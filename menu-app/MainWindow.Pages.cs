@@ -163,6 +163,8 @@ public sealed partial class MainWindow
                 Placeholder.Text = "Search reports…";
                 var reports = Reports.Load();
                 // Each tag its own colour, the same every time (tags are whatever the reports script says).
+                string[] tagColors = [theme.Cyan, theme.Purple, theme.Green, theme.Red];
+                string TagColor(string tag) => string.IsNullOrEmpty(tag) ? theme.Accent : tagColors[tag.Sum(c => c) % tagColors.Length];
                 foreach (var (r, hits) in Filter(reports, query, x => x.Name).Take(150))
                 {
                     var report = r;
