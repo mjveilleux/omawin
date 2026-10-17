@@ -1,0 +1,251 @@
+<#
+.SYNOPSIS
+    Health check: is everything this repo sets up actually in place and working?
+
+.DESCRIPTION
+    Read-only; changes nothing. Checks the tools on PATH, the config links, the startup
+    entries, the helper exes (omawin.exe too), that the migrations have run, that every
+    script in the repo parses, the menu and command lists, and that GlazeWM, Zebar and the
+    launcher are running. Prints one line per check and a summary; exits 1 if
+    anything failed, so it can gate a test run.
+
+        .\check.ps1            everything
+        .\check.ps1 -Quiet     only the problems
+
+    Run it after install.ps1, after a big change, or when something feels off.
+#>
+param([switch]$Quiet)
+
+$Repo = $PSScriptRoot
+# PATH as a new shell would see it (this one may predate the latest installs).
+$env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+$script:failed = 0; $script:warned = 0
+
+function Pass([string]$What, [string]$Detail = '') { if (-not $Quiet) { Write-Host "  ok    $What" -NoNewline; Write-Host "  $Detail" -ForegroundColor DarkGray } }
+function Fail([string]$What, [string]$Detail = '') { $script:failed++; Write-Host "  FAIL  $What" -ForegroundColor Red -NoNewline; Write-Host "  $Detail" -ForegroundColor DarkGray }
+function Warn([string]$What, [string]$Detail = '') { $script:warned++; Write-Host "  warn  $What" -ForegroundColor Yellow -NoNewline; Write-Host "  $Detail" -ForegroundColor DarkGray }
+function Section([string]$Name) { if (-not $Quiet) { Write-Host "`n$Name" -ForegroundColor Cyan } }
+
+# A junction (or symlink) at $Path pointing into the repo at $Target.
+function Test-Link([string]$Path, [string]$Target, [string]$Name) {
+    $item = Get-Item $Path -Force -ErrorAction SilentlyContinue
+    if (-not $item) { Fail $Name "missing: $Path" }
+    elseif (-not $item.LinkType) { Fail $Name "not a link: $Path" }
+    elseif ((@($item.Target)[0] -replace '\\$', '') -ne ($Target -replace '\\$', '')) { Fail $Name "points at $(@($item.Target)[0])" }
+    else { Pass $Name "$Path -> $Target" }
+}
+
+# --- tools --------------------------------------------------------------------------------
+Section 'tools on PATH'
+# The core's, then those of the presets this PC picked (packages.ps1, omawin preset list).
+. "$Repo\packages.ps1"
+$UserLayer = & "$Repo\bin\user-layer.ps1"   # your user layer (docs/work.md)
+$chosen = @(Get-Content "$env:LOCALAPPDATA\launcher\presets.txt" -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
+$tools = @('pwsh', 'git', 'gh', 'wt', 'starship', 'zoxide', 'fzf', 'fd', 'rg', 'eza', 'bat', 'jq', 'lazygit',
+'glazewm', 'zebar', 'nvim', 'node', 'uv', 'herdr',
+'omawin', 'voice-meter', 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch', 'btop', 'omawin-music')
+foreach ($name in $chosen) {
+    if ($Presets.Contains($name)) { $tools += @($Presets[$name].Tools | Where-Object { $_ }) }
+    else { Warn "preset $name" "picked, but packages.ps1 has no such preset (omawin preset remove $name)" }
+}
+foreach ($tool in $tools | Select-Object -Unique) {
+    $cmd = Get-Command $tool -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($cmd) { Pass $tool $cmd.Source } else { Fail $tool 'not found' }
+}
+$font = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts', 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' -ErrorAction SilentlyContinue |
+        ForEach-Object { $_.PSObject.Properties.Name } | Where-Object { $_ -like 'JetBrainsMono*' })
+if ($font) { Pass 'JetBrainsMono Nerd Font' "$(@($font).Count) faces" } else { Fail 'JetBrainsMono Nerd Font' 'not installed' }
+
+# --- links --------------------------------------------------------------------------------
+Section 'config links'
+# omawin.exe, the Terminal profiles and the menu app look for the repo at ~/omawin.
+if ($Repo -eq "$HOME\omawin") { Pass 'repo at ~/omawin' $Repo } else { Fail 'repo at ~/omawin' "it's at $Repo; omawin.exe and the Terminal profiles expect ~/omawin" }
+Test-Link "$env:LOCALAPPDATA\nvim" "$Repo\nvim" 'Neovim'
+Test-Link "$env:APPDATA\neovide" "$Repo\neovide" 'Neovide'
+# Documents\PowerShell is a folder of its own whose profile stubs load the repo's (install/shell.ps1).
+$psDir = "$([Environment]::GetFolderPath('MyDocuments'))\PowerShell"
+$psItem = Get-Item $psDir -Force -ErrorAction SilentlyContinue
+if ($psItem -and $psItem.LinkType) { Fail 'PowerShell profile' "$psDir is still a link into the repo (omawin migrate)" }
+elseif ((Test-Path "$psDir\Microsoft.PowerShell_profile.ps1") -and (Get-Content "$psDir\Microsoft.PowerShell_profile.ps1" -Raw) -match [regex]::Escape("$Repo\powershell\Microsoft.PowerShell_profile.ps1")) { Pass 'PowerShell profile' "$psDir loads powershell/" }
+else { Fail 'PowerShell profile' "$psDir\Microsoft.PowerShell_profile.ps1 doesn't load the repo's (install.ps1 -Step shell)" }
+# Files apps write live outside the repo: Neovim's plugin lockfile (nvim/lua/config/lazy.lua).
+if (Test-Path "$env:LOCALAPPDATA\nvim-data\lazy-lock.json") { Pass 'Neovim lockfile' "$env:LOCALAPPDATA\nvim-data\lazy-lock.json" }
+else { Warn 'Neovim lockfile' 'not in nvim-data yet (the first nvim start seeds it)' }
+# GlazeWM's config and Windows Terminal's scheme: rendered from their templates (themes/render.ps1).
+$glazeLive = "$HOME\.glzr\glazewm\config.yaml"
+if (-not (Test-Path $glazeLive)) { Fail 'GlazeWM config' 'not rendered (omawin restart glazewm)' }
+elseif ((Get-Content $glazeLive -Raw) -match '\{\{') { Fail 'GlazeWM config' "$glazeLive still has {{ placeholders }}" }
+elseif ((Get-Item $glazeLive).LastWriteTime -lt (Get-Item "$Repo\glazewm\config.yaml").LastWriteTime) { Warn 'GlazeWM config' 'older than glazewm/config.yaml (omawin restart glazewm)' }
+elseif ((Test-Path "$UserLayer\glazewm\config.yaml") -and (Get-Item $glazeLive).LastWriteTime -lt (Get-Item "$UserLayer\glazewm\config.yaml").LastWriteTime) { Warn 'GlazeWM config' "older than $UserLayer\glazewm\config.yaml (omawin restart glazewm)" }
+else { Pass 'GlazeWM config' "$glazeLive (rendered)" }
+if (Test-Path "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\omawin\theme.json") { Pass 'Windows Terminal scheme' 'omawin (rendered)' }
+else { Fail 'Windows Terminal scheme' 'not rendered (omawin restart glazewm)' }
+Test-Link "$HOME\.glzr\zebar" "$Repo\zebar" 'Zebar'
+Test-Link "$HOME\.config\fastfetch" "$Repo\fastfetch" 'fastfetch'
+$nocttyStub = "$env:LOCALAPPDATA\noctty\config.ghostty"
+if ((Test-Path $nocttyStub) -and (Get-Content $nocttyStub -Raw) -match [regex]::Escape("$Repo\noctty\config.ghostty")) { Pass 'noctty config' "$nocttyStub -> noctty/config.ghostty" }
+else { Fail 'noctty config' "$nocttyStub doesn't include noctty/config.ghostty (install.ps1 -Step shell)" }
+if (Test-Path "$env:LOCALAPPDATA\Programs\noctty\noctty.exe") { Pass 'noctty' "$env:LOCALAPPDATA\Programs\noctty" } else { Warn 'noctty' 'not installed (omawin update terminal)' }
+# Defaults (omawin default): each pick is one bin/defaults.txt knows.
+foreach ($file in Get-ChildItem "$env:LOCALAPPDATA\launcher\defaults" -File -ErrorAction SilentlyContinue) {
+    $pick = (Get-Content $file.FullName -Raw).Trim()
+    if (Select-String "$Repo\bin\defaults.txt" -Pattern "^$($file.Name) \| $([regex]::Escape($pick)) \|" -Quiet) { Pass "default $($file.Name)" $pick }
+    else { Fail "default $($file.Name)" "'$pick' isn't in bin/defaults.txt (omawin default $($file.Name))" }
+}
+$wt = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.WindowsTerminal_*' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
+# Terminal's settings.json is Terminal's own, in LocalState, seeded once from windows-terminal/ (install/shell.ps1).
+if (-not $wt) { Fail 'Windows Terminal' 'package folder not found' }
+elseif ((Get-Item "$($wt.FullName)\LocalState" -Force -ErrorAction SilentlyContinue).LinkType) { Fail 'Windows Terminal' 'LocalState is still a link into the repo (omawin migrate)' }
+elseif (Test-Path "$($wt.FullName)\LocalState\settings.json") { Pass 'Windows Terminal' "$($wt.FullName)\LocalState\settings.json (its own)" }
+else { Warn 'Windows Terminal' 'no settings.json yet (install.ps1 -Step shell seeds it)' }
+$starship = [Environment]::GetEnvironmentVariable('STARSHIP_CONFIG', 'User')
+if ($starship -eq "$Repo\starship\starship.toml") { Pass 'STARSHIP_CONFIG' $starship } else { Fail 'STARSHIP_CONFIG' "is '$starship'" }
+if (Get-Command git -ErrorAction SilentlyContinue) {
+    $include = "$Repo\git\gitconfig" -replace '\\', '/'
+    if (@(git config --global --get-all include.path) -contains $include) { Pass 'git include' $include } else { Fail 'git include' "~/.gitconfig doesn't include $include" }
+    $gitName = git config --global --includes --get user.name
+    if ($gitName) { Pass 'git identity' $gitName } else { Warn 'git identity' 'no user.name (install.ps1 -Step shell asks for it)' }
+}
+# ~/.wslconfig is your user layer's wsl/.wslconfig if it has one, else omawin's (install/other.ps1).
+$wslSource = if (Test-Path "$UserLayer\wsl\.wslconfig") { "$UserLayer\wsl\.wslconfig" } else { "$Repo\wsl\.wslconfig" }
+if ((Test-Path "$HOME\.wslconfig") -and (Get-Content "$HOME\.wslconfig" -Raw) -eq (Get-Content $wslSource -Raw)) { Pass '~/.wslconfig' $wslSource }
+else { Warn '~/.wslconfig' "differs from $wslSource (run install.ps1 -LinkOnly)" }
+
+# --- startup and helpers ------------------------------------------------------------------
+Section 'startup and helpers'
+# herdr reads its config from the repo (install/shell.ps1), and the config is valid.
+$herdrConfig = [Environment]::GetEnvironmentVariable('HERDR_CONFIG_PATH', 'User')
+if ($herdrConfig -ne "$Repo\herdr\config.toml") { Fail 'herdr config' "HERDR_CONFIG_PATH is '$herdrConfig', not this repo's herdr\config.toml (run install.ps1 -Step shell)" }
+elseif (Get-Command herdr -ErrorAction SilentlyContinue) {
+    $env:HERDR_CONFIG_PATH = $herdrConfig
+    $herdrCheck = (herdr config check 2>&1 | Out-String).Trim()
+    if ($herdrCheck -match 'ok') { Pass 'herdr config' $herdrConfig } else { Fail 'herdr config' $herdrCheck }
+} else { Pass 'herdr config' "$herdrConfig (herdr not on PATH here)" }
+
+# GlazeWM at sign-in: a scheduled task, started right away (install/login-start.ps1).
+$task = Get-ScheduledTask -TaskName 'omawin GlazeWM' -ErrorAction SilentlyContinue
+if ($task -and $task.State -ne 'Disabled') { Pass 'GlazeWM at sign-in' 'scheduled task omawin GlazeWM' } else { Fail 'GlazeWM at sign-in' 'no task (run install\login-start.ps1)' }
+# GlazeWM itself: our fork signed on this PC starts before Explorer; the official one waits for it.
+$gsig = Get-AuthenticodeSignature "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe" -ErrorAction SilentlyContinue
+if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
+elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
+else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
+$stuck = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3' -ErrorAction SilentlyContinue).Settings
+if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn 'taskbar auto-hides' 'off; install.ps1 turns it on' }
+# No ads (no-ads.ps1): Windows' suggestions off, and the PC maker's upsells gone. The OEM ones
+# (Lenovo Now, McAfee) are flagged only when this PC has them at all.
+$adware = Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+    Where-Object DisplayName -In 'McAfee Security Scan Plus', 'WebAdvisor by McAfee', 'Lenovo Now' | ForEach-Object DisplayName
+if ($adware) { Warn 'no ads' "installed: $($adware -join ', ') (run no-ads.ps1)" } else { Pass 'no ads' 'no OEM upsells installed' }
+if ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -ErrorAction SilentlyContinue).SilentInstalledAppsEnabled -ne 0) {
+    Warn 'Windows suggestions' 'on (run no-ads.ps1 -UserOnly)'
+} else { Pass 'Windows suggestions' 'off' }
+$lockTask = Get-ScheduledTask -TaskName 'omawin lock screen' -ErrorAction SilentlyContinue
+if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\themes\set-lockscreen.ps1")) { Pass 'lock screen rotates on unlock' }
+else { Warn 'lock screen rotates on unlock' 'no task "omawin lock screen" (install.ps1 makes it)' }
+# Helper exes: present and built from the current source (the same list as install/helpers.ps1).
+$helpers = [ordered]@{
+    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'zebar\tokyo-islands\voice-meter.cs'; 'cpu-cores' = 'zebar\tokyo-islands\cpu-cores.cs'
+    'win-keys' = 'zebar\tokyo-islands\win-keys.cs'; 'app-icons' = 'zebar\tokyo-islands\app-icons.cs'
+    'theme-watch' = 'zebar\tokyo-islands\theme-watch.cs'
+}
+foreach ($name in $helpers.Keys) {
+    $exe = "$HOME\.local\bin\$name.exe"
+    $src = Get-Item "$Repo\$($helpers[$name])" -ErrorAction SilentlyContinue
+    if (-not $src) { Fail "$name.exe" "its source $($helpers[$name]) is missing" }
+    elseif (-not (Test-Path $exe)) { Fail "$name.exe" 'not built (run install.ps1 -LinkOnly)' }
+    elseif ((Get-Item $exe).LastWriteTime -lt $src.LastWriteTime) { Warn "$name.exe" 'older than its source (run install.ps1 -LinkOnly)' }
+    else { Pass "$name.exe" }
+}
+# omawin.exe reads its commands from ~/omawin (bin/commands.txt) at every run.
+if (Get-Command omawin.exe -ErrorAction SilentlyContinue) {
+    $null = omawin.exe help 2>&1
+    if ($LASTEXITCODE -eq 0) { Pass 'omawin help' 'reads bin/commands.txt' } else { Fail 'omawin help' "exit $LASTEXITCODE (can't read bin/commands.txt?)" }
+}
+# Migrations (bin/migrate.ps1): every one in migrations/ has run on this PC.
+$ran = @(Get-Content "$env:LOCALAPPDATA\launcher\migrations.txt" -ErrorAction SilentlyContinue)
+$migrations = @(Get-ChildItem "$Repo\migrations" -Filter *.ps1 -ErrorAction SilentlyContinue | ForEach-Object BaseName)
+$pending = @($migrations | Where-Object { $ran -notcontains $_ })
+if ($pending) { Warn 'migrations' "not run yet: $($pending -join ', ') (run omawin migrate)" } else { Pass 'migrations' "all $($migrations.Count) run" }
+# Native system menu (menu-app/): built, and running in the background.
+if (Test-Path "$Repo\menu-app") {
+    $menuExe = "$env:LOCALAPPDATA\system-menu\SystemMenu.exe"
+    if (-not (Test-Path $menuExe)) { Fail 'system menu' 'not built (run menu-app\build.ps1)' }
+    elseif (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Pass 'system menu' $menuExe }
+    else { Warn 'system menu' 'built but not running; Win+Alt+Space starts it' }
+    # File search in the launcher (fff's C library, fetched by build.ps1).
+    if (Test-Path "$env:LOCALAPPDATA\system-menu\fff_c.dll") { Pass 'launcher file search (fff)' }
+    else { Warn 'launcher file search (fff)' 'fff_c.dll missing (run menu-app\build.ps1)' }
+}
+
+# --- repo files ---------------------------------------------------------------------------
+Section 'repo files'
+$bad = @()
+Get-ChildItem $Repo -Recurse -Include *.ps1 -File | Where-Object FullName -notmatch '\\(menu-app\\bin|menu-app\\obj|node_modules)\\' | ForEach-Object {
+    $errors = $null
+    $null = [Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$errors)
+    if ($errors) { $bad += "$($_.FullName.Substring($Repo.Length + 1)): $($errors[0].Message)" }
+}
+if ($bad) { $bad | ForEach-Object { Fail 'PowerShell parse' $_ } } else { Pass 'PowerShell scripts parse' }
+foreach ($json in 'windows-terminal\settings.json', 'zebar\tokyo-islands\zpack.json') {
+    try { $null = Get-Content "$Repo\$json" -Raw | ConvertFrom-Json -ErrorAction Stop; Pass $json 'valid JSON' }
+    catch { Fail $json "invalid JSON: $($_.Exception.Message)" }
+}
+# Menu rows: every row's parent exists, actions are known kinds.
+$ids = @{}
+$menuProblems = @()
+foreach ($line in Get-Content "$Repo\launcher\menu.txt" -Encoding utf8) {
+    if (-not $line.Trim() -or $line.TrimStart().StartsWith('#')) { continue }
+    $id, $icon, $label, $action = ($line -split '\|', 4).Trim()
+    if ($ids.ContainsKey($id)) { $menuProblems += "duplicate id $id" }
+    $ids[$id] = $true
+    if ($id.Contains('.') -and -not $ids.ContainsKey($id.Substring(0, $id.LastIndexOf('.')))) { $menuProblems += "$id has no parent row above it" }
+    if (-not $label) { $menuProblems += "$id has no label" }
+    if ($action -and $action.TrimStart('!').Trim() -notmatch '^(winget|choco|task|edit|run|omawin)\s|^@|^themes$') { $menuProblems += "$id has an unknown action" }
+}
+if ($menuProblems) { $menuProblems | ForEach-Object { Fail 'launcher/menu.txt' $_ } } else { Pass 'launcher/menu.txt' "$($ids.Count) rows" }
+# omawin's commands: known action kinds, the scripts they run exist, and every
+# `omawin.exe <command>` in GlazeWM's keys is one of them.
+$commandNames = @()
+$commandProblems = @()
+foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
+    if (-not $line.Trim() -or $line.TrimStart().StartsWith('#')) { continue }
+    $name, $summary, $action = ($line -split '\|', 3).Trim()
+    $commandNames += $name
+    if ($action -match '^pwsh\s+(\S+)') {
+        $script = [IO.Path]::GetFullPath([IO.Path]::Combine($Repo, $Matches[1].Replace('{user}', $UserLayer)))
+        if (Test-Path $script) { }
+        # A script outside this repo (your user layer's, {user}/: docs/work.md) is there only on PCs that have it.
+        elseif (-not $script.StartsWith("$Repo\", [StringComparison]::OrdinalIgnoreCase)) { Pass "omawin $name" "skipped ($($Matches[1]) isn't on this PC)" }
+        else { $commandProblems += "$name runs $($Matches[1]), which is missing" }
+    }
+    elseif ($action -match '^builtin\s+(\S+)') {
+        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
+    }
+    elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
+}
+foreach ($m in [regex]::Matches((Get-Content "$Repo\glazewm\config.yaml" -Raw), "omawin\.exe ([a-z -]+?)'")) {
+    $words = $m.Groups[1].Value.Trim()
+    if (-not ($commandNames | Where-Object { $words -eq $_ -or $words.StartsWith("$_ ") })) { $commandProblems += "glazewm/config.yaml runs unknown 'omawin $words'" }
+}
+if ($commandProblems) { $commandProblems | ForEach-Object { Fail 'bin/commands.txt' $_ } } else { Pass 'bin/commands.txt' "$($commandNames.Count) commands" }
+$dirty = @(git -C $Repo status --porcelain 2>$null)
+if ($dirty) { Warn 'git' "$($dirty.Count) uncommitted change(s)" } else { Pass 'git' 'clean' }
+
+# --- running ------------------------------------------------------------------------------
+Section 'running now'
+foreach ($proc in 'glazewm', 'zebar') {
+    if (Get-Process $proc -ErrorAction SilentlyContinue) { Pass $proc } else { Fail $proc 'not running' }
+}
+# The launcher, file finder and system menu are one native app (menu-app/), running hidden.
+if (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
+else { Warn 'launcher / menu (Win+Space, Win+Alt+Space)' 'not running; the first Win+Space starts it' }
+if (Get-Command glazewm -ErrorAction SilentlyContinue) {
+    $state = glazewm query monitors 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
+    if ($state.success) { Pass 'GlazeWM answers' "$(@($state.data.monitors).Count) monitor(s)" } else { Fail 'GlazeWM answers' 'glazewm query failed' }
+}
+
+Write-Host ''
+$summary = "$failed failed, $warned warning(s)"
+if ($failed) { Write-Host "  $summary" -ForegroundColor Red; exit 1 }
+Write-Host "  $summary" -ForegroundColor $(if ($warned) { 'Yellow' } else { 'Green' })

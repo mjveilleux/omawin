@@ -1,0 +1,378 @@
+/* The colors (--bg, --fg, --blue, --aurora-1..5, ...) are the picked theme's: theme.css, which
+   themes/render.ps1 writes from the theme's palette and theme.js keeps current. None here. */
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: transparent;
+  font-family: 'JetBrainsMono NF', 'JetBrainsMono Nerd Font', monospace;
+  font-size: 12.5px;
+  color: var(--fg);
+  user-select: none;
+}
+
+/* Three islands across the top, lined up with GlazeWM's 10px outer gap. */
+.bar {
+  height: 36px; /* not 100%: the window grows while the tray is open */
+  display: grid;
+  /* The right side is never cut off: it takes the room it needs (the clock moves over a little
+     on a narrow screen rather than the stats falling off the edge). */
+  grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 0 10px;
+  box-sizing: border-box;
+}
+.left { justify-self: start; }
+.center { justify-self: center; display: flex; }
+.right { justify-self: end; }
+.hidden { display: none !important; }
+
+.island {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+  box-sizing: border-box;
+}
+.island:empty { display: none; }
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  height: 24px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+button.item {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+button.item:hover { background: var(--bg-hover); }
+
+.sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border);
+  margin: 0 2px;
+}
+
+/* Workspaces */
+.workspace { color: var(--fg-dim); }
+.workspace.occupied { color: var(--fg); }
+.workspace.displayed { color: var(--blue); }
+.workspace.focused {
+  background: var(--blue);
+  color: var(--bg-solid);
+  font-weight: 700;
+}
+.workspace.focused:hover { background: var(--blue); }
+
+.workspace .num { font-weight: 700; }
+.workspace .label { color: var(--purple); }
+.workspace.focused .label { color: var(--bg-solid); }
+.workspace .apps { letter-spacing: 1px; opacity: 0.85; }
+.rename {
+  width: 110px;
+  height: 22px;
+  padding: 0 8px;
+  border: 1px solid var(--blue);
+  border-radius: 8px;
+  background: var(--bg-solid);
+  color: var(--fg);
+  font: inherit;
+  outline: none;
+}
+
+.mode { color: var(--orange); font-weight: 700; }
+.paused { color: var(--red); font-weight: 700; }
+.direction { color: var(--fg-dim); }
+
+/* Center: media + clock */
+.media { color: var(--purple); }
+.media .text {
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.media.paused-media { color: var(--fg-dim); }
+.clock .date { color: var(--fg-dim); }
+.clock .time { color: var(--fg); font-weight: 700; }
+
+/* Voice typing (Win+H): a glowing aurora pill with an equalizer that follows your voice.
+   --glow (0..1) is set from the mic level. */
+.voice {
+  --glow: 0.3;
+  gap: 10px;
+  padding: 0 14px;
+  border-color: rgb(from var(--purple) r g b / calc(0.35 + var(--glow) * 0.65));
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 calc(8px + var(--glow) * 18px) rgb(from var(--cyan) r g b / calc(var(--glow) * 0.55)),
+    inset 0 0 12px rgb(from var(--purple) r g b / calc(var(--glow) * 0.25));
+  animation: voice-in 220ms ease-out;
+}
+/* Solid red while recording, with a steady glow (no blinking). */
+.voice .mic {
+  color: var(--red);
+  font-size: 15px;
+  text-shadow: 0 0 8px rgb(from var(--red) r g b / 0.85);
+}
+.voice .bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 26px;
+}
+/* Updated every frame by the script, so no CSS transition (it would smooth the wave away). */
+.voice .bars span {
+  width: 3px;
+  height: 26px;
+  border-radius: 2px;
+  transform: scaleY(0.1);
+  filter: drop-shadow(0 0 3px rgb(from var(--cyan) r g b / 0.6));
+}
+.voice .listening {
+  color: var(--fg-dim);
+  font-style: italic;
+  letter-spacing: 1px;
+}
+/* omawin's agent listening (Ctrl+Win+H) rather than dictation: teal, and it says so. */
+.voice.agent {
+  border-color: rgb(from var(--teal) r g b / calc(0.45 + var(--glow) * 0.55));
+  box-shadow:
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 calc(8px + var(--glow) * 18px) rgb(from var(--teal) r g b / calc(var(--glow) * 0.6)),
+    inset 0 0 12px rgb(from var(--teal) r g b / calc(var(--glow) * 0.3));
+}
+.voice.agent .mic {
+  color: var(--teal);
+  text-shadow: 0 0 8px rgb(from var(--teal) r g b / 0.85);
+}
+.voice.agent .listening {
+  color: var(--teal);
+  font-style: normal;
+}
+@keyframes voice-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Right: stats + tray */
+.cpu .icon { color: var(--blue); }
+/* CPU: its total; a button, since a click opens the per-core card. */
+.item.cpu {
+  border: 0;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+}
+.item.cpu:hover { background: var(--bg-hover); }
+.cpu .pct {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: right;
+}
+.cpu.high .pct { color: var(--red); }
+
+/* Numbers: bold, fixed-width digits so they don't jiggle; units small and dim. */
+.num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.unit { color: var(--fg-dim); font-size: 11px; margin-left: 1px; }
+
+/* RAM: a ring that fills clockwise with usage (--p, 0..100), easing between readings. */
+@property --p {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+.memory .ring {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: conic-gradient(var(--teal) calc(var(--p) * 1%), var(--line) 0);
+  -webkit-mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+  mask: radial-gradient(circle, transparent 3.5px, #000 4px);
+  transition: --p 900ms ease-in-out;
+}
+.memory.high .ring { background: conic-gradient(var(--red) calc(var(--p) * 1%), var(--line) 0); }
+
+/* Hover cards under CPU / RAM. */
+.card {
+  position: fixed;
+  top: 42px;
+  width: 270px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  animation: tray-in 160ms ease-out;
+}
+.card-head { display: flex; align-items: baseline; justify-content: space-between; }
+.card-title { display: flex; align-items: center; gap: 8px; font-weight: 700; letter-spacing: 0.5px; }
+.card-title .cpu-icon { color: var(--blue); }
+.card-title .mem-icon { color: var(--teal); }
+.card .big { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.card-sub { color: var(--fg-dim); font-size: 11px; margin: 2px 0 10px; }
+
+/* A thin rounded track whose fill eases between readings (scaleX set by the script). */
+.track {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+.track span {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 900ms ease-in-out;
+}
+.big-track { height: 8px; border-radius: 4px; margin: 10px 0 12px; }
+.big-track span { background: linear-gradient(90deg, var(--teal), var(--cyan)); }
+
+.core-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
+.core { display: grid; grid-template-columns: 16px 1fr 34px; align-items: center; gap: 6px; font-size: 11px; }
+.core-n { color: var(--fg-dim); text-align: right; font-variant-numeric: tabular-nums; }
+.core-v { text-align: right; font-variant-numeric: tabular-nums; color: var(--fg-dim); }
+.core-v.busy { color: var(--orange); }
+
+.stat-rows { display: grid; gap: 5px; font-size: 12px; }
+.stat-rows div { display: flex; justify-content: space-between; }
+.stat-rows span { color: var(--fg-dim); }
+.stat-rows b { font-variant-numeric: tabular-nums; }
+.memory .icon { color: var(--teal); }
+.network .icon { color: var(--cyan); }
+.battery .icon { color: var(--green); }
+.battery.low .icon, .high { color: var(--red); }
+
+/* A connected VPN, next to the wifi icon. */
+.network .vpn { color: var(--teal); font-weight: 700; letter-spacing: 0.5px; }
+.network .vpn .tag { color: var(--fg-dim); font-weight: 400; margin-right: 4px; }
+
+/* The tray button: a round chevron with an aurora ring that turns over and glows when open,
+   and a small count of tray apps. */
+.item.tray-toggle {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: 2px;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--surface), var(--surface)) padding-box,
+    linear-gradient(135deg, var(--purple), var(--cyan), var(--green)) border-box;
+  color: var(--cyan);
+  transition: box-shadow 200ms ease;
+}
+.item.tray-toggle:hover,
+.item.tray-toggle.open {
+  background:
+    linear-gradient(var(--bg-hover), var(--bg-hover)) padding-box,
+    linear-gradient(135deg, var(--purple), var(--cyan), var(--green)) border-box;
+  box-shadow: 0 0 10px rgb(from var(--cyan) r g b / 0.55);
+}
+.tray-toggle .chev {
+  display: inline-block;
+  font-size: 13px;
+  line-height: 1;
+  transition: transform 250ms cubic-bezier(0.3, 1.4, 0.5, 1);
+}
+.tray-toggle.open .chev { transform: rotate(180deg); }
+.tray-toggle::after {
+  content: attr(data-count);
+  position: absolute;
+  top: -5px;
+  right: -6px;
+  min-width: 12px;
+  padding: 0 2px;
+  border-radius: 6px;
+  background: var(--purple);
+  color: var(--bg-solid);
+  font-size: 8.5px;
+  font-weight: 700;
+  line-height: 12px;
+  text-align: center;
+}
+.tray-toggle[data-count='0']::after,
+.tray-toggle:not([data-count])::after { display: none; }
+
+/* The tray itself: a vertical island under the right side of the bar, big icons + names. */
+.tray-panel {
+  position: fixed;
+  top: 42px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  /* No vh-based max-height: the window is only 36px tall when this opens. The script sets a
+     limit from the screen height instead. */
+  overflow-y: auto;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  transform-origin: top right;
+  animation: tray-in 170ms ease-out;
+}
+.tray-row {
+  display: flex;
+  align-items: center;
+  padding: 7px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.tray-row:hover { background: var(--bg-hover); }
+.tray-row img { width: 24px; height: 24px; flex: none; }
+/* The status bubble beside a hovered tray icon. */
+.tray-tip {
+  position: fixed;
+  max-width: 260px;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+  color: var(--fg);
+  font-size: 12px;
+  white-space: pre-line;
+  pointer-events: none;
+  animation: tip-in 120ms ease-out;
+}
+@keyframes tip-in {
+  from { opacity: 0; transform: translateX(4px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes tray-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}

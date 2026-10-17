@@ -1,0 +1,32 @@
+{
+  "name": "Ethereal",
+  "mode": "dark",
+  "background": "#060B1E",
+  "surface": "#131a3a",
+  "selection": "#252e56",
+  "border": "#6d7db6",
+  "foreground": "#ffcead",
+  "muted": "#ffcead",
+  "comment": "#6d7db6",
+  "accent": "#7d82d9",
+  "purple": "#ead7e7",
+  "cyan": "#dfeaf0",
+  "teal": "#a3bfd1",
+  "green": "#92a593",
+  "yellow": "#E9BB4F",
+  "orange": "#eb8b54",
+  "red": "#ED5B5A",
+  "gradient": [
+    "#ead7e7",
+    "#7d82d9",
+    "#dfeaf0",
+    "#a3bfd1",
+    "#92a593"
+  ],
+  "terminal": "Ethereal",
+  "nvimSpec": "ethereal",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ethereal/backgrounds/1-cosmic.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ethereal/backgrounds/2-meadow.webp"
+  ]
+}

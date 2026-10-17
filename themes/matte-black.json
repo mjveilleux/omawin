@@ -1,0 +1,33 @@
+{
+  "name": "Matte Black",
+  "mode": "dark",
+  "background": "#121212",
+  "surface": "#1e1e1e",
+  "selection": "#2a2a2a",
+  "border": "#333333",
+  "foreground": "#bebebe",
+  "muted": "#bebebe",
+  "comment": "#555555",
+  "accent": "#e68e0d",
+  "purple": "#B91C1C",
+  "cyan": "#eaeaea",
+  "teal": "#bebebe",
+  "green": "#FFC107",
+  "yellow": "#b91c1c",
+  "orange": "#c63d3d",
+  "red": "#D35F5F",
+  "gradient": [
+    "#B91C1C",
+    "#e68e0d",
+    "#eaeaea",
+    "#bebebe",
+    "#FFC107"
+  ],
+  "terminal": "Matte Black",
+  "nvimSpec": "matte-black",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/matte-black/backgrounds/0-ship-at-sea.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/matte-black/backgrounds/1-dark-waters.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/matte-black/backgrounds/2-dot-hands.webp"
+  ]
+}

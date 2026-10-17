@@ -1,0 +1,32 @@
+{
+  "name": "Flexoki Light",
+  "mode": "light",
+  "background": "#FFFCF0",
+  "surface": "#E6E4D9",
+  "selection": "#CECDC3",
+  "border": "#B7B5AC",
+  "foreground": "#100F0F",
+  "muted": "#100F0F",
+  "comment": "#878580",
+  "accent": "#205EA6",
+  "purple": "#CE5D97",
+  "cyan": "#3AA99F",
+  "teal": "#3AA99F",
+  "green": "#879A39",
+  "yellow": "#D0A215",
+  "orange": "#d0772b",
+  "red": "#D14D41",
+  "gradient": [
+    "#CE5D97",
+    "#205EA6",
+    "#3AA99F",
+    "#3AA99F",
+    "#879A39"
+  ],
+  "terminal": "Flexoki Light",
+  "nvimSpec": "flexoki-light",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/flexoki-light/backgrounds/1-orb.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/flexoki-light/backgrounds/2-omarchy.webp"
+  ]
+}

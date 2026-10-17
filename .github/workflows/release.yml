@@ -1,0 +1,192 @@
+# Prebuilt binaries, so a new PC downloads omawin.exe, the bar's helpers, the menu app and the
+# music player instead of installing the .NET SDK and compiling (bin/install-binaries.ps1 takes
+# them; docs/releases.md is the reader's version of this file).
+#
+# The build is not a second recipe: every job runs the same script this PC runs (build/helpers.ps1,
+# menu-app\build.ps1, music\build.ps1), so a release is the local build. The only thing CI adds is
+# the version stamp (-Release <tag>) and the release ZIP.
+#
+#   push a v* tag        builds both architectures and publishes the release
+#   run by hand          builds and keeps the files as artifacts (no release)
+#
+# Arm64: GitHub's arm64 Windows runners are free for public repositories only
+# (runs-on: windows-11-arm), so those two jobs wait for the repo variable ARM64_RUNNERS=true.
+# Until then a release is x64-only and an ARM64 PC builds its own menu app and player (the
+# helpers are architecture-neutral IL and are in every release).
+#
+# Actions are pinned by commit SHA, like the forks install/glazewm-fork.ps1 downloads: a tag can be
+# moved, a SHA can't.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: The version to stamp the builds with (also the asset names)
+        default: v0.0.0-dev
+      publish:
+        description: Create the GitHub release (the tag must exist)
+        type: boolean
+        default: false
+
+# One run per ref: a re-tagged or re-run release doesn't race itself.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  # The version, once: a tag push uses its tag, a manual run its input.
+  meta:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      publish: ${{ steps.version.outputs.publish }}
+    steps:
+      - id: version
+        shell: pwsh
+        # Through env, not pasted into the script: a typed version can't run as code.
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          IN_VERSION: ${{ inputs.version }}
+          IN_PUBLISH: ${{ inputs.publish }}
+        run: |
+          $version = if ($env:REF_TYPE -eq 'tag') { $env:REF_NAME } else { $env:IN_VERSION }
+          if ($version -notmatch '^v\d+(\.\d+)*(-[0-9A-Za-z.-]+)?$') { throw "not a version: $version" }
+          $publish = $env:REF_TYPE -eq 'tag' -or $env:IN_PUBLISH -eq 'true'
+          "version=$version" | Add-Content $env:GITHUB_OUTPUT
+          "publish=$($publish.ToString().ToLower())" | Add-Content $env:GITHUB_OUTPUT
+          Write-Host "version $version, publish $publish"
+
+  # omawin.exe and the bar's helpers: in-box csc (C# 5), architecture-neutral IL, one ZIP for both.
+  helpers:
+    needs: meta
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build (the same script install.ps1 runs)
+        shell: pwsh
+        run: .\build\helpers.ps1 -OutDir out\helpers -Release '${{ needs.meta.outputs.version }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: helpers
+          path: out/helpers
+          if-no-files-found: error
+
+  # The menu app (WinUI 3) and the music player: the .NET 9 SDK from global.json, one job per
+  # architecture.
+  menu:
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(vars.ARM64_RUNNERS == 'true' && '["x64","arm64"]' || '["x64"]') }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build (the same script this PC runs)
+        shell: pwsh
+        run: .\menu-app\build.ps1 -OutDir out\menu-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: menu-${{ matrix.arch }}
+          path: out/menu-${{ matrix.arch }}
+          if-no-files-found: error
+
+  music:
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(vars.ARM64_RUNNERS == 'true' && '["x64","arm64"]' || '["x64"]') }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build (the same script this PC runs)
+        shell: pwsh
+        run: .\music\build.ps1 -OutDir out\music-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: music-${{ matrix.arch }}
+          path: out/music-${{ matrix.arch }}
+          if-no-files-found: error
+
+  # Names the files the way the installer looks for them, hashes them into SHA256SUMS.txt (what
+  # bin/release.ps1 checks a download against), and publishes.
+  release:
+    needs: [meta, helpers, menu, music]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      id-token: write          # attestations, when the repo variable ATTEST is true
+      attestations: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: out
+
+      # Off by default: nothing is signed until a certificate profile exists (docs/release-signing.md).
+      # Before packing, so the ZIPs hold signed binaries. Recursed: the helpers and the menu app are
+      # in their own folders. Only the exes - the framework's DLLs are Microsoft's, fff_c.dll is
+      # another project's - and every exe under out\ gets a signature.
+      - name: Sign (repo variable CODESIGN)
+        if: vars.CODESIGN == 'true'
+        uses: azure/trusted-signing-action@1d365fec12862c4aa68fcac418143d73f0cea293 # v0
+        with:
+          endpoint: ${{ vars.CODESIGN_ENDPOINT }}
+          signing-account-name: ${{ vars.CODESIGN_ACCOUNT }}
+          certificate-profile-name: ${{ vars.CODESIGN_PROFILE }}
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          files-folder: out
+          files-folder-recurse: true
+          files-folder-filter: exe
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Pack (asset names live in build/release.ps1)
+        shell: pwsh
+        run: .\build\release.ps1 -Tag '${{ needs.meta.outputs.version }}' -InDir out -OutDir dist -NoManifest
+
+      - name: The manifest the installer verifies against
+        shell: pwsh
+        run: .\build\release.ps1 -Tag '${{ needs.meta.outputs.version }}' -OutDir dist -OnlyManifest
+
+      # Off by default: GitHub artifact attestations need a plan that has them (a private repo on
+      # GitHub Team does not).
+      - name: Attest (repo variable ATTEST)
+        if: vars.ATTEST == 'true'
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2
+        with:
+          subject-path: dist/*
+
+      - name: Publish
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ needs.meta.outputs.version }}'
+          # PowerShell passes 'dist/*' to a program as-is: the list is built here.
+          $files = (Get-ChildItem dist -File | Sort-Object Name).FullName
+          Write-Host "publishing $tag with $($files.Count) files"
+          gh release create $tag --repo '${{ github.repository }}' --verify-tag `
+            --generate-notes --title $tag @files

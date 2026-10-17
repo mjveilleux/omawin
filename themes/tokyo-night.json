@@ -1,0 +1,37 @@
+{
+  "name": "Tokyo Night",
+  "background": "#1a1b26",
+  "surface": "#1f2335",
+  "selection": "#292e42",
+  "border": "#3b4261",
+  "foreground": "#c0caf5",
+  "muted": "#a9b1d6",
+  "comment": "#565f89",
+  "accent": "#7aa2f7",
+  "purple": "#bb9af7",
+  "cyan": "#7dcfff",
+  "teal": "#73daca",
+  "green": "#9ece6a",
+  "yellow": "#e0af68",
+  "orange": "#ff9e64",
+  "red": "#f7768e",
+  "gradient": [
+    "#bb9af7",
+    "#7aa2f7",
+    "#7dcfff",
+    "#73daca",
+    "#9ece6a"
+  ],
+  "terminal": "Tokyo Night",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/0-liftoff.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/1-winding-road.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/2-quattro.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/3-swirl-buck.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/4-sunset-lake.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/5-omakub.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/6-oma-cityscape.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/tokyo-night/backgrounds/7-oma.webp"
+  ],
+  "nvimSpec": "tokyo-night"
+}

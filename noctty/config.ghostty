@@ -1,0 +1,63 @@
+# noctty (Ghostty's terminal core in a Windows app): omawin's terminal, riced like Omarchy's
+# Ghostty config. noctty reads %LOCALAPPDATA%\noctty\config.ghostty, a stub (install/shell.ps1)
+# that includes this file and then the current theme's colors, rendered outside the repo by
+# themes/render.ps1 (%LOCALAPPDATA%\launcher\theme.ghostty).
+
+command = pwsh.exe -NoLogo
+
+font-family = JetBrainsMono Nerd Font
+font-size = 11
+
+window-padding-x = 14
+window-padding-y = 14
+background-opacity = 0.88
+
+# No Windows title bar (GlazeWM tiles the windows; glazewm/config.yaml has to say so, since a
+# window without one would float). The tab strip is drawn in the theme's colors (the theme
+# file sets them) and our font. The strip is drawn with GDI, which knows the Nerd Font only by
+# its short family name "JetBrainsMono NF"; the long name silently falls back to Segoe UI.
+window-decoration = none
+window-theme = ghostty
+window-title-font-family = JetBrainsMono NF
+
+cursor-style = block
+cursor-style-blink = false
+confirm-close-surface = false
+# No shell integration: it injects scripts into every PowerShell (~100+ ms per terminal), and the
+# profile already tells the terminal its folder (OSC 7) and title.
+shell-integration = none
+
+# Shift+Enter as its own key for TUIs (as Omarchy's Ghostty config does).
+keybind = shift+enter=csi:13;2u
+
+# F11 fullscreen, as Windows Terminal's does (Ghostty's own Ctrl+Enter stays bound).
+keybind = f11=toggle_fullscreen
+
+# No tabs of noctty's own: herdr is the multiplexer (projects are herdr sessions), so noctty
+# shows no tab strip and passes its tab keys through to what runs inside.
+window-show-tab-bar = never
+keybind = ctrl+shift+t=unbind
+keybind = ctrl+tab=unbind
+keybind = ctrl+shift+tab=unbind
+keybind = ctrl+page_up=unbind
+keybind = ctrl+page_down=unbind
+keybind = ctrl+shift+arrow_left=unbind
+keybind = ctrl+shift+arrow_right=unbind
+
+# Kept running with no window (omawin start terminal, at login), so a new window is a hand-off
+# to it, never a start-up. No session restore: a background start must not reopen windows.
+quit-after-last-window-closed = false
+window-save-state = never
+# A pwsh kept started in the background (our noctty fork), so a new window or tab gets a prompt
+# at once instead of after pwsh's ~0.6 s start-up. One idle shell's memory (~60-80 MB).
+windows-spare-shell = true
+# A new window appears only once GlazeWM has put it in its tile, fading in (our fork), never
+# at the size and place it starts with.
+windows-reveal-after-placement = true
+
+# A theme switch tells the running noctty to reload its config (themes/set-theme.ps1); no
+# "Configuration reloaded" notification each time.
+app-notifications = no-config-reload
+
+# Updates come through omawin (omawin update terminal).
+auto-update = off

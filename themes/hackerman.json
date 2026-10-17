@@ -1,0 +1,32 @@
+{
+  "name": "Hackerman",
+  "mode": "dark",
+  "background": "#0B0C16",
+  "surface": "#151828",
+  "selection": "#1f253a",
+  "border": "#2d3450",
+  "foreground": "#ddf7ff",
+  "muted": "#ddf7ff",
+  "comment": "#6a6e95",
+  "accent": "#82FB9C",
+  "purple": "#cddbf4",
+  "cyan": "#d1fffe",
+  "teal": "#7cf8f7",
+  "green": "#4fe88f",
+  "yellow": "#50f7d4",
+  "orange": "#50f7a3",
+  "red": "#50f872",
+  "gradient": [
+    "#cddbf4",
+    "#82FB9C",
+    "#d1fffe",
+    "#7cf8f7",
+    "#4fe88f"
+  ],
+  "terminal": "Hackerman",
+  "nvimSpec": "hackerman",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/hackerman/backgrounds/1-synth-scape.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/hackerman/backgrounds/2-geometric.webp"
+  ]
+}

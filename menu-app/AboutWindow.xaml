@@ -1,0 +1,17 @@
+<Window
+    x:Class="SystemMenu.AboutWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    Title="About omawin">
+
+    <!-- The About sheet: the logo as geometry on the left, the facts in three boxes on the
+         right. AboutWindow.xaml.cs draws all of it, in terminal cells (an unbroken grid is the
+         whole point), and the window is only ever as big as the sheet. -->
+    <Grid x:Name="Root">
+        <Canvas x:Name="Sheet" />
+        <!-- Where the keys land: an invisible TextBox, as in the launcher. Any key closes the
+             window, so nothing here reads what was typed. -->
+        <TextBox x:Name="Input" Opacity="0" Width="1" Height="1" HorizontalAlignment="Left"
+                 VerticalAlignment="Top" IsSpellCheckEnabled="False" />
+    </Grid>
+</Window>

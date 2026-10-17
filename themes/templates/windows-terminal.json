@@ -1,0 +1,28 @@
+{
+  "$help": "Rendered by omawin's themes/render.ps1 from themes/templates/windows-terminal.json: the current theme as the scheme 'omawin', which settings.json uses. Don't edit the copy.",
+  "schemes": [
+    {
+      "name": "omawin",
+      "background": "{{ background }}",
+      "foreground": "{{ foreground }}",
+      "cursorColor": "{{ accent }}",
+      "selectionBackground": "{{ selection }}",
+      "black": "{{ darker_background }}",
+      "red": "{{ red }}",
+      "green": "{{ green }}",
+      "yellow": "{{ yellow }}",
+      "blue": "{{ blue }}",
+      "purple": "{{ magenta }}",
+      "cyan": "{{ cyan }}",
+      "white": "{{ foreground }}",
+      "brightBlack": "{{ dark_foreground }}",
+      "brightRed": "{{ bright_red }}",
+      "brightGreen": "{{ bright_green }}",
+      "brightYellow": "{{ bright_yellow }}",
+      "brightBlue": "{{ bright_blue }}",
+      "brightPurple": "{{ bright_magenta }}",
+      "brightCyan": "{{ bright_cyan }}",
+      "brightWhite": "{{ bright_foreground }}"
+    }
+  ]
+}

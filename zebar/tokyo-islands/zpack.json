@@ -1,0 +1,129 @@
+{
+  "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/zpack-schema.json",
+  "name": "tokyo-islands",
+  "version": "1.0.0",
+  "description": "Floating islands for GlazeWM: a top bar (workspaces | media + clock | system + tray) and a bottom dock (Windows buttons | open windows | quick settings).",
+  "tags": [
+    "topbar",
+    "glazewm",
+    "tokyo-night"
+  ],
+  "previewImages": [],
+  "repositoryUrl": "",
+  "widgets": [
+    {
+      "name": "bar",
+      "htmlPath": "./bar.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": false,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "*.html",
+        "*.css",
+        "*.js"
+      ],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": [
+          {
+            "urlRegex": "\\.(html|css|js)$",
+            "duration": 0
+          }
+        ]
+      },
+      "privileges": {
+        "shellCommands": [
+          {
+            "program": "voice-meter",
+            "argsRegex": "^$"
+          },
+          {
+            "program": "cpu-cores",
+            "argsRegex": "^$"
+          },
+          {
+            "program": "theme-watch",
+            "argsRegex": "^$"
+          },
+          {
+            "program": "omawin-music",
+            "argsRegex": "^(watch|add ((podcasts|radio|suno) )?https?://\\S+|suno-show -?\\d+ -?\\d+ \\d+ \\d+|suno-hide|suno-create|tracks [\\w-]+|refresh [\\w-]+|rename [\\w-]+ .+|remove [\\w-]+|play [\\w-]+( \\d+)?|station( (songs|jams))?|rate [0-5]|toggle|pause|resume|next|prev|seek [\\d.]+|shuffle|volume [\\d.]+)$"
+          }
+        ]
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "top_left",
+          "offsetX": "0px",
+          "offsetY": "8px",
+          "width": "100%",
+          "height": "36px",
+          "monitorSelection": {
+            "type": "all"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
+    },
+    {
+      "name": "dock",
+      "htmlPath": "./dock.html",
+      "zOrder": "normal",
+      "shownInTaskbar": false,
+      "focused": false,
+      "resizable": false,
+      "transparent": true,
+      "includeFiles": [
+        "*.html",
+        "*.css",
+        "*.js"
+      ],
+      "caching": {
+        "defaultDuration": 604800,
+        "rules": [
+          {
+            "urlRegex": "\\.(html|css|js)$",
+            "duration": 0
+          }
+        ]
+      },
+      "privileges": {
+        "shellCommands": [
+          {
+            "program": "app-icons",
+            "argsRegex": "^[0-9 ]+$"
+          },
+          {
+            "program": "theme-watch",
+            "argsRegex": "^$"
+          }
+        ]
+      },
+      "presets": [
+        {
+          "name": "default",
+          "anchor": "bottom_left",
+          "offsetX": "0px",
+          "offsetY": "0px",
+          "width": "100%",
+          "height": "62px",
+          "monitorSelection": {
+            "type": "all"
+          },
+          "dockToEdge": {
+            "enabled": false,
+            "edge": null,
+            "windowMargin": "0px"
+          }
+        }
+      ]
+    }
+  ]
+}

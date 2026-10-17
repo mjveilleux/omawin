@@ -1,0 +1,16 @@
+# What omawin opens things with, like Omarchy's defaults. `omawin default <kind> <name>` picks
+# one for this PC (installed first if it's missing); `omawin default` shows the picks. The
+# first row of a kind is the default when nothing was picked. The pick is per PC, in
+# %LOCALAPPDATA%\launcher\defaults\<kind>.
+#
+#   <kind> | <name> | <label> | <winget id, or a script of this repo that installs it> | <program>
+#
+# Everything that opens a terminal or an editor goes through `omawin launch terminal|project|editor`,
+# which knows how to drive each of these (bin/omawin.cs).
+
+terminal | noctty | noctty (Ghostty for Windows) | bin/noctty.ps1 | noctty.exe
+terminal | wt | Windows Terminal | Microsoft.WindowsTerminal | wt.exe
+
+editor | nvim | Neovim (in the terminal) | Neovim.Neovim | nvim.exe
+editor | neovide | Neovide | Neovide.Neovide | neovide.exe
+editor | code | VS Code | Microsoft.VisualStudioCode | code.cmd

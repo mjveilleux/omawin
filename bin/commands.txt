@@ -1,0 +1,79 @@
+# omawin's commands: `omawin <group> <name> [arguments]`, like Omarchy's `omarchy`. The keys
+# (glazewm/config.yaml), the system menu (launcher/menu.txt: `omawin <command>` actions), the
+# dock and you in a terminal all use these names. `omawin help` lists them; bin/omawin.cs runs them.
+#
+#   <command> | <what it does, one line> | <action>
+#
+# Actions:
+#   app <request>          hand the menu app (menu-app/, always running) a request: instant
+#   pwsh <script> [args]   a PowerShell script of this repo, path from the repo root; in your
+#                          terminal when typed, hidden when run from a key
+#   run <program> [args]   start a program
+#   builtin <name> [args]  done by omawin.exe itself: launch-terminal, launch-project,
+#                          launch-editor, terminal-here, terminal-warm, update-terminal, default
+# {repo} in an action is this repo's folder; a pwsh script's path may start with {user}/, your
+# user layer (docs/work.md: ~/omawin-work, or OMAWIN_USER_LAYER).
+# Words typed after the command are added to the end.
+
+launcher | The launcher (Win+Space); with a page name, that page: projects, clipboard, localhost, reports, keys, audio (the sound: speakers, what plays on them, microphones), quick (Quick settings: the switches above the sound), about | app --launcher
+files | The file finder (Win+F) | app --files
+menu | The system menu (Win+Alt+Space); with a row id, that submenu: omawin menu install | app --open
+
+capture screenshot | Screenshot (Win+Shift+S): drag a region, click a window, Enter for everything | app --snip
+capture text | Text from the screen (Win+Shift+T): drag over it, its text is copied | app --snip text
+
+theme set | Apply a theme: omawin theme set gruvbox [-Background village-square] | pwsh themes/set-theme.ps1
+theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
+theme import | Bring in Omarchy's themes (rerun for new ones) | pwsh themes/import-omarchy.ps1
+theme lockscreen | The lock screen's next background | pwsh themes/set-lockscreen.ps1 -Next
+
+terminal here | A terminal in the focused window's folder (Win+Enter) | builtin terminal-here
+workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal --title rename -- pwsh -NoLogo -NoProfile -File "{repo}\launcher\rename-workspace.ps1"
+
+launch terminal | A terminal, in the default terminal: [--dir <folder>] [--title <title>] [--wsl] [-- <command>] | builtin launch-terminal
+launch project | A project window (launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
+launch editor | A file or folder in the default editor | builtin launch-editor
+default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one | builtin default
+
+restart zebar | Restart the bar and the dock | pwsh zebar/start.ps1
+restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+R) | pwsh themes/render.ps1 -Reload
+restart menu | Rebuild and restart the menu app (after editing menu-app/) | pwsh menu-app/build.ps1
+restart music | Rebuild the music player (after editing music/); the bar picks it up by itself | pwsh music/build.ps1
+
+music | The music, podcast and radio player in the bar: open (Win+M), add <url>, add podcasts <url>, add radio <url> [name], add suno <url>, suno-create (Suno's create page, to make a song), list, toggle, next, prev, rate <1-5>, station [songs|jams] (music/) | run omawin-music
+agent listen | Talk to omawin's agent (Ctrl+Win+H): it listens; a second press sends what you said to a herdr session on workspace 9, where it does it live (quick changes to omawin, music, issues) | run omawin-listen.exe
+agent open | Show omawin's agent: its herdr session on workspace 9, with OpenCode's service in the first tab and a tab per request | pwsh agent/open.ps1
+agent start | Start omawin's agent's herdr session in the background, with OpenCode's service in it, so requests only attach (GlazeWM does this at login) | pwsh agent/start.ps1
+agent cancel | Stop listening for the agent and drop what was said | run omawin-listen.exe cancel
+agent ask | Ask omawin's agent, typed: it does it in the background (OpenCode or Claude Code, agent/config.json) it adds music and podcasts, opens issues, starts work in a worktree (docs/agent.md) | pwsh agent/ask.ps1
+
+user new | Start this Windows account's user layer (docs/work.md): git identity, empty launcher / shell files, a git repo; -Repo <name> keeps it in a private GitHub repo | pwsh bin/user-new.ps1
+claude sync | Claude Code's rules, skills, settings and plugins from your shared layer and this account's (docs/work.md); install runs it | pwsh bin/claude-sync.ps1
+
+reports index | Refresh the Reports list now (your user layer's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
+
+update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
+update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
+migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
+profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
+profile ram | What's using the memory and the processor, by app, omawin's parts against their budgets (-Save keeps a history and shows what changed, -Json for agents) | pwsh bin/profile-ram.ps1
+check | Health check: is everything in place and running | pwsh check.ps1
+install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
+no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh no-ads.ps1
+preset list | The presets: opt-in groups of tools on top of the core (packages.ps1), the picked ones marked | pwsh bin/preset.ps1 list
+preset add | Pick a preset and install it now: omawin preset add data | pwsh bin/preset.ps1 add
+preset remove | Unpick a preset (what it installed stays): omawin preset remove data | pwsh bin/preset.ps1 remove
+start | Start the menu app in the background (GlazeWM does this at login) | app --start-hidden
+start terminal | Keep the default terminal running in the background, so new ones open fast (GlazeWM does this at login) | builtin terminal-warm
+start glazewm | Start GlazeWM once Windows' taskbar is up, again if it crashes at start (the sign-in task runs this) | builtin start-glazewm
+
+capture color | Colour picker: a loupe over the frozen screen; click copies the colour as #rrggbb | app --snip color
+capture qr | Read QR codes: drag over one (click a window, Enter for everything); the text is copied, not opened | app --snip qr
+toggle stay-awake | Keep the PC and screen awake, or stop; lasts while the menu app runs (%LOCALAPPDATA%\launcher\stay-awake while on) | app --toggle stay-awake
+wifi | Wi-Fi: on, off, toggle, connect <network> (one Windows already saved), disconnect | app --qs wifi
+bluetooth | Bluetooth: on, off, toggle, connect <device>, disconnect <device> (one of the paired ones) | app --qs bluetooth
+brightness | Monitor brightness: up, down, set <0-100> (every monitor that reports a brightness control) | app --qs brightness
+power | Power mode: efficiency, balanced, performance, cycle (the mode, not Windows' plan) | app --qs power
+toggle night-light | Night light on or off. Windows has no API for it, so this opens the setting | app --qs night-light
+toggle dnd | Do not disturb on or off. No API for that either; this opens the setting | app --qs dnd
+about | About omawin and this PC (version, Windows, CPU, GPU, memory, uptime, theme), drawn like the terminal's fastfetch, in its own window | app --about

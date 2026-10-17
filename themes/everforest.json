@@ -1,0 +1,31 @@
+{
+  "name": "Everforest",
+  "mode": "dark",
+  "background": "#2d353b",
+  "surface": "#343f44",
+  "selection": "#3d484d",
+  "border": "#475258",
+  "foreground": "#d3c6aa",
+  "muted": "#d3c6aa",
+  "comment": "#4f585e",
+  "accent": "#7fbbb3",
+  "purple": "#d699b6",
+  "cyan": "#83c092",
+  "teal": "#83c092",
+  "green": "#a7c080",
+  "yellow": "#dbbc7f",
+  "orange": "#e09d7f",
+  "red": "#e67e80",
+  "gradient": [
+    "#d699b6",
+    "#7fbbb3",
+    "#83c092",
+    "#83c092",
+    "#a7c080"
+  ],
+  "terminal": "Everforest",
+  "nvimSpec": "everforest",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/everforest/backgrounds/1-tree-tops.webp"
+  ]
+}

@@ -1,0 +1,34 @@
+{
+  "name": "Ristretto",
+  "mode": "dark",
+  "background": "#2c2525",
+  "surface": "#3d2f2a",
+  "selection": "#403e41",
+  "border": "#72696a",
+  "foreground": "#e6d9db",
+  "muted": "#e6d9db",
+  "comment": "#72696a",
+  "accent": "#f38d70",
+  "purple": "#bebffd",
+  "cyan": "#9bf1e1",
+  "teal": "#85dacc",
+  "green": "#adda78",
+  "yellow": "#f9cc6c",
+  "orange": "#fb9a77",
+  "red": "#fd6883",
+  "gradient": [
+    "#bebffd",
+    "#f38d70",
+    "#9bf1e1",
+    "#85dacc",
+    "#adda78"
+  ],
+  "terminal": "Ristretto",
+  "nvimSpec": "ristretto",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ristretto/backgrounds/0-launch.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ristretto/backgrounds/1-color-curves.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ristretto/backgrounds/2-coffee-beans.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/ristretto/backgrounds/3-industrial-moon.webp"
+  ]
+}

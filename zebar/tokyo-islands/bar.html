@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" type="text/css" href="./styles.css" />
+    <!-- The picked theme's colors (themes/render.ps1 writes it), kept current by theme.js. -->
+    <link rel="stylesheet" type="text/css" href="./theme.css" />
+    <link rel="stylesheet" type="text/css" href="./music.css" />
+    <script type="module" src="./theme.js"></script>
+  </head>
+  <body>
+    <div class="bar">
+      <div class="left island" id="left"></div>
+      <div class="center">
+        <!-- The music's waves while omawin-music plays (music.js), then what's playing elsewhere
+             and the clock. -->
+        <div class="island" id="center-island">
+          <canvas class="waves hidden" id="waves"></canvas><span class="sep"></span><span id="center" style="display: contents"></span>
+        </div>
+        <!-- Shown instead of the clock while dictation (Win+H) or omawin's agent (Ctrl+Win+H) is listening. -->
+        <div class="island voice hidden" id="voice">
+          <span class="mic">&#xF036C;</span>
+          <div class="bars" id="bars"></div>
+          <span class="listening">listening</span>
+        </div>
+      </div>
+      <div class="right-side">
+      <!-- The music player (music.js): click it for the panel. -->
+      <div class="island music-pill" id="music-pill"></div>
+      <div class="right island" id="right">
+        <!-- CPU and RAM stay put (not redrawn with the other stats). CPU is its total; click
+             it for every core. Hover RAM for its card. -->
+        <button class="item cpu" id="cpu" title="CPU: click for every core">
+          <span class="icon">&#xF0EE0;</span><span class="pct" id="cpu-pct"></span>
+        </button>
+        <div class="item memory" id="mem" data-card="mem-card">
+          <span class="icon">&#xF035B;</span><span class="ring" id="mem-ring"></span>
+        </div>
+        <span id="stats" style="display: contents"></span>
+        <button class="item tray-toggle" id="tray-toggle" title="System tray"></button>
+      </div>
+      </div>
+    </div>
+    <!-- Drop-downs under the bar (the bar's window grows to fit whichever is open). -->
+    <div class="tray-panel drop hidden" id="tray"></div>
+    <div class="tray-tip hidden" id="tray-tip"></div>
+    <div class="card drop hidden" id="cpu-card">
+      <div class="card-head"><span class="card-title"><span class="icon cpu-icon">&#xF0EE0;</span>CPU</span><span class="big" id="cpu-card-pct"></span></div>
+      <div class="card-sub" id="cpu-card-sub"></div>
+      <div class="core-grid" id="core-grid"></div>
+    </div>
+    <div class="card drop hidden" id="mem-card">
+      <div class="card-head"><span class="card-title"><span class="icon mem-icon">&#xF035B;</span>Memory</span><span class="big" id="mem-card-pct"></span></div>
+      <div class="track big-track"><span id="mem-card-fill"></span></div>
+      <div class="stat-rows" id="mem-rows"></div>
+    </div>
+
+    <!-- Plain JS, no build step. Zebar caches the module for a week (zpack.json). -->
+    <script type="module">
+      import * as zebar from 'https://esm.sh/zebar@3.3';
+      import { startMusic } from './music.js';
+
+      const providers = zebar.createProviderGroup({
+        glazewm: { type: 'glazewm' },
+        date: { type: 'date', formatting: 'EEE MMM d|h:mm a' },
+        media: { type: 'media' },
+        cpu: { type: 'cpu' },
+        memory: { type: 'memory' },
+        network: { type: 'network', refreshInterval: 3000 },
+        battery: { type: 'battery' },
+        systray: { type: 'systray' },
+      });
+
+      // Nerd Font icons (codepoints from the nerd-fonts glyph list).
+      const icon = {
+        cpu: '\u{F0EE0}',
+        memory: '\u{F035B}',
+        ethernet: '\u{F0200}',
+        wifi: ['\u{F092F}', '\u{F091F}', '\u{F0922}', '\u{F0925}', '\u{F0928}'],
+        wifiOff: '\u{F092E}',
+        battery: ['\u{F007A}', '\u{F007B}', '\u{F007C}', '\u{F007D}', '\u{F007E}', '\u{F007F}', '\u{F0080}', '\u{F0081}', '\u{F0082}', '\u{F0079}'],
+        charging: '\u{F0084}',
+        music: '\u{F0387}',
+        play: '\u{F040A}',
+        pause: '\u{F03E4}',
+        horizontal: '\u{F04E1}',
+        vertical: '\u{F04E2}',
+        clock: '\u{F0150}',
+        tray: '\u{F0140}', // chevron down; turns over when the tray is open
+      };
+
+      // The tray is collapsed behind a button so the right island fits on a laptop screen. Open,
+      // it's a vertical list dropping down under the bar: the bar's window is only as tall as
+      // the bar, so it grows to fit the list and shrinks back when it closes.
+      const BAR_HEIGHT = 36; // the preset's height in zpack.json
+      let trayOpen = false;
+      // While something drops down (the music panel, the CPU card, the tray), the bar's window
+      // stays above every other window: its zOrder is normal, so the window you're in would
+      // otherwise cover the drop-down. Closed, it's an ordinary window again.
+      let onTop = false;
+      async function fitWindow() {
+        const bottoms = [...document.querySelectorAll('.drop:not(.hidden)')].map(el => el.getBoundingClientRect().bottom);
+        const height = bottoms.length ? Math.ceil(Math.max(...bottoms)) + 24 : BAR_HEIGHT;
+        const win = zebar.currentWidget().tauriWindow;
+        const top = bottoms.length > 0;
+        if (top !== onTop) {
+          onTop = top;
+          try {
+            await win.setAlwaysOnTop(top);
+          } catch (err) {
+            console.error('could not raise the bar', err);
+          }
+        }
+        try {
+          await win.setSize({ type: 'Logical', width: window.innerWidth, height });
+        } catch (err) {
+          console.error('could not resize the bar', err);
+        }
+      }
+      function setTray(open) {
+        trayOpen = open;
+        if (!open) $('tray-tip').classList.add('hidden');
+        $('tray').style.maxHeight = `${Math.max(200, screen.availHeight - 120)}px`;
+        $('tray').classList.toggle('hidden', !open);
+        $('tray-toggle').classList.toggle('open', open);
+        fitWindow();
+      }
+
+      const $ = id => document.getElementById(id);
+      const esc = s =>
+        String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+      const pct = n => `${Math.round(n)}%`;
+
+      // App icons shown next to each workspace number, by process name (lowercase).
+      const appIcons = {
+        chrome: '\u{F02AF}', msedge: '\u{F01E9}', firefox: '\u{F0239}', brave: '\u{F02AF}',
+        windowsterminal: '\u{F018D}', 'git-bash': '\u{F018D}', mintty: '\u{F018D}',
+        code: '\u{F0A1E}', cursor: '\u{F0A1E}', positron: '\u{F0320}', neovide: '\u{E83A}',
+        pbidesktop: '\u{F0128}', ssms: '\u{F01BC}', tabulareditor: '\u{F01BC}', tabulareditor3: '\u{F01BC}', dbeaver: '\u{F01BC}',
+        excel: '\u{F138F}', winword: '\u{F1392}', powerpnt: '\u{F1390}',
+        'ms-teams': '\u{F02BB}', slack: '\u{F04B1}', discord: '\u{F066F}', olk: '\u{F0D22}', outlook: '\u{F0D22}',
+        spotify: '\u{F04C7}', explorer: '\u{F024B}', notepad: '\u{F11D7}', systemsettings: '\u{F0493}',
+        claude: '\u{F06A9}',
+      };
+      const defaultAppIcon = '\u{F0614}';
+
+      // Windows can sit inside split containers, so walk the tree.
+      function windowsOf(container) {
+        return (container.children ?? []).flatMap(c => (c.type === 'window' ? [c] : windowsOf(c)));
+      }
+      function iconsFor(ws) {
+        const seen = new Set();
+        for (const w of windowsOf(ws)) seen.add(appIcons[(w.processName ?? '').toLowerCase()] ?? defaultAppIcon);
+        return [...seen].slice(0, 4).join(' ');
+      }
+
+      // Workspace being renamed (an input replaces its label until Enter/Escape).
+      let renaming = null;
+
+      // --- left island: workspaces, binding mode, tiling direction ---------------------
+      function renderLeft(wm) {
+        if (!wm) return '';
+        const workspaces = wm.currentWorkspaces
+          .map(ws => {
+            const cls = [
+              'item',
+              'workspace',
+              ws.children.length > 0 && 'occupied',
+              ws.isDisplayed && 'displayed',
+              ws.hasFocus && 'focused',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            const custom = ws.displayName && ws.displayName !== ws.name ? ws.displayName : '';
+            const icons = iconsFor(ws);
+            return `<button class="${cls}" data-cmd="focus --workspace ${esc(ws.name)}" data-ws="${esc(ws.name)}" data-label="${esc(custom)}" title="Right-click to name this workspace"><span class="num">${esc(ws.name)}</span>${
+              custom ? `<span class="label">${esc(custom)}</span>` : ''
+            }${icons ? `<span class="apps">${icons}</span>` : ''}</button>`;
+          })
+          .join('');
+        const modes = wm.bindingModes
+          .map(m => `<button class="item mode" data-cmd="wm-disable-binding-mode --name ${esc(m.name)}">${esc(m.displayName ?? m.name)}</button>`)
+          .join('');
+        const paused = wm.isPaused
+          ? `<button class="item paused" data-cmd="wm-toggle-pause">paused</button>`
+          : '';
+        const direction = `<button class="item direction" data-cmd="toggle-tiling-direction" title="Tiling direction (alt+v)">${
+          wm.tilingDirection === 'horizontal' ? icon.horizontal : icon.vertical
+        }</button>`;
+        return workspaces + (modes || paused ? '<span class="sep"></span>' + modes + paused : '') + '<span class="sep"></span>' + direction;
+      }
+
+      let music = null; // the music player (music.js), started further down
+
+      // --- center island: now playing + clock -----------------------------------------
+      function renderCenter(o) {
+        let html = '';
+        const s = o.media?.currentSession;
+        if (s && s.title && !music?.isOurs(s)) {
+          const text = s.artist ? `${s.title} — ${s.artist}` : s.title;
+          html += `<button class="item media ${s.isPlaying ? '' : 'paused-media'}" data-media="toggle" title="Play / pause">${
+            s.isPlaying ? icon.pause : icon.play
+          }<span class="text">${esc(text)}</span></button><span class="sep"></span>`;
+        }
+        if (o.date) {
+          const [date, time] = o.date.formatted.split('|');
+          html += `<div class="item clock"><span class="date">${esc(date)}</span><span class="time">${esc(time)}</span></div>`;
+        }
+        return html;
+      }
+
+      // --- right island: cpu, memory, network, battery (tray is rendered separately) ---
+      function networkIcon(n) {
+        // With a VPN up, the VPN is the default interface, so look past it to the real link.
+        // (Wi-Fi first; virtual adapters like VirtualBox / Hyper-V also report as ethernet.)
+        const up = i => i?.ipv4Addresses?.length && !/virtual|hyper-v|vethernet/i.test(`${i.description} ${i.friendlyName}`);
+        const ifaces = n?.interfaces ?? [];
+        const link = [n?.defaultInterface, ...ifaces.filter(i => i.type === 'wifi'), ...ifaces].find(
+          i => (i?.type === 'wifi' || i?.type === 'ethernet') && up(i),
+        );
+        const type = link?.type;
+        if (type === 'ethernet') return icon.ethernet;
+        if (type === 'wifi') {
+          const s = n.defaultGateway?.signalStrength ?? 100; // unknown behind the VPN: full
+          return icon.wifi[s >= 80 ? 4 : s >= 65 ? 3 : s >= 40 ? 2 : s >= 25 ? 1 : 0];
+        }
+        return icon.wifiOff;
+      }
+
+      // A Windows VPN connection (launcher items "@vpn <name>" connect one): while it's connected
+      // it's an interface named after itself, name and description alike (no ordinary adapter
+      // is), and "VPN <its first word>" shows next to the wifi icon. Null when none is.
+      function connectedVpn(n) {
+        const vpn = (n?.interfaces ?? []).find(i => i.friendlyName && i.friendlyName === i.description);
+        return vpn ? vpn.friendlyName : null;
+      }
+
+      // Per-core load, one line a second from cpu-cores (~/.local/bin, built from cpu-cores.cs),
+      // shown in the CPU card. cpu-cores only runs while the card is open (click CPU), so the bar
+      // costs nothing for it the rest of the time. The bars are made once; each reading only
+      // changes their sizes and numbers, and CSS eases them over the second, so they glide.
+      const coreCells = [];
+      function showCores(loads) {
+        if (coreCells.length !== loads.length) {
+          $('core-grid').innerHTML = '';
+          coreCells.length = 0;
+          loads.forEach((_, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'core';
+            cell.innerHTML = `<span class="core-n">${i + 1}</span><span class="track"><span></span></span><span class="core-v"></span>`;
+            $('core-grid').appendChild(cell);
+            coreCells.push({ fill: cell.querySelector('.track span'), value: cell.querySelector('.core-v') });
+          });
+          if (cpuOpen) fitWindow(); // the card just grew its rows: make room for them
+        }
+        loads.forEach((v, i) => {
+          coreCells[i].fill.style.transform = `scaleX(${(v / 100).toFixed(3)})`;
+          coreCells[i].value.textContent = `${v}%`;
+          coreCells[i].value.classList.toggle('busy', v >= 60);
+        });
+      }
+
+      // RAM: the icon + a small ring that fills with usage in the bar; the numbers are in its card.
+      const gb = b => (b / 1024 ** 3).toFixed(1);
+      function showMemory(m) {
+        $('mem-ring').style.setProperty('--p', m.usage.toFixed(1));
+        $('mem').classList.toggle('high', m.usage > 90);
+        $('mem-card-pct').textContent = pct(m.usage);
+        $('mem-card-fill').style.transform = `scaleX(${(m.usage / 100).toFixed(3)})`;
+        const rows = [
+          ['used', `${gb(m.usedMemory)} GB`],
+          ['free', `${gb(m.freeMemory)} GB`],
+          ['total', `${gb(m.totalMemory)} GB`],
+        ];
+        if (m.totalSwap) rows.push(['page file', `${gb(m.usedSwap)} / ${gb(m.totalSwap)} GB`]);
+        set('mem-rows', rows.map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join(''));
+      }
+
+      function showCpu(c) {
+        $('cpu').classList.toggle('high', c.usage > 85);
+        $('cpu-pct').textContent = pct(c.usage);
+        $('cpu-card-pct').textContent = pct(c.usage);
+        const ghz = c.frequency ? ` · ${(c.frequency / 1000).toFixed(2)} GHz` : '';
+        set('cpu-card-sub', esc(`${c.physicalCoreCount} cores · ${c.logicalCoreCount} threads${ghz}`));
+      }
+
+      // Hover cards: shown while the mouse is on the item or the card, centered under the item.
+      let hideTimer = null;
+      function showCard(anchor) {
+        clearTimeout(hideTimer);
+        const card = $(anchor.dataset.card);
+        document.querySelectorAll('.card').forEach(c => c !== card && c.id !== 'cpu-card' && c.classList.add('hidden'));
+        if (!card.classList.contains('hidden')) return;
+        card.classList.remove('hidden');
+        const a = anchor.getBoundingClientRect();
+        const left = a.left + a.width / 2 - card.offsetWidth / 2;
+        card.style.left = `${Math.max(10, Math.min(window.innerWidth - card.offsetWidth - 10, left))}px`;
+        fitWindow();
+      }
+      function hideCardsSoon() {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          document.querySelectorAll('.card:not(#cpu-card)').forEach(c => c.classList.add('hidden'));
+          fitWindow();
+        }, 250);
+      }
+      // Tray status bubbles: hover an icon in the open tray to see its text to the left of it
+      // (nothing for apps without any).
+      $('tray').addEventListener('mouseover', e => {
+        const row = e.target.closest('.tray-row');
+        const tip = $('tray-tip');
+        if (!row || !row.dataset.tip) return tip.classList.add('hidden');
+        tip.textContent = row.dataset.tip;
+        tip.classList.remove('hidden');
+        const r = row.getBoundingClientRect();
+        const panel = $('tray').getBoundingClientRect();
+        tip.style.top = `${r.top + r.height / 2 - tip.offsetHeight / 2}px`;
+        tip.style.left = `${panel.left - tip.offsetWidth - 8}px`;
+      });
+      $('tray').addEventListener('mouseleave', () => $('tray-tip').classList.add('hidden'));
+
+      document.querySelectorAll('[data-card]').forEach(anchor => {
+        anchor.addEventListener('mouseenter', () => showCard(anchor));
+        anchor.addEventListener('mouseleave', hideCardsSoon);
+      });
+      document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+        card.addEventListener('mouseleave', hideCardsSoon);
+      });
+      let cores = null; // the running cpu-cores, while the CPU card is open
+      async function startCpuCores() {
+        if (cores) return;
+        try {
+          cores = await zebar.shellSpawn('cpu-cores');
+          cores.onStdout(line => {
+            const loads = String(line).trim().split(' ').map(Number).filter(n => !Number.isNaN(n));
+            if (loads.length) showCores(loads);
+          });
+          // It stops itself after 10 readings (see cpu-cores.cs): another, while the card is open.
+          const proc = cores;
+          proc.onExit(() => {
+            if (cores !== proc) return; // an old one, from before the card was closed
+            cores = null;
+            if (cpuOpen) startCpuCores();
+          });
+        } catch (err) {
+          cores = null;
+          console.error('cpu-cores unavailable', err);
+        }
+      }
+      function stopCpuCores() {
+        const proc = cores;
+        cores = null;
+        try { proc?.kill(); } catch {}
+      }
+
+      // The CPU card: click CPU to open it (under the button), click it again, click elsewhere
+      // or press Esc to close it.
+      let cpuOpen = false;
+      function setCpuCard(open) {
+        cpuOpen = open;
+        const card = $('cpu-card');
+        card.classList.toggle('hidden', !open);
+        if (open) {
+          const a = $('cpu').getBoundingClientRect();
+          const left = a.left + a.width / 2 - card.offsetWidth / 2;
+          card.style.left = `${Math.max(10, Math.min(window.innerWidth - card.offsetWidth - 10, left))}px`;
+          startCpuCores();
+        } else stopCpuCores();
+        fitWindow();
+      }
+
+      function renderStats(o) {
+        let html = '';
+        if (o.network) {
+          const ssid = o.network.defaultGateway?.ssid;
+          const vpnName = connectedVpn(o.network);
+          const vpn = vpnName
+            ? `<span class="vpn" title="${esc(vpnName)} connected"><span class="tag">VPN</span>${esc(vpnName.split(' ')[0])}</span>`
+            : '';
+          html += `<div class="item network" title="${esc(ssid ?? '')}"><span class="icon">${networkIcon(o.network)}</span>${vpn}</div>`;
+        }
+        if (o.battery && o.battery.state !== 'unknown') {
+          const p = o.battery.chargePercent;
+          const glyph = o.battery.isCharging ? icon.charging : icon.battery[Math.min(9, Math.floor(p / 10))];
+          html += `<div class="item battery ${p < 20 && !o.battery.isCharging ? 'low' : ''}"><span class="icon">${glyph}</span>${pct(p)}</div>`;
+        }
+        return html + '<span class="sep"></span>';
+      }
+
+      // Tray icons are only rebuilt when the set of icons changes, so they don't flicker.
+      let trayKey = '';
+      function renderTray(tray) {
+        const icons = tray?.icons ?? [];
+        const key = icons.map(i => i.id + ':' + i.iconHash).join(',');
+        if (key === trayKey) return;
+        trayKey = key;
+        // A column of big icons; hovering one shows its status text in a bubble beside it.
+        $('tray').innerHTML = icons
+          .map(i => `<button class="tray-row" data-tip="${esc(String(i.tooltip ?? '').trim())}" data-tray="${esc(i.id)}"><img src="${esc(i.iconUrl)}" /></button>`)
+          .join('');
+        $('tray-toggle').dataset.count = icons.length;
+        if (trayOpen) fitWindow();
+      }
+
+      // Only touch the DOM when an island's content actually changed.
+      const last = {};
+      function set(id, html) {
+        if (last[id] !== html) {
+          last[id] = html;
+          $(id).innerHTML = html;
+        }
+      }
+
+      function render() {
+        const o = providers.outputMap;
+        if (!renaming) set('left', renderLeft(o.glazewm));
+        // Win+M opens the panel on the focused monitor's bar only (music.js).
+        const g = o.glazewm;
+        if (g?.currentMonitor && g?.focusedMonitor) music?.setFocused(g.currentMonitor.id === g.focusedMonitor.id);
+        set('center', renderCenter(o));
+        if (o.cpu) showCpu(o.cpu);
+        if (o.memory) showMemory(o.memory);
+        set('stats', renderStats(o));
+        renderTray(o.systray);
+      }
+
+      // One delegated handler for every clickable thing in the bar.
+      document.addEventListener('click', e => {
+        const o = providers.outputMap;
+        if (e.target.closest('#tray-toggle')) return setTray(!trayOpen);
+        if (e.target.closest('#cpu')) return setCpuCard(!cpuOpen);
+        if (cpuOpen && !e.target.closest('#cpu-card')) setCpuCard(false);
+        const el = e.target.closest('[data-cmd], [data-media], [data-tray]');
+        // A click anywhere else (including the see-through space under the bar) closes the tray.
+        if (trayOpen && !e.target.closest('#tray')) setTray(false);
+        if (!el) return;
+        if (el.dataset.cmd) o.glazewm?.runCommand(el.dataset.cmd);
+        else if (el.dataset.media) o.media?.togglePlayPause();
+        else if (el.dataset.tray) {
+          o.systray?.onLeftClick(el.dataset.tray);
+          setTray(false);
+        }
+      });
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && trayOpen) setTray(false);
+        if (e.key === 'Escape' && cpuOpen) setCpuCard(false);
+      });
+      window.addEventListener('blur', () => {
+        if (trayOpen) setTray(false);
+        if (cpuOpen) setCpuCard(false);
+      });
+      document.addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const tray = e.target.closest('[data-tray]');
+        if (tray) return providers.outputMap.systray?.onRightClick(tray.dataset.tray);
+        const ws = e.target.closest('[data-ws]');
+        if (ws) startRename(ws);
+      });
+
+      // Right-click a workspace: type a project name, Enter to set it, Escape to cancel,
+      // empty to clear. Names last until GlazeWM restarts. Letters, digits, - _ . only, since
+      // the name is passed to a GlazeWM command (spaces become dashes).
+      function startRename(button) {
+        renaming = button.dataset.ws;
+        const input = document.createElement('input');
+        input.className = 'rename';
+        input.value = button.dataset.label;
+        input.placeholder = 'project';
+        button.replaceWith(input);
+        input.focus();
+        input.select();
+
+        const finish = save => {
+          if (!renaming) return;
+          const name = renaming;
+          renaming = null;
+          if (save) {
+            const label = input.value.trim().replace(/\s+/g, '-').replace(/[^\w.-]/g, '');
+            providers.outputMap.glazewm?.runCommand(
+              `update-workspace-config --workspace ${name} --display-name ${label || name}`,
+            );
+          }
+          last.left = null; // force the island to redraw
+          render();
+        };
+        input.addEventListener('keydown', e => {
+          if (e.key === 'Enter') finish(true);
+          if (e.key === 'Escape') finish(false);
+        });
+        input.addEventListener('blur', () => finish(false));
+      }
+
+      // --- voice typing: an aurora equalizer that moves with your voice -------------------
+      // voice-meter (~/.local/bin, built from voice-meter.cs) prints "1 <level>" while
+      // Windows voice typing is listening and "0" when it isn't.
+      const BAR_COUNT = 36;
+      const mix = (a, b, t) => {
+        const p = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+        const [x, y] = [p(a), p(b)];
+        return `rgb(${x.map((v, i) => Math.round(v + (y[i] - v) * t)).join(',')})`;
+      };
+      const barEls = [];
+      for (let i = 0; i < BAR_COUNT; i++) {
+        const el = document.createElement('span');
+        $('bars').appendChild(el);
+        barEls.push(el);
+      }
+      // The theme's gradient (theme.css sets --aurora-1..5), again after a theme switch.
+      function paintAurora() {
+        const css = getComputedStyle(document.documentElement);
+        const aurora = [1, 2, 3, 4, 5].map(i => css.getPropertyValue(`--aurora-${i}`).trim());
+        if (!aurora.every(c => /^#[0-9a-f]{6}$/i.test(c))) return;
+        barEls.forEach((el, i) => {
+          const t = (i / (BAR_COUNT - 1)) * (aurora.length - 1);
+          const k = Math.min(Math.floor(t), aurora.length - 2);
+          el.style.background = mix(aurora[k], aurora[k + 1], t - k);
+        });
+      }
+      paintAurora();
+      document.addEventListener('omawin-theme', paintAurora);
+
+      let listening = false;
+      let target = 0; // latest mic level
+      let level = 0; // smoothed
+      function setListening(on) {
+        if (on === listening) return;
+        listening = on;
+        $('voice').classList.toggle('hidden', !on);
+        $('center-island').classList.toggle('hidden', on);
+        if (on && !animating) {
+          animating = true;
+          requestAnimationFrame(animate);
+        }
+      }
+      // Voice-driven: the middle bars show your voice right now and older moments ripple
+      // outward to the edges, so every word sends a wave across the pill. Silence is a flat
+      // line. Auto-gain learns how loud your mic is, so normal speech fills the pill.
+      const HALF = Math.ceil(BAR_COUNT / 2);
+      const history = new Array(HALF).fill(0);
+      const NOISE_FLOOR = 0.012; // room hum / fan: ignored
+      let peak = 0.08; // loudest recent level (auto-gain), decays slowly
+      let lastShift = 0;
+      let animating = false; // one loop at most, however often listening flips
+      function animate(now) {
+        if (!listening) return void (animating = false);
+        // The next frame in 40 ms (~25 a second, like music.js): without a GPU, every display
+        // frame cost a lot more for no visible gain.
+        setTimeout(() => requestAnimationFrame(animate), 40);
+        const raw = Math.max(0, target - NOISE_FLOOR);
+        peak = Math.max(raw, peak * 0.996, 0.04);
+        const norm = Math.pow(Math.min(1, raw / peak), 0.75);
+        level += (norm - level) * (norm > level ? 0.6 : 0.18); // snap up, ease down
+        if (now - lastShift > 28) {
+          history.unshift(level); // newest in the middle...
+          history.pop(); // ...oldest falls off the edges
+          lastShift = now;
+        }
+        const t = now / 1000;
+        const middle = (BAR_COUNT - 1) / 2;
+        barEls.forEach((el, i) => {
+          const d = Math.abs(i - middle);
+          const v = history[Math.min(HALF - 1, Math.floor(d))];
+          // A little wobble that only shows when there's sound, so loud words look wavy.
+          const wobble = 1 + 0.3 * v * Math.sin(t * 14 + i * 0.8);
+          const h = 0.06 + 0.94 * v * wobble * (1 - (d / HALF) * 0.25);
+          el.style.transform = `scaleY(${Math.max(0.06, Math.min(1, h)).toFixed(3)})`;
+        });
+        $('voice').style.setProperty('--glow', (0.25 + level * 0.75).toFixed(3));
+      }
+
+      async function startVoiceMeter() {
+        try {
+          const proc = await zebar.shellSpawn('voice-meter');
+          proc.onStdout(line => {
+            const [on, value] = String(line).trim().split(' ');
+            // 2: omawin's agent is the one listening (Ctrl+Win+H), not dictation.
+            const agent = on === '2';
+            $('voice').classList.toggle('agent', agent);
+            $('voice').querySelector('.listening').textContent = agent ? 'omawin is listening' : 'listening';
+            setListening(on === '1' || agent);
+            target = parseFloat(value) || 0;
+          });
+          proc.onExit(() => {
+            setListening(false);
+            setTimeout(startVoiceMeter, 3000); // restart it if it ever stops
+          });
+        } catch (err) {
+          console.error('voice-meter unavailable', err);
+        }
+      }
+      startVoiceMeter();
+
+      // The music player: its pill, panel and the waves in the middle (music.js).
+      music = startMusic({ zebar, fitWindow, onChange: () => music && render() });
+
+      $('tray-toggle').innerHTML = `<span class="chev">${icon.tray}</span>`;
+      setTray(false);
+      providers.onOutput(render);
+      render();
+    </script>
+  </body>
+</html>

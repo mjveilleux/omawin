@@ -1,0 +1,29 @@
+# Live-linked folders also hold runtime files the apps write; keep only the configs.
+powershell/*
+!powershell/Microsoft.PowerShell_profile.ps1
+!powershell/profile.ps1
+!powershell/powershell.config.json
+
+windows-terminal/*
+!windows-terminal/settings.json
+
+glazewm/*
+!glazewm/config.yaml
+
+# Zebar writes WebView caches (tmp-*) next to the packs.
+zebar/*
+!zebar/settings.json
+!zebar/start.ps1
+!zebar/tokyo-islands/
+
+# Written by themes/set-theme.ps1 for the chosen theme.
+zebar/tokyo-islands/theme.css
+music/bin/
+music/obj/
+
+# Scratch output: local builds and the release tests (bin/install-binaries.ps1, docs/releases.md)
+# write here, never into the live ~/.local/bin or %LOCALAPPDATA%\system-menu.
+scratch/
+
+# Written by agent/backends/opencode.ps1: the omawin agent for the OpenCode service.
+.opencode/

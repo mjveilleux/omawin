@@ -1,0 +1,87 @@
+# Shortcuts cheat sheet, shown by the launcher (Win+Space -> Shortcuts). Searchable.
+# <section> | <keys> | <what it does>      Keep this in sync when you change a binding.
+
+desktop | Win+Space | launcher: your items + every installed app (native window); again or Esc hides it
+desktop | Win+Shift+S | screenshot: drag a region (click a window; Enter: everything); copied and saved to Pictures\Screenshots
+desktop | Win+Shift+T | text from the screen: drag over it, its text is copied (Windows' OCR; T switches in the screenshot overlay)
+desktop | Win+F | files: find a file or folder, with a preview (tab: which folder, ctrl+enter: show in folder)
+desktop | Win+Alt+Space | system menu: themes, install / remove apps, update, edit configs, power
+desktop | Win+Ctrl+Space | next background for the current theme
+desktop | Win+Shift+V | clipboard history: pick something you copied, Enter pastes it
+desktop | Win+A | quick settings: Wi-Fi, Bluetooth, brightness, power mode, night light, do not disturb, battery — and the speakers and microphones below them (Space: on/off · mute, + −: volume · brightness, Enter: opens / uses)
+desktop | Win+M | music, podcasts and radio: the player in the bar (Space plays / pauses, Esc or Win+M closes)
+desktop | Win+Enter | terminal in the focused window's folder (else ~)
+desktop | Alt+Enter | terminal in ~
+desktop | Win+H | dictate (Handy): tap to start, tap again to stop
+desktop | Alt+N | name this workspace (type a name; empty clears)
+desktop | Alt+Shift+R | reload GlazeWM config
+desktop | Alt+Shift+P | pause / resume tiling
+desktop | Alt+Shift+E | quit GlazeWM
+desktop | Alt+Shift+W | redraw all windows
+
+projects | Win+Space, Projects | open a project: its herdr session, with tabs shell, nvim, claude, opencode
+projects | Ctrl+Space 1 .. 9 | herdr: jump to tab N (Ctrl+Space c new tab, Ctrl+Space n / p next / previous)
+projects | close the window | the herdr session keeps running (agents too); open the project again to reattach
+projects | Win+Space, Localhost | web servers running on this PC / in WSL + favorite sites, open in Chrome
+projects | Ctrl+X (in Localhost) | stop the highlighted server (asks first)
+projects | Ctrl+X (in Clipboard) | delete the highlighted entry
+projects | quit a tool (e.g. :q) | leaves a shell in that tab, in the project folder
+windows | Win+Arrows  /  Alt+H J K L | focus window left / down / up / right
+windows | Win+Shift+Arrows  /  Alt+Shift+H J K L | move window in a direction
+windows | Alt+R | resize mode: H J K L or arrows, Enter/Esc to leave
+windows | Alt+U / Alt+P | narrower / wider
+windows | Alt+I / Alt+O | shorter / taller
+windows | Alt+V | next window opens beside / below (tiling direction)
+windows | Alt+F | fullscreen
+windows | Alt+T | tile a floating window
+windows | Alt+Shift+Space | float / unfloat
+windows | Alt+Space | cycle focus: tiled -> floating -> fullscreen
+windows | Alt+M | minimize
+windows | Alt+Shift+Q | close window
+
+workspaces | Alt+1..9 | go to workspace
+workspaces | Alt+Shift+1..9 | send window to workspace
+workspaces | Alt+S / Alt+A | next / previous workspace in use
+workspaces | Alt+D | last workspace
+workspaces | Alt+Shift+A F D S | move workspace to monitor left / right / up / down
+workspaces | right-click in bar | name a workspace with the mouse
+workspaces | chat apps | Teams, Slack, Discord, Outlook open on 9
+
+neovim | Space Space | find files
+neovim | Space / | search text in project
+neovim | Space e | file explorer
+neovim | :restart | restart Neovim (0.12)
+neovim | Ctrl+\  /  Space T | floating terminal
+neovim | Space db | database UI (dadbod)
+neovim | Space r s / r l | run Lua file / line
+neovim | Space r p | run Python file or selection (uv / poetry aware)
+neovim | Space i s | Elixir: start IEx (iex -S mix in a Mix project)
+neovim | Space i r | Elixir: send file / selection to IEx
+neovim | Space o a | opencode: ask about cursor / selection
+neovim | Space o s | opencode: pick a prompt or command
+neovim | Space o r | opencode: review uncommitted changes
+neovim | Space o i / o c | opencode: interrupt / compact session
+neovim | Ctrl+.  /  Space o t | opencode split
+neovim | g o {motion} / g o o | send range / line to opencode
+neovim | Y Y / P P | yank whole buffer / replace it with paste
+neovim | Space w a | save all
+neovim | Tab h / Tab l | start / end of line
+
+terminal | Ctrl+Shift+V | paste (noctty)
+terminal | F11 / Ctrl+Enter | fullscreen (noctty)
+terminal | Ctrl+Shift+\ / Ctrl+Shift+E | split the pane
+terminal | Alt+Arrows | move between panes
+terminal | Ctrl+Shift+P | command palette
+terminal | Ctrl+Shift+, | reload the terminal's config
+terminal | Ctrl+Space c / n / p / 1..9 | herdr (project windows): new tab / next / previous / tab N
+
+shell | Ctrl+R | fuzzy history
+shell | Ctrl+T | insert a file path (with preview)
+shell | Up / Down | history matching what you typed
+shell | z <name> / zi | jump to a folder / pick one
+shell | ls / ll / lt | list / long list / tree
+shell | lg | lazygit
+shell | gacp <message> | git add, commit, push
+shell | iex | Elixir IEx (iex.bat)
+shell | reload | reload the PowerShell profile
+shell | Update-ShellCache | after upgrading starship or zoxide

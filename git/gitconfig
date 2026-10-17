@@ -1,0 +1,14 @@
+# Shared git settings. ~/.gitconfig includes this file (install.ps1 adds the include),
+# so machine-specific entries git writes itself (safe.directory, etc.) stay out of the repo.
+# Your name and email aren't here: install asks for them once and writes them to your own
+# ~/.gitconfig, or your user layer's git/gitconfig has them (docs/work.md).
+[credential "https://github.com"]
+	helper =
+	helper = !gh auth git-credential
+[credential "https://gist.github.com"]
+	helper =
+	helper = !gh auth git-credential
+[safe]
+	# Neovim run from an admin window leaves its plugin folders owned by Administrators,
+	# which git refuses to touch from a normal shell (Lazy: "dubious ownership").
+	directory = ~/AppData/Local/nvim-data/lazy/*

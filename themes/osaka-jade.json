@@ -1,0 +1,33 @@
+{
+  "name": "Osaka Jade",
+  "mode": "dark",
+  "background": "#111c18",
+  "surface": "#23372B",
+  "selection": "#32473B",
+  "border": "#53685B",
+  "foreground": "#F7E8B2",
+  "muted": "#C1C497",
+  "comment": "#81B8A8",
+  "accent": "#509475",
+  "purple": "#75bbb3",
+  "cyan": "#8CD3CB",
+  "teal": "#2DD5B7",
+  "green": "#549e6a",
+  "yellow": "#459451",
+  "orange": "#a2734b",
+  "red": "#FF5345",
+  "gradient": [
+    "#75bbb3",
+    "#509475",
+    "#8CD3CB",
+    "#2DD5B7",
+    "#549e6a"
+  ],
+  "terminal": "Osaka Jade",
+  "nvimSpec": "osaka-jade",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/osaka-jade/backgrounds/1-glowing-city.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/osaka-jade/backgrounds/2-shaded-entrance.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/osaka-jade/backgrounds/3-mountain-moon.webp"
+  ]
+}

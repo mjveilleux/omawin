@@ -1,0 +1,48 @@
+<!--
+  omawin-music: the music player behind the bar's music pill (zebar/tokyo-islands). One copy
+  plays in the background with no window; the same exe is also the client the bar and you run
+  (omawin-music add <url>, toggle, ...). Built by build.ps1 into ~/.local/bin as one file.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>OmawinMusic</RootNamespace>
+    <AssemblyName>omawin-music</AssemblyName>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- The release this build is from (what the version flag prints). CI passes
+         -p:OmawinRelease=v0.1.0 (.github/workflows/release.yml); a build off a checkout says (dev).
+         No +sha suffix: the tag alone, so a release binary says exactly which release it is. -->
+    <OmawinRelease Condition="'$(OmawinRelease)' == ''">(dev)</OmawinRelease>
+    <InformationalVersion>$(OmawinRelease)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- Small and quiet: it runs all day. One GC thread, no server GC, give memory back. -->
+    <ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
+    <ServerGarbageCollection>false</ServerGarbageCollection>
+    <TieredPGO>false</TieredPGO>
+    <!-- Suno plays in its own page (the omawin-music suno window, suno/SunoHost.cs): a WinForms window with
+         WebView2. WebView2's native loader goes inside the one exe. -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <!-- WebView2's package carries a WPF part (unused here) built against another WindowsBase. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+    <EmbeddedResource Include="suno\suno-bridge.js" LogicalName="suno-bridge.js" />
+    <!-- WinForms' names only where the Suno window is (their Timer would clash with Watch.cs's). -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <RuntimeHostConfigurationOption Include="System.GC.ConserveMemory" Value="7" />
+    <RuntimeHostConfigurationOption Include="System.GC.RetainVM" Value="false" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,32 @@
+{
+  "name": "Miasma",
+  "mode": "dark",
+  "background": "#222222",
+  "surface": "#2c2c2c",
+  "selection": "#383838",
+  "border": "#666666",
+  "foreground": "#c2c2b0",
+  "muted": "#c2c2b0",
+  "comment": "#555555",
+  "accent": "#78824b",
+  "purple": "#bb7744",
+  "cyan": "#c9a554",
+  "teal": "#c9a554",
+  "green": "#5f875f",
+  "yellow": "#b36d43",
+  "orange": "#8d6242",
+  "red": "#685742",
+  "gradient": [
+    "#bb7744",
+    "#78824b",
+    "#c9a554",
+    "#c9a554",
+    "#5f875f"
+  ],
+  "terminal": "Miasma",
+  "nvimSpec": "miasma",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/miasma/backgrounds/01-nature-of-fear.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/miasma/backgrounds/02-crowned.webp"
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "name": "Catppuccin Latte",
+  "mode": "light",
+  "background": "#eff1f5",
+  "surface": "#dce0e8",
+  "selection": "#ccd0da",
+  "border": "#acb0be",
+  "foreground": "#4c4f69",
+  "muted": "#4c4f69",
+  "comment": "#9ca0b0",
+  "accent": "#1e66f5",
+  "purple": "#ea76cb",
+  "cyan": "#179299",
+  "teal": "#179299",
+  "green": "#40a02b",
+  "yellow": "#df8e1d",
+  "orange": "#d84e2b",
+  "red": "#d20f39",
+  "gradient": [
+    "#ea76cb",
+    "#1e66f5",
+    "#179299",
+    "#179299",
+    "#40a02b"
+  ],
+  "terminal": "Catppuccin Latte",
+  "nvimSpec": "catppuccin-latte",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/catppuccin-latte/backgrounds/1-color-fade.webp"
+  ]
+}

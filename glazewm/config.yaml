@@ -1,0 +1,370 @@
+# GlazeWM (tiling window manager). This is a template: the {{ accent }} and {{ selection }}
+# below are filled in with the current theme's colors (themes/render.ps1, on every theme switch)
+# into ~/.glzr/glazewm/config.yaml, which is what GlazeWM reads; nothing here changes on a switch.
+# After editing: alt+shift+r (omawin restart glazewm) renders it and reloads.
+# Docs: https://github.com/glzr-io/glazewm
+
+general:
+  # Zebar draws the floating top bar and the dock (pack: zebar/tokyo-islands): `omawin restart
+  # zebar` runs zebar/start.ps1, which runs `zebar startup` without a GPU process (see that file).
+  # `omawin start` starts the native launcher / menu (menu-app/) hidden, so the first press is
+  # instant; `omawin start terminal` keeps noctty running with no window, so terminals open fast too.
+  # `omawin agent start` starts the agent's herdr session (OpenCode's service), headless, for Ctrl+Win+H.
+  startup_commands: ['shell-exec --hide-window omawin.exe restart zebar', 'shell-exec --hide-window omawin.exe start', 'shell-exec --hide-window omawin.exe start terminal', 'shell-exec --hide-window omawin.exe agent start']
+  shutdown_commands: ['shell-exec taskkill /IM zebar.exe /F']
+  config_reload_commands: []
+
+  focus_follows_cursor: false
+  toggle_workspace_on_refocus: false
+
+  cursor_jump:
+    enabled: true
+    trigger: 'monitor_focus'
+
+  # 'cloak' hides other workspaces' windows instantly, without animation.
+  hide_method: 'cloak'
+  # Taskbar shows only the windows of the workspaces on screen.
+  show_all_in_taskbar: false
+
+gaps:
+  scale_with_dpi: true
+  inner_gap: '10px'
+  # The Zebar islands are 36px tall at 8px from the top, and the dock 46px at 8px from the
+  # bottom: leave room for them plus a gap.
+  outer_gap:
+    top: '54px'
+    right: '10px'
+    bottom: '64px'
+    left: '10px'
+  # A lone window doesn't stretch edge to edge: a little margin on the sides.
+  single_window_outer_gap:
+    top: '54px'
+    right: '6%'
+    bottom: '68px'
+    left: '6%'
+
+window_effects:
+  focused_window:
+    border:
+      enabled: true
+      color: '{{ accent }}'
+    hide_title_bar:
+      enabled: false
+    corner_style:
+      enabled: true
+      style: 'rounded'
+    transparency:
+      enabled: false
+      opacity: '95%'
+
+  other_windows:
+    border:
+      enabled: true
+      color: '{{ selection }}' # barely there, like the inactive Neovim splits
+    hide_title_bar:
+      enabled: false
+    corner_style:
+      enabled: true
+      style: 'rounded'
+    transparency:
+      enabled: false
+      opacity: '0%'
+
+window_behavior:
+  initial_state: 'tiling'
+  state_defaults:
+    floating:
+      centered: true
+      shown_on_top: false
+    fullscreen:
+      maximized: false
+      shown_on_top: false
+
+# Plain numbered workspaces, used per project rather than per app type. The bar shows each
+# one's number plus icons of the apps in it; right-click a workspace in the bar to give it a
+# project name for the session (runs `update-workspace-config --display-name`).
+workspaces:
+  - name: '1'
+  - name: '2'
+  - name: '3'
+  - name: '4'
+  - name: '5'
+  - name: '6'
+  - name: '7'
+  - name: '8'
+  - name: '9'
+
+# Rules run when a window is first opened, so moving a window somewhere else afterwards sticks.
+# Everything opens on the current workspace, except chat apps, which go to 9, out of the way.
+window_rules:
+  - commands: ['move --workspace 9']
+    match:
+      - window_process: { regex: '^(ms-teams|Slack|Discord|olk|OUTLOOK)$' }
+
+  # The alt+n workspace rename prompt (launcher/rename-workspace.ps1) floats centered on top.
+  # The terminal (whichever is the default) gets its title just after the window appears,
+  # hence title_change.
+  - commands: ['set-floating --centered --shown-on-top --width 520px --height 170px']
+    on: ['manage', 'title_change']
+    match:
+      - window_title: { equals: 'rename' }
+
+  # Jobs started from the system menu (installs, updates; launcher/menu.ps1 runs them).
+  - commands: ['set-floating --centered --shown-on-top --width 1000px --height 600px']
+    on: ['manage', 'title_change']
+    match:
+      - window_title: { equals: 'menu-task' }
+
+  # omawin's agent works in the open on workspace 9 (Ctrl+Win+H: agent/listen.ps1 opens a terminal
+  # on its herdr session, "omawin-agent"), so where you are stays as it is.
+  - commands: ['move --workspace 9']
+    on: ['manage']
+    match:
+      - window_title: { regex: 'omawin-agent' }
+
+  # The terminal has no title bar (noctty/config.ghostty: window-decoration = none), and GlazeWM
+  # floats windows without one: tile it like any other window.
+  - commands: ['set-tiling']
+    match:
+      - window_process: { equals: 'noctty' }
+        window_title: { not_regex: '^(menu-task|rename)$' }
+
+  # Small utility windows float instead of taking half the screen.
+  - commands: ['set-floating --centered']
+    match:
+      - window_process: { regex: '^(CalculatorApp|SystemSettings|SnippingTool)$' }
+      - window_class: { equals: '#32770' } # classic Windows dialogs (open/save, properties)
+
+  - commands: ['ignore']
+    match:
+      # Zebar's own windows.
+      - window_process: { equals: 'zebar' }
+      # The system menu (menu-app/) places itself.
+      - window_process: { equals: 'SystemMenu' }
+      # The Suno window (music/suno/): the bar places it beside the music panel.
+      - window_process: { equals: 'omawin-music' }
+
+      # Picture-in-picture windows for browsers.
+      - window_title: { regex: '[Pp]icture.in.[Pp]icture' }
+        window_class: { regex: 'Chrome_WidgetWin_1|MozillaDialogClass' }
+
+      # Third-party popups (from GlazeWM's sample config).
+      - window_process: { equals: 'PowerToys' }
+        window_class: { regex: 'HwndWrapper\[PowerToys\.PowerAccent.*?\]' }
+      - window_title: { equals: 'Command Palette' }
+        window_class: { equals: 'WinUIDesktopWin32WindowClass' }
+      - window_process: { equals: 'PowerToys' }
+        window_title: { regex: '.*? - Peek' }
+      - window_process: { equals: 'Lively' }
+        window_class: { regex: 'HwndWrapper' }
+      - window_process: { equals: 'EXCEL' }
+        window_class: { not_regex: 'XLMAIN' }
+      - window_process: { equals: 'WINWORD' }
+        window_class: { not_regex: 'OpusApp' }
+      - window_process: { equals: 'POWERPNT' }
+        window_class: { not_regex: 'PPTFrameClass' }
+
+binding_modes:
+  # alt+r: resize the focused window with HJKL / arrows, then Enter or Escape.
+  - name: 'resize'
+    keybindings:
+      - commands: ['resize --width -2%']
+        bindings: ['h', 'left']
+      - commands: ['resize --width +2%']
+        bindings: ['l', 'right']
+      - commands: ['resize --height +2%']
+        bindings: ['k', 'up']
+      - commands: ['resize --height -2%']
+        bindings: ['j', 'down']
+      - commands: ['wm-disable-binding-mode --name resize']
+        bindings: ['escape', 'enter']
+
+keybindings:
+  # Focus a window in a direction. Win+arrows like Omarchy (replaces Windows' snapping,
+  # which a tiling WM doesn't need).
+  - commands: ['focus --direction left']
+    bindings: ['lwin+left', 'alt+h', 'alt+left']
+  - commands: ['focus --direction right']
+    bindings: ['lwin+right', 'alt+l', 'alt+right']
+  - commands: ['focus --direction up']
+    bindings: ['lwin+up', 'alt+k', 'alt+up']
+  - commands: ['focus --direction down']
+    bindings: ['lwin+down', 'alt+j', 'alt+down']
+
+  # Move (swap) the focused window in a direction, Omarchy's Super+Shift+arrows.
+  - commands: ['move --direction left']
+    bindings: ['lwin+shift+left', 'alt+shift+h', 'alt+shift+left']
+  - commands: ['move --direction right']
+    bindings: ['lwin+shift+right', 'alt+shift+l', 'alt+shift+right']
+  - commands: ['move --direction up']
+    bindings: ['lwin+shift+up', 'alt+shift+k', 'alt+shift+up']
+  - commands: ['move --direction down']
+    bindings: ['lwin+shift+down', 'alt+shift+j', 'alt+shift+down']
+
+  # Resize the focused window.
+  - commands: ['resize --width -2%']
+    bindings: ['alt+u']
+  - commands: ['resize --width +2%']
+    bindings: ['alt+p']
+  - commands: ['resize --height +2%']
+    bindings: ['alt+o']
+  - commands: ['resize --height -2%']
+    bindings: ['alt+i']
+  - commands: ['wm-enable-binding-mode --name resize']
+    bindings: ['alt+r']
+
+  # Pause all window management (and these keys) until pressed again.
+  - commands: ['wm-toggle-pause']
+    bindings: ['alt+shift+p']
+
+  # Where the next window goes: beside (horizontal) or below (vertical).
+  - commands: ['toggle-tiling-direction']
+    bindings: ['alt+v']
+
+  # Window states.
+  - commands: ['wm-cycle-focus']
+    bindings: ['alt+space']
+  - commands: ['toggle-floating --centered']
+    bindings: ['alt+shift+space']
+  - commands: ['toggle-tiling']
+    bindings: ['alt+t']
+  - commands: ['toggle-fullscreen']
+    bindings: ['alt+f']
+  - commands: ['toggle-minimized']
+    bindings: ['alt+m']
+  - commands: ['close']
+    bindings: ['alt+shift+q']
+
+  # GlazeWM itself.
+  - commands: ['wm-exit']
+    bindings: ['alt+shift+e']
+  - commands: ['shell-exec --hide-window omawin.exe restart glazewm']
+    bindings: ['alt+shift+r']
+  - commands: ['wm-redraw']
+    bindings: ['alt+shift+w']
+
+  # A terminal (the default one: omawin default terminal) in ~.
+  - commands: ['shell-exec --hide-window omawin.exe launch terminal']
+    bindings: ['alt+enter']
+
+  # A terminal in the focused window's folder (terminal tab, Ubuntu tab, File Explorer),
+  # else ~ (omawin terminal here, in bin/omawin.cs).
+  - commands: ['shell-exec --hide-window omawin.exe terminal here']
+    bindings: ['lwin+enter']
+
+  # Dictation with Handy (local speech-to-text) instead of Windows voice typing, whose popup
+  # can't be hidden; catching Win+H here keeps that popup from ever opening. Tap to start,
+  # tap again to stop; the Zebar bar shows the listening animation. (Handy's own shortcut is
+  # parked on ctrl+alt+shift+f9 so it never collides with anything.)
+  - commands: ['shell-exec handy --toggle-transcription']
+    bindings: ['lwin+h']
+
+  # omawin's agent (docs/agent.md): listens (the bar says so; nothing opens), and a second press
+  # sends what you said to its herdr session on workspace 9.
+  - commands: ['shell-exec --hide-window omawin.exe agent listen']
+    bindings: ['ctrl+lwin+h']
+
+  # These keys (and Win+Enter above) run omawin's commands (bin/commands.txt; `omawin help`
+  # lists them), hidden; the same names work in a terminal.
+
+  # Name the current workspace (shown in the bar), e.g. after its project.
+  - commands: ['shell-exec --hide-window omawin.exe workspace rename']
+    bindings: ['alt+n']
+
+  # The launcher, like Omarchy's Super+Space: launcher/items.txt's items, then every installed
+  # app, in the same native window as the system menu (menu-app/, running hidden, so it's
+  # instant).
+  - commands: ['shell-exec --hide-window omawin.exe launcher']
+    bindings: ['lwin+space']
+  # The launcher straight on the clipboard history (Win+V stays Windows' own).
+  - commands: ['shell-exec --hide-window omawin.exe launcher clipboard']
+    bindings: ['lwin+shift+v']
+  # The launcher on Audio: every speaker and microphone, its volume and mute (menu-app/Audio.cs);
+  # Quick settings' switches are `launcher quick`.
+  # For keyboards without volume keys Windows understands (the HHKB over USB). Windows' own
+  # Win+A (quick settings) gives way, as Win+M does.
+  - commands: ['shell-exec --hide-window omawin.exe launcher audio']
+    bindings: ['lwin+a']
+  # The music player's panel in the bar (music/, zebar/tokyo-islands/music.js): Space plays /
+  # pauses, Esc or Win+M again closes it. (Windows' own Win+M, minimize everything, means
+  # little with tiling.)
+  - commands: ['shell-exec --hide-window omawin.exe music open']
+    bindings: ['lwin+m']
+  # The system menu, like Omarchy's: install / remove, themes, setup, power (launcher/menu.txt,
+  # drawn natively by menu-app/; the launcher's Menu item opens it too).
+  - commands: ['shell-exec --hide-window omawin.exe menu']
+    bindings: ['lwin+alt+space']
+  # The file finder: files and folders in Desktop, Documents, Downloads and your repos (fff),
+  # with a preview; also the launcher's Files item. Win+F (Windows' Feedback Hub gives way);
+  # Win+Shift+F, its old key, still works.
+  - commands: ['shell-exec --hide-window omawin.exe files']
+    bindings: ['lwin+f', 'lwin+shift+f']
+  # Screenshots, nearly instant (menu-app/Snip.cs, always running) instead of Windows' Snipping
+  # Tool, which starts up each time: drag a region (click: a window; Enter: everything); it's
+  # copied and saved to Pictures\Screenshots.
+  - commands: ['shell-exec --hide-window omawin.exe capture screenshot']
+    bindings: ['lwin+shift+s']
+  # The text in a region instead (Windows' OCR, offline), like Omarchy's capture text.
+  - commands: ['shell-exec --hide-window omawin.exe capture text']
+    bindings: ['lwin+shift+t']
+  # The theme's next background, like Omarchy (themes/set-theme.ps1).
+  - commands: ['shell-exec --hide-window omawin.exe theme next-background']
+    bindings: ['lwin+ctrl+space']
+
+  # Workspaces: next/previous active, last used.
+  - commands: ['focus --next-active-workspace']
+    bindings: ['alt+s']
+  - commands: ['focus --prev-active-workspace']
+    bindings: ['alt+a']
+  - commands: ['focus --recent-workspace']
+    bindings: ['alt+d']
+
+  # Go to workspace N.
+  - commands: ['focus --workspace 1']
+    bindings: ['alt+1']
+  - commands: ['focus --workspace 2']
+    bindings: ['alt+2']
+  - commands: ['focus --workspace 3']
+    bindings: ['alt+3']
+  - commands: ['focus --workspace 4']
+    bindings: ['alt+4']
+  - commands: ['focus --workspace 5']
+    bindings: ['alt+5']
+  - commands: ['focus --workspace 6']
+    bindings: ['alt+6']
+  - commands: ['focus --workspace 7']
+    bindings: ['alt+7']
+  - commands: ['focus --workspace 8']
+    bindings: ['alt+8']
+  - commands: ['focus --workspace 9']
+    bindings: ['alt+9']
+
+  # Move the focused workspace to the monitor in a direction.
+  - commands: ['move-workspace --direction left']
+    bindings: ['alt+shift+a']
+  - commands: ['move-workspace --direction right']
+    bindings: ['alt+shift+f']
+  - commands: ['move-workspace --direction up']
+    bindings: ['alt+shift+d']
+  - commands: ['move-workspace --direction down']
+    bindings: ['alt+shift+s']
+
+  # Send the focused window to workspace N.
+  - commands: ['move --workspace 1']
+    bindings: ['alt+shift+1']
+  - commands: ['move --workspace 2']
+    bindings: ['alt+shift+2']
+  - commands: ['move --workspace 3']
+    bindings: ['alt+shift+3']
+  - commands: ['move --workspace 4']
+    bindings: ['alt+shift+4']
+  - commands: ['move --workspace 5']
+    bindings: ['alt+shift+5']
+  - commands: ['move --workspace 6']
+    bindings: ['alt+shift+6']
+  - commands: ['move --workspace 7']
+    bindings: ['alt+shift+7']
+  - commands: ['move --workspace 8']
+    bindings: ['alt+shift+8']
+  - commands: ['move --workspace 9']
+    bindings: ['alt+shift+9']

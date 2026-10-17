@@ -1,0 +1,34 @@
+{
+  "name": "Last Horizon",
+  "mode": "dark",
+  "background": "#0c0b0c",
+  "surface": "#0c0b0c",
+  "selection": "#584e51",
+  "border": "#584e51",
+  "foreground": "#e2dddc",
+  "muted": "#FAFCFB",
+  "comment": "#584e51",
+  "accent": "#b59790",
+  "purple": "#c4d8e2",
+  "cyan": "#a5a0b6",
+  "teal": "#a5a0b6",
+  "green": "#87a9b0",
+  "yellow": "#6B5E73",
+  "orange": "#6B5E73",
+  "red": "#c38b7b",
+  "gradient": [
+    "#c4d8e2",
+    "#b59790",
+    "#a5a0b6",
+    "#a5a0b6",
+    "#87a9b0"
+  ],
+  "terminal": "Last Horizon",
+  "nvimSpec": "last-horizon",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/last-horizon/backgrounds/1-eyes-wide.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/last-horizon/backgrounds/2-blink.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/last-horizon/backgrounds/3-bokeh.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/last-horizon/backgrounds/4-new-horizons.jpg"
+  ]
+}

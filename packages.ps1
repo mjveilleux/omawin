@@ -1,0 +1,90 @@
+# Everything install.ps1 installs: a lean core, plus the presets you pick (opt-in groups).
+# `omawin preset list|add <name>|remove <name>` picks them (bin/preset.ps1); the picks are kept in
+# %LOCALAPPDATA%\launcher\presets.txt, and install.ps1 installs the core and those.
+# Edit these lists to add or drop tools. No Chocolatey: everything is winget or its own installer.
+
+# The core, winget (no admin needed for most). Id = winget package id.
+$WingetPackages = @(
+    # shell and terminal
+    'Microsoft.PowerShell'          # pwsh 7
+    'Microsoft.WindowsTerminal'     # the fallback (omawin default terminal wt)
+    'Git.Git'                       # also gives Git Bash
+    'GitHub.cli'
+    'Starship.Starship'             # prompt
+    'ajeetdsouza.zoxide'            # z / zi
+    'junegunn.fzf'                  # Ctrl+R / Ctrl+T
+    'sharkdp.fd'
+    'BurntSushi.ripgrep.MSVC'
+    'eza-community.eza'             # ls / ll / lt
+    'sharkdp.bat'
+    'jqlang.jq'
+    'JesseDuffield.lazygit'         # lg
+    'Fastfetch-cli.Fastfetch'       # system info with omawin's logo (fastfetch/)
+
+    # desktop
+    'glzr-io.glazewm'               # tiling window manager
+    'glzr-io.zebar'                 # the top bar and the dock
+    'aristocratos.btop4win'         # task manager (btop), from the dock and the launcher
+    'Oven-sh.Bun'                   # omawin's JavaScript runtime
+
+    # editor
+    'Neovim.Neovim'
+    'Neovide.Neovide'
+    'tree-sitter.tree-sitter-cli'   # nvim-treesitter builds parsers with it
+    'zig.zig'                       # C compiler for nvim-treesitter parsers
+    'OpenJS.NodeJS.LTS'             # mason.nvim (Neovim) installs most LSPs with npm
+    'astral-sh.uv'                  # Python tools (harlequin, the Fabric CLI) and mason.nvim's Python LSPs
+
+    'Microsoft.DotNet.SDK.9'        # builds the menu app (menu-app/) and the music player (music/)
+)
+
+# Opt-in groups. Winget: winget ids. Extras: names in $ExtraInstalls. Tools: the commands
+# `omawin check` expects once the preset is in.
+$Presets = [ordered]@{
+    'python'         = @{ Summary = 'Python 3.13'; Winget = @('Python.Python.3.13'); Tools = @('python') }
+    'node'           = @{ Summary = 'pnpm (Node.js itself is in the core)'; Winget = @('pnpm.pnpm'); Tools = @('pnpm') }
+    'go'             = @{ Summary = 'Go'; Winget = @('GoLang.Go'); Tools = @('go') }
+    'elixir'         = @{ Summary = "Erlang and Elixir (Neovim's IEx helpers)"; Winget = @('Erlang.ErlangOTP', 'Elixir.Elixir'); Tools = @('elixir') }
+    'r'              = @{ Summary = 'R and RStudio'; Winget = @('RProject.R', 'Posit.RStudio') }
+    'c'              = @{ Summary = 'gcc and mingw32-make (WinLibs)'; Winget = @('BrechtSanders.WinLibs.POSIX.UCRT'); Tools = @('gcc') }
+    'data'           = @{ Summary = 'DuckDB, harlequin (SQL in the terminal), sqlcmd'; Winget = @('DuckDB.cli', 'Microsoft.Sqlcmd'); Extras = @('harlequin'); Tools = @('duckdb', 'harlequin') }
+    'typst'          = @{ Summary = 'Typst (documents)'; Winget = @('Typst.Typst'); Tools = @('typst') }
+    'docker'         = @{ Summary = 'lazydocker (Docker Desktop: Install > Development)'; Winget = @('JesseDuffield.Lazydocker'); Tools = @('lazydocker') }
+    'cli-extras'     = @{ Summary = 'make, cloc, wget'; Winget = @('ezwinports.make', 'AlDanial.Cloc', 'JernejSimoncic.Wget'); Tools = @('make', 'cloc', 'wget') }
+    'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
+    'music'          = @{ Summary = "yt-dlp and mpv, for the bar's music player (music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv'); Tools = @('yt-dlp', 'mpv') }
+    'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
+    'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
+}
+
+# Installer arguments for packages whose defaults don't fit (passed as winget --override).
+$WingetOverrides = @{
+    # Python's installer leaves PATH alone by default, so `python` would hit the Store stub.
+    'Python.Python.3.13' = '/quiet InstallAllUsers=0 PrependPath=1 Include_launcher=1'
+}
+
+# A package counts as installed when its command is on the PATH, however it got there (an
+# older install, another package manager), so it isn't installed a second time.
+$WingetCommands = @{
+    'GoLang.Go' = 'go'; 'pnpm.pnpm' = 'pnpm'; 'zig.zig' = 'zig'; 'astral-sh.uv' = 'uv'; 'DuckDB.cli' = 'duckdb'
+    'Typst.Typst' = 'typst'; 'Erlang.ErlangOTP' = 'erl'; 'Elixir.Elixir' = 'elixir'; 'BrechtSanders.WinLibs.POSIX.UCRT' = 'gcc'
+    'JesseDuffield.Lazydocker' = 'lazydocker'; 'ezwinports.make' = 'make'; 'AlDanial.Cloc' = 'cloc'; 'JernejSimoncic.Wget' = 'wget'
+    'jqlang.jq' = 'jq'; 'junegunn.fzf' = 'fzf'; 'sharkdp.fd' = 'fd'; 'BurntSushi.ripgrep.MSVC' = 'rg'; 'JesseDuffield.lazygit' = 'lazygit'
+}
+
+# Tools with their own installers (run after the winget ones, so uv exists). herdr is the core's
+# (the launcher's project windows use it); the rest belong to presets.
+$ExtraInstalls = [ordered]@{
+    # herdr (agent workspaces; the launcher's project windows use it). Official installer:
+    # verifies the download's SHA-256 and installs under ~/.herdr, on the user PATH.
+    'herdr'     = { Invoke-RestMethod https://herdr.dev/install.ps1 | Invoke-Expression }
+    'claude'    = { Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression }
+    # opencode's official installer is a bash script; Git Bash runs it (lands in ~/.opencode/bin).
+    'opencode'  = { & "$env:ProgramFiles\Git\bin\bash.exe" -lc 'curl -fsSL https://opencode.ai/install | bash' }
+    'harlequin' = { uv tool install 'harlequin[odbc]' }
+    'fab'       = { uv tool install ms-fabric-cli }
+}
+$CoreExtras = @('herdr')
+
+# Nerd Font used by Windows Terminal ("JetBrainsMono NF") and the eza/starship glyphs.
+$NerdFont = 'JetBrainsMono'

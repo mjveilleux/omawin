@@ -1,0 +1,31 @@
+{
+  "name": "Kanagawa",
+  "mode": "dark",
+  "background": "#1f1f28",
+  "surface": "#223249",
+  "selection": "#363646",
+  "border": "#54546D",
+  "foreground": "#dcd7ba",
+  "muted": "#dcd7ba",
+  "comment": "#727169",
+  "accent": "#dcd7ba",
+  "purple": "#938aa9",
+  "cyan": "#7aa89f",
+  "teal": "#6a9589",
+  "green": "#76946a",
+  "yellow": "#c0a36e",
+  "orange": "#c17158",
+  "red": "#c34043",
+  "gradient": [
+    "#938aa9",
+    "#dcd7ba",
+    "#7aa89f",
+    "#6a9589",
+    "#76946a"
+  ],
+  "terminal": "Kanagawa",
+  "nvimSpec": "kanagawa",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/kanagawa/backgrounds/1-kanagawa.jpg"
+  ]
+}

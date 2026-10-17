@@ -1,0 +1,38 @@
+{
+  "name": "Retro 82",
+  "mode": "dark",
+  "background": "#05182e",
+  "surface": "#0a2540",
+  "selection": "#134e5a",
+  "border": "#2a6b78",
+  "foreground": "#f6dcac",
+  "muted": "#f6dcac",
+  "comment": "#3f8f8a",
+  "accent": "#faa968",
+  "purple": "#3f8f8a",
+  "cyan": "#8cbfb8",
+  "teal": "#8cbfb8",
+  "green": "#028391",
+  "yellow": "#e97b3c",
+  "orange": "#faa968",
+  "red": "#f85525",
+  "gradient": [
+    "#3f8f8a",
+    "#faa968",
+    "#8cbfb8",
+    "#8cbfb8",
+    "#028391"
+  ],
+  "terminal": "Retro 82",
+  "nvimSpec": "retro-82",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/1-in-the-groove.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/2-dusk-guardian.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/3-glassy-lines.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/4-gateway.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/5-zen-boat.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/6-abstract-pyramids.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/7-the-journey.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/retro-82/backgrounds/8-glitter-glass.webp"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "name": "Solitude",
+  "mode": "dark",
+  "background": "#101315",
+  "surface": "#101315",
+  "selection": "#343d41",
+  "border": "#4b4e55",
+  "foreground": "#a5aeb4",
+  "muted": "#cacccc",
+  "comment": "#4b4e55",
+  "accent": "#798186",
+  "purple": "#9a9a9a",
+  "cyan": "#707070",
+  "teal": "#707070",
+  "green": "#9fa5a9",
+  "yellow": "#d9dbdc",
+  "orange": "#c9c2b4",
+  "red": "#565d60",
+  "gradient": [
+    "#9a9a9a",
+    "#798186",
+    "#707070",
+    "#707070",
+    "#9fa5a9"
+  ],
+  "terminal": "Solitude",
+  "nvimSpec": "solitude",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/solitude/backgrounds/1-on-pole.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/solitude/backgrounds/2-wreakage.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/solitude/backgrounds/3-climb.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/solitude/backgrounds/4-ether.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/solitude/backgrounds/5-eyed.jpg"
+  ]
+}

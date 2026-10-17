@@ -1,0 +1,13 @@
+# A project's tabs, in its folder (Ubuntu projects: in WSL). Win+Space > Projects (omawin launch
+# project) opens a project as a herdr session named after the folder: herdr keeps it running with
+# no window, so agents carry on, and opening the project again reattaches. A new session gets
+# these tabs, the first in front (Windows Terminal opens them as its own tabs).
+#
+#   <tab title> | <command>
+#
+# No command: just a shell. A command is typed into the tab's shell, so quitting it leaves a
+# prompt in the project. {session} is the project's name.
+shell |
+nvim | nvim
+claude | claude
+opencode | opencode

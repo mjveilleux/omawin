@@ -1,0 +1,33 @@
+{
+  "name": "White",
+  "mode": "light",
+  "background": "#ffffff",
+  "surface": "#c0c0c0",
+  "selection": "#c0c0c0",
+  "border": "#808080",
+  "foreground": "#000000",
+  "muted": "#000000",
+  "comment": "#c0c0c0",
+  "accent": "#6e6e6e",
+  "purple": "#2e2e2e",
+  "cyan": "#3e3e3e",
+  "teal": "#3e3e3e",
+  "green": "#3a3a3a",
+  "yellow": "#4a4a4a",
+  "orange": "#4a4a4a",
+  "red": "#2a2a2a",
+  "gradient": [
+    "#2e2e2e",
+    "#6e6e6e",
+    "#3e3e3e",
+    "#3e3e3e",
+    "#3a3a3a"
+  ],
+  "terminal": "White",
+  "nvimSpec": "white",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/white/backgrounds/1-white.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/white/backgrounds/2-white.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/white/backgrounds/3-white.webp"
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "name": "Rose Pine",
+  "mode": "light",
+  "background": "#faf4ed",
+  "surface": "#f2e9e1",
+  "selection": "#dfdad9",
+  "border": "#cecacd",
+  "foreground": "#575279",
+  "muted": "#575279",
+  "comment": "#9893a5",
+  "accent": "#56949f",
+  "purple": "#907aa9",
+  "cyan": "#d7827e",
+  "teal": "#d7827e",
+  "green": "#286983",
+  "yellow": "#ea9d34",
+  "orange": "#cf8057",
+  "red": "#b4637a",
+  "gradient": [
+    "#907aa9",
+    "#56949f",
+    "#d7827e",
+    "#d7827e",
+    "#286983"
+  ],
+  "terminal": "Rose Pine",
+  "nvimSpec": "rose-pine",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/rose-pine/backgrounds/1-funky-shapes.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/rose-pine/backgrounds/2-dot-map.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/rose-pine/backgrounds/3-omarchy-plants.webp"
+  ]
+}

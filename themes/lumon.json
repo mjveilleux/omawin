@@ -1,0 +1,32 @@
+{
+  "name": "Lumon",
+  "mode": "dark",
+  "background": "#16242d",
+  "surface": "#1b2d40",
+  "selection": "#243d56",
+  "border": "#304860",
+  "foreground": "#f2fcff",
+  "muted": "#d6e2ee",
+  "comment": "#4d86b0",
+  "accent": "#8bc9eb",
+  "purple": "#b1d8ee",
+  "cyan": "#d1eef8",
+  "teal": "#b4e4f6",
+  "green": "#5e95bc",
+  "yellow": "#6fa4c9",
+  "orange": "#8bc9eb",
+  "red": "#4d86b0",
+  "gradient": [
+    "#b1d8ee",
+    "#8bc9eb",
+    "#d1eef8",
+    "#b4e4f6",
+    "#5e95bc"
+  ],
+  "terminal": "Lumon",
+  "nvimSpec": "lumon",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/lumon/backgrounds/01-united-in-severance.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/lumon/backgrounds/02-opinions-equally.webp"
+  ]
+}

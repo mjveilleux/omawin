@@ -1,0 +1,5 @@
+# Folders the file finder (Win+F) leaves out, one per line: a folder name (any folder
+# by that name, at any depth) or a full path. Big source checkouts you don't open files from
+# only make the index bigger and the results noisier. Read when the menu app starts.
+duckdb
+node_modules

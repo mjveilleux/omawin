@@ -1,0 +1,32 @@
+{
+  "backend": "opencode",
+  "backends": {
+    "opencode": {
+      "model": "opencode/deepseek-v4.1-flash"
+    },
+    "claude": {
+      "model": ""
+    }
+  },
+  "allow": {
+    "commands": [
+      "omawin.exe",
+      "omawin-music",
+      "yt-dlp",
+      "gh issue",
+      "gh repo view",
+      "git status",
+      "git diff",
+      "git log",
+      "git branch",
+      "git fetch",
+      "git worktree add",
+      "git worktree list"
+    ],
+    "read": true,
+    "web": true
+  },
+  "live": {
+    "edit": true
+  }
+}

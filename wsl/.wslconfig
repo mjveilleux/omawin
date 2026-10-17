@@ -1,0 +1,11 @@
+# WSL 2 VM settings (all distros). Copied to %UserProfile%\.wslconfig by install.ps1, unless your
+# user layer has its own wsl/.wslconfig (docs/work.md), which is copied instead.
+# Applies the next time WSL starts (`wsl --shutdown`, or after everything in the distro closes).
+# Reference: https://learn.microsoft.com/windows/wsl/wsl-config
+
+# [wsl2] memory is left at WSL's default, half of this PC's RAM. To cap it lower, put a copy of
+# this file with `memory=6GB` (say) under [wsl2] in your user layer.
+
+[experimental]
+# Hand cached memory back to Windows right away (the current default, made explicit).
+autoMemoryReclaim=dropCache

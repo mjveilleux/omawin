@@ -1,0 +1,33 @@
+{
+  "name": "Nord",
+  "mode": "dark",
+  "background": "#2e3440",
+  "surface": "#3b4252",
+  "selection": "#434c5e",
+  "border": "#4c566a",
+  "foreground": "#d8dee9",
+  "muted": "#d8dee9",
+  "comment": "#667080",
+  "accent": "#81a1c1",
+  "purple": "#b48ead",
+  "cyan": "#8fbcbb",
+  "teal": "#88c0d0",
+  "green": "#a3be8c",
+  "yellow": "#ebcb8b",
+  "orange": "#d5967a",
+  "red": "#bf616a",
+  "gradient": [
+    "#b48ead",
+    "#81a1c1",
+    "#8fbcbb",
+    "#88c0d0",
+    "#a3be8c"
+  ],
+  "terminal": "Nord",
+  "nvimSpec": "nord",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/nord/backgrounds/0-black-moon.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/nord/backgrounds/1-city-view.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/nord/backgrounds/2-night-hawks.webp"
+  ]
+}

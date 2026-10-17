@@ -1,0 +1,2 @@
+# Login shells (Git Bash opens one) load ~/.bashrc too.
+[[ -f ~/.bashrc ]] && source ~/.bashrc

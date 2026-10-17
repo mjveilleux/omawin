@@ -1,0 +1,35 @@
+{
+  "name": "Gruvbox",
+  "mode": "dark",
+  "background": "#282828",
+  "surface": "#3c3836",
+  "selection": "#504945",
+  "border": "#665c54",
+  "foreground": "#d4be98",
+  "muted": "#d4be98",
+  "comment": "#7c6f64",
+  "accent": "#7daea3",
+  "purple": "#d3869b",
+  "cyan": "#89b482",
+  "teal": "#89b482",
+  "green": "#a9b665",
+  "yellow": "#d8a657",
+  "orange": "#e1875c",
+  "red": "#ea6962",
+  "gradient": [
+    "#d3869b",
+    "#7daea3",
+    "#89b482",
+    "#89b482",
+    "#a9b665"
+  ],
+  "terminal": "Gruvbox",
+  "nvimSpec": "gruvbox",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/gruvbox/backgrounds/1-the-backwater.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/gruvbox/backgrounds/2-flower-basket.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/gruvbox/backgrounds/3-village-square.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/gruvbox/backgrounds/4-idyllic-procession.jpg",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/gruvbox/backgrounds/5-leaves.jpg"
+  ]
+}

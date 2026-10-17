@@ -1,0 +1,34 @@
+{
+  "name": "Vantablack",
+  "mode": "dark",
+  "background": "#000000",
+  "surface": "#1a1a1a",
+  "selection": "#1a1a1a",
+  "border": "#7a7a7a",
+  "foreground": "#ffffff",
+  "muted": "#ffffff",
+  "comment": "#505050",
+  "accent": "#8d8d8d",
+  "purple": "#9b9b9b",
+  "cyan": "#b0b0b0",
+  "teal": "#b0b0b0",
+  "green": "#b6b6b6",
+  "yellow": "#cecece",
+  "orange": "#b9b9b9",
+  "red": "#a4a4a4",
+  "gradient": [
+    "#9b9b9b",
+    "#8d8d8d",
+    "#b0b0b0",
+    "#b0b0b0",
+    "#b6b6b6"
+  ],
+  "terminal": "Vantablack",
+  "nvimSpec": "vantablack",
+  "backgrounds": [
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/vantablack/backgrounds/0-dot-hands.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/vantablack/backgrounds/1-twisted-stairs.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/vantablack/backgrounds/2-layers-deep.webp",
+    "https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/vantablack/backgrounds/3-layers-stacked.webp"
+  ]
+}
