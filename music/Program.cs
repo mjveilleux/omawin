@@ -33,7 +33,7 @@ namespace OmawinMusic;
 // The player listens on the pipe \\.\pipe\omawin-music, one JSON array of words per line.
 public static class Program
 {
-    const string PipeName = "omawin-music";
+    static readonly string PipeName = Account.Pipe("omawin-music");
     static readonly string LogFile = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "launcher", "music.log");
     static readonly TextWriter Out = new StreamWriter(Console.OpenStandardOutput(), new UTF8Encoding(false)) { AutoFlush = true };

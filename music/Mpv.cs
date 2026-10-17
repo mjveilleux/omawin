@@ -17,7 +17,7 @@ namespace OmawinMusic;
 // events, so it would wait on itself.
 sealed class Mpv
 {
-    const string PipeName = "omawin-mpv";
+    static readonly string PipeName = Account.Pipe("omawin-mpv");
     readonly object gate = new();
     Process? proc;
     NamedPipeClientStream? pipe;

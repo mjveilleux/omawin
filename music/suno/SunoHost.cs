@@ -28,7 +28,7 @@ namespace OmawinMusic;
 // %LOCALAPPDATA%\launcher\suno.
 static class SunoHost
 {
-    public const string PipeName = "omawin-suno";
+    public static readonly string PipeName = Account.Pipe("omawin-suno");
 
     public static void Run()
     {

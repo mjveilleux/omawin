@@ -28,7 +28,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 - Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher and music player on the PC.
 - winget (App Installer, from the Microsoft Store; every current Windows 11 has it).
 - An internet connection and a few GB of disk (the core installs about 25 packages).
-- A standard account is fine. Expect one Windows admin prompt (for the GlazeWM fork); `omawin no-ads` asks for another.
+- A standard account is fine; run the install from a normal (not "as administrator") PowerShell. Expect two Windows admin prompts (the GlazeWM and Zebar forks); `omawin no-ads` asks for another.
 
 ## Install
 
@@ -54,8 +54,9 @@ Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never dele
 
 - **The taskbar auto-hides** (the bar and dock take its place; the bottom edge or the Win key still shows it), and the desktop's Recycle Bin icon goes.
 - **The theme** sets dark or light mode, the wallpaper and the lock screen (which changes on each unlock).
-- **At sign-in**: a scheduled task, `omawin GlazeWM`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen`, runs on unlock.
-- **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it goes in the machine's Root and Trusted Publishers stores, and its private key can't be exported. Decline the admin prompt and the official GlazeWM stays.
+- **At sign-in**: a scheduled task, `omawin GlazeWM (<you>)`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen (<you>)`, runs on unlock.
+- **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it goes in the machine's Root and Trusted Publishers stores, and its private key can't be exported. Its CLI and watcher are replaced too. Decline the admin prompt and the official GlazeWM stays.
+- **The Zebar fork** replaces `zebar.exe` (the official one kept as `zebar.official.exe`; a second admin prompt). With both forks, each Windows account gets its own GlazeWM and Zebar ports (`GLAZEWM_IPC_PORT`, `ZEBAR_ASSET_PORT` in your user environment), so several accounts can be signed in at once, each with its own desktop.
 - **No ads** (for you, no admin): Windows' suggestions, tips, promoted apps, the advertising ID, search highlights and the Copilot button off; the PC maker's notifications off (Lenovo, McAfee, Adobe, when present). `omawin no-ads` does the admin part: Windows' consumer-features policy, uninstalling Lenovo Now and McAfee's extras. [manual/11-no-ads.md](manual/11-no-ads.md) lists everything.
 - **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font installed for you.
 - **Packages** from winget ([`packages.ps1`](packages.ps1): a lean core plus the presets you pick), and a few installers run from their own sites (herdr; Claude Code and opencode with the AI preset).

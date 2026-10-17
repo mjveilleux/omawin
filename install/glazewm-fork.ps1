@@ -33,6 +33,20 @@ $exe = Join-Path $dir 'glazewm.exe'
 $official = Join-Path $dir 'glazewm.official.exe'
 $subject = "CN=omawin code signing ($env:COMPUTERNAME)"
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+# What the fork's release holds, laid out as in Program Files.
+$Files = 'glazewm.exe', 'glazewm-watcher.exe', 'cli\glazewm.exe'
+
+# Puts $New at $Target even while another Windows account runs it: a running program can't be
+# overwritten, but it can be renamed, so the old one is set aside (and deleted once nothing uses it).
+function Set-InUseFile([string]$New, [string]$Target) {
+    Get-ChildItem (Split-Path $Target) -Filter ((Split-Path $Target -Leaf) + '.old-*') -ErrorAction SilentlyContinue |
+        ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $Target) {
+        try { Copy-Item $New $Target -Force; return } catch { }
+        Rename-Item $Target ((Split-Path $Target -Leaf) + '.old-' + (Get-Date -Format yyyyMMddHHmmss))
+    }
+    Copy-Item $New $Target -Force
+}
 
 # --- the admin part: trust the certificate, put the file in place ---------------------------------
 # Run elevated by the part below, with the signed download; GlazeWM is already stopped.
@@ -44,21 +58,36 @@ if ($Signed) {
             $s.Open('ReadWrite'); $s.Add([Security.Cryptography.X509Certificates.X509Certificate2]::new($cert.RawData)); $s.Close()
         }
     }
+    $from = Split-Path $Signed
     if ((Get-AuthenticodeSignature $Signed).Status -ne 'Valid') { throw 'the signed glazewm.exe does not verify' }
-    if (-not (Test-Path $official)) { Copy-Item $exe $official }
-    Copy-Item $Signed $exe -Force
+    # The window manager, its watcher and its CLI: all three know the per-account port
+    # (bin/ports.ps1). Each official one is kept as <name>.official.exe for -Restore.
+    foreach ($name in $Files) {
+        $new = Join-Path $from $name
+        if (-not (Test-Path $new)) { continue }
+        $target = Join-Path $dir $name
+        $keep = $target -replace '\.exe$', '.official.exe'
+        if ((Test-Path $target) -and -not (Test-Path $keep)) { Copy-Item $target $keep }
+        Set-InUseFile $new $target
+    }
     exit 0
 }
 if ($Restore -and $elevated) {
-    if (Test-Path $official) { Copy-Item $official $exe -Force; Remove-Item $official }
+    foreach ($name in $Files) {
+        $target = Join-Path $dir $name
+        $keep = $target -replace '\.exe$', '.official.exe'
+        if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
+    }
     exit 0
 }
 
 # --- your part ---------------------------------------------------------------------------------------
+function Get-MyGlazeWM { Get-Process glazewm -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId }
 function Stop-GlazeWM {
-    if (-not (Get-Process glazewm -ErrorAction SilentlyContinue)) { return }
+    # This account's only: another account's GlazeWM is its own business.
+    if (-not (Get-MyGlazeWM)) { return }
     try { & "$dir\cli\glazewm.exe" command wm-exit 2>$null | Out-Null } catch { }
-    for ($i = 0; $i -lt 50 -and (Get-Process glazewm -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 100 }
+    for ($i = 0; $i -lt 50 -and (Get-MyGlazeWM); $i++) { Start-Sleep -Milliseconds 100 }
     Get-Process glazewm -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
 }
 function Start-GlazeWM {

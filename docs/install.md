@@ -53,11 +53,11 @@ Not covered (set up by hand): SQL Server tools / ODBC drivers, Docker Desktop, V
 
 There's no `omawin uninstall` yet (it's on [the to-do list](mission-todo.md)). By hand, in this order:
 
-1. **The official GlazeWM back** (if the fork went in): `~\omawin\install\glazewm-fork.ps1 -Restore` (an admin prompt). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Trusted Root Certification Authorities* and *Trusted Publishers*; in `certmgr.msc`, delete it from *Personal*.
-2. **The sign-in and unlock tasks**: `Unregister-ScheduledTask 'omawin GlazeWM','omawin lock screen' -Confirm:$false`.
+1. **The official GlazeWM and Zebar back** (if the forks went in): `~\omawin\install\glazewm-fork.ps1 -Restore` and `~\omawin\install\zebar-fork.ps1 -Restore` (an admin prompt each). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Trusted Root Certification Authorities* and *Trusted Publishers*; in `certmgr.msc`, delete it from *Personal*.
+2. **The sign-in and unlock tasks**: `Unregister-ScheduledTask "omawin GlazeWM ($env:USERNAME)","omawin lock screen ($env:USERNAME)" -Confirm:$false`.
 3. **The taskbar**: Settings › Personalization › Taskbar › Taskbar behaviors › untick *Automatically hide the taskbar*. The Recycle Bin icon: Settings › Personalization › Themes › Desktop icon settings.
 4. **Your files back**: each config omawin replaced is next to its link as `<path>.backup-<timestamp>` (the PowerShell profile folder, `~/.gitconfig`, Windows Terminal's settings, Neovim's config, `~/.bashrc`, `~/.wslconfig`). Delete the link or stub, rename the backup back.
-5. **The environment**: remove `~\.local\bin` from your user PATH, and the user variables `STARSHIP_CONFIG` and `HERDR_CONFIG_PATH` (Settings › System › About › Advanced system settings › Environment Variables).
+5. **The environment**: remove `~\.local\bin` from your user PATH, and the user variables `STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`, `GLAZEWM_IPC_PORT` and `ZEBAR_ASSET_PORT` (Settings › System › About › Advanced system settings › Environment Variables).
 6. **What it installed**: `winget uninstall <id>` for the packages you don't want (the list is in `packages.ps1`); `%LOCALAPPDATA%\launcher` (omawin's data), `%LOCALAPPDATA%\system-menu` (the menu app), `%LOCALAPPDATA%\Programs\noctty`.
 7. **No ads** stays off: those are Windows' own settings, each turned back on where Windows shows it (Settings › Privacy, Personalization › Start, Notifications), and the programs `omawin no-ads` uninstalled can be reinstalled from their makers.
 8. Delete `~/omawin`.

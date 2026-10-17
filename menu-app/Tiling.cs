@@ -28,7 +28,9 @@ public static class Tiling
     static async Task Watch()
     {
         using var socket = new ClientWebSocket();
-        await socket.ConnectAsync(new Uri("ws://localhost:6123"), CancellationToken.None);
+        // This account's GlazeWM: its port is per account (bin/ports.ps1), 6123 without one.
+        var port = Environment.GetEnvironmentVariable("GLAZEWM_IPC_PORT") is { Length: > 0 } p ? p.Trim() : "6123";
+        await socket.ConnectAsync(new Uri($"ws://localhost:{port}"), CancellationToken.None);
         await Send(socket, "sub -e focus_changed");
         var buffer = new byte[64 * 1024];
         while (socket.State == WebSocketState.Open)

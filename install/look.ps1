@@ -22,9 +22,9 @@ try {
     $action = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$Repo\themes\set-lockscreen.ps1`" -Next"
     $taskSettings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 2) -MultipleInstances IgnoreNew
     $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
-    $null = Register-ScheduledTask -TaskName 'omawin lock screen' -Trigger $unlock -Action $action -Settings $taskSettings -Principal $principal -Force `
+    $null = Register-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -Trigger $unlock -Action $action -Settings $taskSettings -Principal $principal -Force `
         -Description "Rotates the lock screen through the theme's backgrounds on unlock (omawin/themes/set-lockscreen.ps1)."
-    Write-Note 'ok  lock screen rotates on unlock (task "omawin lock screen")'
+    Write-Note 'ok  lock screen rotates on unlock (task "omawin lock screen ($([Environment]::UserName))")'
 } catch { Write-Warn "lock screen rotation task not made: $_" }
 # No taskbar, like Omarchy: it auto-hides (the Zebar bar has workspaces, apps and the
 # tray); pushing the mouse to the bottom edge or pressing Win still brings it up. Set

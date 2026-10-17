@@ -137,7 +137,8 @@ static class Watch
         {
             using (process)
             {
-                if (process.Id == Environment.ProcessId) continue;
+                // This account's bars only (another signed-in account has its own).
+                if (process.Id == Environment.ProcessId || process.SessionId != System.Diagnostics.Process.GetCurrentProcess().SessionId) continue;
                 var handles = new List<EventWaitHandle>();
                 foreach (var what in new[] { "panel", "focus", "open", "close" })
                     if (EventWaitHandle.TryOpenExisting(EventName(process.Id, what), out var h)) handles.Add(h);

@@ -123,8 +123,8 @@ elseif (Get-Command herdr -ErrorAction SilentlyContinue) {
 } else { Pass 'herdr config' "$herdrConfig (herdr not on PATH here)" }
 
 # GlazeWM at sign-in: a scheduled task, started right away (install/login-start.ps1).
-$task = Get-ScheduledTask -TaskName 'omawin GlazeWM' -ErrorAction SilentlyContinue
-if ($task -and $task.State -ne 'Disabled') { Pass 'GlazeWM at sign-in' 'scheduled task omawin GlazeWM' } else { Fail 'GlazeWM at sign-in' 'no task (run install\login-start.ps1)' }
+$task = Get-ScheduledTask -TaskName "omawin GlazeWM ($([Environment]::UserName))" -ErrorAction SilentlyContinue
+if ($task -and $task.State -ne 'Disabled') { Pass 'GlazeWM at sign-in' "scheduled task omawin GlazeWM ($([Environment]::UserName))" } else { Fail 'GlazeWM at sign-in' 'no task (run install\login-start.ps1)' }
 # GlazeWM itself: our fork signed on this PC starts before Explorer; the official one waits for it.
 $gsig = Get-AuthenticodeSignature "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe" -ErrorAction SilentlyContinue
 if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
@@ -140,9 +140,9 @@ if ($adware) { Warn 'no ads' "installed: $($adware -join ', ') (run no-ads.ps1)"
 if ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -ErrorAction SilentlyContinue).SilentInstalledAppsEnabled -ne 0) {
     Warn 'Windows suggestions' 'on (run no-ads.ps1 -UserOnly)'
 } else { Pass 'Windows suggestions' 'off' }
-$lockTask = Get-ScheduledTask -TaskName 'omawin lock screen' -ErrorAction SilentlyContinue
+$lockTask = Get-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -ErrorAction SilentlyContinue
 if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\themes\set-lockscreen.ps1")) { Pass 'lock screen rotates on unlock' }
-else { Warn 'lock screen rotates on unlock' 'no task "omawin lock screen" (install.ps1 makes it)' }
+else { Warn 'lock screen rotates on unlock' 'no task for this account (install.ps1 makes it)' }
 # Helper exes: present and built from the current source (the same list as install/helpers.ps1).
 $helpers = [ordered]@{
     'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'zebar\tokyo-islands\voice-meter.cs'; 'cpu-cores' = 'zebar\tokyo-islands\cpu-cores.cs'

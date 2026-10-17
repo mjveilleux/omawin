@@ -12,6 +12,11 @@ Set-Junction "$HOME\.glzr\zebar" "$Repo\zebar"
 # Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1).
 # Asks for admin once; without it, the official GlazeWM stays (it starts a few seconds later).
 try { & "$Repo\install\glazewm-fork.ps1" | ForEach-Object { Write-Note $_ } } catch { Write-Warn "GlazeWM fork: $_ (the official GlazeWM stays)" }
+# Our Zebar fork: the bar on this account's ports (install/zebar-fork.ps1). One more admin prompt.
+try { & "$Repo\install\zebar-fork.ps1" | ForEach-Object { Write-Note $_ } } catch { Write-Warn "Zebar fork: $_ (the official Zebar stays)" }
+# This account's own ports (bin/ports.ps1), once both forks are in: other accounts signed in
+# on the PC have theirs. They take effect at the next sign-in.
+& "$Repo\bin\ports.ps1" -Set | ForEach-Object { Write-Note $_ }
 
 Write-Step 'Handy (dictation on Win+H)'
 # GlazeWM runs `handy --toggle-transcription` on Win+H, so Handy must be on PATH.

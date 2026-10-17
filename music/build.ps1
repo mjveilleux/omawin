@@ -29,7 +29,7 @@ if (-not $BuildOnly) {
     Get-Process omawin-music -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     # The player's mpv (Mpv.cs) would play on without it.
     Get-CimInstance Win32_Process -Filter "Name='mpv.exe'" -ErrorAction SilentlyContinue |
-        Where-Object { $_.CommandLine -like '*omawin-mpv*' } |
+        Where-Object { $_.SessionId -eq (Get-Process -Id $PID).SessionId -and $_.CommandLine -like '*omawin-mpv*' } |
         ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
     if (Test-Path $exe) {
         $old = Join-Path $out "omawin-music.exe.old-$(Get-Date -Format yyyyMMddHHmmss)"

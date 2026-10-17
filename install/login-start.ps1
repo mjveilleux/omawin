@@ -12,6 +12,8 @@ $ErrorActionPreference = 'Stop'
 $glazewm = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
 # Who's signed in, from Windows itself (USERNAME can be something else in a service's shell).
 $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+# Task names are one list for the whole PC: each account's carries its name.
+$taskName = "omawin GlazeWM ($([Environment]::UserName))"
 if (Test-Path $glazewm) {
     $trigger = New-ScheduledTaskTrigger -AtLogOn -User $user
     # Through omawin.exe ("omawin start glazewm", bin/omawin.cs), in a console nobody sees. It
@@ -26,13 +28,13 @@ if (Test-Path $glazewm) {
     $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
         -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -Priority 4 -MultipleInstances IgnoreNew
     $principal = New-ScheduledTaskPrincipal -UserId $user -LogonType Interactive -RunLevel Limited
-    $null = Register-ScheduledTask -TaskName 'omawin GlazeWM' -Trigger $trigger -Action $action -Settings $settings `
+    $null = Register-ScheduledTask -TaskName $taskName -Trigger $trigger -Action $action -Settings $settings `
         -Principal $principal -Description 'GlazeWM at sign-in, without waiting for the Run list (omawin install/login-start.ps1)' -Force
-    if (-not (Get-ScheduledTask -TaskName 'omawin GlazeWM' -ErrorAction SilentlyContinue)) { throw 'the sign-in task did not register' }
+    if (-not (Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue)) { throw 'the sign-in task did not register' }
     # One start only, now that the task is there: the Run entry would launch a second copy later.
     $run = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
     if ((Get-ItemProperty $run -ErrorAction SilentlyContinue).GlazeWM) { Remove-ItemProperty $run -Name GlazeWM }
-    'ok  GlazeWM starts at sign-in (scheduled task "omawin GlazeWM")'
+    "ok  GlazeWM starts at sign-in (scheduled task '$taskName')"
 } else { 'GlazeWM not installed; re-run after installing it' }
 
 # Windows' start-up delay for the Run list: none, and no waiting for the PC to go idle first.
