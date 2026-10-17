@@ -15,7 +15,8 @@ foreach ($old in 'omawin GlazeWM', 'omawin lock screen') {
     if (-not (Get-ScheduledTask -TaskName $new -ErrorAction SilentlyContinue)) {
         Register-ScheduledTask -TaskName $new -Xml (Export-ScheduledTask -TaskName $old -TaskPath '\') | Out-Null
     }
-    Unregister-ScheduledTask -TaskName $old -TaskPath '\' -Confirm:$false
-    "task '$old' is '$new' now"
+    # One made from an admin window can only be removed as admin: left, and said so.
+    try { Unregister-ScheduledTask -TaskName $old -TaskPath '\' -Confirm:$false -ErrorAction Stop; "task '$old' is '$new' now" }
+    catch { "task '$new' made; the old '$old' was made as admin: delete it in Task Scheduler (as admin)" }
 }
 & (Join-Path (Split-Path $PSScriptRoot) 'bin\ports.ps1') -Set
