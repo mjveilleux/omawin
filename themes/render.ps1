@@ -33,7 +33,7 @@ param([string]$Name, [switch]$Reload)
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $State = Join-Path $env:LOCALAPPDATA 'launcher'
-if (-not $Name) { $Name = if (Test-Path "$State\theme") { (Get-Content "$State\theme" -Raw).Trim() } else { 'gruvbox' } }
+if (-not $Name) { $Name = if (Test-Path "$State\theme") { (Get-Content "$State\theme" -Raw).Trim() } else { 'starship' } }
 $palette = "$PSScriptRoot\colors\$Name.toml"
 if (-not (Test-Path $palette)) { $palette = "$PSScriptRoot\colors\gruvbox.toml" }
 

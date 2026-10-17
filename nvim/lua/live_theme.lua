@@ -21,7 +21,7 @@ local function read()
 end
 
 function M.current()
-  return read() or "gruvbox"
+  return read() or "starship"
 end
 
 -- Tokyo Night this setup's way: "night", the same palette as the Windows Terminal scheme;

@@ -8,7 +8,7 @@ omawin is "omakase Windows": one opinionated, keyboard-first desktop, after [Oma
 | **Win+Alt+Space** | the system menu: themes, install / remove apps, update, setup, power |
 | **Win+Enter** | a terminal, in the folder you're working in |
 
-Everything wears one theme: Gruvbox by default, or any of Omarchy's themes from the system menu. It covers the wallpaper, bar, borders, terminal, Neovim, RStudio and VS Code. The font is JetBrainsMono Nerd Font.
+Everything wears one theme: Starship by default, or any of Omarchy's themes from the system menu. It covers the wallpaper, bar, borders, terminal, Neovim, RStudio and VS Code. The font is JetBrainsMono Nerd Font.
 
 ## Chapters
 

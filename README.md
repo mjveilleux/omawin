@@ -1,6 +1,6 @@
 # omawin
 
-**Omakase Windows**: one command turns a Windows 11 PC into a keyboard-driven developer desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Tiling windows and workspaces, a bar and a dock, an instant launcher and system menu, screenshots and text from the screen, a terminal and Neovim set up and themed, and Windows' ads turned off. One theme runs through every app: **Gruvbox** by default, or any of Omarchy's.
+**Omakase Windows**: one command turns a Windows 11 PC into a keyboard-driven developer desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Tiling windows and workspaces, a bar and a dock, an instant launcher and system menu, screenshots and text from the screen, a terminal and Neovim set up and themed, and Windows' ads turned off. One theme runs through every app: **Starship** by default, or any of Omarchy's.
 
 <!-- A screenshot goes here: the desktop with the launcher open. -->
 

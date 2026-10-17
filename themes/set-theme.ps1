@@ -24,7 +24,7 @@
 
     `omawin theme set` and `omawin theme next-background` run this.
 
-    The name is remembered in %LOCALAPPDATA%\launcher\theme. Gruvbox (on its village square
+    The name is remembered in %LOCALAPPDATA%\launcher\theme. Starship (on its starbase
     background) is the default, what install.ps1 applies. Nothing tracked by git changes.
     The colors go first, so they change within about a second; the wallpaper and the editors
     follow.
@@ -62,7 +62,7 @@ $State = Join-Path $env:LOCALAPPDATA 'launcher'
 New-Item -ItemType Directory -Force $State | Out-Null
 
 $current = Get-Content "$State\theme" -ErrorAction SilentlyContinue
-if (-not $current) { $current = 'gruvbox' }
+if (-not $current) { $current = 'starship' }
 if ($NextBackground -or -not $Name) { $Name = $current }
 $file = Join-Path $PSScriptRoot "$Name.json"
 if (-not (Test-Path $file)) { throw "No theme '$Name' (themes/*.json)." }

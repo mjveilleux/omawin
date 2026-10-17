@@ -48,4 +48,4 @@ Like Omarchy, a theme is one palette and a switch only writes state outside the 
 
 After editing `glazewm/config.yaml`, press Alt+Shift+R (`omawin restart glazewm`): it renders, then reloads. A config never holds a theme's color itself.
 
-The default is **Gruvbox on 3-village-square**, which `install.ps1` applies when no theme is set.
+The default is **Starship on 1-starbase**, which `install.ps1` applies when no theme is set.

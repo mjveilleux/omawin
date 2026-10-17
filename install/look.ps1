@@ -2,11 +2,11 @@
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
 Write-Step 'Windows look'
-# The theme (themes/set-theme.ps1) owns dark/light mode and the wallpaper: Gruvbox, on
-# Omarchy's village square background, until another is picked (system menu > Style > Theme).
+# The theme (themes/set-theme.ps1) owns dark/light mode and the wallpaper: Starship, on
+# its first background (Omarchy's starbase), until another is picked (system menu > Style > Theme).
 if (Test-Path "$env:LOCALAPPDATA\launcher\theme") { Write-Note "ok  theme $(Get-Content "$env:LOCALAPPDATA\launcher\theme")" }
 else {
-    try { & "$Repo\themes\set-theme.ps1" gruvbox -Background village-square } catch { Write-Warn "theme not applied: $_" }
+    try { & "$Repo\themes\set-theme.ps1" starship } catch { Write-Warn "theme not applied: $_" }
 }
 # A clean desktop: no Recycle Bin icon (it's still in File Explorer). Files belong in
 # Documents; the desktop is just the wallpaper.

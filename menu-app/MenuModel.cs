@@ -146,7 +146,7 @@ public static class MenuModel
     public static string CurrentThemeName()
     {
         try { var n = File.ReadAllText(CurrentThemeFile).Trim(); if (n.Length > 0) return n; } catch { }
-        return "gruvbox";
+        return "starship";
     }
 
     public static Theme LoadTheme(string name)
@@ -156,7 +156,7 @@ public static class MenuModel
             var json = File.ReadAllText(Path.Combine(ThemesDir, name + ".json"));
             return JsonSerializer.Deserialize<Theme>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new Theme();
         }
-        catch { return name != "gruvbox" ? LoadTheme("gruvbox") : new Theme(); } // omawin's default theme
+        catch { return name != "starship" ? LoadTheme("starship") : new Theme(); } // omawin's default theme
     }
 
     public static List<(string File, Theme Theme)> Themes() =>

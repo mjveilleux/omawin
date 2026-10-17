@@ -20,4 +20,4 @@ omawin theme next-background
 omawin theme import                             pick up new Omarchy themes
 ```
 
-Gruvbox on the village square background is the default; a new machine starts with it. How it works: [docs/themes.md](../docs/themes.md).
+Starship, on its starbase background, is the default; a new machine starts with it. How it works: [docs/themes.md](../docs/themes.md).

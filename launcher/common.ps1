@@ -7,8 +7,8 @@ $reset = "$esc[0m"
 
 # --- colors -------------------------------------------------------------------------------
 # The theme picked in the system menu (themes/<name>.json), read each time one of these starts;
-# Gruvbox (the default) when none was picked yet or its file is gone. No colors of its own.
-$ThemeName = (Get-Content (Join-Path $env:LOCALAPPDATA 'launcher\theme') -ErrorAction SilentlyContinue) ?? 'gruvbox'
+# Starship (the default) when none was picked yet or its file is gone. No colors of its own.
+$ThemeName = (Get-Content (Join-Path $env:LOCALAPPDATA 'launcher\theme') -ErrorAction SilentlyContinue) ?? 'starship'
 $ThemeFile = Join-Path $PSScriptRoot "..\themes\$ThemeName.json"
 if (-not (Test-Path $ThemeFile)) { $ThemeFile = Join-Path $PSScriptRoot '..\themes\gruvbox.json' }
 $theme = Get-Content $ThemeFile -Raw | ConvertFrom-Json

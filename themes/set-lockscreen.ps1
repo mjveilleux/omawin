@@ -25,7 +25,7 @@ $dir = Join-Path $state 'lockscreen'
 New-Item -ItemType Directory -Force $dir | Out-Null
 
 if ($Next) {
-    $name = if (Test-Path "$state\theme") { (Get-Content "$state\theme" -Raw).Trim() } else { 'gruvbox' }
+    $name = if (Test-Path "$state\theme") { (Get-Content "$state\theme" -Raw).Trim() } else { 'starship' }
     $theme = Get-Content (Join-Path $PSScriptRoot "$name.json") -Raw | ConvertFrom-Json
     $backgrounds = @($theme.backgrounds)
     if (-not $backgrounds) { return }

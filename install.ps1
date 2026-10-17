@@ -24,6 +24,12 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# Never as administrator (see bootstrap.ps1): it would set up whichever account the admin
+# password belongs to, not the one signed in. The steps that need admin ask for it.
+if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host "This PowerShell runs as administrator ($env:USERNAME): run install.ps1 from a normal one; it asks for admin where it needs it." -ForegroundColor Yellow
+    exit 1
+}
 $Repo = $PSScriptRoot
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 . "$Repo\packages.ps1"

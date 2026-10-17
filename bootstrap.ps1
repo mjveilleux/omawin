@@ -22,6 +22,18 @@
     already at ~/omawin (testing in a VM).
 #>
 $ErrorActionPreference = 'Stop'
+
+# Never as administrator: in a standard account, "Run as administrator" with another account's
+# password runs everything as that other account (its home folder, its settings), and the
+# desktop it starts can't work in this one. The steps that need admin ask for it themselves.
+if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Host ''
+    Write-Host "  This PowerShell runs as administrator ($env:USERNAME). Close it, open PowerShell" -ForegroundColor Yellow
+    Write-Host '  normally (Start, type PowerShell, Enter), and run the command again. The steps' -ForegroundColor Yellow
+    Write-Host '  that need admin ask for it on their own.' -ForegroundColor Yellow
+    return
+}
+
 $Repo = if ($env:OMAWIN_REPO) { $env:OMAWIN_REPO } else { 'mjveilleux/omawin' }
 $Target = "$HOME\omawin"
 $Local = $env:OMAWIN_LOCAL -eq '1' -or $env:DOTFILES_LOCAL -eq '1'

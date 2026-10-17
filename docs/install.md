@@ -35,7 +35,7 @@ If it warns that Windows Terminal's settings couldn't be linked (the install she
 | `shell` | PowerShell profile, Windows Terminal, noctty's config stub, starship, git (includes, and your name and email: asked once if git has none, written to your own `~/.gitconfig`), Git Bash |
 | `desktop` | GlazeWM + Zebar, GlazeWM at sign-in (a scheduled task, `install/login-start.ps1`, so it doesn't wait for Windows' delayed start-up list); our GlazeWM fork ([mjveilleux/glazewm](https://github.com/mjveilleux/glazewm), `install/glazewm-fork.ps1`: it can start before Explorer, so the desktop is up the moment you sign in; signed with a certificate made on and trusted by that PC only, one admin prompt; declined or failed, the official GlazeWM stays and waits for Explorer); Handy (dictation) on PATH, configured |
 | `helpers` | `omawin.exe` and the bar's helpers into `~/.local/bin` (on PATH), the `btop` shim, noctty (the terminal, our fork's latest release, into `%LOCALAPPDATA%\Programs\noctty`; `bin/noctty.ps1`), the menu app and the music player (`bin/install-binaries.ps1`: the release's prebuilt file for this PC, checked against its published hash, or a build here when there is none — [releases.md](releases.md)) |
-| `look` | the default theme (Gruvbox on village square) if none is set; no Recycle Bin icon; the lock-screen rotation task; the taskbar set to auto-hide |
+| `look` | the default theme (Starship, on its first background) if none is set, so a new install shows at once that it took; no Recycle Bin icon; the lock-screen rotation task; the taskbar set to auto-hide |
 | `other` | `~/.wslconfig` (the user layer's when it has one); Claude Code's rules, skills, settings and plugins from your layers (`omawin claude sync`) |
 
 Then the migrations (below).
