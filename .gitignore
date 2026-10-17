@@ -27,3 +27,6 @@ scratch/
 
 # Written by agent/backends/opencode.ps1: the omawin agent for the OpenCode service.
 .opencode/
+
+# Agents' worktrees (Claude Code)
+.claude/worktrees/
