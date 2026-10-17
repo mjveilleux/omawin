@@ -35,7 +35,10 @@ $WingetPackages = @(
     'OpenJS.NodeJS.LTS'             # mason.nvim (Neovim) installs most LSPs with npm
     'astral-sh.uv'                  # Python tools (harlequin, the Fabric CLI) and mason.nvim's Python LSPs
 
-    'Microsoft.DotNet.SDK.9'        # builds the menu app (menu-app/) and the music player (music/)
+    # The menu app and the music player run on it (they come prebuilt from the release). The
+    # 1 GB SDK that builds them is installed only where one has to be built: no release for this
+    # PC, or a checkout being worked on (bin/install-binaries.ps1, Install-DotNetSdk).
+    'Microsoft.DotNet.DesktopRuntime.9'
 )
 
 # Opt-in groups. Winget: winget ids. Extras: names in $ExtraInstalls. Tools: the commands

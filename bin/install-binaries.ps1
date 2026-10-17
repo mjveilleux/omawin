@@ -15,8 +15,8 @@
          music\build.ps1) - a dev checkout, offline, no release, no GitHub sign-in, no .NET SDK.
 
     Step 2 is the point: a new PC gets omawin.exe, the helpers, the menu app and the music player
-    without the .NET SDK (a 1 GB dependency) or a compile. The SDK stays in the core
-    (packages.ps1) as step 3's fallback.
+    without the .NET SDK (a 1 GB dependency) or a compile. The SDK is installed only
+    for step 3, when it comes to that (Install-DotNetSdk); the core has the runtime.
 
     -Release pins a tag (default: the newest release); OMAWIN_RELEASE does the same. -NoDownload
     builds, -NoBuild never builds (OMAWIN_PREBUILT=0|1 for a whole install). -BaseUrl points at a
@@ -55,6 +55,15 @@ $Arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
 if (-not $Release) { $Release = if ($env:OMAWIN_RELEASE) { $env:OMAWIN_RELEASE } else { 'latest' } }
 if ($env:OMAWIN_PREBUILT -eq '0') { $NoDownload = $true }
 if ($env:OMAWIN_PREBUILT -eq '1') { $NoBuild = $true }
+# The .NET SDK, for a build here: only now, when one is needed (the core has just the runtime).
+function Install-DotNetSdk {
+    if ((Get-Command dotnet -ErrorAction SilentlyContinue) -and (& dotnet --list-sdks 2>$null | Select-String '^9\.')) { return $true }
+    Write-Note 'installing the .NET 9 SDK to build here (about 1 GB, once)'
+    winget install --id Microsoft.DotNet.SDK.9 --exact --silent --accept-source-agreements --accept-package-agreements | Out-Null
+    $env:Path = [Environment]::GetEnvironmentVariable('Path', 'Machine') + ';' + [Environment]::GetEnvironmentVariable('Path', 'User')
+    [bool](Get-Command dotnet -ErrorAction SilentlyContinue)
+}
+
 $WantHelpers = $What -in 'all', 'helpers'
 $WantMenu = $What -in 'all', 'menu'
 $WantMusic = $What -in 'all', 'music'
@@ -166,10 +175,10 @@ try {
             elseif ($NoBuild) { Write-Warn "no system menu in a release ($reason) and -NoBuild: left as it is" }
             else {
                 if ($reason -and $reason -ne '-NoDownload') { Write-Note "no release ($reason): building here" }
-                if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+                if (Install-DotNetSdk) {
                     try { & "$Repo\menu-app\build.ps1" -OutDir $MenuDir -BuildOnly:([bool]$NoStart) -Arch $Arch }
                     catch { Write-Warn "system menu build failed: $_" }
-                } else { Write-Warn '.NET SDK not found; install Microsoft.DotNet.SDK.9, then run install.ps1 -LinkOnly' }
+                } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }
         }
     }
@@ -195,10 +204,10 @@ try {
             elseif ($NoBuild) { Write-Warn "no music player in a release ($reason) and -NoBuild: left as it is" }
             else {
                 if ($reason -and $reason -ne '-NoDownload') { Write-Note "no release ($reason): building here" }
-                if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+                if (Install-DotNetSdk) {
                     try { & "$Repo\music\build.ps1" -OutDir $BinDir -BuildOnly:([bool]$NoStart) -Arch $Arch }
                     catch { Write-Warn "music player build failed: $_" }
-                } else { Write-Warn '.NET SDK not found: install Microsoft.DotNet.SDK.9, then run install.ps1 -LinkOnly' }
+                } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }
         }
     }

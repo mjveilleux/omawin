@@ -91,7 +91,7 @@ Anything already at a live location is moved to `<path>.backup-<timestamp>` firs
 
 ## Presets
 
-`packages.ps1` is a lean core (shell tools, the desktop, the editor and what it needs, Git, the .NET SDK for the menu app: the fallback where no release fits, [releases.md](releases.md)) plus presets, opt-in groups: `python`, `node`, `go`, `elixir`, `r`, `c`, `data` (DuckDB, harlequin, sqlcmd), `typst`, `docker`, `cli-extras`, `ai-agents` (Claude Code, opencode), `music` (yt-dlp and mpv for the bar's player), `dictation` (Handy), `powerbi-fabric`.
+`packages.ps1` is a lean core (shell tools, the desktop, the editor and what it needs, Git, the .NET desktop runtime the menu app and the music player run on; the 1 GB SDK only where they have to be built, [releases.md](releases.md)) plus presets, opt-in groups: `python`, `node`, `go`, `elixir`, `r`, `c`, `data` (DuckDB, harlequin, sqlcmd), `typst`, `docker`, `cli-extras`, `ai-agents` (Claude Code, opencode), `music` (yt-dlp and mpv for the bar's player), `dictation` (Handy), `powerbi-fabric`.
 - `omawin preset list` shows them, the picked ones marked; `omawin preset add <name>` picks one and installs it now; `omawin preset remove <name>` unpicks it (what it installed stays). Also in the system menu: Install > Presets.
 - The picks are per PC, in `%LOCALAPPDATA%\launcher\presets.txt`; `install.ps1` installs the core and those. The first install asks (or starts with none when nobody's there to answer).
 - `omawin check` expects the tools of the picked presets only.

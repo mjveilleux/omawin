@@ -27,7 +27,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 
 - Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher and music player on the PC.
 - winget (App Installer, from the Microsoft Store; every current Windows 11 has it).
-- An internet connection and a few GB of disk (the core installs about 25 packages, among them the .NET SDK).
+- An internet connection and a few GB of disk (the core installs about 25 packages).
 - A standard account is fine. Expect one Windows admin prompt (for the GlazeWM fork); `omawin no-ads` asks for another.
 
 ## Install
