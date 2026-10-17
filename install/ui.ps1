@@ -193,7 +193,8 @@ function Write-OkCount([string]$What = 'already installed') {
 # Something just done, with how long it took (fancy only; plain said "installing x" before it).
 function Write-Done([string]$Text, [double]$Seconds) {
     Write-Log "    done  $Text ($(Format-Duration $Seconds))"
-    if (-not $UI.Fancy) { return }
+    # Plain: installs run several at once now, so each says when it's done.
+    if (-not $UI.Fancy) { Write-Host "    done  $Text ($(Format-Duration $Seconds))"; return }
     $c = $UI.C
     Write-UILine ("      {0}{1}{2} {3}  {4}{5}{2}" -f $c.Green, $UI.G.Done, $c.Reset, $Text, $c.Dim, (Format-Duration $Seconds))
 }
