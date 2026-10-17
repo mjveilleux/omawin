@@ -8,7 +8,7 @@
 param([string]$Dir = (Join-Path $env:LOCALAPPDATA 'system-menu'))
 $ErrorActionPreference = 'Stop'
 
-Get-Process SystemMenu -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
 if (-not (Test-Path $Dir)) { return }
 
 function Test-Locked($file) {

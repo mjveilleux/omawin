@@ -59,7 +59,7 @@ function Stop-GlazeWM {
     if (-not (Get-Process glazewm -ErrorAction SilentlyContinue)) { return }
     try { & "$dir\cli\glazewm.exe" command wm-exit 2>$null | Out-Null } catch { }
     for ($i = 0; $i -lt 50 -and (Get-Process glazewm -ErrorAction SilentlyContinue); $i++) { Start-Sleep -Milliseconds 100 }
-    Get-Process glazewm -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process glazewm -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
 }
 function Start-GlazeWM {
     # omawin.exe waits for Explorer and starts GlazeWM once; on a brand-new PC the desktop step

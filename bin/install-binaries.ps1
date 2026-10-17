@@ -194,7 +194,7 @@ try {
                     # The bar restarts its feed (the same exe) within seconds, so the old one is
                     # renamed aside rather than waited for: a file in use can still be renamed.
                     Get-ChildItem $BinDir -Filter 'omawin-music.exe.old-*' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
-                    Get-Process omawin-music -ErrorAction SilentlyContinue | Stop-Process -Force
+                    Get-Process omawin-music -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
                     if (Test-Path $dest) { Move-Item $dest "$dest.old-$(Get-Date -Format yyyyMMddHHmmss)" -Force }
                 }
                 Copy-Item -LiteralPath $fromRelease -Destination "$dest.part" -Force

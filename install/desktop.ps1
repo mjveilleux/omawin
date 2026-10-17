@@ -29,7 +29,7 @@ if (Test-Path "$handyDir\handy.exe") {
         Start-Process "$handyDir\handy.exe"
         for ($i = 0; $i -lt 40 -and -not (Test-Path $store); $i++) { Start-Sleep -Milliseconds 500 }
         Start-Sleep 2
-        Get-Process handy -ErrorAction SilentlyContinue | Stop-Process -Force
+        Get-Process handy -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     }
     if (Test-Path $store) {
         $j = Get-Content $store -Raw | ConvertFrom-Json; $s = $j.settings

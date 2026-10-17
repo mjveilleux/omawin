@@ -26,7 +26,7 @@ $exe = Join-Path $out 'omawin-music.exe'
 $old = $null
 if (-not $BuildOnly) {
     Get-ChildItem $out -Filter 'omawin-music.exe.old-*' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
-    Get-Process omawin-music -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process omawin-music -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     # The player's mpv (Mpv.cs) would play on without it.
     Get-CimInstance Win32_Process -Filter "Name='mpv.exe'" -ErrorAction SilentlyContinue |
         Where-Object { $_.CommandLine -like '*omawin-mpv*' } |

@@ -38,7 +38,7 @@ try {
     if (-not $unpacked) { throw 'no noctty.exe in the ZIP' }
 
     $running = [bool](Get-Process noctty -ErrorAction SilentlyContinue)
-    Get-Process noctty -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process noctty -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     Start-Sleep -Milliseconds 500
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
     New-Item -ItemType Directory -Force (Split-Path $dir) | Out-Null

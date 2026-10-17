@@ -12,7 +12,7 @@
 # Their colors are theme.css, which themes/render.ps1 writes; made here if it was never written.
 $render = Join-Path $PSScriptRoot '..\themes\render.ps1'
 if (-not (Test-Path "$PSScriptRoot\tokyo-islands\theme.css") -and (Test-Path $render)) { & $render }
-Get-Process zebar, voice-meter, cpu-cores, theme-watch -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process zebar, voice-meter, cpu-cores, theme-watch -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
 Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object CommandLine -match 'zebar' |
     ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--disable-gpu'

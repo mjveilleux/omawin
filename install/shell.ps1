@@ -57,7 +57,7 @@ if ($wtPackage) {
     Start-Process wt -WindowStyle Minimized
     for ($i = 0; $i -lt 30 -and -not ($wtPackage = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.WindowsTerminal_*' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1); $i++) { Start-Sleep 1 }
     Start-Sleep 3
-    Get-Process WindowsTerminal -ErrorAction SilentlyContinue | Stop-Process -Force
+    Get-Process WindowsTerminal -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     Start-Sleep 1
     if ($wtPackage) {
         try { Set-TerminalSettings "$($wtPackage.FullName)\LocalState" }
