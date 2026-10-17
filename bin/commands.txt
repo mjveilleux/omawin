@@ -40,7 +40,7 @@ restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+
 restart menu | Rebuild and restart the menu app (after editing menu-app/) | pwsh menu-app/build.ps1
 restart music | Rebuild the music player (after editing music/); the bar picks it up by itself | pwsh music/build.ps1
 
-music | The music, podcast and radio player in the bar: open (Win+M), add <url>, add podcasts <url>, add radio <url> [name], add suno <url>, suno-create (Suno's create page, to make a song), list, toggle, next, prev, rate <1-5>, station [songs|jams] (music/) | run omawin-music
+music | The music, podcast and radio player in the bar: open (Win+M), add <url>, add podcasts <url>, add radio <url> [name], add suno <url>, suno-create (Suno's create page, to make a song), list, toggle, next, prev, rate <1-5>, station [songs or jams] (music/) | run omawin-music
 agent listen | Talk to omawin's agent (Ctrl+Win+H): it listens; a second press sends what you said to a herdr session on workspace 9, where it does it live (quick changes to omawin, music, issues) | run omawin-listen.exe
 agent open | Show omawin's agent: its herdr session on workspace 9, with OpenCode's service in the first tab and a tab per request | pwsh agent/open.ps1
 agent start | Start omawin's agent's herdr session in the background, with OpenCode's service in it, so requests only attach (GlazeWM does this at login) | pwsh agent/start.ps1
