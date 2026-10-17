@@ -35,26 +35,57 @@ $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 . "$Repo\packages.ps1"
 
 $Steps = 'no-ads', 'software','neovim', 'shell', 'desktop', 'helpers', 'look', 'other'
+# One line each for the banner's plan (docs/install.md has the long version).
+$StepSummaries = @{
+    'no-ads'     = "Windows' ads and suggestions off"
+    'software'   = 'winget packages, your presets, the Nerd Font'
+    'neovim'     = 'Neovim and Neovide config'
+    'shell'      = 'PowerShell profile, terminals, prompt, git'
+    'desktop'    = 'GlazeWM, Zebar, dictation'
+    'helpers'    = 'omawin.exe, the menu app, the music player'
+    'look'       = 'the theme, the lock screen, the taskbar'
+    'other'      = 'WSL settings, Claude Code'
+    'migrations' = 'clear away what older versions left'
+}
 . "$Repo\install\lib.ps1"
+
+# A step that throws still stops the install, as it always has; it's marked failed first.
 if ($Step) {
     if ($Steps -notcontains $Step) { throw "no step '$Step'; the steps: $($Steps -join ', ')" }
-    . "$Repo\install\$Step.ps1"
+    Add-InstallStep $Step $StepSummaries[$Step]
+    Enter-InstallStep $Step
+    try { . "$Repo\install\$Step.ps1" } catch { Exit-InstallStep $_; Close-InstallUI; throw }
+    Exit-InstallStep
+    Write-InstallLogPath
+    Close-InstallUI
     return
 }
+
+$what = if ($LinkOnly) { 'relink and rebuild (-LinkOnly)' } else { 'set up this PC' }
+Write-InstallBanner (Get-InstallVersion $Repo) $what
+foreach ($name in $Steps + 'migrations') { Add-InstallStep $name $StepSummaries[$name] -Skip:($LinkOnly -and $name -eq 'software') }
+Write-InstallPlan
+
 foreach ($name in $Steps) {
     if ($LinkOnly -and $name -eq 'software') { continue }
-    . "$Repo\install\$name.ps1"
+    Enter-InstallStep $name
+    try { . "$Repo\install\$name.ps1" } catch { Exit-InstallStep $_; Write-InstallSummary; Close-InstallUI; throw }
+    Exit-InstallStep
 }
 
+Enter-InstallStep 'migrations'
 Write-Step 'migrations'
 $global:LASTEXITCODE = 0  # not a stale one from a step's native program
 & "$Repo\bin\migrate.ps1"
 if ($LASTEXITCODE -ne 0) {
     # migrate.ps1 already said which one failed; the rest run on the next install or omawin migrate.
     Write-Warn 'a migration failed (above); fix it, then run: omawin migrate'
+    Exit-InstallStep 'a migration failed'
+    Write-InstallSummary
+    Close-InstallUI
     exit 1
 }
+Exit-InstallStep
 
-Write-Step 'done'
-Write-Note 'Sign out and back in: the desktop (GlazeWM, the bar, the launcher) starts at sign-in.'
-Write-Note 'Then Win+Enter for a terminal; the first nvim start installs its plugins. `omawin help` lists every command.'
+Write-InstallSummary
+Close-InstallUI

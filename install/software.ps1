@@ -9,17 +9,35 @@ function Install-WingetPackages([string[]]$Ids) {
         Write-Warn 'winget not found. Install "App Installer" from the Microsoft Store, then re-run.'
         return
     }
+    # The fancy face (install/ui.ps1) runs winget with its output captured and a spinner showing
+    # which package of how many; the plain one runs it as it always has, its output inline.
+    $winget = (Get-Command winget).Source
+    $n = 0
     foreach ($id in $Ids) {
+        $n++
+        $of = '{0}/{1}' -f $n, @($Ids).Count
         $command = $WingetCommands[$id]
-        if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { Write-Note "ok  $id ($command)"; continue }
-        winget list --id $id --exact --accept-source-agreements *> $null
-        if ($LASTEXITCODE -eq 0) { Write-Note "ok  $id"; continue }
-        Write-Note "installing $id"
+        if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { Write-Ok "$id ($command)"; continue }
+        if ($UI.Fancy) {
+            $listed = (Invoke-NativeStatus $winget @('list', '--id', $id, '--exact', '--accept-source-agreements') "checking    $of  $id").ExitCode -eq 0
+        } else {
+            winget list --id $id --exact --accept-source-agreements *> $null
+            $listed = $LASTEXITCODE -eq 0
+        }
+        if ($listed) { Write-Ok $id; continue }
         $wingetArgs = @('install', '--id', $id, '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements')
         if ($WingetOverrides[$id]) { $wingetArgs += '--override', $WingetOverrides[$id] }
-        winget @wingetArgs
-        if ($LASTEXITCODE -ne 0) { Write-Warn "winget install $id exited with $LASTEXITCODE" }
+        if ($UI.Fancy) {
+            $result = Invoke-NativeStatus $winget $wingetArgs "installing  $of  $id"
+            if ($result.ExitCode -ne 0) { Write-Warn "winget install $id exited with $($result.ExitCode)"; Write-OutputTail $result.Output }
+            else { Write-Done $id $result.Seconds }
+        } else {
+            Write-Note "installing $id"
+            winget @wingetArgs
+            if ($LASTEXITCODE -ne 0) { Write-Warn "winget install $id exited with $LASTEXITCODE" }
+        }
     }
+    Write-OkCount
     # Bun's winget package leaves bun.exe in its own folder, off the PATH: put that folder on it.
     $bun = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter bun.exe -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($bun -and (Add-UserPath $bun.DirectoryName)) { Write-Note "bun on the PATH: $($bun.DirectoryName)" }

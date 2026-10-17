@@ -25,7 +25,7 @@ If it warns that Windows Terminal's settings couldn't be linked (the install she
 
 ## The steps (`install/`)
 
-`install.ps1` dot-sources `install/lib.ps1` (step headings, junctions, stub files), then these in order:
+`install.ps1` dot-sources `install/lib.ps1` (output, junctions, stub files), then these in order:
 
 | Step | What it does |
 |---|---|
@@ -39,6 +39,12 @@ If it warns that Windows Terminal's settings couldn't be linked (the install she
 | `other` | `~/.wslconfig` (the user layer's when it has one); Claude Code's rules, skills, settings and plugins from your layers (`omawin claude sync`) |
 
 Then the migrations (below).
+
+### What it shows
+
+In a console the install draws its own screen (`install/ui.ps1`): the omawin banner and the plan, then each step as it runs (● running, ✓ done with its time, ! with warnings, ✗ failed) with an overall progress bar, a spinner with `installing 7/25 Neovim.Neovim` while winget works, and a finish box with the warnings and what to do next. `bootstrap.ps1` opens with the same banner (a small copy: it runs before the clone). When the output isn't a console (`omawin update`'s log, an agent), or `OMAWIN_PLAIN=1` or `NO_COLOR` is set, it prints the plain `==> step` lines instead; `OMAWIN_PLAIN=0` forces the screen.
+
+Every line, with winget's output for a failed package, also goes to `%LOCALAPPDATA%\launcher\install.log`, timestamped (moved to `install.log.old` past 1 MB). `install\demo-ui.ps1` plays the whole screen with fake steps and installs nothing (`-Fail` for a failing step, `-Speed 2` to hurry).
 
 By hand, once:
 - Open a terminal and run `nvim` once: lazy.nvim installs the plugins, mason.nvim the LSPs.

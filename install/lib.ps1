@@ -1,15 +1,10 @@
-# install.ps1's shared helpers: step headings, junctions, stub files. Dot-sourced by install.ps1
+# install.ps1's shared helpers: output, junctions, stub files. Dot-sourced by install.ps1
 # before any step, so each step (and install.ps1 -Step <name>) can use them.
 # Runs under Windows PowerShell 5.1 too (a fresh PC has no pwsh yet).
 
-# Each step shows the time since the start, so slow steps are easy to spot.
-$Started = Get-Date
-function Write-Step([string]$Text) {
-    $elapsed = (Get-Date) - $Started
-    Write-Host ("`n==> {0}   [{1:mm\:ss}]" -f $Text, $elapsed) -ForegroundColor Cyan
-}
-function Write-Note([string]$Text) { Write-Host "    $Text" -ForegroundColor DarkGray }
-function Write-Warn([string]$Text) { Write-Host "    ! $Text" -ForegroundColor Yellow }
+# The output (Write-Step, Write-Note, Write-Warn, the step tracker) and its log: install/ui.ps1.
+. "$PSScriptRoot\ui.ps1"
+Initialize-InstallUI (Split-Path -Leaf $MyInvocation.PSCommandPath)
 
 # Your user layer: what's yours and not omawin's (your git identity, Claude settings, launcher
 # items, profile additions), in a folder of your own next to the repo (docs/work.md). Each step
