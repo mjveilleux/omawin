@@ -83,10 +83,10 @@ public static class About
         if (!Real(model)) return null;
         maker = Real(maker) ? maker!.Trim() : "";
         model = model!.Trim();
-        // Lenovo's model is a machine type ("82XM"); the name people know is its family.
+        // Lenovo's model is a machine type ("21HM"); the name people know is its family.
         if (!model.Contains(' ') && key.GetValue("SystemFamily") is string family && Real(family) && family.Trim().Contains(' '))
             model = $"{family.Trim()} ({model})";
-        // "HP" + "HP Laptop 15-ef2xxx", "LENOVO" + "20XW0026US": the maker once, in its own case.
+        // "HP" + "HP Laptop 15-ef2xxx", "LENOVO" + "21HMXXXXUS": the maker once, in its own case.
         var first = maker.Split(' ', ',')[0];
         return first.Length == 0 || model.StartsWith(first, StringComparison.OrdinalIgnoreCase) ? model : $"{Title(maker)} {model}";
     }

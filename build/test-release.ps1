@@ -8,7 +8,7 @@
 # Nothing outside scratch\ is written (-StateFile is redirected too); the menu app and the music
 # player are never stopped or started (-NoStart), so the running desktop is left alone.
 #
-#   pwsh -File build\test-release.ps1                  what I ran for 4-ci-releases
+#   pwsh -File build\test-release.ps1                  the full run
 #   pwsh -File build\test-release.ps1 -SkipBuild       use what scratch\ already has
 #   pwsh -File build\test-release.ps1 -Http            also serve the release over http
 param(

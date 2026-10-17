@@ -171,8 +171,7 @@ jobs:
         shell: pwsh
         run: .\build\release.ps1 -Tag '${{ needs.meta.outputs.version }}' -OutDir dist -OnlyManifest
 
-      # Off by default: GitHub artifact attestations need a plan that has them (a private repo on
-      # GitHub Team does not).
+      # Off by default: GitHub artifact attestations need a public repo or a plan that has them.
       - name: Attest (repo variable ATTEST)
         if: vars.ATTEST == 'true'
         uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2

@@ -30,7 +30,6 @@ PowerShell 7 with starship, zoxide, fzf, eza and bat:
 - **Shortcuts:** `..`, `...`, `which`, `lg` (lazygit), `reload`.
 - **`gacp <msg>`:** git add, commit and push.
 - **`iex`:** Elixir's IEx. Piped to, it's still Invoke-Expression, so `irm <url> | iex` works.
-- **Project jumps:** `cs`, `dw`, `api`.
 - **Starship and zoxide** are cached in `~/.cache/pwsh`; after upgrading either, run `Update-ShellCache`.
 - Your own aliases and tool paths (a classic `sqlcmd`, say) go in your user layer's `powershell/profile.ps1` (interactive shells; the profile loads it last) or `powershell/all-hosts.ps1` (every PowerShell, scripts too) ([docs/work.md](../docs/work.md)).
 

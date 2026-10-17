@@ -157,12 +157,6 @@
         "name": "Command Prompt"
       },
       {
-        "guid": "{b453ae62-4e3d-5e58-b989-0a998ec441b8}",
-        "hidden": false,
-        "name": "Azure Cloud Shell",
-        "source": "Windows.Terminal.Azure"
-      },
-      {
         "guid": "{2ece5bfe-50ed-5f3a-ab87-5cd4baafed2b}",
         "hidden": false,
         "name": "Git Bash",
@@ -185,72 +179,6 @@
         "icon": "ms-appx:///ProfileIcons/pwsh.png",
         "name": "PowerShell (Admin)",
         "tabColor": "#f7768e"
-      },
-      {
-        "guid": "{17bf3de4-5353-5709-bcf9-835bd952a95e}",
-        "hidden": true,
-        "name": "Ubuntu-22.04",
-        "source": "Windows.Terminal.Wsl"
-      },
-      {
-        "guid": "{2386fdf6-27d8-5a84-81e3-f12b4363acbe}",
-        "hidden": false,
-        "name": "Ubuntu",
-        "source": "Microsoft.WSL"
-      },
-      {
-        "guid": "{4ff56d04-d9cf-57ea-bae2-ad396374e7e3}",
-        "hidden": false,
-        "name": "Ubuntu 22.04.5 LTS",
-        "source": "CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc"
-      },
-      {
-        "guid": "{2101475b-021a-5024-b2b1-ed2dae91822c}",
-        "hidden": false,
-        "name": "Developer Command Prompt for VS 2022",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{18f82acb-becb-50f7-ba91-a2bdfbebb750}",
-        "hidden": false,
-        "name": "Developer PowerShell for VS 2022",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{fb35a6b0-9457-5dbd-bb00-b5fdda25c091}",
-        "hidden": false,
-        "name": "Developer Command Prompt for VS 2022 [Preview]",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{9149ace6-3df5-5507-9564-1755781c94c3}",
-        "hidden": false,
-        "name": "Developer PowerShell for VS 2022 [Preview]",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{24f30221-a580-58cb-bbf2-b38443572494}",
-        "hidden": false,
-        "name": "Developer Command Prompt for VS 21",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{63d1f082-24ce-5ae4-bc58-518ec47b825f}",
-        "hidden": false,
-        "name": "Developer PowerShell for VS 21",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{36542956-6b13-50f3-b89e-7dac62c3e1c5}",
-        "hidden": true,
-        "name": "Developer Command Prompt for VS 18 (2)",
-        "source": "Windows.Terminal.VisualStudio"
-      },
-      {
-        "guid": "{3dff99f6-9182-5f8f-9767-e012124d933c}",
-        "hidden": true,
-        "name": "Developer PowerShell for VS 18 (2)",
-        "source": "Windows.Terminal.VisualStudio"
       }
     ]
   },

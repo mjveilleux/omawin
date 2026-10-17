@@ -6,7 +6,7 @@ namespace SystemMenu;
 // microphone, with its volume, its mute, and which one Windows uses; and every app making sound
 // (the music player, Chrome, Teams, ...) with its own volume, its mute and the speaker it plays
 // on, like Windows' volume mixer. Windows' Core Audio (what the volume flyout and Sound settings
-// use), so it works whatever keyboard you have: some, like the HHKB over USB, have no volume
+// use), so it works whatever keyboard you have: some compact ones have no volume
 // keys Windows understands.
 public sealed record AudioDevice(string Id, string Name, bool Input, bool Default, int Volume, bool Muted);
 

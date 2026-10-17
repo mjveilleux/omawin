@@ -687,7 +687,7 @@ static class Wlan
         return session.Interfaces.Count;
     }
 
-    // "Intel(R) Wi-Fi 6E AX211 160MHz" and its state, as netsh wlan show interfaces has them.
+    // the adapter's name and its state, as netsh wlan show interfaces has them.
     public static List<(string Description, string State)> Adapters()
     {
         using var session = new Session();
@@ -1137,7 +1137,7 @@ static class Brightness
 
     static int Percent(uint value, uint min, uint max) => max <= min ? 100 : (int)Math.Round((value - min) * 100.0 / (max - min));
 
-    // "DISPLAY\LEN40A9\4&2f8a1b3&0&UID4353_0" -> "LEN40A9"
+    // "DISPLAY\ABC1234\4&0000000&0&UID0000_0" -> "ABC1234"
     static string Short(string instance)
     {
         var parts = instance.Split('\\');

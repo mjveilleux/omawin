@@ -162,11 +162,11 @@ public sealed partial class MainWindow
             case "reports":
                 Placeholder.Text = "Search reports…";
                 var reports = Reports.Load();
-                var tagColor = new Dictionary<string, string> { ["conference"] = theme.Cyan, ["robots"] = theme.Purple, ["local"] = theme.Green };
+                // Each tag its own colour, the same every time (tags are whatever the reports script says).
                 foreach (var (r, hits) in Filter(reports, query, x => x.Name).Take(150))
                 {
                     var report = r;
-                    AddRow(Glyph(0xF0128), r.Name, Hex(tagColor.GetValueOrDefault(r.Tag, theme.Accent)), () => { HideMenu(); Reports.Import(report); },
+                    AddRow(Glyph(0xF0128), r.Name, Hex(TagColor(r.Tag)), () => { HideMenu(); Reports.Import(report); },
                         Tag.Text, r.Modified.ToString("MMM d, yyyy"), sub: $"{r.Tag} · {r.Folder}", highlight: hits);
                 }
                 if (reports.Count == 0) AddRow(Glyph(0xF0996), "No reports yet: " + Reports.Age(), Hex(theme.Comment), () => { }, dim: true);

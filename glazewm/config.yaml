@@ -281,7 +281,7 @@ keybindings:
     bindings: ['lwin+shift+v']
   # The launcher on Audio: every speaker and microphone, its volume and mute (menu-app/Audio.cs);
   # Quick settings' switches are `launcher quick`.
-  # For keyboards without volume keys Windows understands (the HHKB over USB). Windows' own
+  # For keyboards without volume keys Windows understands (some compact keyboards). Windows' own
   # Win+A (quick settings) gives way, as Win+M does.
   - commands: ['shell-exec --hide-window omawin.exe launcher audio']
     bindings: ['lwin+a']

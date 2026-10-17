@@ -18,7 +18,7 @@ M.wide = false -- set on each render; plugins/dashboard.lua shows pane 2 only wh
 local palette = {}
 
 -- Mountain ranges, as { column, height in rows, slope } for a 7-row tall range; they scale
--- with the number of rows. The panorama is a longer range with Denali-ish in the middle.
+-- with the number of rows. The panorama is a longer range with mountain-ish in the middle.
 local ranges = {
   [60] = {
     far = { { 10, 5.0, 0.42 }, { 29, 6.6, 0.48 }, { 44, 5.5, 0.45 }, { 57, 4.3, 0.4 } },
