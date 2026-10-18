@@ -80,7 +80,7 @@ setup.check | 󰄬 | Health check | task omawin check
 setup.noads | 󰀧 | No ads (Windows; Lenovo / McAfee / Adobe upsells when found) | task omawin no-ads
 
 install | 󰉉 | Install
-install.package | 󰏓 | Any package (winget search) | task & "$HOME\omawin\launcher\menu.ps1" -SearchPackage
+install.package | 󰏓 | Package | task omawin pkg install
 install.preset | 󰏓 | Presets (groups of tools)
 install.preset.list | 󰆍 | Which are picked | task omawin preset list
 install.preset.python | 󰌠 | Python | task omawin preset add python
@@ -208,6 +208,7 @@ install.gaming | 󰊗 | Gaming
 install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
 
 remove | 󰭌 | Remove
+remove.package | 󰏓 | Package | task omawin pkg remove
 
 update | 󰚰 | Update
 update.dotfiles | 󰊢 | This setup (pull + relink) | task omawin update
