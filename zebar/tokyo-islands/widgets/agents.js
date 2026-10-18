@@ -42,7 +42,8 @@ export function create(ctx) {
 
   function draw() {
     const r = rec;
-    if (!r) return;
+    // Not checked yet, or the checks so far failed: say so, rather than an empty box.
+    if (!r) { panel.el.innerHTML = '<div class="note">Checking your limits…</div>'; return; }
     const limits = r.limits ?? [];
     const alarming = limits.some(l => l.percent >= 0.9);
     el.classList.toggle('hidden', !r.ready && !limits.length);
@@ -76,14 +77,17 @@ export function create(ctx) {
       const text = String(out.stdout).trim().split('\n').pop();
       rec = JSON.parse(text);
       draw();
+      if (panel.open) panel.show(el); // centered again: the filled panel is wider
     } catch (err) {
       console.error('agent usage', err);
     }
-    timer = setTimeout(refresh, rec?.retryAdvised ? 30000 : EVERY);
+    // No data yet: again in a minute, not in 15 (the panel would stay empty that long).
+    timer = setTimeout(refresh, !rec ? 60000 : rec.retryAdvised ? 30000 : EVERY);
   }
 
   el.addEventListener('click', () => {
     if (panel.open) return panel.hide();
+    if (!rec) refresh(true);
     // Filled first: show() centers it by its width, and an empty panel would land off-center.
     draw();
     panel.show(el);
