@@ -137,18 +137,30 @@ try {
         else {
             $zip = Get-ReleaseFile 'omawin-helpers-*.zip'
             if ($zip) {
-                # A running helper (Zebar's voice-meter) locks its exe, and the archive can't
-                # replace a locked file: those are moved aside first and keep running until the
-                # bar restarts them.
-                foreach ($h in $stale) {
-                    $exe = Join-Path $BinDir "$($h.Exe).exe"
-                    if (Test-Path $exe) {
-                        Remove-Item "$exe.old" -Force -ErrorAction SilentlyContinue
-                        try { Move-Item $exe "$exe.old" -ErrorAction Stop } catch { }
+                # Unpacked aside, then put in one file at a time. A running helper (the bar's
+                # theme-watch, voice-meter) locks its exe: it's moved aside, and keeps running until
+                # the bar restarts it. One that can't be moved stays as it is, for the next update;
+                # unpacking straight over the folder stopped at such a file, halfway, with
+                # omawin.exe already moved aside and no new one written.
+                $unpacked = Join-Path $work 'helpers'
+                Expand-Archive -Path $zip -DestinationPath $unpacked -Force
+                $kept = @()
+                foreach ($file in Get-ChildItem $unpacked -File) {
+                    $dest = Join-Path $BinDir $file.Name
+                    try {
+                        if (Test-Path $dest) {
+                            Remove-Item "$dest.old" -Force -ErrorAction SilentlyContinue
+                            Move-Item $dest "$dest.old" -Force -ErrorAction Stop
+                        }
+                        Copy-Item $file.FullName $dest -Force -ErrorAction Stop
+                    } catch {
+                        # Never leave one missing (omawin.exe is every key and the sign-in start).
+                        if (-not (Test-Path $dest) -and (Test-Path "$dest.old")) { Move-Item "$dest.old" $dest }
+                        $kept += $file.Name
                     }
                 }
-                Expand-Archive -Path $zip -DestinationPath $BinDir -Force
-                Write-Note 'omawin.exe and the helpers from the release'
+                if ($kept) { Write-Note "omawin.exe and the helpers from the release; $($kept -join ', ') in use, so the current one stays until the next update" }
+                else { Write-Note 'omawin.exe and the helpers from the release' }
             }
             elseif ($NoBuild) { Write-Warn "no release to download ($reason) and -NoBuild: left as they are" }
             else {
