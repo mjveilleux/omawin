@@ -5,7 +5,7 @@ import { startMusic } from '../music.js';
 export function create(ctx) {
   const el = document.createElement('div');
   el.className = 'media';
-  el.innerHTML = `<div id="music-pill"></div><canvas id="waves" class="hidden"></canvas>`;
+  el.innerHTML = `<div id="music-pill" class="music-pill"></div><canvas id="waves" class="waves hidden"></canvas>`;
   let music = null;
   // music.js finds its elements by id: they're in the page once this is placed, so start after.
   queueMicrotask(() => {
