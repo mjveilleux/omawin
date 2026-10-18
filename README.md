@@ -1,6 +1,6 @@
 # omawin
 
-**Omakase Windows**: one command turns a Windows 11 PC into a keyboard-driven developer desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Tiling windows and workspaces, a bar and a dock, an instant launcher and system menu, screenshots and text from the screen, a terminal and Neovim set up and themed, and Windows' ads turned off. One theme runs through every app: **Starship** by default, or any of Omarchy's.
+**Omakase Windows**: one command turns a Windows 11 PC into a keyboard-driven developer desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Tiling windows and workspaces, a bar like Omarchy's (with your coding agents' usage), an instant launcher and system menu, screenshots and text from the screen, a terminal and Neovim set up and themed, and Windows' ads turned off. One theme runs through every app: **Starship** by default, or any of Omarchy's.
 
 <!-- A screenshot goes here: the desktop with the launcher open. -->
 
@@ -17,11 +17,11 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 - **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
 - **File finder** (`Win+F`), **clipboard history** (`Win+Shift+V`), **audio** (`Win+A`).
-- **A bar and a dock** ([Zebar](https://github.com/glzr-io/zebar)) in the theme's colours: workspaces, now playing, CPU, memory, network, battery, the tray. The Windows taskbar hides.
+- **A bar like Omarchy 4's** ([Zebar](https://github.com/glzr-io/zebar)) in the theme's colours: the menu, workspaces, the clock, your coding agents' limits, the tray and quick settings, no dock, network, battery, the tray. The Windows taskbar hides.
 - **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
 - **Neovim** with [LazyVim](https://lazyvim.org), themed.
 - **Opt-in presets**: language toolchains, data tools, AI agents, a music and podcast player in the bar (`Win+M`), local dictation (`Win+H`).
-- **`omawin`**, a command for everything: `omawin help` lists them; the keys, menus and dock all call it.
+- **`omawin`**, a command for everything: `omawin help` lists them; the keys, menus and bar all call it.
 
 ## Requirements
 
@@ -52,7 +52,7 @@ Then sign out and back in. Every step is safe to run again; `omawin install -Ste
 
 Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never deleted.
 
-- **The taskbar auto-hides** (the bar and dock take its place; the bottom edge or the Win key still shows it), and the desktop's Recycle Bin icon goes.
+- **The taskbar auto-hides** (the bar and the launcher take its place; the bottom edge or the Win key still shows it), and the desktop's Recycle Bin icon goes.
 - **The theme** sets dark or light mode, the wallpaper and the lock screen (which changes on each unlock).
 - **At sign-in**: a scheduled task, `omawin GlazeWM (<you>)`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen (<you>)`, runs on unlock.
 - **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it's kept in the PC's own store, where only admins can use its private key (which can't be exported), and trusted through the machine's Root and Trusted Publishers stores. Its CLI and watcher are replaced too. Decline the admin prompt and the official GlazeWM stays.
@@ -108,7 +108,7 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 | `bin/` | the `omawin` command (`omawin.cs`, `commands.txt`), update, migrate, profilers |
 | `menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
 | `launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
-| `glazewm/` · `zebar/` | window manager config and keys · the bar and dock |
+| `glazewm/` · `zebar/` | window manager config and keys · the bar |
 | `themes/` | Omarchy's themes and `set-theme.ps1` |
 | `install.ps1` · `install/` · `packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
 | `bootstrap.ps1` · `check.ps1` · `no-ads.ps1` | the one-liner · health check · ads off |

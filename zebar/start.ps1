@@ -12,8 +12,33 @@
 # Their colors are theme.css, which themes/render.ps1 writes; made here if it was never written.
 $render = Join-Path $PSScriptRoot '..\themes\render.ps1'
 if (-not (Test-Path "$PSScriptRoot\tokyo-islands\theme.css") -and (Test-Path $render)) { & $render }
-Get-Process zebar, voice-meter, cpu-cores, theme-watch -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
-Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object CommandLine -match 'zebar' |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+# This account's only: another account signed in on the PC has its own bar.
+$session = (Get-Process -Id $PID).SessionId
+Get-Process zebar, voice-meter, cpu-cores, theme-watch -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session | Stop-Process -Force
+$webviews = @(Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object { $_.CommandLine -match 'zebar' -and $_.SessionId -eq $session })
+$webviews | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+# Started before the old webviews are gone, the new bar can come up blank (it shares their
+# profile folder): wait for them, up to 5 s.
+for ($i = 0; $i -lt 50; $i++) {
+    if (-not ($webviews | Where-Object { Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue }) -and
+        -not (Get-Process zebar -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session)) { break }
+    Start-Sleep -Milliseconds 100
+}
 $env:WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS = '--disable-gpu'
-Start-Process zebar -ArgumentList 'startup' -WindowStyle Hidden
+# Its widgets load from a local server on its port. Right after a restart the old one's
+# connections can still hold the port, and the new Zebar then comes up with blank widgets
+# (its server never started): it's checked, and Zebar started again if so.
+$port = if ($env:ZEBAR_ASSET_PORT) { [int]$env:ZEBAR_ASSET_PORT } else { 6124 }
+for ($attempt = 1; $attempt -le 4; $attempt++) {
+    $z = Start-Process zebar -ArgumentList 'startup' -WindowStyle Hidden -PassThru
+    $serving = $false
+    for ($i = 0; $i -lt 40 -and -not $serving; $i++) {
+        Start-Sleep -Milliseconds 150
+        $serving = [bool](Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue | Where-Object OwningProcess -eq $z.Id)
+    }
+    if ($serving) { break }
+    Stop-Process -Id $z.Id -Force -ErrorAction SilentlyContinue
+    Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object { $_.CommandLine -match 'zebar' -and $_.SessionId -eq $session } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+    Start-Sleep -Seconds 2
+}

@@ -98,33 +98,28 @@ install.preset.music | 󰓇 | Music: yt-dlp and mpv for the bar player | task om
 install.preset.dictation | 󰕾 | Dictation: Handy | task omawin preset add dictation
 install.preset.powerbi | 󰄨 | Power BI + Fabric | task omawin preset add powerbi-fabric
 install.development | 󰵮 | Development
-install.development.python | 󰌠 | Python | winget Python.Python.3.13
-install.development.uv | 󰌠 | uv (Python tools) | winget astral-sh.uv
-install.development.node | 󰎙 | Node.js | winget OpenJS.NodeJS.LTS
-install.development.bun | 󰚅 | Bun | winget Oven-sh.Bun
-install.development.deno | 󰛦 | Deno | winget DenoLand.Deno
-install.development.go | 󰟓 | Go | winget GoLang.Go
-install.development.rust | 󱘗 | Rust | winget Rustlang.Rustup
-install.development.zig | 󱐋 | Zig | winget zig.zig
-install.development.java | 󰬷 | Java (OpenJDK 21) | winget Microsoft.OpenJDK.21
-install.development.dotnet | 󰪮 | .NET SDK | winget Microsoft.DotNet.SDK.9
-install.development.ruby | 󰴭 | Ruby | winget RubyInstallerTeam.RubyWithDevKit.3.3
-install.development.elixir | 󰖌 | Elixir | winget Elixir.Elixir
-install.development.docker | 󰡨 | Docker Desktop | winget Docker.DockerDesktop
-install.development.duckdb | 󰆼 | DuckDB | winget DuckDB.cli
-install.development.r | 󰟔 | R | winget RProject.R
-install.development.rstudio | 󰟔 | RStudio | winget Posit.RStudio
-install.development.terraform | 󱁢 | Terraform | winget Hashicorp.Terraform
-install.development.kubectl | 󱃾 | kubectl | winget Kubernetes.kubectl
-install.development.aws | 󰸏 | AWS CLI | winget Amazon.AWSCLI
-install.development.gcloud | 󱇶 | Google Cloud CLI | winget Google.CloudSDK
-install.development.github | 󰊤 | GitHub CLI | winget GitHub.cli
-install.development.githubdesktop | 󰊤 | GitHub Desktop | winget GitHub.GitHubDesktop
-install.development.visualstudio | 󰘐 | Visual Studio 2022 Community | winget Microsoft.VisualStudio.2022.Community
-install.development.postman | 󰖟 | Postman | winget Postman.Postman
-install.development.bruno | 󰖟 | Bruno (API client) | winget Bruno.Bruno
-install.development.helm | 󰠳 | Helm | winget Helm.Helm
-install.development.k9s | 󱃾 | k9s (Kubernetes) | winget Derailed.k9s
+install.development.rails | 󰫏 | Ruby on Rails | task omawin dev install ruby
+install.development.docker-dbs |  | Docker DB | task omawin dev install docker-db
+install.development.javascript |  | JavaScript
+install.development.javascript.node |  | Node.js | task omawin dev install node
+install.development.javascript.bun |  | Bun | task omawin dev install bun
+install.development.javascript.deno |  | Deno | task omawin dev install deno
+install.development.go |  | Go | task omawin dev install go
+install.development.php |  | PHP
+install.development.php.php |  | PHP | task omawin dev install php
+install.development.php.laravel |  | Laravel | task omawin dev install laravel
+install.development.php.symfony |  | Symfony | task omawin dev install symfony
+install.development.python |  | Python | task omawin dev install python
+install.development.elixir |  | Elixir
+install.development.elixir.elixir |  | Elixir | task omawin dev install elixir
+install.development.elixir.phoenix |  | Phoenix | task omawin dev install phoenix
+install.development.zig |  | Zig | task omawin dev install zig
+install.development.rust |  | Rust | task omawin dev install rust
+install.development.java |  | Java | task omawin dev install java
+install.development.dotnet |  | .NET | task omawin dev install dotnet
+install.development.ocaml |  | OCaml | task omawin dev install ocaml
+install.development.clojure |  | Clojure | task omawin dev install clojure
+install.development.scala |  | Scala | task omawin dev install scala
 install.azure | 󰠅 | Azure + Fabric
 install.azure.cli | 󰠅 | Azure CLI | winget Microsoft.AzureCLI
 install.azure.fabric | 󰆍 | Fabric CLI (fab) | task uv tool install --upgrade ms-fabric-cli
@@ -195,6 +190,21 @@ install.service.signal | 󰍩 | Signal | winget OpenWhisperSystems.Signal
 install.service.telegram | 󰔁 | Telegram | winget Telegram.TelegramDesktop
 install.service.figma | 󰏘 | Figma | winget Figma.Figma
 install.tools | 󰖷 | Tools
+install.tools.docker | 󰡨 | Docker Desktop | winget Docker.DockerDesktop
+install.tools.duckdb | 󰆼 | DuckDB | winget DuckDB.cli
+install.tools.r | 󰟔 | R | winget RProject.R
+install.tools.rstudio | 󰟔 | RStudio | winget Posit.RStudio
+install.tools.terraform | 󱁢 | Terraform | winget Hashicorp.Terraform
+install.tools.kubectl | 󱃾 | kubectl | winget Kubernetes.kubectl
+install.tools.aws | 󰸏 | AWS CLI | winget Amazon.AWSCLI
+install.tools.gcloud | 󱇶 | Google Cloud CLI | winget Google.CloudSDK
+install.tools.github | 󰊤 | GitHub CLI | winget GitHub.cli
+install.tools.githubdesktop | 󰊤 | GitHub Desktop | winget GitHub.GitHubDesktop
+install.tools.visualstudio | 󰘐 | Visual Studio 2022 Community | winget Microsoft.VisualStudio.2022.Community
+install.tools.postman | 󰖟 | Postman | winget Postman.Postman
+install.tools.bruno | 󰖟 | Bruno (API client) | winget Bruno.Bruno
+install.tools.helm | 󰠳 | Helm | winget Helm.Helm
+install.tools.k9s | 󱃾 | k9s (Kubernetes) | winget Derailed.k9s
 install.tools.powertoys | 󰖷 | PowerToys | winget Microsoft.PowerToys
 install.tools.everything | 󰍉 | Everything (file search) | winget voidtools.Everything
 install.tools.btop | 󰨇 | btop (task manager) | winget aristocratos.btop4win
@@ -209,6 +219,29 @@ install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
 
 remove | 󰭌 | Remove
 remove.package | 󰏓 | Package | task omawin pkg remove
+remove.development | 󰵮 | Development
+remove.development.rails | 󰫏 | Ruby on Rails | task omawin dev remove ruby
+remove.development.docker-dbs |  | Docker DB | task omawin dev remove docker-db
+remove.development.javascript |  | JavaScript
+remove.development.javascript.node |  | Node.js | task omawin dev remove node
+remove.development.javascript.bun |  | Bun | task omawin dev remove bun
+remove.development.javascript.deno |  | Deno | task omawin dev remove deno
+remove.development.go |  | Go | task omawin dev remove go
+remove.development.php |  | PHP
+remove.development.php.php |  | PHP | task omawin dev remove php
+remove.development.php.laravel |  | Laravel | task omawin dev remove laravel
+remove.development.php.symfony |  | Symfony | task omawin dev remove symfony
+remove.development.python |  | Python | task omawin dev remove python
+remove.development.elixir |  | Elixir
+remove.development.elixir.elixir |  | Elixir | task omawin dev remove elixir
+remove.development.elixir.phoenix |  | Phoenix | task omawin dev remove phoenix
+remove.development.zig |  | Zig | task omawin dev remove zig
+remove.development.rust |  | Rust | task omawin dev remove rust
+remove.development.java |  | Java | task omawin dev remove java
+remove.development.dotnet |  | .NET | task omawin dev remove dotnet
+remove.development.ocaml |  | OCaml | task omawin dev remove ocaml
+remove.development.clojure |  | Clojure | task omawin dev remove clojure
+remove.development.scala |  | Scala | task omawin dev remove scala
 
 update | 󰚰 | Update
 update.dotfiles | 󰊢 | This setup (pull + relink) | task omawin update

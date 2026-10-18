@@ -78,19 +78,19 @@ Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--sni
 
 About 0.2 s from the key to the overlay; Windows' Snipping Tool cold-starts each time.
 
-## The bar and dock (`zebar/`)
+## The bar (`zebar/`)
 
-Zebar 3 widgets are web pages in WebView2. They come from the custom pack `zebar/tokyo-islands`: `bar.html` (workspaces, now playing, clock, CPU / RAM / network / battery, tray) and `dock.html` (launcher and menu buttons, open windows, quick settings). `zebar/start.ps1` (`omawin restart zebar`) stops any running Zebar, including its webviews, otherwise the new bar can come up blank. It then starts Zebar with `--disable-gpu` for the webviews (the same look, about 100 MB less).
+Zebar 3 widgets are web pages in WebView2, from the custom pack `zebar/tokyo-islands`. The bar is Omarchy 4's, rebuilt: `bar.html` is a shell that reads `bar.json` (which widgets sit where: left, centerBegin, center, centerEnd, right, as Omarchy's `shell.json`) and loads each from `widgets/<name>.js`; each widget makes its element and updates it from Zebar's providers (GlazeWM, date, network, battery, audio, tray). There is no dock. A widget that needs more than Zebar gives runs a script through Zebar's shell permission (`zpack.json` allows exactly those commands): `bin/agent-usage.ps1 -Json` for the agents panel every 15 minutes, `bin/update-available.ps1` for the update arrow every 6 hours. Clicks that start something go through GlazeWM (`shell-exec omawin.exe ...`). A drop-down (the agents panel, the music player) grows the bar's window while it's open; resizes run one at a time.
+
+`zebar/start.ps1` (`omawin restart zebar`) stops this account's Zebar and its webviews, waits for them to go, starts it with `--disable-gpu` for the webviews (the same look, about 100 MB less), and starts it again if its widget server didn't come up (the old one's connections can hold the port for a moment, and the bar then shows blank).
 
 Small native helpers in `zebar/tokyo-islands/*.cs`, built into `~/.local/bin` by install:
 
 | Helper | What it does |
 |---|---|
-| `voice-meter.exe` | feeds the dictation animation: "is dictation listening" from Windows' microphone privacy log, the level from the default mic's meter; it never opens the mic itself |
-| `cpu-cores.exe` | per-core load, only while the CPU card is open |
-| `win-keys.exe` | presses Win / Win+S / Win+A for the dock's buttons |
-| `app-icons.exe` | the dock's app icons, read from the programs |
-| `theme-watch.exe` | says when `theme.css` changed (a theme switch), so the bar and dock recolor without a restart (`theme.js`) |
+| `voice-meter.exe` | the dictation indicator: "is dictation listening" from Windows' microphone privacy log, the level from the default mic's meter; it never opens the mic itself |
+| `theme-watch.exe` | says when `theme.css` changed (a theme switch), so the bar recolors without a restart (`theme.js`) |
+| `cpu-cores.exe`, `win-keys.exe`, `app-icons.exe` | the old bar's CPU card and dock; nothing uses them now |
 
 ## The music player (`music/`)
 

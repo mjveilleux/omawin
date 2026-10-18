@@ -7,6 +7,13 @@ Copyright (c) David Heinemeier Hansson.
   - fastfetch/logo.txt (Omarchy's icon, unchanged; see fastfetch/NOTICE)
   - the About window's sheen (menu-app/AboutWindow.xaml.cs, ported from
     omarchy-branding-about-animation)
+  - the omarchy icon font (zebar/tokyo-islands/omarchy.ttf, unchanged: its logo is the bar's
+    menu button)
+  - the bar's layout, widgets and their behavior (zebar/tokyo-islands/bar.json, widgets/),
+    the agent usage collector (bin/agent-usage.ps1, ported from omarchy-agent-usage-claude),
+    the package finder (bin/pkg-install.ps1, pkg-remove.ps1, after omarchy-pkg-install and
+    omarchy-pkg-remove) and the development environments (bin/install-dev-env.ps1,
+    remove-dev-env.ps1, after omarchy-install-dev-env and omarchy-remove-dev-env)
   - ideas, not code: the menu layout, the key scheme, updates with migrations
 
   Permission is hereby granted, free of charge, to any person obtaining a copy of this

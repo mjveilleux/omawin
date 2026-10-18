@@ -43,17 +43,28 @@
       // panel, the music player) it grows to fit, and stays above other windows meanwhile.
       const BAR_HEIGHT = 26; // the preset's height in zpack.json
       let onTop = false;
-      async function fitWindow() {
+      // One resize at a time, each measuring when it applies: two that overlap (a panel opening,
+      // then filling in) could otherwise land in the wrong order and leave the window too short,
+      // with the page scrolled out of view.
+      let fitting = Promise.resolve();
+      function fitWindow() {
+        fitting = fitting.then(fitNow, fitNow);
+        return fitting;
+      }
+      async function fitNow() {
+        const win = zebar.currentWidget().tauriWindow;
+        const open = document.querySelectorAll('.drop:not(.hidden)').length > 0;
+        if (open !== onTop) {
+          onTop = open;
+          try { await win.setAlwaysOnTop(open); } catch (err) { console.error('could not raise the bar', err); }
+        }
         const bottoms = [...document.querySelectorAll('.drop:not(.hidden)')].map(el => el.getBoundingClientRect().bottom);
         const height = bottoms.length ? Math.ceil(Math.max(...bottoms)) + 16 : BAR_HEIGHT;
-        const win = zebar.currentWidget().tauriWindow;
-        const top = bottoms.length > 0;
-        if (top !== onTop) {
-          onTop = top;
-          try { await win.setAlwaysOnTop(top); } catch (err) { console.error('could not raise the bar', err); }
-        }
         try { await win.setSize({ type: 'Logical', width: window.innerWidth, height }); } catch (err) { console.error('could not resize the bar', err); }
+        window.scrollTo(0, 0);
       }
+      // The page never scrolls: the bar stays at the top of its window whatever its size.
+      window.addEventListener('scroll', () => { if (window.scrollY) window.scrollTo(0, 0); });
 
       // What every widget gets: the providers' output, ways to run things, and the drop-downs.
       const drops = [];

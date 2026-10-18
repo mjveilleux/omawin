@@ -1,23 +1,25 @@
-# The bar and dock
+# The bar
 
-## Bar (top)
+One strip across the top of the screen, as in Omarchy 4: the theme's background, 26 pixels tall. There is no dock: the launcher (Win+Space) and the system menu (Win+Alt+Space) take its place, and the Windows taskbar auto-hides (the very bottom edge or the Win key still shows it).
 
-Three floating islands:
-
-- **Left: workspaces**, with the icons of their apps. Right-click one to name it (or Alt+N).
-- **Middle: now playing and the clock.** While the bar's own player plays, the title gives way to slow ribbons of light that swell with the sound. While you dictate, the clock becomes a glowing pill whose bars ripple out from the center with your voice.
+- **Left:**
+  - **The menu**: Omarchy's logo. Click: the system menu; right-click: a terminal.
+  - **Workspaces**: 1 to 5 always, and any others in use. The one on screen shows its layout instead of its number (a square: tiling; a triangle: its window floats); empty ones are dimmed. Click one to go there; click the one on screen to turn its tiling direction; the mouse wheel moves along them.
+- **Middle:**
+  - **Indicators**, only while they're on: a red, pulsing microphone while you dictate (Win+H) or omawin's agent listens (Ctrl+Win+H); a mug while the PC is kept awake (click it to stop). Hover the bar to see the mug faintly and click it to keep the PC awake.
+  - **The clock**: "Saturday 22:58". Right-click for the date and week; click for Windows' calendar.
+  - **An update arrow**, red, only while an omawin update is waiting (checked every 6 hours). Click it to update.
 - **Right:**
-  - **The record**: the music, podcast and radio player (below).
-  - **CPU**: its total; click it for a card with every core's load.
-  - **RAM**: an icon and a ring that fills with usage; hover for used / free / total / page file.
-  - **Network** and **battery**.
-  - **The tray**: a round button with a count, which drops the tray down as a column of big icons; hover one for its status. Click outside or Esc closes it.
+  - **The record**: the music, podcast and radio player (below), while it plays.
+  - **The tray**: an arrow; hover it and the tray's icons slide out beside it.
+  - **Agents**: a little robot, red when you've used 90% of a Claude limit. Click it for your Claude Code limits (the 5-hour session, the week, and any per-model week), each with a meter and when it resets, and a line that turns through this week's numbers (tokens, today, the model you use most, your busiest day, prompts and sessions). It reads your Claude Code sign-in on this PC and asks Anthropic every 15 minutes; middle-click to check now, right-click to start Claude Code. `omawin` runs `bin/agent-usage.ps1 -Print` for the same in a terminal.
+  - **Bluetooth**, **network** (wifi by strength, or ethernet), **sound** (the wheel changes the volume, right-click mutes, click for the sound page), **monitor** (the wheel changes the brightness), and **power** (the battery; right-click shows its percentage, click for sleep, restart and the rest). Bluetooth, network and monitor open Quick settings (Win+A).
 
-While a VPN is connected, **VPN** and the first word of its name show next to the wifi icon.
+The layout is `zebar/tokyo-islands/bar.json`: which widgets sit where, as Omarchy's `shell.json` does. Each widget is a file in `zebar/tokyo-islands/widgets/`.
 
 ## Music, podcasts and radio
 
-The record left of the CPU island is a music, podcast and radio player. It wears the cover of what's playing and turns while anything plays; click it (or press **Win+M**) for the player.
+The record at the right of the bar is a music, podcast and radio player. It wears the cover of what's playing and turns while anything plays; click it (or press **Win+M**) for the player.
 
 - **Top:** the cover on a spinning record, the title, a strip of light that follows the sound, the progress bar (click to jump), and shuffle, back, play / pause, skip. Space plays / pauses and the arrow keys jump 10 s while it's open. A station is live: no progress bar, and `LIVE` where the time would be.
 - **Music / Podcasts / Radio:** a switch. Each opens on a list: your playlists (newest added first), your shows (newest episode first), or your stations. Click a playlist or show for its tracks (click a track to play it; the arrow at the top goes back; double-click the name to rename it). Click a station to tune in. Right-click one in a list, then click it, to remove it. At the bottom, a box: paste a link and press Enter.
@@ -31,16 +33,8 @@ The record left of the CPU island is a music, podcast and radio player. It wears
 - **While you dictate** (Win+H), the music drops to 10% and comes back up gently when you stop.
 - The media keys, the lock screen and Windows' volume flyout control it too. From a terminal: `omawin music add <url>`, `omawin music add podcasts <url>`, `omawin music add radio <url> [name]`, `omawin music list`, `omawin music toggle`, `next`, `prev`, `rate <1-5>`, `station`.
 
-## Dock (bottom)
-
-It takes the place of the Windows taskbar, which auto-hides: the mouse at the very bottom edge, or the Win key, still shows the real one. Three islands in the theme's colors:
-
-- **Left:** Start, Search, File Explorer, Settings, Task manager (btop), the launcher and the system menu
-- **Middle:** every open window as its app icon, grouped by workspace. The focused one is underlined; other workspaces' are dimmer. Click to go to it; hover for its title.
-- **Right:** quick settings, notifications, show desktop
-
 ## Task manager
 
-btop (btop4win, by btop's author): from the dock, the launcher, or `btop` in a shell. It follows the theme from its next start. Windows' own Task Manager is in the launcher too.
+btop (btop4win, by btop's author): from the launcher, or `btop` in a shell. It follows the theme from its next start. Windows' own Task Manager is in the launcher too.
 
 If the bar is missing or blank: `omawin restart zebar` (System menu › Update › Restart › Zebar).

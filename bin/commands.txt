@@ -62,7 +62,9 @@ profile ram | What's using the memory and the processor, by app, omawin's parts 
 check | Health check: is everything in place and running | pwsh check.ps1
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
 no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh no-ads.ps1
-pkg install | Any of winget's ~16,000 packages, fuzzy found (fzf, with a preview) and installed; Tab picks several: omawin pkg install [query] | pwsh bin/pkg-install.ps1
+dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
+dev remove | Take a development environment away again: omawin dev remove node | pwsh bin/remove-dev-env.ps1
+pkg install |Any of winget's ~16,000 packages, fuzzy found (fzf, with a preview) and installed; Tab picks several: omawin pkg install [query] | pwsh bin/pkg-install.ps1
 pkg remove | What winget installed here, fuzzy found and uninstalled; Tab picks several | pwsh bin/pkg-remove.ps1
 pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path | pwsh bin/pkg-index.ps1
 preset list |The presets: opt-in groups of tools on top of the core (packages.ps1), the picked ones marked | pwsh bin/preset.ps1 list
