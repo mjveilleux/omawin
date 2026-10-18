@@ -65,8 +65,18 @@ function Remove-Mise([string[]]$Tools) {
 
 function Remove-Winget([string]$Prefix) {
     # Every installed package whose id starts with $Prefix (PHP.PHP.8.4 and 8.5, say).
+    # winget's table shortens long ids to fit the console ("RubyInstallerTeam.RubyWithDevKit.3…"),
+    # so its export (JSON) has the full ones; the table's whole ones count too, for a package the
+    # export leaves out (one winget can't match back to its source).
+    $json = Join-Path $env:TEMP "omawin-winget-$PID.json"
+    winget export --output $json --source winget --accept-source-agreements --disable-interactivity *> $null
+    $exported = if (Test-Path $json) {
+        @((Get-Content $json -Raw | ConvertFrom-Json).Sources.Packages.PackageIdentifier | Where-Object { $_ -like "$Prefix*" })
+        Remove-Item $json -Force -ErrorAction SilentlyContinue
+    }
     $out = winget list --id $Prefix --accept-source-agreements --disable-interactivity 2>$null | Out-String
-    $ids = [regex]::Matches($out, '(?<=\s)' + [regex]::Escape($Prefix) + '[\w.+-]*') | ForEach-Object Value | Sort-Object -Unique
+    $listed = [regex]::Matches($out, '(?<=\s)' + [regex]::Escape($Prefix) + '[\w.+-]*(?![\w.+-]|…)') | ForEach-Object Value
+    $ids = @(@($exported) + @($listed) | Where-Object { $_ } | Sort-Object -Unique)
     foreach ($id in $ids) { Try-Run winget uninstall --id $id -e --disable-interactivity }
 }
 

@@ -132,10 +132,23 @@ function Add-UserPath([string]$Dir, [switch]$Prepend) {
 function Install-Winget([string]$Id) {
     Write-Host "$e[2m> winget install --id $Id$e[0m"
     winget install --id $Id -e --source winget --accept-source-agreements --accept-package-agreements --disable-interactivity
-    # Already installed with nothing newer is fine too.
-    if ($LASTEXITCODE -and $LASTEXITCODE -ne -1978335189 -and $LASTEXITCODE -ne -1978335135) {
+    # Already installed with nothing newer is fine too, and so is installed but wanting a restart
+    # (Erlang's and RubyInstaller's installers can ask for one), as pkg-install.ps1 has it.
+    if ($LASTEXITCODE -eq -1978334967) { Write-Host "$e[33m$Id is installed; Windows wants a restart to finish it.$e[0m" }
+    elseif ($LASTEXITCODE -and $LASTEXITCODE -ne -1978335189 -and $LASTEXITCODE -ne -1978335135) {
         throw "winget install $Id failed (exit $LASTEXITCODE)"
     }
+    Update-SessionPath
+}
+
+function Add-ToolPath([string]$Tool) {
+    # An installer that doesn't put its tool on the PATH (Erlang/OTP's leaves erl off it): found in
+    # Program Files, and its folder put on the user PATH.
+    if (Get-Command $Tool -ErrorAction SilentlyContinue) { return }
+    $found = Get-ChildItem $env:ProgramFiles, ${env:ProgramFiles(x86)} -Filter "$Tool.*" -Recurse -Depth 3 -ErrorAction SilentlyContinue |
+        Where-Object { $_.Extension -in '.exe', '.bat', '.cmd' } | Sort-Object { $_.FullName.Length } | Select-Object -First 1
+    if (-not $found) { return }
+    if (Add-UserPath $found.DirectoryName) { Write-Host "$e[2mput $($found.DirectoryName) on your PATH$e[0m" }
     Update-SessionPath
 }
 
@@ -143,10 +156,15 @@ function Get-NewestWingetId([string]$Prefix) {
     # The newest of a family of versioned winget ids (PHP.PHP.8.4, PHP.PHP.8.5, ...), so this
     # doesn't go stale when a new major version ships.
     $out = winget search --id $Prefix --source winget --accept-source-agreements --disable-interactivity 2>$null | Out-String
-    $rx = [regex]::Escape($Prefix) + '(\d+(\.\d+)*)\b'
+    # winget shortens a long id to fit the console ("RubyInstallerTeam.RubyWithDevKit.3…"): an
+    # id cut short isn't taken, and the one picked is checked to exist before it's used.
+    $rx = [regex]::Escape($Prefix) + '(\d+(?:\.\d+)*)(?![.\d]|…)'
     $found = [regex]::Matches($out, $rx) | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique { [version]($_ + '.0') } -Descending
-    if (-not $found) { throw "winget has no $Prefix* package" }
-    "$Prefix$(@($found)[0])"
+    foreach ($version in $found) {
+        winget show --id "$Prefix$version" -e --source winget --accept-source-agreements --disable-interactivity *> $null
+        if ($LASTEXITCODE -eq 0) { return "$Prefix$version" }
+    }
+    throw "winget has no $Prefix* package"
 }
 
 function Initialize-Mise {
@@ -234,6 +252,9 @@ function Install-Erlang-Elixir {
     # Windows installers (they ask for admin once). mix then works as on Omarchy.
     Install-Winget 'Erlang.ErlangOTP'
     Install-Winget 'Elixir.Elixir'
+    # Erlang/OTP's installer leaves erl off the PATH, and mix needs it.
+    Add-ToolPath 'erl'
+    Add-ToolPath 'mix'
 }
 
 function Install-DockerDb {
@@ -270,7 +291,8 @@ $Labels = @{
 }
 
 try {
-    if ($Name -ne 'docker-db') { Initialize-Mise }
+    # mise only for the environments that use it (the rest come from their own installers).
+    if ($Name -in 'node', 'bun', 'deno', 'go', 'laravel', 'symfony', 'python', 'zig', 'java', 'dotnet', 'clojure', 'scala') { Initialize-Mise }
     switch ($Name) {
         'ruby' {
             Say 'Installing Ruby on Rails...'
