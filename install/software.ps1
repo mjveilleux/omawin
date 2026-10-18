@@ -165,10 +165,33 @@ function Install-WingetPackages([string[]]$Ids) {
     if ($failed) { $failed = @(Invoke-WingetBatch $winget @($failed | ForEach-Object Id) 1) }
     foreach ($f in $failed) { Set-BoardPackage $f.Id 'fail'; Write-Warn "winget install $($f.Id) exited with $($f.ExitCode)"; Write-OutputTail $f.Output }
     Write-OkCount
-    # Bun's winget package leaves bun.exe in its own folder, off the PATH: put that folder on it.
-    $bun = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter bun.exe -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
-    if ($bun -and (Add-UserPath $bun.DirectoryName)) { Write-Note "bun on the PATH: $($bun.DirectoryName)" }
     Update-SessionPath
+    Add-ToolPaths @(Get-WantedTools)
+}
+
+# The commands the core and the chosen presets are for (packages.ps1's Tools); bun is the core's.
+function Get-WantedTools {
+    @('bun') + @(foreach ($name in Get-ChosenPresets) { $Presets[$name].Tools }) |
+        Where-Object { $_ } | Select-Object -Unique
+}
+
+# A tool its package put off the PATH (bun's winget package in its own folder; shinchiro.mpv's
+# installer in Program Files\MPV Player, for every account) is found where installers put things,
+# and that folder goes on this account's PATH. Runs on every install and update, so a package that
+# changes where it installs is caught on PCs that already have it. Nothing to do: no search.
+function Add-ToolPaths([string[]]$Tools) {
+    $added = $false
+    foreach ($tool in $Tools) {
+        if (Get-Command $tool -ErrorAction SilentlyContinue) { continue }
+        $exe = @(
+            foreach ($root in $env:ProgramFiles, ${env:ProgramFiles(x86)}, "$env:LOCALAPPDATA\Programs") {
+                if ($root -and (Test-Path $root)) { Get-ChildItem $root -Filter "$tool.exe" -Recurse -Depth 2 -ErrorAction SilentlyContinue }
+            }
+            Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter "$tool.exe" -Recurse -Depth 3 -ErrorAction SilentlyContinue
+        ) | Select-Object -First 1
+        if ($exe -and (Add-UserPath $exe.DirectoryName)) { Write-Note "$tool on the PATH: $($exe.DirectoryName)"; $added = $true }
+    }
+    if ($added) { Update-SessionPath }
 }
 
 function Install-Extras([string[]]$Names) {
@@ -258,6 +281,9 @@ if (-not $SoftwareFunctionsOnly) {
         $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
         Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
         Install-NerdFont
+    } else {
+        # An update installs nothing, but a tool a package moved off the PATH still goes back on.
+        Add-ToolPaths @(Get-WantedTools)
     }
 
     Write-Step 'Neovim and Neovide'

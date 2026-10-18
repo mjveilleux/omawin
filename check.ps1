@@ -51,9 +51,10 @@ foreach ($name in $chosen) {
 foreach ($tool in $tools | Select-Object -Unique) {
     $cmd = Get-Command $tool -ErrorAction SilentlyContinue | Select-Object -First 1
     # Not on PATH, but where a by-hand install or winget's package folder put it (the music
-    # player looks there for mpv too: music/Mpv.cs).
+    # player looks there for mpv too: music/Mpv.cs; shinchiro.mpv's installer puts it in Program
+    # Files\MPV Player).
     $found = if ($cmd) { $cmd.Source } else {
-        @("$env:LOCALAPPDATA\Programs\$tool\$tool.exe") + @(Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter "$tool.exe" -Recurse -Depth 3 -ErrorAction SilentlyContinue | ForEach-Object FullName) |
+        @("$env:LOCALAPPDATA\Programs\$tool\$tool.exe", "$env:ProgramFiles\MPV Player\$tool.exe") + @(Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter "$tool.exe" -Recurse -Depth 3 -ErrorAction SilentlyContinue | ForEach-Object FullName) |
             Where-Object { Test-Path $_ } | Select-Object -First 1
     }
     if ($cmd) { Pass $tool $found } elseif ($found) { Pass $tool "$found (not on PATH)" } else { Fail $tool 'not found' }

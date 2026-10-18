@@ -179,7 +179,8 @@ sealed class Mpv
     }
 
     // mpv.exe: on the PATH, where omawin's install puts it by hand (%LOCALAPPDATA%\Programs\mpv),
-    // or where winget unpacked it (shinchiro.mpv; its link isn't always on the PATH).
+    // or where winget unpacked it (shinchiro.mpv; its link isn't always on the PATH). Since 0.41
+    // shinchiro.mpv is an installer instead, into Program Files\MPV Player, not on the PATH.
     static string? exe;
     public static string Exe()
     {
@@ -187,7 +188,8 @@ sealed class Mpv
         var local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
         var places = (Environment.GetEnvironmentVariable("Path") ?? "").Split(';')
             .Append(Path.Combine(local, "Programs", "mpv"))
-            .Append(Path.Combine(local, "Microsoft", "WinGet", "Links"));
+            .Append(Path.Combine(local, "Microsoft", "WinGet", "Links"))
+            .Append(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "MPV Player"));
         foreach (var dir in places)
         {
             try
