@@ -24,7 +24,9 @@
         .\glazewm-fork.ps1            (asks for admin once)
         .\glazewm-fork.ps1 -Restore
 #>
-param([switch]$Restore, [string]$Signed, [string]$Cert)
+# (-CertFile, not -Cert: PowerShell's names ignore case, and a [string] $Cert would turn every
+# $cert below into text.)
+param([switch]$Restore, [string]$Signed, [string]$CertFile)
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
 
@@ -54,7 +56,7 @@ if ($Signed) {
     # The certificate that signed it, as a file from the part below: this part may run as
     # another account (a standard account's admin prompt takes an admin's password), whose own
     # certificate store doesn't have it.
-    $cert = if ($Cert) { New-Object Security.Cryptography.X509Certificates.X509Certificate2 (, [IO.File]::ReadAllBytes($Cert)) }
+    $cert = if ($CertFile) { New-Object Security.Cryptography.X509Certificates.X509Certificate2 (, [IO.File]::ReadAllBytes($CertFile)) }
             else { Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $subject } | Select-Object -First 1 }
     foreach ($store in 'Root', 'TrustedPublisher') {
         if (-not (Get-ChildItem "Cert:\LocalMachine\$store" | Where-Object Thumbprint -eq $cert.Thumbprint)) {
@@ -154,7 +156,7 @@ try {
     try {
         $certFile = Join-Path $work 'omawin-signing.cer'   # the public half only
         [IO.File]::WriteAllBytes($certFile, $cert.RawData)
-        Invoke-Elevated @('-Signed', "`"$download`"", '-Cert', "`"$certFile`"")
+        Invoke-Elevated @('-Signed', "`"$download`"", '-CertFile', "`"$certFile`"")
         New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
         Set-Content $state $release.tag_name -NoNewline
     }
