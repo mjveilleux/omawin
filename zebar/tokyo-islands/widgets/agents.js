@@ -50,7 +50,8 @@ export function create(ctx) {
     el.classList.toggle('active', alarming);
     const worst = limits.reduce((a, l) => (l.percent > (a?.percent ?? -1) ? l : a), null);
     el.title = worst ? `${r.name}: ${Math.round(worst.percent * 100)}% of ${worst.label}` : r.name;
-    if (!panel.open) return;
+    // Filled even while closed: a click draws before show(), which sizes the window to the panel
+    // as it is then. Skipping this while closed left the first open an empty box, cut off.
     const rows = limits
       .map(l => {
         const p = Math.max(0, Math.min(1, l.percent ?? 0));
