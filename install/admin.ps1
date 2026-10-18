@@ -21,7 +21,8 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         # the software step then counts it as there.
         if ($installed -and (Test-Path "$env:LOCALAPPDATA\launcher\migrations.txt")) {
             $packages = @($packages | Where-Object {
-                    winget list --id $_ --exact --accept-source-agreements *> $null
+                    # (Windows PowerShell throws on a native program's stderr under 'Stop'.)
+                    & { $ErrorActionPreference = 'Continue'; winget list --id $_ --exact --accept-source-agreements *> $null }
                     if ($LASTEXITCODE -eq 0) { $installed[$_] = $true; $false } else { $true }
                 })
         }
@@ -104,14 +105,20 @@ function Get-AdminState([string]$Item) {
 }
 function Get-AdminText([string]$Item) { $i = $script:AdminBatch.Items[$Item]; if ($i) { $i.Text } else { '' } }
 
-# Waits until each of $Items is finished, running $Tick between looks.
+# Waits until each of $Items is finished, running $Tick between looks. Not for ever: past 45
+# minutes from the prompt (each package has its own 15 in the batch), what's still waiting is
+# taken as failed, and this account installs it, or the official fork stays.
 function Wait-AdminItems([string[]]$Items, [scriptblock]$Tick) {
     if (-not $script:AdminBatch) { return }
-    while ($true) {
+    $deadline = $script:AdminBatch.Started.AddMinutes(45)
+    while ((Get-Date) -lt $deadline) {
         Update-AdminStatus
         if ($Tick) { & $Tick }
         if (-not @($Items | Where-Object { (Get-AdminState $_) -in 'wait', 'run' })) { return }
         Start-Sleep -Milliseconds 200
+    }
+    foreach ($item in $Items) {
+        if ((Get-AdminState $item) -in 'wait', 'run') { $script:AdminBatch.Items[$item] = @{ State = 'fail'; Text = 'the admin step took too long' } }
     }
 }
 

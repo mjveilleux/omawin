@@ -8,7 +8,7 @@ omawin theme                   the theme commands
 omawin capture text            text from the screen, as if you'd pressed Win+Shift+T
 omawin theme set gruvbox       words after the command are passed on
 omawin theme set nord -Background 2
-omawin update                  pull the latest setup, relink, run new migrations
+omawin update                  pull the latest setup, relink, run new migrations; shows what's new
 omawin check                   is everything in place and running?
 omawin --version               the release this omawin came from ((dev) if built here)
 ```

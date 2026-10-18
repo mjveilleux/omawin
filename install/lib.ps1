@@ -22,19 +22,24 @@ function Get-InstallSteps {
 }
 
 # Your git name and email: never in the repo. Asked once if git has none, into your own
-# ~/.gitconfig (--includes: an identity from your account folder's gitconfig counts). install.ps1
-# asks it before anything starts, with its other questions; the shell step checks again.
+# ~/.gitconfig (--includes: an identity from your account folder's gitconfig counts, even before
+# the shell step includes it). install.ps1 asks it before anything starts, with its other
+# questions; $true once it's settled (there, answered or skipped), $false when git isn't here yet
+# and the shell step should ask after all.
 function Request-GitIdentity {
-    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return }
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return $false }
     $ErrorActionPreference = 'Continue'
     $name = git config --global --includes --get user.name 2>$null
-    if ($name) { Write-Note "ok  git user.name $name"; return }
-    if (-not (Test-Interactive)) { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com'; return }
+    $mine = "$UserLayer\git\gitconfig"
+    if (-not $name -and (Test-Path $mine)) { $name = git config --file $mine --get user.name 2>$null }
+    if ($name) { Write-Note "ok  git user.name $name"; return $true }
+    if (-not (Test-Interactive)) { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com'; return $true }
     $name = (Read-InstallAnswer 'git: your name, for commits (Enter to skip)').Trim()
-    if (-not $name) { return }
+    if (-not $name) { return $true }
     $email = (Read-InstallAnswer 'git: your email').Trim()
     git config --global user.name $name; Write-Note "git user.name = $name"
     if ($email) { git config --global user.email $email; Write-Note "git user.email = $email" }
+    $true
 }
 
 # Whether a person is there to answer a question (not a scheduled or piped run).

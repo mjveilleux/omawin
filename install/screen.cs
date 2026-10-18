@@ -26,6 +26,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 
 static class Screen
@@ -61,6 +62,10 @@ static class Screen
     static DateTime FinalAt;
     static volatile bool Paused, Quit, InputEnded, Repaint;
     static readonly DateTime Started = DateTime.Now;
+    // Every time below is the start plus a stopwatch: a clock that a time sync or a time zone
+    // change can't move back or forward mid-install.
+    static readonly Stopwatch Mono = Stopwatch.StartNew();
+    static DateTime Now { get { return Started + Mono.Elapsed; } }
 
     static Step GetStep(string name)
     {
@@ -70,11 +75,13 @@ static class Screen
         return n;
     }
 
+    static readonly Regex Escapes = new Regex("\x1b\\[[0-9;?]*[ -/]*[@-~]|\x1b[@-_]|[\x00-\x08\x0a-\x1f\x7f]");
     static void Handle(string raw)
     {
+        raw = Escapes.Replace(raw, " ");
         var f = raw.Split('\t');
         if (f.Length == 0) return;
-        var now = DateTime.Now;
+        var now = Now;
         lock (Gate)
         {
             switch (f[0])
@@ -263,10 +270,9 @@ static class Screen
         }
         if (Sb.Length == 0) return;
         Sb.Append("\x1b[0m\x1b[1;1H");
-        var bytes = Encoding.UTF8.GetBytes(Sb.ToString());
-        Out.Write(bytes, 0, bytes.Length);
-        Out.Flush();
+        Pending = Encoding.UTF8.GetBytes(Sb.ToString());
     }
+    static byte[] Pending;   // a frame to write, once the lock is let go
 
     // --- the logo and its snake -----------------------------------------------------------------------
     static readonly string[] Rows = {
@@ -406,7 +412,14 @@ static class Screen
     {
         double dt = Math.Max(0.001, Math.Min(0.1, t - LastT)); LastT = t;
         Clear();
-        var now = DateTime.Now;
+        if (W < 79 || Hgt < 24)
+        {
+            string msg = "make this window bigger (80 x 24) to see the install";
+            Put(Math.Max(0, (W - msg.Length) / 2), Hgt / 2, msg, Dim, W);
+            Flush(false);
+            return;
+        }
+        var now = Now;
         string spin = Spin[(int)(t * 12) % Spin.Length];
         double elapsed = (now - Started).TotalSeconds;
 
@@ -642,7 +655,7 @@ static class Screen
                     Put(4, wy++, l, Mix(Ground, Warn, Ease(wa / 0.5)), W - 6);
                 }
     }
-    static bool FinaleRunning() { return Final && !Failed && (DateTime.Now - FinalAt).TotalSeconds < 4.6; }
+    static bool FinaleRunning() { return Final && !Failed && (Now - FinalAt).TotalSeconds < 4.6; }
 
     static void DrawAdmin(int ix, int iy, int iw, int inner, string spin)
     {
@@ -772,7 +785,7 @@ static class Screen
                 case "ok": Put(ix + 2, by, Done, Ok, 1); Put(ix + 4, by, l.Text, Mix(Fg, Dim, Math.Min(1, age / 0.8)), iw - 4); break;
                 case "warn": Put(ix + 2, by, "!", Warn, 1); Put(ix + 4, by, l.Text, Warn, iw - 4); break;
                 case "fail": Put(ix + 2, by, Fail, Red, 1); Put(ix + 4, by, l.Text, Red, iw - 4); break;
-                case "done": Put(ix + 2, by, Done, Ok, 1); int n = Put(ix + 4, by, l.Text, appear, iw - 10); Put(ix + 6 + n, by, Dur(l.Seconds), Dim, 8); break;
+                case "done": { string d = Dur(l.Seconds); Put(ix + 2, by, Done, Ok, 1); int n = Put(ix + 4, by, l.Text, appear, iw - 6 - d.Length); Put(ix + 6 + n, by, d, Dim, d.Length); break; }
                 default: Put(ix + 4, by, l.Text, Mix(appear, Dim, Math.Min(1, age / 0.8)), iw - 4); break;
             }
         }
@@ -924,14 +937,15 @@ static class Screen
         if (!finale) sb.Append("\r\n");
         foreach (var g in GroupOrder)
         {
-            var fresh = new List<string>(); var have = new List<string>(); var failed = new List<string>();
-            foreach (var it in Items) if (it.Group == g) { if (it.State == "done") fresh.Add(it.Name); else if (it.State == "fail") failed.Add(it.Name); else if (it.State == "have") have.Add(it.Name); }
+            var fresh = new List<string>(); var have = new List<string>(); var failed = new List<string>(); var open = new List<string>();
+            foreach (var it in Items) if (it.Group == g) { if (it.State == "done") fresh.Add(it.Name); else if (it.State == "fail") failed.Add(it.Name); else if (it.State == "have") have.Add(it.Name); else open.Add(it.Name); }
             string head = g;
             // Changes (omawin update's): their titles have commas of their own, so one a line.
             if (g == "Changes") { for (int i = 0; i < fresh.Count; i++) Wrapped(sb, i == 0 ? head : "", White, Dot + " " + fresh[i], Fg, width); continue; }
             if (fresh.Count > 0) Wrapped(sb, head, White, Done + " " + string.Join(", ", fresh.ToArray()), Ok, width);
             if (failed.Count > 0) Wrapped(sb, fresh.Count > 0 ? "" : head, White, Fail + " " + string.Join(", ", failed.ToArray()), Red, width);
             if (have.Count > 0) Wrapped(sb, fresh.Count + failed.Count > 0 ? "" : head, White, "already there: " + string.Join(", ", have.ToArray()), Dim, width);
+            if (open.Count > 0) Wrapped(sb, fresh.Count + failed.Count + have.Count > 0 ? "" : head, White, "not finished: " + string.Join(", ", open.ToArray()), Warn, width);
         }
         if (wn > 0)
         {
@@ -985,6 +999,9 @@ static class Screen
         }
         catch { }
         Out = Console.OpenStandardOutput();
+        // Ctrl+C reaches every program on the console: this one leaves it to the install, which
+        // closes it (stdin ends) so it prints its summary instead of dying mid-frame.
+        Console.CancelKeyPress += (sender, e) => { e.Cancel = true; };
         Glyphs();
         BuildWalk();
         var input = new Thread(() =>
@@ -1015,7 +1032,13 @@ static class Screen
             if (Paused && !done) { wasPaused = true; Thread.Sleep(20); continue; }
             bool full = Size() || Repaint || wasPaused;
             if (full) { var clr = Encoding.UTF8.GetBytes("\x1b[2J"); Out.Write(clr, 0, clr.Length); for (int i = 0; i < PCh.Length; i++) PCh[i] = null; Repaint = false; wasPaused = false; }
-            try { lock (Gate) Frame(t); } catch (Exception e) { try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "omawin-screen.err"), e + "\r\n"); } catch { } }
+            try
+            {
+                lock (Gate) Frame(t);
+                var frame = Pending; Pending = null;
+                if (frame != null) { Out.Write(frame, 0, frame.Length); Out.Flush(); }
+            }
+            catch (Exception e) { try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "omawin-screen.err"), e + "\r\n"); } catch { } }
             // Done, unless the finale is still playing (the install waits for it).
             bool playing; lock (Gate) playing = FinaleRunning();
             if (done && !playing) break;

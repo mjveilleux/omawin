@@ -56,17 +56,26 @@ try {
                         $psi.RedirectStandardOutput = $true
                         $psi.RedirectStandardError = $true
                         $p = [Diagnostics.Process]::Start($psi)
-                        $running[$id] = @{ P = $p; Out = $p.StandardOutput.ReadToEndAsync(); Err = $p.StandardError.ReadToEndAsync() }
+                        $running[$id] = @{ P = $p; Out = $p.StandardOutput.ReadToEndAsync(); Err = $p.StandardError.ReadToEndAsync(); Start = Get-Date }
                         Say $id 'run'
                     }
                     foreach ($id in @($running.Keys)) {
                         $r = $running[$id]
+                        # An installer waiting on something it can't show (this window is hidden):
+                        # given up on after 15 minutes, and this account installs it instead.
+                        if (-not $r.P.HasExited -and ((Get-Date) - $r.Start).TotalMinutes -gt 15) {
+                            try { $r.P.Kill() } catch { }
+                            $running.Remove($id)
+                            Say $id 'fail' 'gave up after 15 minutes'
+                            continue
+                        }
                         if (-not $r.P.HasExited) { continue }
                         $r.P.WaitForExit()
                         $running.Remove($id)
                         $code = $r.P.ExitCode
-                        # 0: installed; 0x8A15002B / 0x8A150061: already there.
-                        if ($code -in 0, -1978335189, -1978335135) { Say $id 'done' }
+                        # 0: installed; 0x8A15002B / 0x8A150061: already there; 0x8A150109: installed,
+                        # Windows wants a restart.
+                        if ($code -in 0, -1978335189, -1978335135, -1978334967) { Say $id 'done' }
                         elseif ($width -gt 1) { $retry += $id }
                         else {
                             $tail = (($r.Out.Result + $r.Err.Result) -split "[`r`n]+" | Where-Object { $_.Trim() -and $_ -notmatch ('[{0}-{1}]' -f [char]0x2580, [char]0x259F) } | Select-Object -Last 1)

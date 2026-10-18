@@ -54,7 +54,17 @@ function Get-Base {
 function Get-Release([string]$Base) {
     # (Assigned first: Windows PowerShell passes the whole list down a pipe as one object.)
     $releases = Invoke-RestMethod 'https://api.github.com/repos/mjveilleux/zebar/releases' -UseBasicParsing
-    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { [int]($_.tag_name -replace '.*omawin\.', '') } | Select-Object -Last 1
+    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { if ($_.tag_name -match 'omawin\.(\d+)') { [int]$Matches[1] } else { 0 } } | Select-Object -Last 1
+}
+# A folder of its own under Program Files, which only admins can write, for the admin part's
+# download: nothing running in an account can swap a file in it between the hash check, the
+# signing and the copy (the account's own TEMP is that account's to write).
+function New-Staging {
+    $root = Join-Path $env:ProgramFiles 'glzr.io\.omawin-staging'
+    New-Item -ItemType Directory -Force $root | Out-Null
+    $work = Join-Path $root ([Guid]::NewGuid().ToString('n'))
+    New-Item -ItemType Directory $work | Out-Null
+    $work
 }
 # In, and still ours: an upgrade that got past the pin puts the official file back.
 function Test-Current([string]$Tag) {
@@ -84,8 +94,7 @@ if ($Machine) {
 
         $zipAsset = $release.assets | Where-Object name -like 'zebar-*-windows-x64.zip' | Select-Object -First 1
         $sumsAsset = $release.assets | Where-Object name -eq 'SHA256SUMS-windows-x64.txt' | Select-Object -First 1
-        $work = Join-Path $env:TEMP "zebar-fork-$(Get-Date -Format yyyyMMddHHmmss)"
-        New-Item -ItemType Directory -Force $work | Out-Null
+        $work = New-Staging
         try {
             Invoke-WebRequest $zipAsset.browser_download_url -OutFile "$work\fork.zip" -UseBasicParsing
             Invoke-WebRequest $sumsAsset.browser_download_url -OutFile "$work\sums.txt" -UseBasicParsing

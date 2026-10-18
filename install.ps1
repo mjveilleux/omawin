@@ -125,14 +125,15 @@ try {
     Send-Board 'enter' 'before it starts'
     Write-Step 'before it starts'
     if (-not $LinkOnly) { Initialize-Presets }
-    Request-GitIdentity
-    $GitAsked = $true
+    $GitAsked = Request-GitIdentity
 
     # --- 2. the one admin prompt -----------------------------------------------------------------
     Write-Note 'what needs admin ...'
     $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages }) -NoPackages:$LinkOnly
     if ($plan.Packages.Count -or $plan.Forks.Count) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
+        # omawin update's pull came before it.
+        if ($Update) { $u = Get-InstallStep 'update'; $UI.Steps.Remove($u); $UI.Steps.Insert(0, $u); Sync-BoardSteps }
         [void](Start-AdminBatch $plan)
     } else { Write-Note 'ok  nothing needs admin' }
 
@@ -147,7 +148,7 @@ try {
     Enter-InstallStep 'migrations'
     Write-Step 'migrations'
     $global:LASTEXITCODE = 0  # not a stale one from a step's native program
-    & "$Repo\bin\migrate.ps1"
+    & "$Repo\bin\migrate.ps1" | ForEach-Object { if ("$_".Trim()) { Write-Note "$_" } }
     if ($LASTEXITCODE -ne 0) {
         # migrate.ps1 already said which one failed; the rest run on the next install or omawin migrate.
         Write-Warn 'a migration failed (above); fix it, then run: omawin migrate'

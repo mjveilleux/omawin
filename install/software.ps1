@@ -33,7 +33,7 @@ function Test-PackageInstalled([string]$Id, $Installed) {
     $command = $WingetCommands[$Id]
     if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { return $true }
     if ($Installed) { return $Installed.ContainsKey($Id) }
-    winget list --id $Id --exact --accept-source-agreements *> $null
+    & { $ErrorActionPreference = 'Continue'; winget list --id $Id --exact --accept-source-agreements *> $null }
     $LASTEXITCODE -eq 0
 }
 
@@ -90,8 +90,9 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scrip
                 $running.Remove($id)
                 $done++
                 if ($line) { [Console]::Out.Write($UI.C.Clear) }
-                # 0x8A15002B / 0x8A150061: winget found it installed after all (its export can miss one).
-                if ($r.P.ExitCode -in 0, -1978335189, -1978335135) { Set-BoardPackage $id 'done'; Write-Done $id $seconds }
+                # 0x8A15002B / 0x8A150061: winget found it installed after all (its export can miss one);
+                # 0x8A150109: installed, Windows wants a restart.
+                if ($r.P.ExitCode -in 0, -1978335189, -1978335135, -1978334967) { Set-BoardPackage $id 'done'; Write-Done $id $seconds }
                 else {
                     if ($output.Trim()) { Write-Log ($output.Trim() -replace "`r", '') }
                     Set-BoardPackage $id 'wait'

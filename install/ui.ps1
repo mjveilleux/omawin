@@ -358,6 +358,11 @@ function Invoke-NativeStatus([string]$Exe, [string[]]$Arguments, [string]$Label)
 # The last few meaningful lines of a program's output (winget's progress bars aside), dim.
 function Write-OutputTail([string]$Output, [int]$Lines = 3) {
     if (-not $UI.Fancy) { return }
+    if ($UI.Board) {
+        @(($Output -split "[`r`n]+") | ForEach-Object { $_.Trim() } | Where-Object { $_ -and $_ -notmatch '^[-\\|/ ]+$' -and $_ -notmatch '[\u2580-\u259F]' } |
+            Select-Object -Last $Lines) | ForEach-Object { Add-BoardLine 'note' $_ }
+        return
+    }
     $keep = @(($Output -split "[`r`n]+") | ForEach-Object { $_.Trim() } |
         Where-Object { $_ -and $_ -notmatch '^[-\\|/ ]+$' -and $_ -notmatch '[\u2580-\u259F]' } | Select-Object -Last $Lines)
     foreach ($line in $keep) { Write-UILine ("        {0}{1}{2}" -f $UI.C.Dim, $line, $UI.C.Reset) }
@@ -444,7 +449,7 @@ function Write-InstallSummary {
         if ($null -ne $UI.FinaleSection) { Send-Board 'section' $UI.FinaleSection }
         $next = if ($Failed) {
             @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
-        } elseif ($null -ne $UI.FinaleNext) { @($UI.FinaleNext) } else {
+        } elseif ($null -ne $UI.FinaleNext) { , @($UI.FinaleNext) } else {
             @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
                 @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
         }

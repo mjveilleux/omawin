@@ -120,7 +120,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
         Write-Note "~/.gitconfig now includes $gitUserConfig"
     }
     # Your name and email (install/lib.ps1): asked before the install started, if git had none.
-    if (-not $GitAsked) { Request-GitIdentity }
+    if (-not $GitAsked) { $null = Request-GitIdentity }
     elseif (git config --global --includes --get user.name) { Write-Note "ok  user.name $(git config --global --includes --get user.name)" }
     else { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com' }
 } else { Write-Warn 'git not found; re-run after installing it' }

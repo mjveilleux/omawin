@@ -23,7 +23,7 @@ Your own settings live outside omawin, in the PC's shared folder and this accoun
 
 It asks everything up front, then needs nobody:
 1. **The questions**: which presets (first install only) and your git name and email (only if git has none).
-2. **One admin prompt**, when anything needs admin (`install/admin.ps1`). It says what for, Windows asks once, and `install/admin-batch.ps1` does it all in the background, hidden, while the steps carry on: the whole-PC packages (`$WholePC` in `packages.ps1`, `winget --scope machine`) and omawin's GlazeWM and Zebar. In a standard account that prompt takes an admin's password and the batch runs as that admin, so it only does what's the same for every account; everything per-account stays in the steps. Declined: each whole-PC package and fork asks on its own as it comes, as before.
+2. **One admin prompt**, when anything needs admin (`install/admin.ps1`). It says what for, Windows asks once, and `install/admin-batch.ps1` does it all in the background, hidden, while the steps carry on: the whole-PC packages (`$WholePC` in `packages.ps1`, `winget --scope machine`) and omawin's GlazeWM and Zebar. In a standard account that prompt takes an admin's password and the batch runs as that admin, so it only does what's the same for every account; everything per-account stays in the steps. Declined: each whole-PC package and fork asks on its own as it comes, as before. Like any admin prompt for a script, it runs this account's `~/omawin` as admin: on a PC shared with an account you don't trust, run the install there without an admin password, or from an account you do.
 3. **The steps**, below.
 4. **The migrations**.
 
@@ -121,7 +121,7 @@ Every migration must be safe on a brand-new PC (nothing to clean up) and safe to
 
 ## Updating
 
-`omawin update` (system menu > Update > This setup, `bin/update.ps1`) fetches and fast-forwards the checkout, then runs `install.ps1 -LinkOnly`: relinks, takes the release's binaries (or rebuilds) for the pieces whose source changed, runs new migrations. It never stops because the checkout was changed by hand:
+`omawin update` (system menu > Update > This setup, `bin/update.ps1`) fetches and fast-forwards the checkout, then runs `install.ps1 -LinkOnly -UpdateInfo <file>`: relinks, takes the release's binaries (or rebuilds) for the pieces whose source changed, upgrades yt-dlp, runs new migrations. It shows on the install screen: the pull is its first step (its notes and warnings with it), each change it brought is an item under **Changes**, and the finale says "omawin is updated: N changes" with what's new, or "already up to date". The summary it leaves lists the changes one a line. It never stops because the checkout was changed by hand:
 - Local changes and new files go into a stash named `omawin update <time>` and are put back after the update. If they clash with it, the checkout is left as the update made it, the stash is kept, and it says how to see, re-apply or drop it ([troubleshooting](../manual/12-troubleshooting.md)).
 - Local commits are replayed on top of the update; if they clash, they're kept on a branch `omawin-local/<time>` and the checkout moves to the update.
 - An unfinished merge, rebase or cherry-pick is undone first; the repo is never left in the middle of one.

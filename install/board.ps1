@@ -38,7 +38,8 @@ function Get-ScreenExe {
     New-Item -ItemType Directory -Force $dir | Out-Null
     Get-ChildItem $dir -Filter 'omawin-screen-*.exe' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
     $ErrorActionPreference = 'Continue'
-    $output = & $csc.FullName /nologo /target:exe /optimize "/out:$exe" $source 2>&1
+    # (/codepage:65001: screen.cs is UTF-8, its glyphs too, whatever this PC's code page.)
+    $output = & $csc.FullName /nologo /target:exe /optimize /codepage:65001 "/out:$exe" $source 2>&1
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path $exe)) { Write-Log "    (the screen didn't build: $($output -join ' '))"; return $null }
     $exe
 }

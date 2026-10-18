@@ -68,12 +68,39 @@ function Get-Base {
 function Get-Release([string]$Base) {
     # (Assigned first: Windows PowerShell passes the whole list down a pipe as one object.)
     $releases = Invoke-RestMethod 'https://api.github.com/repos/mjveilleux/glazewm/releases' -UseBasicParsing
-    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { [int]($_.tag_name -replace '.*omawin\.', '') } | Select-Object -Last 1
+    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { if ($_.tag_name -match 'omawin\.(\d+)') { [int]$Matches[1] } else { 0 } } | Select-Object -Last 1
 }
 # This PC's certificate (the machine store's public half is readable from any account).
 function Get-MachineCert {
     Get-ChildItem Cert:\LocalMachine\My -ErrorAction SilentlyContinue |
         Where-Object { $_.Subject -eq $subject -and $_.NotAfter -gt (Get-Date).AddDays(30) } | Select-Object -First 1
+}
+# Certificates older versions made in each account's own store, where anything running in that
+# account could sign with them, still trusted by the PC: every omawin one but $Keep's.
+function Get-OldTrust([string]$Keep) {
+    foreach ($store in 'Root', 'TrustedPublisher') {
+        Get-ChildItem "Cert:\LocalMachine\$store" -ErrorAction SilentlyContinue |
+            Where-Object { $_.Subject -like 'CN=omawin code signing*' -and $_.Thumbprint -ne $Keep } |
+            ForEach-Object { [pscustomobject]@{ Store = $store; Cert = $_ } }
+    }
+}
+function Remove-OldTrust([string]$Keep) {
+    foreach ($store in 'Root', 'TrustedPublisher') {
+        $s = New-Object Security.Cryptography.X509Certificates.X509Store($store, 'LocalMachine')
+        $s.Open('ReadWrite')
+        foreach ($old in @($s.Certificates | Where-Object { $_.Subject -like 'CN=omawin code signing*' -and $_.Thumbprint -ne $Keep })) { $s.Remove($old) }
+        $s.Close()
+    }
+}
+# A folder of its own under Program Files, which only admins can write, for the admin part's
+# download: nothing running in an account can swap a file in it between the hash check, the
+# signing and the copy (the account's own TEMP is that account's to write).
+function New-Staging {
+    $root = Join-Path $env:ProgramFiles 'glzr.io\.omawin-staging'
+    New-Item -ItemType Directory -Force $root | Out-Null
+    $work = Join-Path $root ([Guid]::NewGuid().ToString('n'))
+    New-Item -ItemType Directory $work | Out-Null
+    $work
 }
 # Whether $Tag is in, signed by this PC's certificate.
 function Test-Current([string]$Tag) {
@@ -112,6 +139,9 @@ function Say([string]$Line) { if ($Out) { Set-Content $Out $Line -Encoding utf8 
 if ($Machine) {
     if (-not $elevated) { throw '-Machine runs elevated (install/admin.ps1, or this script without it)' }
     try {
+        # First, whatever happens next: no certificate an account could sign with stays trusted.
+        $machineCert = Get-MachineCert
+        Remove-OldTrust $(if ($machineCert) { $machineCert.Thumbprint } else { '-' })
         if (-not (Test-Path $exe)) { Say 'skip  GlazeWM is not installed'; exit 0 }
         $base = Get-Base
         $release = Get-Release $base
@@ -120,8 +150,7 @@ if ($Machine) {
 
         $zipAsset = $release.assets | Where-Object name -like 'glazewm-*-windows-x64.zip' | Select-Object -First 1
         $sumsAsset = $release.assets | Where-Object name -eq 'SHA256SUMS-windows-x64.txt' | Select-Object -First 1
-        $work = Join-Path $env:TEMP "glazewm-fork-$(Get-Date -Format yyyyMMddHHmmss)"
-        New-Item -ItemType Directory -Force $work | Out-Null
+        $work = New-Staging
         try {
             Invoke-WebRequest $zipAsset.browser_download_url -OutFile "$work\fork.zip" -UseBasicParsing
             Invoke-WebRequest $sumsAsset.browser_download_url -OutFile "$work\sums.txt" -UseBasicParsing
@@ -156,19 +185,26 @@ if ($Machine) {
             }
             New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
             Set-Content $state $release.tag_name -NoNewline
-
-            # Certificates older versions made in an account's own store, where anything running
-            # in that account could sign with them: no longer trusted.
-            foreach ($store in 'Root', 'TrustedPublisher') {
-                $s = New-Object Security.Cryptography.X509Certificates.X509Store($store, 'LocalMachine')
-                $s.Open('ReadWrite')
-                foreach ($old in @($s.Certificates | Where-Object { $_.Subject -like 'CN=omawin code signing*' -and $_.Thumbprint -ne $cert.Thumbprint })) { $s.Remove($old) }
-                $s.Close()
-            }
+            Remove-OldTrust $cert.Thumbprint
         } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
         Say "installed  GlazeWM fork $($release.tag_name) (signed on this PC; the official one kept as glazewm.official.exe)"
         exit 0
     } catch { Say "failed  $_"; exit 1 }
+    finally {
+        # A glazewm.exe still signed by a certificate taken away above (the new one didn't go in:
+        # GitHub down, no build for this version) won't start: Windows refuses a uiAccess program
+        # whose signature doesn't check out. The official one goes back instead.
+        $sig = if (Test-Path $exe) { Get-AuthenticodeSignature $exe }
+        if ($sig -and $sig.SignerCertificate -and $sig.SignerCertificate.Subject -like 'CN=omawin code signing*' -and $sig.Status -ne 'Valid') {
+            foreach ($name in $Files) {
+                $target = Join-Path $dir $name
+                $keep = $target -replace '\.exe$', '.official.exe'
+                if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
+            }
+            Remove-Item $state -ErrorAction SilentlyContinue
+            Say "skip  official GlazeWM back: the fork in place was signed by a certificate no longer trusted"
+        }
+    }
 }
 if ($RestoreMachine) {
     if (-not $elevated) { throw '-RestoreMachine runs elevated' }
@@ -178,6 +214,10 @@ if ($RestoreMachine) {
         if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
     }
     Remove-Item $state -ErrorAction SilentlyContinue
+    # The official GlazeWM needs none of omawin's certificates: none stays trusted, and this PC's
+    # own goes too.
+    Remove-OldTrust '-'
+    Get-ChildItem Cert:\LocalMachine\My -ErrorAction SilentlyContinue | Where-Object Subject -eq $subject | Remove-Item -ErrorAction SilentlyContinue
     Say 'ok  official GlazeWM back'
     exit 0
 }
@@ -186,6 +226,9 @@ if ($RestoreMachine) {
 if ($Check) {
     # Not installed yet: the admin step installs it first (when it's on its list), then this.
     if (-not (Test-Path $exe)) { return 'needed' }
+    # An old per-account certificate still trusted: the admin part takes that away, whatever else.
+    $machineCert = Get-MachineCert
+    if (Get-OldTrust $(if ($machineCert) { $machineCert.Thumbprint } else { '-' })) { return 'needed' }
     try { $release = Get-Release (Get-Base) } catch { return "skip  couldn't reach GitHub: $_" }
     if (-not $release) { return 'skip  no fork build for this GlazeWM yet' }
     if (Test-Current $release.tag_name) { return "ok  GlazeWM fork $($release.tag_name)" }
