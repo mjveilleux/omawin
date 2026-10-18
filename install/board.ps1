@@ -12,8 +12,8 @@
 #
 # ASCII only, like ui.ps1: glyphs come from code points ($UI.G).
 
-$BoardMinWidth = 96
-$BoardMinHeight = 28
+$BoardMinWidth = 80
+$BoardMinHeight = 24
 
 # The console's size; OMAWIN_SCREEN=<width>x<height> fixes it (recording the demo into a file).
 function Get-ScreenSize {
@@ -384,8 +384,9 @@ function Draw {
     if ($room -gt 0) { $right += , @(); $right += $stepLines }
 
     # --- the left pane: what the running step is doing
-    $leftW = [int][Math]::Floor(($W - 5) * 0.58)
-    $rightW = $W - 5 - $leftW
+    # The right side needs the logo's 27 columns and a border; the left side takes what's left.
+    $rightW = [Math]::Max(33, [int][Math]::Floor(($W - 5) * 0.42))
+    $leftW = $W - 5 - $rightW
     $iw = $leftW - 4
     $left = @()
     $legend = if ($final) { if ($final.Failed) { @(P $C.Red "$($G.Fail) stopped") } else { @(P $C.Ok "$($G.Done) installed") } }
@@ -427,7 +428,7 @@ function Draw {
         $left += , @()
         $left += , @((P $C.Acc $spin), (P $C.Fg ' waiting for the Windows prompt'))
     } elseif ($B.Mode -eq 'packages') {
-        $cols = if ($iw -ge 66) { 3 } elseif ($iw -ge 40) { 2 } else { 1 }
+        $cols = if ($iw -ge 66) { 3 } elseif ($iw -ge 30) { 2 } else { 1 }
         $cw = [Math]::Floor($iw / $cols)
         $rowsN = [Math]::Ceiling($pkgs.Count / $cols)
         for ($gr = 0; $gr -lt $rowsN; $gr++) {
