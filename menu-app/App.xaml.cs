@@ -193,6 +193,9 @@ public partial class App : Application
         else if (args.Contains("--launcher")) window.ToggleLauncher();
         else if (args.Contains("--files")) window.ToggleFinder();
         else if (args.Contains("--start-hidden")) { }
+        // Asked to go (menu-app\stop-menu.ps1, before new files go in): started by GlazeWM, this
+        // app inherits its uiAccess, and a plain shell isn't allowed to stop it by force.
+        else if (args.Contains("--quit")) Environment.Exit(0);
         else window.Toggle();
     }
 }

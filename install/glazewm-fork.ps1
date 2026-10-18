@@ -24,7 +24,7 @@
         .\glazewm-fork.ps1            (asks for admin once)
         .\glazewm-fork.ps1 -Restore
 #>
-param([switch]$Restore, [string]$Signed)
+param([switch]$Restore, [string]$Signed, [string]$Cert)
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
 
@@ -51,7 +51,11 @@ function Set-InUseFile([string]$New, [string]$Target) {
 # --- the admin part: trust the certificate, put the file in place ---------------------------------
 # Run elevated by the part below, with the signed download; GlazeWM is already stopped.
 if ($Signed) {
-    $cert = Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $subject } | Select-Object -First 1
+    # The certificate that signed it, as a file from the part below: this part may run as
+    # another account (a standard account's admin prompt takes an admin's password), whose own
+    # certificate store doesn't have it.
+    $cert = if ($Cert) { New-Object Security.Cryptography.X509Certificates.X509Certificate2 (, [IO.File]::ReadAllBytes($Cert)) }
+            else { Get-ChildItem Cert:\CurrentUser\My | Where-Object { $_.Subject -eq $subject } | Select-Object -First 1 }
     foreach ($store in 'Root', 'TrustedPublisher') {
         if (-not (Get-ChildItem "Cert:\LocalMachine\$store" | Where-Object Thumbprint -eq $cert.Thumbprint)) {
             $s = New-Object Security.Cryptography.X509Certificates.X509Store($store, 'LocalMachine')
@@ -148,7 +152,9 @@ try {
     # The state file is written as soon as the admin part succeeds, so a failure restarting
     # GlazeWM can't make the next run redo the install.
     try {
-        Invoke-Elevated @('-Signed', "`"$download`"")
+        $certFile = Join-Path $work 'omawin-signing.cer'   # the public half only
+        [IO.File]::WriteAllBytes($certFile, $cert.RawData)
+        Invoke-Elevated @('-Signed', "`"$download`"", '-Cert', "`"$certFile`"")
         New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
         Set-Content $state $release.tag_name -NoNewline
     }

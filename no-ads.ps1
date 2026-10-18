@@ -78,7 +78,11 @@ $Senders = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settin
 function Disable-Senders([string]$Pattern, [string[]]$Known = @(), [string]$Keep = '^$') {
     $found = Get-ChildItem $Senders -ErrorAction SilentlyContinue | Where-Object PSChildName -Match $Pattern | ForEach-Object PSChildName
     foreach ($sender in @(@($Known) + @($found) | Where-Object { $_ } | Select-Object -Unique | Where-Object { $_ -notmatch $Keep })) {
-        Set-Dword (Join-Path $Senders $sender) 'Enabled' 0
+        # Through .NET, not the registry drive: a sender's name can be a program's path
+        # ("C:/ProgramData/..."), which PowerShell's paths take apart.
+        $key = [Microsoft.Win32.Registry]::CurrentUser.CreateSubKey("Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\$sender")
+        $key.SetValue('Enabled', 0, [Microsoft.Win32.RegistryValueKind]::DWord)
+        $key.Close()
         $sender
     }
 }

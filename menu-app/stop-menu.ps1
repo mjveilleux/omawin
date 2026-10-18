@@ -8,7 +8,17 @@
 param([string]$Dir = (Join-Path $env:LOCALAPPDATA 'system-menu'))
 $ErrorActionPreference = 'Stop'
 
-Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
+function Get-MyMenu { Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId }
+# Asked first: started by GlazeWM, the menu app inherits its uiAccess, which a plain shell may
+# not stop by force. (A copy from before --quit ignores it; then force, and failing that, its
+# files are moved aside below and it runs on until the next start.)
+$running = Get-MyMenu | Select-Object -First 1
+if ($running) {
+    $exe = Join-Path $Dir 'SystemMenu.exe'
+    if (Test-Path $exe) { try { Start-Process $exe -ArgumentList '--quit' -WindowStyle Hidden } catch { } }
+    for ($i = 0; $i -lt 30 -and (Get-MyMenu); $i++) { Start-Sleep -Milliseconds 100 }
+    Get-MyMenu | Stop-Process -Force -ErrorAction SilentlyContinue
+}
 if (-not (Test-Path $Dir)) { return }
 
 function Test-Locked($file) {
