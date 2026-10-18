@@ -267,6 +267,13 @@ foreach ($m in [regex]::Matches((Get-Content "$Repo\glazewm\config.yaml" -Raw), 
     if (-not ($commandNames | Where-Object { $words -eq $_ -or $words.StartsWith("$_ ") })) { $commandProblems += "glazewm/config.yaml runs unknown 'omawin $words'" }
 }
 if ($commandProblems) { $commandProblems | ForEach-Object { Fail 'bin/commands.txt' $_ } } else { Pass 'bin/commands.txt' "$($commandNames.Count) commands" }
+# install.ps1's steps: each line of install/steps.txt has its file, and no file in install/ that
+# looks like a step (it says so on its first line) is missing from the list.
+$stepNames = @(Get-Content "$Repo\install\steps.txt" | Where-Object { $_ -notmatch '^\s*(#|$)' } | ForEach-Object { ($_ -split '\|')[0].Trim() })
+$stepProblems = @($stepNames | Where-Object { -not (Test-Path "$Repo\install\$_.ps1") } | ForEach-Object { "$_ is listed but install/$_.ps1 is missing" })
+$stepProblems += @(Get-ChildItem "$Repo\install" -Filter *.ps1 | Where-Object { (Get-Content $_.FullName -TotalCount 1) -like '# install.ps1 step*' -and $stepNames -notcontains $_.BaseName } |
+    ForEach-Object { "install/$($_.Name) is a step that isn't listed, so it never runs" })
+if ($stepProblems) { $stepProblems | ForEach-Object { Fail 'install/steps.txt' $_ } } else { Pass 'install/steps.txt' "$($stepNames.Count) steps" }
 $dirty = @(git -C $Repo status --porcelain 2>$null)
 if ($dirty) { Warn 'git' "$($dirty.Count) uncommitted change(s)" } else { Pass 'git' 'clean' }
 

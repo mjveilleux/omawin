@@ -115,15 +115,10 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
         git config --global --add include.path $gitUserConfig
         Write-Note "~/.gitconfig now includes $gitUserConfig"
     }
-    # Your name and email: never in the repo. Asked once, into your own ~/.gitconfig.
-    # (--includes: an identity from an included file counts.)
-    if (git config --global --includes --get user.name) { Write-Note "ok  user.name $(git config --global --includes --get user.name)" }
-    elseif (Test-Interactive) {
-        $name = (Read-Host '    git: your name (for commits; Enter to skip)').Trim()
-        $email = if ($name) { (Read-Host '    git: your email').Trim() }
-        if ($name) { git config --global user.name $name; Write-Note "user.name = $name" }
-        if ($email) { git config --global user.email $email; Write-Note "user.email = $email" }
-    } else { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com' }
+    # Your name and email (install/lib.ps1): asked before the install started, if git had none.
+    if (-not $GitAsked) { Request-GitIdentity }
+    elseif (git config --global --includes --get user.name) { Write-Note "ok  user.name $(git config --global --includes --get user.name)" }
+    else { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com' }
 } else { Write-Warn 'git not found; re-run after installing it' }
 
 Write-Step 'Git Bash'

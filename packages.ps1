@@ -60,6 +60,17 @@ $Presets = [ordered]@{
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
 }
 
+# Packages that install for the whole PC (into Program Files, with Windows' admin prompt each).
+# install.ps1 hands them to its one admin step (install/admin.ps1) instead, which installs them
+# all after a single prompt; the rest install for this account alone. A package missing here only
+# costs its own prompt; one listed that has no whole-PC installer falls back to this account's.
+$WholePC = @(
+    'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'glzr-io.zebar', 'Neovim.Neovim',
+    'Neovide.Neovide', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.DesktopRuntime.9',
+    'GoLang.Go', 'Erlang.ErlangOTP', 'Elixir.Elixir', 'RProject.R', 'Posit.RStudio', 'Microsoft.Sqlcmd',
+    'Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'
+)
+
 # Installer arguments for packages whose defaults don't fit (passed as winget --override).
 $WingetOverrides = @{
     # Python's installer leaves PATH alone by default, so `python` would hit the Store stub.

@@ -10,25 +10,29 @@
     this account's settings, ZEBAR_ASSET_PORT and GLAZEWM_IPC_PORT (bin/ports.ps1), and is
     the official one otherwise.
 
-    1. downloads the fork's zebar.exe built on the installed Zebar's version (skipped, with
-       the official one kept, when there's no fork build for it yet)
-    2. checks it against the release's SHA256SUMS
-    3. puts it in Program Files (admin: one prompt), keeping the official one as
-       zebar.official.exe, and pins Zebar in winget so an upgrade doesn't undo it
+    The admin part downloads the fork's zebar.exe built on the installed Zebar's version
+    (skipped, with the official one kept, when there's no fork build for it yet), checks it
+    against the release's SHA256SUMS, and puts it in Program Files, keeping the official one as
+    zebar.official.exe. It does it all itself, so install.ps1's one admin step can run it
+    (install/admin.ps1), as another account if need be. Safe to run again.
 
-    Safe to run again; -Restore puts the official zebar.exe back. Runs under Windows
-    PowerShell 5.1 too.
+        .\zebar-fork.ps1              the fork in (asks for admin)
+        .\zebar-fork.ps1 -Restore     the official one back (asks for admin)
+        .\zebar-fork.ps1 -Check       whether the admin part has anything to do ("needed" or why not)
+        .\zebar-fork.ps1 -Machine     the admin part, run elevated; -Out <file> gets its last line
+        .\zebar-fork.ps1 -After       this account's part: pins Zebar in winget, so an upgrade doesn't undo it
 
-        .\zebar-fork.ps1
-        .\zebar-fork.ps1 -Restore
+    Runs under Windows PowerShell 5.1 too.
 #>
-param([switch]$Restore, [string]$From)
+param([switch]$Restore, [switch]$Check, [switch]$Machine, [switch]$RestoreMachine, [switch]$After, [string]$Out)
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
+$ProgressPreference = 'SilentlyContinue'
 
 $dir = Join-Path $env:ProgramFiles 'glzr.io\Zebar'
 $exe = Join-Path $dir 'zebar.exe'
 $official = Join-Path $dir 'zebar.official.exe'
+$state = Join-Path $env:ProgramData 'omawin\zebar-fork.txt'
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 # Puts $New at $Target even while another account runs it (see install/glazewm-fork.ps1).
@@ -41,54 +45,86 @@ function Set-InUseFile([string]$New, [string]$Target) {
     }
     Copy-Item $New $Target -Force
 }
-
-# --- the admin part ------------------------------------------------------------------------
-if ($From -and $elevated) {
-    if (-not (Test-Path $official)) { Copy-Item $exe $official }
-    Set-InUseFile $From $exe
-    exit 0
+# The installed Zebar's version, from Windows' list of programs (zebar.exe's own is 0.0.0).
+function Get-Base {
+    $entry = Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq 'Zebar' } | Select-Object -First 1
+    if ($entry.DisplayVersion) { $entry.DisplayVersion -replace '^(\d+\.\d+\.\d+).*', '$1' }
 }
-if ($Restore -and $elevated) {
+function Get-Release([string]$Base) {
+    # (Assigned first: Windows PowerShell passes the whole list down a pipe as one object.)
+    $releases = Invoke-RestMethod 'https://api.github.com/repos/mjveilleux/zebar/releases' -UseBasicParsing
+    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { [int]($_.tag_name -replace '.*omawin\.', '') } | Select-Object -Last 1
+}
+# In, and still ours: an upgrade that got past the pin puts the official file back.
+function Test-Current([string]$Tag) {
+    (Test-Path $state) -and (Get-Content $state -Raw).Trim() -eq $Tag -and (Test-Path $official) -and
+        (Get-Item $exe).Length -ne (Get-Item $official).Length
+}
+function Invoke-Elevated([string]$Switch) {
+    $result = Join-Path $env:TEMP "zebar-fork-$PID.txt"
+    $p = Start-Process powershell.exe -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"", $Switch, '-Out', "`"$result`""
+    $line = if (Test-Path $result) { (Get-Content $result -Raw).Trim() }
+    Remove-Item $result -ErrorAction SilentlyContinue
+    if ($p.ExitCode -ne 0) { throw "the admin part failed$(if ($line) { ": $line" } else { " ($($p.ExitCode))" })" }
+    $line
+}
+function Say([string]$Line) { if ($Out) { Set-Content $Out $Line -Encoding utf8 }; $Line }
+
+# --- the admin part ------------------------------------------------------------------------------
+if ($Machine) {
+    if (-not $elevated) { throw '-Machine runs elevated (install/admin.ps1, or this script without it)' }
+    try {
+        if (-not (Test-Path $exe)) { Say 'skip  Zebar is not installed'; exit 0 }
+        $base = Get-Base
+        if (-not $base) { Say 'skip  Zebar version unknown; official Zebar kept'; exit 0 }
+        $release = Get-Release $base
+        if (-not $release) { Say "ok  official Zebar $base (no fork build for it yet)"; exit 0 }
+        if (Test-Current $release.tag_name) { Say "ok  Zebar fork $($release.tag_name)"; exit 0 }
+
+        $zipAsset = $release.assets | Where-Object name -like 'zebar-*-windows-x64.zip' | Select-Object -First 1
+        $sumsAsset = $release.assets | Where-Object name -eq 'SHA256SUMS-windows-x64.txt' | Select-Object -First 1
+        $work = Join-Path $env:TEMP "zebar-fork-$(Get-Date -Format yyyyMMddHHmmss)"
+        New-Item -ItemType Directory -Force $work | Out-Null
+        try {
+            Invoke-WebRequest $zipAsset.browser_download_url -OutFile "$work\fork.zip" -UseBasicParsing
+            Invoke-WebRequest $sumsAsset.browser_download_url -OutFile "$work\sums.txt" -UseBasicParsing
+            $want = ((Get-Content "$work\sums.txt" | Where-Object { $_ -match [regex]::Escape($zipAsset.name) } | Select-Object -First 1) -split '\s+')[0]
+            if (-not $want -or (Get-FileHash "$work\fork.zip" -Algorithm SHA256).Hash -ne $want.ToUpper()) { throw "$($zipAsset.name) doesn't match its published SHA-256" }
+            Expand-Archive "$work\fork.zip" "$work\x" -Force
+            if (-not (Test-Path $official)) { Copy-Item $exe $official }
+            Set-InUseFile "$work\x\zebar.exe" $exe
+            New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
+            Set-Content $state $release.tag_name -NoNewline
+        } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+        Say "installed  Zebar fork $($release.tag_name) (the official one kept as zebar.official.exe)"
+        exit 0
+    } catch { Say "failed  $_"; exit 1 }
+}
+if ($RestoreMachine) {
+    if (-not $elevated) { throw '-RestoreMachine runs elevated' }
     if (Test-Path $official) { Set-InUseFile $official $exe; Remove-Item $official -ErrorAction SilentlyContinue }
+    Remove-Item $state -ErrorAction SilentlyContinue
+    Say 'ok  official Zebar back (restart the bar: omawin restart zebar)'
     exit 0
 }
 
-# --- your part -----------------------------------------------------------------------------
-function Invoke-Elevated([string[]]$Arguments) {
-    $shell = if (Get-Command pwsh -ErrorAction SilentlyContinue) { 'pwsh' } else { 'powershell' }
-    $p = Start-Process $shell -Verb RunAs -Wait -PassThru -WindowStyle Hidden -ArgumentList (@('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSCommandPath`"") + $Arguments)
-    if ($p.ExitCode -ne 0) { throw "the admin part failed ($($p.ExitCode))" }
+# --- this account's part -------------------------------------------------------------------------
+if ($Check) {
+    if (-not (Test-Path $exe)) { return 'needed' }
+    $base = Get-Base
+    if (-not $base) { return 'skip  Zebar version unknown' }
+    try { $release = Get-Release $base } catch { return "skip  couldn't reach GitHub: $_" }
+    if (-not $release) { return 'skip  no fork build for this Zebar yet' }
+    if (Test-Current $release.tag_name) { return "ok  Zebar fork $($release.tag_name)" }
+    return 'needed'
 }
-
-if (-not (Test-Path $exe)) { 'Zebar not installed; re-run after installing it'; return }
-if ($Restore) { Invoke-Elevated '-Restore'; 'ok  official Zebar back (restart the bar: omawin restart zebar)'; return }
-
-# The installed Zebar's version: from winget (zebar.exe's own file version is 0.0.0).
-$base = $null
-try { $line = winget list --id glzr-io.zebar --exact --accept-source-agreements 2>$null | Select-String 'glzr-io\.zebar'; if ($line -match '(\d+\.\d+\.\d+)') { $base = $Matches[1] } } catch { }
-if (-not $base) { 'Zebar version unknown; official Zebar kept'; return }
-
-$releases = Invoke-RestMethod 'https://api.github.com/repos/mjveilleux/zebar/releases' -UseBasicParsing
-$release = $releases | Where-Object { $_.tag_name -like "v$base-omawin.*" } | Sort-Object { [int]($_.tag_name -replace '.*omawin\.', '') } | Select-Object -Last 1
-if (-not $release) { "ok  official Zebar $base (no fork build for $base yet)"; return }
-$state = Join-Path $env:LOCALAPPDATA 'launcher\zebar-fork.txt'
-if ((Test-Path $official) -and (Test-Path $state) -and (Get-Content $state -Raw).Trim() -eq $release.tag_name) { "ok  Zebar fork $($release.tag_name)"; return }
-
-$zipAsset = $release.assets | Where-Object name -like 'zebar-*-windows-x64.zip' | Select-Object -First 1
-$sumsAsset = $release.assets | Where-Object name -eq 'SHA256SUMS-windows-x64.txt' | Select-Object -First 1
-$work = Join-Path $env:TEMP "zebar-fork-$(Get-Date -Format yyyyMMddHHmmss)"
-New-Item -ItemType Directory -Force $work | Out-Null
-try {
-    Invoke-WebRequest $zipAsset.browser_download_url -OutFile "$work\fork.zip" -UseBasicParsing
-    Invoke-WebRequest $sumsAsset.browser_download_url -OutFile "$work\sums.txt" -UseBasicParsing
-    $want = ((Get-Content "$work\sums.txt" | Where-Object { $_ -match [regex]::Escape($zipAsset.name) } | Select-Object -First 1) -split '\s+')[0]
-    if (-not $want -or (Get-FileHash "$work\fork.zip" -Algorithm SHA256).Hash -ne $want.ToUpper()) { throw "$($zipAsset.name) doesn't match its published SHA-256" }
-    Expand-Archive "$work\fork.zip" "$work\x" -Force
-    Invoke-Elevated @('-From', "`"$work\x\zebar.exe`"")
-    New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
-    Set-Content $state $release.tag_name -NoNewline
+if ($After) {
     try { winget pin add --id glzr-io.zebar --exact --accept-source-agreements 2>$null | Out-Null } catch { }
-    "ok  Zebar fork $($release.tag_name) (the official one kept as zebar.official.exe)"
-} finally {
-    Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
+    return
 }
+if (-not (Test-Path $exe)) { 'Zebar not installed; re-run after installing it'; return }
+if ($Restore) { Invoke-Elevated '-RestoreMachine'; return }
+$line = if ($elevated) { & $PSCommandPath -Machine } else { Invoke-Elevated '-Machine' }
+& $PSCommandPath -After
+$line

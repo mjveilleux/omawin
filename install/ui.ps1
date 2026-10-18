@@ -2,9 +2,11 @@
 # native calls, the finish screen, and the log every line also goes to. Dot-sourced by
 # install/lib.ps1; install/demo-ui.ps1 walks it through fake steps without installing anything.
 #
-# Two faces. Fancy: colors, glyphs and a spinner, in a console. Plain: the old "==> step" lines,
-# whenever the output is redirected (omawin update's log, an agent), or OMAWIN_PLAIN=1 or NO_COLOR
-# is set. OMAWIN_PLAIN=0 forces fancy (recording the demo into a file).
+# Three faces. The screen (install/board.ps1): two panes redrawn in place, in a console big enough
+# for it (OMAWIN_BOARD=0 turns it off). Fancy: colors, glyphs and a spinner, line after line, in a
+# smaller console and for install.ps1 -Step. Plain: the old "==> step" lines, whenever the output
+# is redirected (omawin update's log, an agent), or OMAWIN_PLAIN=1 or NO_COLOR is set.
+# OMAWIN_PLAIN=0 forces fancy (recording the demo into a file).
 #
 # Runs under Windows PowerShell 5.1 too, so escapes come from [char]27 (5.1 has no `e), and this
 # file stays ASCII: 5.1 reads a script without a BOM in the ANSI code page, so every glyph below
@@ -17,13 +19,18 @@ $UI = @{
     Fancy = $false
     Width = 100
     Log = Join-Path $env:LOCALAPPDATA 'launcher\install.log'
-    Steps = New-Object System.Collections.ArrayList     # @{ Name; Summary; State; Start; Seconds; Warnings }
+    # @{ Name; Summary; State; Start; Seconds; Expected; Warnings; Note }: install/steps.txt's, as
+    # they run. Synchronized: the screen's thread reads it while the steps change it.
+    Steps = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))
     Current = $null
     Warnings = New-Object System.Collections.ArrayList  # "<step>: <text>", for the finish screen
     AlreadyThere = 0                                    # packages found installed, shown as one line
     Encoding = $null                                    # the console's own, put back at the end
     G = @{}                                             # glyphs
     C = @{}                                             # colors
+    Board = $null                                       # the screen, while it's up (board.ps1)
+    Mode = 'full'                                       # which saved step times to go by: full or link
+    Times = Join-Path $env:LOCALAPPDATA 'launcher\install-times.txt'
 }
 
 function ConvertFrom-CodePoint([int[]]$Codes) { -join ($Codes | ForEach-Object { [string][char]$_ }) }
@@ -86,6 +93,8 @@ function Initialize-InstallUI([string]$Caller) {
     $g.Dot = ConvertFrom-CodePoint 0x00B7
     $g.H = ConvertFrom-CodePoint 0x2500
     $g.V = ConvertFrom-CodePoint 0x2502
+    $g.Upper = ConvertFrom-CodePoint 0x2580             # half blocks: two logo squares a character
+    $g.Lower = ConvertFrom-CodePoint 0x2584
     if ($rich) {
         $g.Done = ConvertFrom-CodePoint 0x2713
         $g.Fail = ConvertFrom-CodePoint 0x2717
@@ -93,6 +102,9 @@ function Initialize-InstallUI([string]$Caller) {
         $g.Sub = ConvertFrom-CodePoint 0x25B8
         $g.Corners = ConvertFrom-CodePoint 0x256D, 0x256E, 0x2570, 0x256F
         $g.Spin = @(0x280B, 0x2819, 0x2839, 0x2838, 0x283C, 0x2834, 0x2826, 0x2827, 0x2807, 0x280F | ForEach-Object { [string][char]$_ })
+        $g.Ell = ConvertFrom-CodePoint 0x2026
+        $g.Track = ConvertFrom-CodePoint 0x2500
+        $g.Seg = ConvertFrom-CodePoint 0x2501
     } else {
         $g.Done = ConvertFrom-CodePoint 0x221A
         $g.Fail = ConvertFrom-CodePoint 0x00D7
@@ -100,6 +112,9 @@ function Initialize-InstallUI([string]$Caller) {
         $g.Sub = ConvertFrom-CodePoint 0x25BA
         $g.Corners = ConvertFrom-CodePoint 0x250C, 0x2510, 0x2514, 0x2518
         $g.Spin = @('|', '/', '-', '\')
+        $g.Ell = '~'
+        $g.Track = '-'
+        $g.Seg = '='
     }
 
     # Bright enough for a dark background, deep enough for a light one; the accent is the orange
@@ -122,6 +137,7 @@ function Initialize-InstallUI([string]$Caller) {
 
 # Put the console back as it was (its encoding) once the install is over.
 function Close-InstallUI {
+    Stop-InstallBoard
     if (-not $UI.Fancy) { return }
     try { if ($UI.Encoding) { [Console]::OutputEncoding = $UI.Encoding } } catch { }
 }
@@ -154,6 +170,7 @@ function Write-Step([string]$Text) {
     }
     # The step's own name repeated as its first heading ('no ads' in no-ads) says nothing new.
     if ($UI.Current -and (($Text -replace '\W') -eq ($UI.Current.Name -replace '\W'))) { return }
+    if ($UI.Board) { Add-BoardLine 'head' $Text; return }
     $c = $UI.C
     Write-UILine ("    {0}{1}{2} {3}  {4}{5}{2}" -f $c.Accent, $UI.G.Sub, $c.Reset, $Text, $c.Dim, (Format-Clock))
 }
@@ -161,6 +178,7 @@ function Write-Step([string]$Text) {
 function Write-Note([string]$Text) {
     Write-Log "    $Text"
     if (-not $UI.Fancy) { Write-Host "    $Text" -ForegroundColor DarkGray; return }
+    if ($UI.Board) { if ($Text.StartsWith('ok  ')) { Add-BoardLine 'ok' $Text.Substring(4) } else { Add-BoardLine 'note' $Text }; return }
     $c = $UI.C
     if ($Text.StartsWith('ok  ')) { Write-UILine ("      {0}{1}{2} {3}{4}{2}" -f $c.Green, $UI.G.Done, $c.Reset, $c.Dim, $Text.Substring(4)) }
     else { Write-UILine ("      {0}{1}{2}" -f $c.Dim, $Text, $c.Reset) }
@@ -172,6 +190,7 @@ function Write-Warn([string]$Text) {
     [void]$UI.Warnings.Add("${where}: $Text")
     if ($UI.Current) { $UI.Current.Warnings++ }
     if (-not $UI.Fancy) { Write-Host "    ! $Text" -ForegroundColor Yellow; return }
+    if ($UI.Board) { Add-BoardLine 'warn' $Text; return }
     Write-UILine ("      {0}{1} {2}{3}" -f $UI.C.Yellow, $UI.G.Warn, $Text, $UI.C.Reset)
 }
 
@@ -183,7 +202,7 @@ function Write-Ok([string]$Text) {
 }
 
 function Write-OkCount([string]$What = 'already installed') {
-    if ($UI.Fancy -and $UI.AlreadyThere) {
+    if ($UI.Fancy -and -not $UI.Board -and $UI.AlreadyThere) {
         $c = $UI.C
         Write-UILine ("      {0}{1}{2} {3}{4} {5}{2}" -f $c.Green, $UI.G.Done, $c.Reset, $c.Dim, $UI.AlreadyThere, $What)
     }
@@ -195,15 +214,43 @@ function Write-Done([string]$Text, [double]$Seconds) {
     Write-Log "    done  $Text ($(Format-Duration $Seconds))"
     # Plain: installs run several at once now, so each says when it's done.
     if (-not $UI.Fancy) { Write-Host "    done  $Text ($(Format-Duration $Seconds))"; return }
+    if ($UI.Board) { return }  # the package grid shows it
     $c = $UI.C
     Write-UILine ("      {0}{1}{2} {3}  {4}{5}{2}" -f $c.Green, $UI.G.Done, $c.Reset, $Text, $c.Dim, (Format-Duration $Seconds))
 }
 
 # --- the step tracker --------------------------------------------------------------------------
 
-function Add-InstallStep([string]$Name, [string]$Summary, [switch]$Skip) {
+# $Expected: seconds, a first guess (install/steps.txt) until an install has timed the step
+# (Get-StepTime). -First: before the others (the admin step).
+function Add-InstallStep([string]$Name, [string]$Summary, [double]$Expected = 0, [switch]$Skip, [switch]$First) {
     $state = if ($Skip) { 'skipped' } else { 'pending' }
-    [void]$UI.Steps.Add(@{ Name = $Name; Summary = $Summary; State = $state; Seconds = 0; Warnings = 0 })
+    $saved = Get-StepTime $Name
+    $step = [hashtable]::Synchronized(@{ Name = $Name; Summary = $Summary; State = $state; Seconds = 0; Warnings = 0
+        Expected = $(if ($saved) { $saved } elseif ($Expected) { $Expected } else { 5 }) })
+    if ($First) { $UI.Steps.Insert(0, $step) } else { [void]$UI.Steps.Add($step) }
+}
+
+# How long each step took last time (install-times.txt: "<full|link> <step> <seconds>").
+function Get-StepTime([string]$Name) {
+    if (-not $UI.TimesRead) {
+        $UI.TimesRead = @{}
+        foreach ($line in Get-Content $UI.Times -ErrorAction SilentlyContinue) {
+            $f = $line -split '\s+'
+            if ($f.Count -eq 3) { $UI.TimesRead["$($f[0]) $($f[1])"] = [double]$f[2] }
+        }
+    }
+    $UI.TimesRead["$($UI.Mode) $Name"]
+}
+function Save-StepTimes {
+    [void](Get-StepTime '')
+    foreach ($s in $UI.Steps) {
+        if ($s.State -in 'done', 'warned' -and $s.Name -ne 'admin' -and $s.Seconds -gt 0) { $UI.TimesRead["$($UI.Mode) $($s.Name)"] = [Math]::Round($s.Seconds, 1) }
+    }
+    try {
+        New-Item -ItemType Directory -Force (Split-Path $UI.Times) | Out-Null
+        Set-Content $UI.Times (@($UI.TimesRead.Keys | Sort-Object | ForEach-Object { "$_ $($UI.TimesRead[$_])" })) -Encoding ascii
+    } catch { }
 }
 
 function Get-InstallStep([string]$Name) {
@@ -228,6 +275,14 @@ function Enter-InstallStep([string]$Name) {
     $s.Start = Get-Date
     $UI.Current = $s
     Write-Log "[$Name]"
+    if ($UI.Board) {
+        $UI.Board.Log.Clear()
+        $UI.Board.Pkgs.Clear()
+        $UI.BoardIndex = @{}
+        $UI.Board.Mode = 'log'
+        $UI.Board.Legend = $Name
+        return
+    }
     if (-not $UI.Fancy) { return }
     [void](Enable-VirtualTerminal)
     $todo = @($UI.Steps | Where-Object { $_.State -ne 'skipped' })
@@ -245,8 +300,9 @@ function Exit-InstallStep($Failure) {
     $UI.Current = $null
     $s.Seconds = ((Get-Date) - $s.Start).TotalSeconds
     $s.State = if ($Failure) { 'failed' } elseif ($s.Warnings) { 'warned' } else { 'done' }
+    if ($Failure) { $s.Failure = "$Failure" }
     Write-Log ("[{0}] {1} in {2}{3}" -f $s.Name, $s.State, (Format-Duration $s.Seconds), $(if ($Failure) { ": $Failure" }))
-    if (-not $UI.Fancy) { return }
+    if (-not $UI.Fancy -or $UI.Board) { return }
     $c = $UI.C
     $mark = switch ($s.State) {
         'failed' { $c.Red + $UI.G.Fail }
@@ -324,6 +380,7 @@ $Logo = @(
 )
 
 function Write-InstallBanner([string]$Version, [string]$What) {
+    if ($UI.Board) { return }
     if (-not $UI.Fancy) {
         Write-Host "omawin ${Version}: $What" -ForegroundColor Cyan
         return
@@ -347,12 +404,12 @@ function Write-InstallBanner([string]$Version, [string]$What) {
 
 # The steps about to run, each with what it does, all pending.
 function Write-InstallPlan {
-    if (-not $UI.Fancy) { return }
+    if (-not $UI.Fancy -or $UI.Board) { return }
     $c = $UI.C
     Write-UILine ''
     foreach ($s in $UI.Steps) {
         if ($s.State -eq 'skipped') {
-            Write-UILine ("    {0}{1} {2} {3}{4}" -f $c.Dim, $UI.G.Skip, $s.Name.PadRight(12), 'skipped (-LinkOnly)', $c.Reset)
+            Write-UILine ("    {0}{1} {2} {3}{4}" -f $c.Dim, $UI.G.Skip, $s.Name.PadRight(12), 'skipped', $c.Reset)
         } else {
             Write-UILine ("    {0}{1}{2} {3}{4}{5}{2}" -f $c.Dim, $UI.G.Pending, $c.Reset, $s.Name.PadRight(12), $c.Dim, $s.Summary)
         }
@@ -379,6 +436,28 @@ function Write-InstallSummary {
     $done = @($UI.Steps | Where-Object { $_.State -in 'done', 'warned' }).Count
     $skipped = @($UI.Steps | Where-Object { $_.State -eq 'skipped' }).Count
     Write-Log ("finished: {0} steps done, {1} warnings, {2}{3}" -f $done, $UI.Warnings.Count, $elapsed, $(if ($Failed) { ", stopped at $Failed" }))
+    if (-not $Failed -and $UI.SaveTimes) { Save-StepTimes }
+
+    if ($UI.Board) {
+        $failure = if ($Failed) { @($UI.Steps | Where-Object { $_.Name -eq $Failed })[0].Failure }
+        $UI.Board.Final = @{
+            At = Get-Date
+            Seconds = ((Get-Date) - $Started).TotalSeconds
+            Failed = $Failed
+            Error = $failure
+            Line = "$done steps $($UI.G.Dot) $elapsed" + $(if ($skipped) { " $($UI.G.Dot) $skipped skipped" })
+            Warnings = @($UI.Warnings)
+            Next = $(if ($Failed) {
+                    @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
+                } else {
+                    @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
+                        @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
+                })
+        }
+        # A moment for the logo to light up whole before the screen stops.
+        if (-not $Failed) { Start-Sleep -Milliseconds 1600 }
+        return
+    }
 
     if (-not $UI.Fancy) {
         if ($Failed) { return }  # the error says it
@@ -439,3 +518,30 @@ function Write-InstallSummary {
     }
     Write-InstallLogPath
 }
+
+# --- questions, and other output while the screen is up -------------------------------------------
+
+# Asks the person installing; on the screen's bottom line while it's up.
+function Read-InstallAnswer([string]$Question) {
+    if ($UI.Board) { $answer = Read-BoardAnswer $Question }
+    else { $answer = Microsoft.PowerShell.Utility\Read-Host "    $Question" }
+    Write-Log "    ? $Question -> $answer"
+    "$answer"
+}
+
+# Write-Host from a step or a script it runs (migrate.ps1, install-binaries.ps1) would draw over the
+# screen: while it's up, its lines become the step's notes. Otherwise it's Write-Host.
+function Write-Host {
+    param([Parameter(Position = 0, ValueFromPipeline = $true)][object]$Object, [switch]$NoNewline, [object]$Separator,
+        [ConsoleColor]$ForegroundColor, [ConsoleColor]$BackgroundColor)
+    process {
+        if (-not $UI.Board) { Microsoft.PowerShell.Utility\Write-Host @PSBoundParameters; return }
+        $text = "$Object".Trim()
+        if (-not $text) { return }
+        Write-Log "    $text"
+        if ($PSBoundParameters.ContainsKey('ForegroundColor') -and $ForegroundColor -in 'Red', 'Yellow', 'DarkYellow') { Add-BoardLine 'warn' $text }
+        else { Add-BoardLine 'note' $text }
+    }
+}
+
+. "$PSScriptRoot\board.ps1"

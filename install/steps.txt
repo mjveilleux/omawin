@@ -1,0 +1,14 @@
+# install.ps1's steps, in the order they run: <name> | <what it does> | <seconds on a new PC>.
+# Each is install/<name>.ps1. install.ps1, its -Step, the install screen and omawin check all read
+# this list: adding or removing a step is a line here and its file, nothing else.
+# The seconds are only a first guess for the progress bar: each install saves how long each step
+# really took (%LOCALAPPDATA%\launcher\install-times.txt) and the next one goes by that.
+# Two steps aren't files: "admin" (the one admin prompt, first, when anything needs it) and
+# "migrations" (last; bin/migrate.ps1).
+no-ads   | Windows' ads and suggestions off                                 | 2
+software | winget packages, your presets, the Nerd Font, Neovim's config    | 150
+shell    | PowerShell profile, terminals, prompt, git                       | 6
+desktop  | GlazeWM, Zebar, dictation                                        | 8
+helpers  | omawin.exe, the menu app, the music player                       | 25
+look     | the theme, the lock screen, the taskbar                          | 5
+other    | WSL settings, Claude Code                                        | 6

@@ -21,19 +21,24 @@ Your own settings live outside omawin, in the PC's shared folder and this accoun
 - `-LinkOnly` skips the installs and only relinks and rebuilds.
 - `-Step <name>` runs one step.
 
+It asks everything up front, then needs nobody:
+1. **The questions**: which presets (first install only) and your git name and email (only if git has none).
+2. **One admin prompt**, when anything needs admin (`install/admin.ps1`). It says what for, Windows asks once, and `install/admin-batch.ps1` does it all in the background, hidden, while the steps carry on: the whole-PC packages (`$WholePC` in `packages.ps1`, `winget --scope machine`) and omawin's GlazeWM and Zebar. In a standard account that prompt takes an admin's password and the batch runs as that admin, so it only does what's the same for every account; everything per-account stays in the steps. Declined: each whole-PC package and fork asks on its own as it comes, as before.
+3. **The steps**, below.
+4. **The migrations**.
+
 If it warns that Windows Terminal's settings couldn't be linked (the install shell was running inside Terminal), close Terminal and run `.\install.ps1 -LinkOnly` from a plain console: Win+R, `conhost powershell`.
 
 ## The steps (`install/`)
 
-`install.ps1` dot-sources `install/lib.ps1` (output, junctions, stub files), then these in order:
+The steps are listed in `install/steps.txt`, one line each (`name | what it does | seconds on a new PC`), in the order they run; each is `install/<name>.ps1`. `install.ps1`, its `-Step`, the install screen and `omawin check` all read that list, so adding or removing a step is a line there and its file. `install.ps1` dot-sources `install/lib.ps1` (output, junctions, stub files), then runs them:
 
 | Step | What it does |
 |---|---|
 | `no-ads` | first, before anything is installed or started: `no-ads.ps1 -UserOnly` (Windows' suggestions off; Copilot off the taskbar and out of the background; the Lenovo / McAfee / Adobe / Visual Studio modules only where that software is found). The admin part is `omawin no-ads` |
-| `software` | the core winget packages and the chosen presets' (`packages.ps1`, see Presets below; asks which presets on the first run); other installers (herdr; Claude Code, opencode, harlequin, the Fabric CLI when their preset is picked); JetBrainsMono Nerd Font, per-user. No Chocolatey. Skipped by `-LinkOnly`. |
-| `neovim` | Neovim and Neovide config; the one-line `.Rprofile` for RStudio themes |
+| `software` | the core winget packages and the chosen presets' (`packages.ps1`, see Presets below), four at once, with the whole-PC ones installing in the admin step alongside; other installers (herdr; Claude Code, opencode, harlequin, the Fabric CLI when their preset is picked); JetBrainsMono Nerd Font, per-user; then Neovim's and Neovide's config and the one-line `.Rprofile` for RStudio themes. No Chocolatey. `-LinkOnly` skips the installs and keeps the config. |
 | `shell` | PowerShell profile, Windows Terminal, noctty's config stub, starship, git (includes, and your name and email: asked once if git has none, written to your own `~/.gitconfig`), Git Bash |
-| `desktop` | GlazeWM + Zebar, GlazeWM at sign-in (a scheduled task, `install/login-start.ps1`, so it doesn't wait for Windows' delayed start-up list); our GlazeWM fork ([mjveilleux/glazewm](https://github.com/mjveilleux/glazewm), `install/glazewm-fork.ps1`: it can start before Explorer, so the desktop is up the moment you sign in; signed with a certificate made on and trusted by that PC only, one admin prompt; declined or failed, the official GlazeWM stays and waits for Explorer); Handy (dictation) on PATH, configured |
+| `desktop` | GlazeWM + Zebar, GlazeWM at sign-in (a scheduled task, `install/login-start.ps1`, so it doesn't wait for Windows' delayed start-up list); our GlazeWM fork ([mjveilleux/glazewm](https://github.com/mjveilleux/glazewm), `install/glazewm-fork.ps1`: it can start before Explorer, so the desktop is up the moment you sign in; signed with a certificate made on that PC, in the PC's own store where only admins can use its key, and trusted there only) and our Zebar fork (`install/zebar-fork.ps1`: each account's bar on its own ports), both put in by the admin step; declined or failed, the official ones stay and GlazeWM waits for Explorer; Handy (dictation) on PATH, configured |
 | `helpers` | `omawin.exe` and the bar's helpers into `~/.local/bin` (on PATH), the `btop` shim, noctty (the terminal, our fork's latest release, into `%LOCALAPPDATA%\Programs\noctty`; `bin/noctty.ps1`), the menu app and the music player (`bin/install-binaries.ps1`: the release's prebuilt file for this PC, checked against its published hash, or a build here when there is none — [releases.md](releases.md)) |
 | `look` | the default theme (Starship, on its first background) if none is set, so a new install shows at once that it took; no Recycle Bin icon; the lock-screen rotation task; the taskbar set to auto-hide |
 | `other` | `~/.wslconfig` (the account folder's when it has one); Claude Code's rules, skills, settings and plugins from the shared folder and this account's (`omawin claude sync`) |
@@ -42,9 +47,11 @@ Then the migrations (below).
 
 ### What it shows
 
-In a console the install draws its own screen (`install/ui.ps1`): the omawin banner and the plan, then each step as it runs (● running, ✓ done with its time, ! with warnings, ✗ failed) with an overall progress bar, a spinner with `installing 7/25 Neovim.Neovim` while winget works, and a finish box with the warnings and what to do next. `bootstrap.ps1` opens with the same banner (a small copy: it runs before the clone). When the output isn't a console (`omawin update`'s log, an agent), or `OMAWIN_PLAIN=1` or `NO_COLOR` is set, it prints the plain `==> step` lines instead; `OMAWIN_PLAIN=0` forces the screen.
+In a console at least 96 by 28 the install draws one screen and redraws it in place (`install/board.ps1`). On the left, what the step running now is doing: the admin prompt and what it's for, then the packages as a grid (✓ in, a spinner and a sliding bar while installing, the admin step's marked `admin`), then each step's lines. On the right, the omawin logo, lit by a snake that slides along its strokes as the install gets further, the percentage and time left, and every step on a line (green done, orange running, `!` with warnings). It finishes on the summary, the warnings and what to do next, with the logo whole. A second thread draws it, so it keeps moving while a step is busy. It keeps nothing of its own: the steps come from `steps.txt` and each step's share of the bar from how long it took last time (`%LOCALAPPDATA%\launcher\install-times.txt`; the first install goes by `steps.txt`'s guesses).
 
-Every line, with winget's output for a failed package, also goes to `%LOCALAPPDATA%\launcher\install.log`, timestamped (moved to `install.log.old` past 1 MB). `install\demo-ui.ps1` plays the whole screen with fake steps and installs nothing (`-Fail` for a failing step, `-Speed 2` to hurry).
+In a smaller console, and for `-Step`, it prints line after line instead (`install/ui.ps1`: each step with its time, a progress bar, a spinner while winget works, a finish box); `OMAWIN_BOARD=0` asks for that. `bootstrap.ps1` opens with the omawin banner (a small copy: it runs before the clone). When the output isn't a console (`omawin update`'s log, an agent), or `OMAWIN_PLAIN=1` or `NO_COLOR` is set, it prints the plain `==> step` lines instead; `OMAWIN_PLAIN=0` forces colors, and `OMAWIN_SCREEN=120x36` gives the screen a fixed size (to record it into a file).
+
+Every line, with winget's output for a failed package, also goes to `%LOCALAPPDATA%\launcher\install.log`, timestamped (moved to `install.log.old` past 1 MB). `install\demo-ui.ps1` plays the whole screen with pretend steps and packages and installs nothing (`-Fail` for a failing step, `-Speed 2` to hurry).
 
 By hand, once:
 - Open a terminal and run `nvim` once: lazy.nvim installs the plugins, mason.nvim the LSPs.
@@ -59,7 +66,7 @@ Not covered (set up by hand): SQL Server tools / ODBC drivers, Docker Desktop, V
 
 There's no `omawin uninstall` yet (it's on [the to-do list](mission-todo.md)). By hand, in this order:
 
-1. **The official GlazeWM and Zebar back** (if the forks went in): `~\omawin\install\glazewm-fork.ps1 -Restore` and `~\omawin\install\zebar-fork.ps1 -Restore` (an admin prompt each). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Trusted Root Certification Authorities* and *Trusted Publishers*; in `certmgr.msc`, delete it from *Personal*.
+1. **The official GlazeWM and Zebar back** (if the forks went in): `~\omawin\install\glazewm-fork.ps1 -Restore` and `~\omawin\install\zebar-fork.ps1 -Restore` (an admin prompt each). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Personal*, *Trusted Root Certification Authorities* and *Trusted Publishers*; and `C:\ProgramData\omawin\glazewm-fork.txt` and `zebar-fork.txt`.
 2. **The sign-in and unlock tasks**: `Unregister-ScheduledTask "omawin GlazeWM ($env:USERNAME)","omawin lock screen ($env:USERNAME)" -Confirm:$false`.
 3. **The taskbar**: Settings › Personalization › Taskbar › Taskbar behaviors › untick *Automatically hide the taskbar*. The Recycle Bin icon: Settings › Personalization › Themes › Desktop icon settings.
 4. **Your files back**: each config omawin replaced is next to its link as `<path>.backup-<timestamp>` (the PowerShell profile folder, `~/.gitconfig`, Windows Terminal's settings, Neovim's config, `~/.bashrc`, `~/.wslconfig`). Delete the link or stub, rename the backup back.

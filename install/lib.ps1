@@ -12,6 +12,31 @@ Initialize-InstallUI (Split-Path -Leaf $MyInvocation.PSCommandPath)
 # (~/omawin-account, or OMAWIN_USER_LAYER).
 $UserLayer = & "$Repo\bin\user-layer.ps1"
 
+# install.ps1's steps, from install/steps.txt: Name, Summary, Seconds (a first guess), in order.
+function Get-InstallSteps {
+    foreach ($line in Get-Content "$Repo\install\steps.txt") {
+        if ($line -match '^\s*(#|$)') { continue }
+        $f = @($line -split '\|' | ForEach-Object { $_.Trim() })
+        [pscustomobject]@{ Name = $f[0]; Summary = $(if ($f.Count -gt 1) { $f[1] }); Seconds = $(if ($f.Count -gt 2 -and $f[2]) { [double]$f[2] } else { 0 }) }
+    }
+}
+
+# Your git name and email: never in the repo. Asked once if git has none, into your own
+# ~/.gitconfig (--includes: an identity from your account folder's gitconfig counts). install.ps1
+# asks it before anything starts, with its other questions; the shell step checks again.
+function Request-GitIdentity {
+    if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return }
+    $ErrorActionPreference = 'Continue'
+    $name = git config --global --includes --get user.name 2>$null
+    if ($name) { Write-Note "ok  git user.name $name"; return }
+    if (-not (Test-Interactive)) { Write-Warn 'no git identity: git config --global user.name "Your Name"; git config --global user.email you@example.com'; return }
+    $name = (Read-InstallAnswer 'git: your name, for commits (Enter to skip)').Trim()
+    if (-not $name) { return }
+    $email = (Read-InstallAnswer 'git: your email').Trim()
+    git config --global user.name $name; Write-Note "git user.name = $name"
+    if ($email) { git config --global user.email $email; Write-Note "git user.email = $email" }
+}
+
 # Whether a person is there to answer a question (not a scheduled or piped run).
 function Test-Interactive {
     [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and

@@ -1,13 +1,55 @@
 # install.ps1 step: the core winget packages and the chosen presets' (packages.ps1), other
-# installers, the Nerd Font. Skipped with -LinkOnly.
+# installers, the Nerd Font, then Neovim's and Neovide's config. -LinkOnly skips the installs and
+# keeps the config.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1), $Stamp and the package lists
-# (packages.ps1) are in scope. bin/preset.ps1 dot-sources it with $SoftwareFunctionsOnly set, to
-# install one preset with the same functions.
+# (packages.ps1) are in scope. install.ps1 (to plan the admin step) and bin/preset.ps1 (to install
+# one preset) dot-source it with $SoftwareFunctionsOnly set, for the functions alone.
+
+# The winget packages installed on this PC, from one `winget export` (every installed package it
+# knows) rather than a `winget list` per package (1-2 s each). Asked once per install; $null if
+# winget can't say, and then each package is asked after all. -Fresh asks again.
+function Get-WingetInstalled([switch]$Fresh) {
+    if ($script:WingetInstalledDone -and -not $Fresh) { return $script:WingetInstalled }
+    $script:WingetInstalledDone = $true
+    $script:WingetInstalled = $null
+    $winget = Get-Command winget -ErrorAction SilentlyContinue
+    if (-not $winget) { return $null }
+    $export = Join-Path $env:TEMP "omawin-winget-$PID.json"
+    try {
+        $null = & $winget.Source export --output $export --accept-source-agreements --disable-interactivity 2>$null
+        if (Test-Path $export) {
+            $found = @{}
+            foreach ($source in (Get-Content $export -Raw | ConvertFrom-Json).Sources) {
+                foreach ($package in $source.Packages) { $found[$package.PackageIdentifier] = $true }
+            }
+            $script:WingetInstalled = $found
+        }
+    } catch { } finally { Remove-Item $export -ErrorAction SilentlyContinue }
+    $script:WingetInstalled
+}
+
+# Installed: its command is on the PATH ($WingetCommands: however it got there), or winget has it.
+function Test-PackageInstalled([string]$Id, $Installed) {
+    $command = $WingetCommands[$Id]
+    if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { return $true }
+    if ($Installed) { return $Installed.ContainsKey($Id) }
+    winget list --id $Id --exact --accept-source-agreements *> $null
+    $LASTEXITCODE -eq 0
+}
+
+# A package's short name for the screen: its id without the publisher (Git.Git -> Git).
+function Get-PackageName([string]$Id) {
+    $parts = $Id -split '\.'
+    if ($parts.Count -lt 2) { return $Id }
+    $name = ($parts[1..($parts.Count - 1)] -join '.') -replace '\.(MSVC|LTS)$'
+    # A name that says nothing on its own (GitHub.cli) keeps its publisher.
+    if ($name -in 'cli', 'app') { $parts[0] } else { $name }
+}
 
 # Installs $Ids with winget, up to $Width at once, each with its output captured (to the log, and
-# its last lines on a failure). Shows one line of progress while they run (a spinner in the
-# fancy face, a line per package in the plain one). Returns the ones that failed.
-function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width) {
+# its last lines on a failure). $Tick runs between looks (the admin step's progress). Returns the
+# ones that failed.
+function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scriptblock]$Tick) {
     $queue = New-Object Collections.Generic.Queue[string]
     foreach ($id in $Ids) { $queue.Enqueue($id) }
     $total = $queue.Count
@@ -17,7 +59,8 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width) {
     $done = 0
     $t0 = Get-Date
     $frame = 0
-    if ($UI.Fancy) { [Console]::Out.Write($UI.C.HideCursor) }
+    $line = $UI.Fancy -and -not $UI.Board
+    if ($line) { [Console]::Out.Write($UI.C.HideCursor) }
     try {
         while ($queue.Count -or $running.Count) {
             while ($queue.Count -and $running.Count -lt $Width) {
@@ -34,6 +77,7 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width) {
                 $psi.StandardErrorEncoding = [Text.Encoding]::UTF8
                 $p = [Diagnostics.Process]::Start($psi)
                 $running[$id] = @{ P = $p; Out = $p.StandardOutput.ReadToEndAsync(); Err = $p.StandardError.ReadToEndAsync(); Start = Get-Date }
+                Set-BoardPackage $id 'run'
                 if (-not $UI.Fancy) { Write-Note "installing $id" }
             }
             foreach ($id in @($running.Keys)) {
@@ -45,14 +89,17 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width) {
                 Write-Log ("    $ winget install --id $id  (exit $($r.P.ExitCode), $([int]$seconds) s)")
                 $running.Remove($id)
                 $done++
-                if ($UI.Fancy) { [Console]::Out.Write($UI.C.Clear) }
-                if ($r.P.ExitCode -eq 0) { Write-Done $id $seconds }
+                if ($line) { [Console]::Out.Write($UI.C.Clear) }
+                # 0x8A15002B / 0x8A150061: winget found it installed after all (its export can miss one).
+                if ($r.P.ExitCode -in 0, -1978335189, -1978335135) { Set-BoardPackage $id 'done'; Write-Done $id $seconds }
                 else {
                     if ($output.Trim()) { Write-Log ($output.Trim() -replace "`r", '') }
+                    Set-BoardPackage $id 'wait'
                     $failed += [pscustomobject]@{ Id = $id; ExitCode = $r.P.ExitCode; Output = $output }
                 }
             }
-            if ($UI.Fancy -and $running.Count) {
+            if ($Tick) { & $Tick }
+            if ($line -and $running.Count) {
                 $names = (@($running.Keys) | Sort-Object) -join ', '
                 $room = [Math]::Max(10, $UI.Width - 40)
                 if ($names.Length -gt $room) { $names = $names.Substring(0, $room - 3) + '...' }
@@ -62,7 +109,7 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width) {
             }
             Start-Sleep -Milliseconds 100
         }
-    } finally { if ($UI.Fancy) { [Console]::Out.Write($UI.C.Clear + $UI.C.ShowCursor) } }
+    } finally { if ($line) { [Console]::Out.Write($UI.C.Clear + $UI.C.ShowCursor) } }
     $failed
 }
 
@@ -72,39 +119,50 @@ function Install-WingetPackages([string[]]$Ids) {
         return
     }
     $winget = (Get-Command winget).Source
-
-    # What's already here, in one call (winget export lists every installed package it knows),
-    # instead of a `winget list` per package (1-2 s each). If that fails, each is asked after all.
-    $installed = $null
-    $export = Join-Path $env:TEMP "omawin-winget-$PID.json"
-    try {
-        $null = & $winget export --output $export --accept-source-agreements --disable-interactivity 2>$null
-        if (Test-Path $export) {
-            $installed = @{}
-            foreach ($source in (Get-Content $export -Raw | ConvertFrom-Json).Sources) {
-                foreach ($package in $source.Packages) { $installed[$package.PackageIdentifier] = $true }
-            }
-        }
-    } catch { $installed = $null } finally { Remove-Item $export -ErrorAction SilentlyContinue }
+    $installed = Get-WingetInstalled
 
     $todo = New-Object Collections.Generic.List[string]
     foreach ($id in $Ids) {
-        $command = $WingetCommands[$id]
-        if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { Write-Ok "$id ($command)"; continue }
-        if ($installed) { $listed = $installed.ContainsKey($id) }
-        else {
-            winget list --id $id --exact --accept-source-agreements *> $null
-            $listed = $LASTEXITCODE -eq 0
-        }
-        if ($listed) { Write-Ok $id } else { $todo.Add($id) }
+        if (Test-PackageInstalled $id $installed) { Set-BoardPackage $id 'have'; Write-Ok $id }
+        else { Set-BoardPackage $id 'wait'; $todo.Add($id) }
     }
+
+    # The whole-PC ones the admin step took (install/admin.ps1) install there, alongside these.
+    $admin = @()
+    if ($AdminBatch -and $AdminBatch.Plan.Packages) { $admin = @($todo | Where-Object { $AdminBatch.Plan.Packages -contains $_ }) }
+    foreach ($id in $admin) { Set-BoardPackage $id 'wait' -Admin }
+    $mine = @($todo | Where-Object { $admin -notcontains $_ })
+    $seen = @{}
+    $tick = {
+        if (-not $admin) { return }
+        Update-AdminStatus
+        foreach ($id in $admin) {
+            $state = Get-AdminState $id
+            if ($seen[$id] -eq $state) { continue }
+            $seen[$id] = $state
+            switch ($state) {
+                'run' { Set-BoardPackage $id 'run' -Admin }
+                'done' { Set-BoardPackage $id 'done' -Admin; Write-Log "    done  $id (admin step)" }
+            }
+        }
+        Set-BoardPackageNote $(if ($admin) { "$(@($admin | Where-Object { (Get-AdminState $_) -in 'wait', 'run' }).Count) left in the admin step" })
+    }  # run from Invoke-WingetBatch and Wait-AdminItems, called from here: $admin and $seen are in reach
 
     # Several at once: downloads and portable tools overlap. Windows runs one MSI installer at a
     # time, so one that finds another in progress fails; anything that failed gets one more go at
     # the end, alone, before it counts as failed.
-    $failed = @(Invoke-WingetBatch $winget @($todo) 4)
+    $failed = @(Invoke-WingetBatch $winget $mine 4 $tick)
+    if ($admin) { Wait-AdminItems $admin $tick }
+    # The admin step couldn't: this account installs them, each with its own prompt.
+    foreach ($id in $admin) {
+        if ((Get-AdminState $id) -ne 'done') {
+            Write-Log "    admin step: $id $(Get-AdminState $id) $(Get-AdminText $id)"
+            $failed += [pscustomobject]@{ Id = $id; ExitCode = 'in the admin step'; Output = (Get-AdminText $id) }
+        }
+    }
+    Set-BoardPackageNote $null
     if ($failed) { $failed = @(Invoke-WingetBatch $winget @($failed | ForEach-Object Id) 1) }
-    foreach ($f in $failed) { Write-Warn "winget install $($f.Id) exited with $($f.ExitCode)"; Write-OutputTail $f.Output }
+    foreach ($f in $failed) { Set-BoardPackage $f.Id 'fail'; Write-Warn "winget install $($f.Id) exited with $($f.ExitCode)"; Write-OutputTail $f.Output }
     Write-OkCount
     # Bun's winget package leaves bun.exe in its own folder, off the PATH: put that folder on it.
     $bun = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages" -Filter bun.exe -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1
@@ -128,14 +186,20 @@ function Get-ChosenPresets {
     }
 }
 
+# Every winget id this install wants: the core and the chosen presets'.
+function Get-WantedPackages {
+    @($WingetPackages) + @(foreach ($name in Get-ChosenPresets) { $Presets[$name].Winget }) | Where-Object { $_ } | Select-Object -Unique
+}
+
 # First install: no presets file yet. Ask which presets (a person is there), else start with none.
+# install.ps1 asks this before anything starts, with its other questions.
 function Initialize-Presets {
     if (Test-Path $PresetsFile) { return }
     $picked = @()
     if (Test-Interactive) {
-        Write-Host '    Presets (opt-in groups on top of the core):' -ForegroundColor DarkGray
-        foreach ($name in $Presets.Keys) { Write-Host ("      {0,-15} {1}" -f $name, $Presets[$name].Summary) -ForegroundColor DarkGray }
-        $answer = Read-Host '    Which ones? (names separated by spaces, Enter for none; omawin preset add <name> later)'
+        Write-Note 'Presets: opt-in groups on top of the core'
+        foreach ($name in $Presets.Keys) { Write-Note ("  {0,-15} {1}" -f $name, $Presets[$name].Summary) }
+        $answer = Read-InstallAnswer 'Which presets? (names separated by spaces, Enter for none; omawin preset add <name> later)'
         $picked = @($answer -split '[\s,]+' | Where-Object { $_ } | ForEach-Object {
                 if ($Presets.Contains($_)) { $_ } else { Write-Warn "no preset '$_'" } })
     }
@@ -178,17 +242,29 @@ function Install-NerdFont {
 }
 
 if (-not $SoftwareFunctionsOnly) {
-    Write-Step 'winget packages (core)'
-    Install-WingetPackages $WingetPackages
-    Write-Step 'presets'
-    Initialize-Presets
-    $chosen = @(Get-ChosenPresets)
-    foreach ($name in $chosen) {
-        Write-Note "-- $name"
-        Install-WingetPackages @($Presets[$name].Winget | Where-Object { $_ })
+    if (-not $LinkOnly) {
+        Write-Step 'winget packages'
+        Initialize-Presets
+        $chosen = @(Get-ChosenPresets)
+        Install-WingetPackages @(Get-WantedPackages)
+        Write-Step 'other tools'
+        $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
+        Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
+        Install-NerdFont
     }
-    Write-Step 'other tools'
-    $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
-    Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
-    Install-NerdFont
+
+    Write-Step 'Neovim and Neovide'
+    Set-Junction "$env:LOCALAPPDATA\nvim" "$Repo\nvim"
+    # Neovide uses the same Neovim config; this is only its own settings (config.toml).
+    Set-Junction "$env:APPDATA\neovide" "$Repo\neovide"
+
+    Write-Step 'R / RStudio'
+    # A one-line ~/.Rprofile (R's ~ is Documents) sourcing r/rprofile.R: RStudio follows the
+    # desktop theme. An .Rprofile of your own (more than that one line) is left alone.
+    $rprofile = Join-Path ([Environment]::GetFolderPath('MyDocuments')) '.Rprofile'
+    $source = "source('$("$Repo\r\rprofile.R" -replace '\\', '/')')"
+    $current = if (Test-Path $rprofile) { (Get-Content $rprofile -Raw).Trim() }
+    if ($current -eq $source) { Write-Note "ok  $rprofile" }
+    elseif (-not $current -or $current -match '^source\(.*rprofile\.R.*\)$') { Set-Content $rprofile $source -Encoding utf8; Write-Note "wrote $rprofile" }
+    else { Write-Note "$rprofile is yours; add this line to it for themes: $source" }
 }
