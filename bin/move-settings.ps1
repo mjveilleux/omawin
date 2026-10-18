@@ -1,6 +1,6 @@
 # Moves your own settings to where they live since 2026-10-17 (docs/work.md):
 #   ~/omawin-me   (yours in every account)  ->  C:\ProgramData\omawin\shared, one per PC, which
-#                                               every account reads and may change
+#                                               every account reads and its owner changes
 #   ~/omawin-work (this account's)          ->  ~/omawin-account
 # Each old name is left as a link to the new place, so anything still pointing there keeps working.
 #
@@ -56,14 +56,14 @@ if (-not $env:OMAWIN_SHARED_LAYER) {
             & robocopy.exe $old $partial /E /COPY:DAT /R:1 /W:1 /NFL /NDL /NJH /NJS /NP | Out-Null
             if ($LASTEXITCODE -ge 8) { throw "couldn't copy ~/omawin-me to $new (robocopy $LASTEXITCODE; the part copied is in $partial)" }
             Rename-Item $partial (Split-Path $new -Leaf)
-            Say "copied  ~/omawin-me to $new (shared by every account)"
+            Say "copied  ~/omawin-me to $new (every account reads it; this one changes it)"
         }
         # The shared folder is the one used from here; the old copy is kept, out of the way, once
         # nothing in it is missing from the shared folder (another account's copy may hold a
         # skill this one's never had: that's for you to move across, not for this to guess).
         $missing = Get-Missing $old $new
         if ($missing) {
-            Say "kept    ~/omawin-me where it is: $($missing.Count) file(s) in it aren't in $new, such as $($missing[0]). Copy what you want across; it's set aside once nothing is missing"
+            Say "kept    ~/omawin-me where it is: $($missing.Count) file(s) in it aren't in $new, such as $($missing[0]). Add what you want to it from the account that owns it ($((Get-Acl $new).Owner)); this copy is set aside once nothing is missing"
         } elseif (Rename-Aside $old "omawin-me.old-$stamp") {
             Say "kept    the old ~/omawin-me as ~/omawin-me.old-$($stamp): delete it once everything works"
         } else {

@@ -5,15 +5,17 @@
 .DESCRIPTION
     C:\ProgramData\omawin\shared holds what's the same wherever you sign in on this PC: Claude
     rules and skills (claude/), launcher items, sites and shortcuts (launcher/). Every account
-    reads it live and every account on the PC may change it, so nothing secret goes in it
-    (no tokens, no client documents) and nothing an employer or client would mind another seeing:
-    that goes in the account's own folder (~/omawin-account). Sign-ins are in neither.
+    reads it live; only the account that made it (its owner, your main one) may change it, since
+    what's in it runs as every account, admins included. Nothing secret goes in it (no tokens,
+    no client documents) and nothing an employer or client would mind another seeing: that goes
+    in the account's own folder (~/omawin-account). Sign-ins are in neither.
 
     GitHub is optional: the folder can be backed up to a private repo under any GitHub account,
     and a new PC can start from that backup.
 
         omawin shared                    where it is, who can change it, its backup
-        omawin shared -Init              make it (install does), letting every account change it
+        omawin shared -Init              make it (install does): every account reads it, this one
+                                         alone changes it
         omawin shared -From owner/name   start it from a backup (a git URL works too); only into
                                          an empty or missing folder
         omawin shared backup             commit what changed and push it to its backup
@@ -33,20 +35,34 @@ $parent = Split-Path $dir
 
 function Say([string]$Text) { if (-not $Quiet) { Write-Host $Text } }
 
-# Every account may change it: BUILTIN\Users (S-1-5-32-545) gets Modify, inherited by all that's
-# made inside. Without this, a file one account makes would be read only for the others.
-function Grant-Everyone([string]$Path) {
+# Every account reads it; only the account that made it (its owner: your main one) may change it.
+# The shared Claude settings and launcher items run as every account that reads them, so a
+# folder any account could write would let the least trusted account (a client's, say) plant
+# something that runs as the most trusted one (an admin). So: inheritance off (ProgramData
+# lets every account add files), full control for the owner, SYSTEM and Administrators, read
+# for Users (S-1-5-32-545).
+function Set-OwnerOnly([string]$Path) {
     # (Windows PowerShell turns a native program's stderr into an error under 'Stop'.)
     $ErrorActionPreference = 'Continue'
-    $null = & icacls.exe $Path /grant '*S-1-5-32-545:(OI)(CI)M' /Q 2>&1
-    if ($LASTEXITCODE -ne 0) { throw "couldn't let every account change $Path (icacls $LASTEXITCODE)" }
+    $me = [Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+    $null = & icacls.exe $Path /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' "*$($me):(OI)(CI)F" '*S-1-5-32-545:(OI)(CI)RX' /Q 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "couldn't set who may change $Path (icacls $LASTEXITCODE)" }
+    # What's inside takes these (anything given its own permissions earlier loses them).
+    if (Get-ChildItem $Path -Force -ErrorAction SilentlyContinue | Select-Object -First 1) {
+        $null = & icacls.exe (Join-Path $Path '*') /reset /T /C /Q 2>&1
+    }
 }
-function Test-Everyone([string]$Path) {
+# Whether any account but the owner may write there (Users, Authenticated Users, Everyone).
+function Test-OthersWrite([string]$Path) {
     [bool]((Get-Acl $Path).Access | Where-Object {
-        $(try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { '' }) -eq 'S-1-5-32-545' -and
-        $_.FileSystemRights -match 'Modify|FullControl' -and $_.AccessControlType -eq 'Allow' })
+        $(try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { '' }) -in 'S-1-5-32-545', 'S-1-5-11', 'S-1-1-0' -and
+        $_.AccessControlType -eq 'Allow' -and $_.FileSystemRights -match 'Write|Modify|FullControl|CreateFiles|AppendData' })
 }
-
+function Get-Owner([string]$Path) { (Get-Acl $Path).Owner }
+function Test-Mine([string]$Path) {
+    $me = [Security.Principal.WindowsIdentity]::GetCurrent().User
+    try { (Get-Acl $Path).GetOwner([Security.Principal.SecurityIdentifier]) -eq $me } catch { $false }
+}
 # Git refuses a repo another account owns ("dubious ownership") unless told it's fine, per account.
 function Approve-Git {
     if (-not (Get-Command git -ErrorAction SilentlyContinue)) { return }
@@ -65,10 +81,16 @@ function Initialize-Shared {
     $made = -not (Test-Path $dir)
     if (-not (Test-Path $parent)) { New-Item -ItemType Directory $parent | Out-Null }
     if ($made) { New-Item -ItemType Directory $dir | Out-Null }
-    # Set once, by the account that made it (only it may change the permissions); everything made
-    # inside inherits them, so they're never reset. Another account finds them set.
-    if (-not (Test-Everyone $dir)) {
-        try { Grant-Everyone $dir } catch { if ($made) { throw } }
+    # Another account finds it made, and reads it: nothing to set up here.
+    if (-not $made -and -not (Test-Mine $dir)) { Approve-Git; return }
+    # Set by the owner when made, or when found open to others (as omawin made it for a few hours
+    # on 2026-10-17, and as a copy into ProgramData starts out).
+    if ($made -or (Test-OthersWrite $dir)) {
+        Set-OwnerOnly $dir
+        # That day's version also opened the folder above to every account.
+        $ErrorActionPreference = 'Continue'
+        $null = & icacls.exe $parent /remove:g '*S-1-5-32-545' /Q 2>&1
+        $ErrorActionPreference = 'Stop'
     }
     foreach ($sub in 'claude\skills', 'launcher') {
         New-Item -ItemType Directory -Force (Join-Path $dir $sub) | Out-Null
@@ -79,7 +101,8 @@ function Initialize-Shared {
 # Shared omawin settings
 
 What's yours in every Windows account on this PC (omawin's docs/work.md). Every account reads
-this folder live and may change it.
+this folder live; only the account that made it (its owner) may change it,
+since what's here runs in every account.
 
 - ``claude/CLAUDE.md``, ``claude/skills/``, ``claude/settings.json``: Claude Code's rules, skills and
   settings (omawin claude sync)
@@ -90,7 +113,7 @@ see in another's account. Those go in that account's ~/omawin-account.
 "@.Replace("`r`n", "`n"))
     }
     Approve-Git
-    if ($made) { Say "made    $dir (every account on this PC can change it)" }
+    if ($made) { Say "made    $dir (every account reads it; only this one may change it)" }
 }
 
 if ($From) {
@@ -114,6 +137,7 @@ if ($Init) { Initialize-Shared; return }
 
 if ($Action -eq 'backup') {
     if (-not (Test-Path $dir)) { throw "no shared folder yet ($dir): omawin shared -Init" }
+    if ($ours -and -not (Test-Mine $dir)) { throw "only $(Get-Owner $dir) may change the shared folder: back it up from that account" }
     $ErrorActionPreference = 'Continue'
     Approve-Git
     if (-not (Test-Path (Join-Path $dir '.git'))) { git -C $dir init -q -b main }
@@ -138,11 +162,11 @@ if ($Action -eq 'backup') {
 
 # Status.
 if (-not (Test-Path $dir)) { Say "no shared folder yet: $dir (omawin shared -Init)"; return }
-$everyone = Test-Everyone $dir
+$others = Test-OthersWrite $dir
 $remote = if (Test-Path (Join-Path $dir '.git')) { git -c "safe.directory=$($dir -replace '\\','/')" -C $dir remote get-url origin 2>$null }
 $skills = @(Get-ChildItem (Join-Path $dir 'claude\skills') -Directory -ErrorAction SilentlyContinue).Count
 Say "Shared settings  $dir"
-Say "  changed by     $(if ($everyone) { 'every account on this PC' } else { 'its owner only (omawin shared -Init from that account fixes it)' })"
+Say "  changed by     $(Get-Owner $dir)$(if ($others) { ', and other accounts too (omawin shared -Init from the owner closes that)' } else { ' only; every account reads it' })"
 Say "  backup         $(if ($remote) { $remote } else { 'none (omawin shared backup -Repo <name>)' })"
 Say "  Claude         $(if (Test-Path (Join-Path $dir 'claude\CLAUDE.md')) { 'rules, ' })$skills skill(s)"
 Say "This account     $(& (Join-Path $PSScriptRoot 'user-layer.ps1'))"

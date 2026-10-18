@@ -4,7 +4,7 @@ omawin holds nothing that's one person's: no name or email, no work shares or VP
 
 | Folder | What | Where | Who sees it |
 |---|---|---|---|
-| **shared** | what's yours in every Windows account: Claude Code's rules, skills and settings, launcher items, sites, shortcuts | `C:\ProgramData\omawin\shared`, one per PC (or `OMAWIN_SHARED_LAYER`) | every account on the PC reads it live and may change it |
+| **shared** | what's yours in every Windows account: Claude Code's rules, skills and settings, launcher items, sites, shortcuts | `C:\ProgramData\omawin\shared`, one per PC (or `OMAWIN_SHARED_LAYER`) | every account on the PC reads it live; only the account that made it (your main one) may change it, since what's in it runs in every account |
 | **this account's** | who you are in this account: git name and email, the employer's or client's launcher items and sites, shares, VPN, reports, notes for agents | `~/omawin-account` in that account (or `OMAWIN_USER_LAYER`) | that account only |
 
 Sign-ins are in neither. Claude, GitHub, Slack and Gmail keep them inside each Windows account, so each account signs in as whichever account that work uses (a company's Claude, a client's GitHub), and two accounts may share one.
@@ -25,13 +25,13 @@ Sign-ins are in neither. Claude, GitHub, Slack and Gmail keep them inside each W
 | Level | Where | How a change spreads |
 |---|---|---|
 | omawin | `~/omawin` in **each** account, all on `main` | committed and pushed from one account; the others take it with `omawin update` |
-| shared folder | one per PC | at once: every account reads the same files (a new Claude skill or setting at the account's next sign-in, or `omawin claude sync`) |
+| shared folder | one per PC, changed from its owner | at once: every account reads the same files (a new Claude skill or setting at the account's next sign-in, or `omawin claude sync`) |
 | this account's folder | each account's home | it doesn't |
 | what apps write | `%LOCALAPPDATA%` of each account | it doesn't |
 
 - **omawin's own clone in each account**, not one shared: its files are live and agents edit them, so one account's experiment would change another's desktop mid-work. Change omawin in one account and update the others; an account whose GitHub sign-in can't push to omawin sends its changes as a pull request.
 - **No forks, no profile repos.** A GitHub fork of a public repo is public, and accounts may or may not share a GitHub sign-in, so nothing depends on GitHub: the folders are the source. Each may be backed up to a private repo under any GitHub account: `omawin shared backup -Repo <name>` the first time, `omawin shared backup` after; `omawin account new -Repo <name>` for an account's.
-- **Two accounts changing the shared folder at once**: the last save wins (there's no merge). The backup keeps every version.
+- **Only the owner changes the shared folder.** Its Claude settings (plugins, hooks), skills and launcher items run as every account that reads them, admins included, so a folder any account could write would let the least trusted account (a client's, say) plant something that runs as the most trusted one. So the account that made it, your main one, changes it; the others read it. A shared skill wanted from another account is added from the owner's; `omawin check` warns if the folder is ever open to other accounts.
 - **Different omawin versions in two accounts** read the same shared folder, so its layout only grows: nothing in it is renamed or removed without a fallback for older versions.
 - **Off limits per account**: each account's folder has a `README.md` that says what agents in that account must never touch (the employer's repos, a client's folders). Agents in one account can't read another account's files at all.
 - **Signed in at once**: each account runs its own desktop with nothing shared that can collide: its own GlazeWM and Zebar ports (`bin/ports.ps1`, through our forks of both; `omawin.exe` decides them at every sign-in from what Program Files holds, since another account may have changed it), its own OpenCode server (a free port and password of its own), its own pipe names (they carry the account's SID), its own scheduled tasks (named with the account), and scripts only ever stop that account's programs. Program Files is shared: a fork update there sets a running copy aside instead of stopping another account's.
@@ -41,10 +41,10 @@ Sign-ins are in neither. Claude, GitHub, Slack and Gmail keep them inside each W
 ### A new account
 
 1. Make it: Settings › Accounts › Other users › Add account. A standard (not admin) account is fine; installs that need admin ask for an admin's password.
-2. Sign in to it, then in Windows PowerShell (not as administrator) run `bootstrap.ps1` ([install.md](install.md); the new account can't read another account's home folder, so put a copy where it can, such as `C:\Users\Public`). It finds the shared folder another account made and uses it, asks whether this account's folder is in a private repo (Enter: start fresh), then installs, which asks your git name and email for this account.
+2. Sign in to it, then in Windows PowerShell (not as administrator) run `bootstrap.ps1` ([install.md](install.md); the new account can't read another account's home folder, so put a copy where it can, such as `C:\Users\Public`). It finds the shared folder your main account made and reads it, asks whether this account's folder is in a private repo (Enter: start fresh), then installs, which asks your git name and email for this account.
 3. Sign in to Claude, GitHub and the rest in their own apps, as this account's work needs.
 
-On a brand-new PC the first account makes the shared folder: empty, or from its backup (bootstrap asks).
+On a brand-new PC the first account to install makes the shared folder, empty or from its backup (bootstrap asks), and is its owner: install on your main account first.
 
 Tools already on the PC aren't downloaded again (some per-user ones are: they install per account).
 

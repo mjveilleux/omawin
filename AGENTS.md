@@ -7,7 +7,7 @@ Read before working:
 - [`docs/architecture.md`](docs/architecture.md): how the pieces fit (keys → GlazeWM → `omawin.exe` → the menu app or a script), where state lives
 - [`docs/install.md`](docs/install.md): install steps, what's linked where, migrations
 - [`docs/themes.md`](docs/themes.md): how a theme reaches every app
-- [`docs/work.md`](docs/work.md): your own settings, outside omawin: the PC's shared folder (`C:\ProgramData\omawin\shared`: yours in every Windows account, which every account reads and may change, so nothing secret or employer-specific) and each account's folder (`~/omawin-account`: identity, an employer's or client's launcher items and sites, tool paths, work shares, VPN, reports)
+- [`docs/work.md`](docs/work.md): your own settings, outside omawin: the PC's shared folder (`C:\ProgramData\omawin\shared`: yours in every Windows account, which every account reads and only the account that made it may change, so nothing secret or employer-specific) and each account's folder (`~/omawin-account`: identity, an employer's or client's launcher items and sites, tool paths, work shares, VPN, reports)
 - [`manual/`](manual/): what the user sees and uses; keep it current when behavior changes
 
 ## Rules

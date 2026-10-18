@@ -34,7 +34,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 
 The one-liner above:
 1. installs git and clones omawin to `~/omawin` (it must live there);
-2. sets up your own settings: the PC's **shared folder** (found if another account made it, else empty or from your private backup) and this account's folder (from a private repo, or fresh; see [Make it yours](#make-it-yours));
+2. sets up your own settings: the PC's **shared folder** (found if your main account made it, else empty or from your private backup) and this account's folder (from a private repo, or fresh; see [Make it yours](#make-it-yours));
 3. runs `install.ps1`, which asks which presets you want, and your name and email for git.
 
 By hand instead:
@@ -86,7 +86,7 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Make it yours
 
-Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folders of your own: the PC's **shared folder** (`C:\ProgramData\omawin\shared`), what's yours in every Windows account (Claude Code's rules and skills, launcher items and sites), and **this account's folder** (`~/omawin-account`), who you are in that account (git identity, an employer's or client's launcher items, GlazeWM keys, Neovim plugins, PowerShell additions). Several Windows accounts (personal, a client, a job) each run their own omawin, borrow the shared folder and keep their own sign-ins. Either folder can be backed up to a private repo: `omawin shared backup`, `omawin account new -Repo <name>`. [docs/work.md](docs/work.md).
+Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folders of your own: the PC's **shared folder** (`C:\ProgramData\omawin\shared`), what's yours in every Windows account (Claude Code's rules and skills, launcher items and sites), and **this account's folder** (`~/omawin-account`), who you are in that account (git identity, an employer's or client's launcher items, GlazeWM keys, Neovim plugins, PowerShell additions). Several Windows accounts (personal, a client, a job) each run their own omawin, read the shared folder (only the account that made it changes it) and keep their own sign-ins. Either folder can be backed up to a private repo: `omawin shared backup`, `omawin account new -Repo <name>`. [docs/work.md](docs/work.md).
 
 ## Updating and health
 

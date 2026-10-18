@@ -48,7 +48,7 @@ agent cancel | Stop listening for the agent and drop what was said | run omawin-
 agent ask | Ask omawin's agent, typed: it does it in the background (OpenCode or Claude Code, agent/config.json) it adds music and podcasts, opens issues, starts work in a worktree (docs/agent.md) | pwsh agent/ask.ps1
 
 account new | Start this Windows account's own folder, ~/omawin-account (docs/work.md): git identity, empty launcher / shell files, a git repo; -Repo <name> keeps it in a private GitHub repo | pwsh bin/account-new.ps1
-shared | The PC's shared folder (docs/work.md): yours in every account, which every account reads and may change; -From owner/name starts it from a backup | pwsh bin/shared.ps1
+shared | The PC's shared folder (docs/work.md): yours in every account, which every account reads and only its owner changes; -From owner/name starts it from a backup | pwsh bin/shared.ps1
 shared backup | Commit what changed in the shared folder and push it to its private backup repo (-Repo <name> the first time) | pwsh bin/shared.ps1 backup
 claude sync | Claude Code's rules, skills, settings and plugins from the shared folder and this account's (docs/work.md); install runs it | pwsh bin/claude-sync.ps1
 

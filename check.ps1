@@ -116,12 +116,12 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 $wslSource = if (Test-Path "$UserLayer\wsl\.wslconfig") { "$UserLayer\wsl\.wslconfig" } else { "$Repo\wsl\.wslconfig" }
 if ((Test-Path "$HOME\.wslconfig") -and (Get-Content "$HOME\.wslconfig" -Raw) -eq (Get-Content $wslSource -Raw)) { Pass '~/.wslconfig' $wslSource }
 else { Warn '~/.wslconfig' "differs from $wslSource (run install.ps1 -LinkOnly)" }
-# Your own settings (docs/work.md): the PC's shared folder, which every account may change, and
+# Your own settings (docs/work.md): the PC's shared folder, which every account reads and only its owner changes, and
 # this account's. Both optional; the old ~/omawin-me and ~/omawin-work mean the move hasn't run.
 $SharedLayer = & "$Repo\bin\user-layer.ps1" -Shared
 if ($SharedLayer -eq (Join-Path $HOME 'omawin-me')) { Warn 'shared settings' "still in ~/omawin-me (omawin migrate moves it to $env:ProgramData\omawin\shared)" }
 elseif (-not (Test-Path $SharedLayer)) { Warn 'shared settings' "no $SharedLayer (omawin shared -Init)" }
-elseif (-not ((Get-Acl $SharedLayer).Access | Where-Object { $(try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { '' }) -eq 'S-1-5-32-545' -and $_.FileSystemRights -match 'Modify|FullControl' })) { Warn 'shared settings' "$($SharedLayer): only its owner may change it (omawin shared -Init from that account)" }
+elseif ((Get-Acl $SharedLayer).Access | Where-Object { $(try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { '' }) -in 'S-1-5-32-545', 'S-1-5-11', 'S-1-1-0' -and $_.AccessControlType -eq 'Allow' -and $_.FileSystemRights -match 'Write|Modify|FullControl|CreateFiles|AppendData' }) { Warn 'shared settings' "every account may change $($SharedLayer), and what's in it runs in every account: omawin shared -Init from its owner, $((Get-Acl $SharedLayer).Owner)" }
 else {
     # Every account reads it: nothing secret or confidential belongs there.
     $risky = @(Get-ChildItem $SharedLayer -Recurse -File -Force -Include *.pbix, *.env, .credentials.json, *.pfx, *.key -ErrorAction SilentlyContinue | Where-Object FullName -notmatch '\\\.git\\')
