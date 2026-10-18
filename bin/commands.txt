@@ -81,6 +81,7 @@ wifi | Wi-Fi: on, off, toggle, connect <network> (one Windows already saved), di
 bluetooth | Bluetooth: on, off, toggle, connect <device>, disconnect <device> (one of the paired ones) | app --qs bluetooth
 brightness | Monitor brightness: up, down, set <0-100> (every monitor that reports a brightness control) | app --qs brightness
 power | Power mode: efficiency, balanced, performance, cycle (the mode, not Windows' plan) | app --qs power
+toggle desktop-icons | Desktop icons shown or hidden (hidden by default; files stay on the desktop); or: show, hide, status | pwsh bin/desktop-icons.ps1
 toggle night-light | Night light on or off. Windows has no API for it, so this opens the setting | app --qs night-light
 toggle dnd | Do not disturb on or off. No API for that either; this opens the setting | app --qs dnd
 about | About omawin and this PC (version, Windows, CPU, GPU, memory, uptime, theme), drawn like the terminal's fastfetch, in its own window | app --about

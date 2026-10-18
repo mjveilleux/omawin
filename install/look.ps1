@@ -11,6 +11,10 @@ else { Invoke-InstallItem 'Desktop' 'theme' { & "$Repo\themes\set-theme.ps1" sta
 $icons = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel'
 if (-not (Test-Path $icons)) { New-Item $icons -Force | Out-Null }
 Set-ItemProperty $icons -Name '{645FF040-5081-101B-9F08-00AA002F954E}' -Value 1 -Type DWord
+# No desktop icons at all, by default (Windows' own Show desktop icons; the files stay where they
+# are). An app's installer or update putting its shortcut back doesn't show either.
+# omawin toggle desktop-icons show brings them back, and an update leaves that choice alone.
+Invoke-InstallItem 'Desktop' 'desktop icons' { & "$Repo\bin\desktop-icons.ps1" -Default }
 # The lock screen rotates through the theme's backgrounds: a task for this user (no admin)
 # runs themes/set-lockscreen.ps1 -Next on every unlock, headless (no console flash).
 try {

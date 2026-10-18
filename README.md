@@ -52,7 +52,7 @@ Then sign out and back in. Every step is safe to run again; `omawin install -Ste
 
 Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never deleted.
 
-- **The taskbar auto-hides** (the bar and the launcher take its place; the bottom edge or the Win key still shows it), and the desktop's Recycle Bin icon goes.
+- **The taskbar auto-hides** (the bar and the launcher take its place; the bottom edge or the Win key still shows it), and the desktop's icons are hidden (Windows' own *Show desktop icons*: your files stay on the desktop, and `omawin toggle desktop-icons` brings them back).
 - **The theme** sets dark or light mode, the wallpaper and the lock screen (which changes on each unlock).
 - **At sign-in**: a scheduled task, `omawin GlazeWM (<you>)`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen (<you>)`, runs on unlock.
 - **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it's kept in the PC's own store, where only admins can use its private key (which can't be exported), and trusted through the machine's Root and Trusted Publishers stores. Its CLI and watcher are replaced too. Decline the admin prompt and the official GlazeWM stays.

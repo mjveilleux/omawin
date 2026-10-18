@@ -49,6 +49,7 @@ style | 󰏘 | Style
 style.theme | 󰸌 | Theme | themes
 style.background | 󰸉 | Next background | omawin theme next-background
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\launcher\menu.ps1" -SetWallpaper
+style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
 style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\glazewm\config.yaml
 style.zebar | 󰍜 | Bar (Zebar) | edit ~\omawin\zebar\tokyo-islands
 style.terminal | 󰆍 | Terminal | edit ~\omawin\noctty\config.ghostty
