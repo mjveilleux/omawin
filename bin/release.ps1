@@ -36,6 +36,8 @@ param(
     [switch]$Force                       # download again even if a verified copy is here
 )
 $ErrorActionPreference = 'Stop'
+# Windows PowerShell draws Invoke-WebRequest's progress so often it slows a download several times over.
+$ProgressPreference = 'SilentlyContinue'
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
 if (-not $Repo) { $Repo = if ($env:OMAWIN_REPO) { $env:OMAWIN_REPO } else { 'mjveilleux/omawin' } }
 $Manifest = 'SHA256SUMS.txt'
@@ -67,7 +69,10 @@ function Save-Entry([string]$Name, [string]$Url) {
     $dest = Join-Path $OutDir $Name
     $part = "$dest.part"
     try {
-        if ($Url -match '^[a-z]+://') { Invoke-WebRequest -Uri $Url -OutFile $part -UseBasicParsing | Out-Null }
+        # A GitHub asset's API address gives the file only when asked for it (Accept:
+        # application/octet-stream); without that it answers with the asset's description.
+        if ($Url -match '^https://api\.github\.com/') { Invoke-WebRequest -Uri $Url -OutFile $part -Headers $assetHeaders -UseBasicParsing | Out-Null }
+        elseif ($Url -match '^[a-z]+://') { Invoke-WebRequest -Uri $Url -OutFile $part -UseBasicParsing | Out-Null }
         else { Copy-Item -LiteralPath $Url -Destination $part -Force }
         Move-Item -LiteralPath $part -Destination $dest -Force
     } finally {

@@ -26,7 +26,13 @@ function Test-BoardFits {
 }
 
 function Start-InstallBoard([string]$Version, [string]$What) {
-    if (-not $UI.Fancy -or $UI.Board -or -not (Test-BoardFits)) { return }
+    if (-not $UI.Fancy -or $UI.Board) { return }
+    # A terminal that has just opened (Windows Terminal, started for the install) may still be
+    # at its first size for a moment: give it up to two seconds to settle.
+    for ($i = 0; $i -lt 20 -and -not (Test-BoardFits); $i++) { if ($env:OMAWIN_BOARD -eq '0') { break }; Start-Sleep -Milliseconds 100 }
+    $size = try { (Get-ScreenSize) -join 'x' } catch { 'unknown' }
+    if (-not (Test-BoardFits)) { Write-Log "    (the screen needs a console of $($BoardMinWidth)x$($BoardMinHeight); this one is $($size): line by line instead)"; return }
+    Write-Log "    (the screen, in a console of $size)"
     $B = [hashtable]::Synchronized(@{})
     $B.Steps = $UI.Steps
     $B.Log = [Collections.ArrayList]::Synchronized((New-Object Collections.ArrayList))

@@ -83,6 +83,7 @@ function Update-AdminStatus {
                         $f = $line -split "`t", 3
                         if ($f.Count -lt 2) { continue }
                         $b.Items[$f[0]] = @{ State = $f[1]; Text = $(if ($f.Count -gt 2) { $f[2] } else { '' }) }
+                        if ($f[0] -eq 'end') { $b.EndedAt = Get-Date }
                         Write-Log "    admin: $line"
                     }
                 }
@@ -121,7 +122,8 @@ function Complete-AdminBatch {
     Wait-AdminItems @('end')
     $b.Completed = $true
     $s = Get-InstallStep 'admin'
-    $s.Seconds = ((Get-Date) - $b.Started).TotalSeconds - $b.Waited
+    $ended = if ($b.EndedAt) { $b.EndedAt } else { Get-Date }
+    $s.Seconds = [Math]::Max(0, ($ended - $b.Started).TotalSeconds - $b.Waited)
     $s.State = if ((Get-AdminState 'end') -eq 'done') { 'done' } else { 'warned' }
     $s.Note = $null
     Write-Log ("[admin] {0} in {1}" -f $s.State, (Format-Duration $s.Seconds))
