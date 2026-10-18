@@ -84,8 +84,9 @@ export function create(ctx) {
 
   el.addEventListener('click', () => {
     if (panel.open) return panel.hide();
-    panel.show(el);
+    // Filled first: show() centers it by its width, and an empty panel would land off-center.
     draw();
+    panel.show(el);
     ctx.fitWindow();
   });
   el.addEventListener('contextmenu', () => ctx.omawin('launch terminal -- claude'));

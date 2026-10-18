@@ -524,6 +524,8 @@ export function startMusic({ zebar, fitWindow, onChange }) {
   // Losing the keyboard closes the panel, except on the Suno tab: clicking into the Suno window
   // beside it takes the keyboard there. Esc, the record or Win+M close it then.
   window.addEventListener('blur', () => open && !adding && tab !== 'suno' && setOpen(false));
+  // Another drop-down opening (the agents' panel) closes this one: one open at a time (bar.html).
+  document.addEventListener('drop-open', () => open && setOpen(false));
 
   // The Suno tab: Suno's own player (music/suno) in its window, beside this panel while the tab is
   // open, out of sight otherwise (it plays on). In screen pixels: this window's place plus the

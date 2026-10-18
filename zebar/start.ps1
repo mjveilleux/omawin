@@ -15,6 +15,10 @@ if (-not (Test-Path "$PSScriptRoot\tokyo-islands\theme.css") -and (Test-Path $re
 # This account's only: another account signed in on the PC has its own bar.
 $session = (Get-Process -Id $PID).SessionId
 Get-Process zebar, voice-meter, cpu-cores, theme-watch -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session | Stop-Process -Force
+# The bar's music feed too (`omawin-music watch`): a Zebar killed by force (GlazeWM's shutdown)
+# leaves its children behind, and one can hold the bar's port. Not the player itself: music plays on.
+Get-CimInstance Win32_Process -Filter "Name = 'omawin-music.exe'" | Where-Object { $_.SessionId -eq $session -and $_.CommandLine -match '\swatch\b' } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 $webviews = @(Get-CimInstance Win32_Process -Filter "Name = 'msedgewebview2.exe'" | Where-Object { $_.CommandLine -match 'zebar' -and $_.SessionId -eq $session })
 $webviews | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
 # Started before the old webviews are gone, the new bar can come up blank (it shares their

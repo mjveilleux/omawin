@@ -96,6 +96,8 @@
             get open() { return !el.classList.contains('hidden'); },
             show(anchor) {
               drops.forEach(o => o !== d && o.hide());
+              // The music panel isn't one of these (music.js runs its own): it closes on this.
+              document.dispatchEvent(new Event('drop-open'));
               el.classList.remove('hidden');
               const a = anchor.getBoundingClientRect();
               const left = a.left + a.width / 2 - el.offsetWidth / 2;
