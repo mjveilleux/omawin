@@ -14,7 +14,7 @@ Set-ItemProperty $icons -Name '{645FF040-5081-101B-9F08-00AA002F954E}' -Value 1 
 # The lock screen rotates through the theme's backgrounds: a task for this user (no admin)
 # runs themes/set-lockscreen.ps1 -Next on every unlock, headless (no console flash).
 try {
-    $user = "$env:USERDOMAIN\$env:USERNAME"
+    $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name # the account, whatever USERNAME says
     $class = Get-CimClass -Namespace Root/Microsoft/Windows/TaskScheduler -ClassName MSFT_TaskSessionStateChangeTrigger
     $unlock = New-CimInstance -CimClass $class -ClientOnly -Property @{ StateChange = 8; UserId = $user } # on unlock
     $action = New-ScheduledTaskAction -Execute 'conhost.exe' -Argument "--headless powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"$Repo\themes\set-lockscreen.ps1`" -Next"
