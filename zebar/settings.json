@@ -5,11 +5,6 @@
       "pack": "tokyo-islands",
       "widget": "bar",
       "preset": "default"
-    },
-    {
-      "pack": "tokyo-islands",
-      "widget": "dock",
-      "preset": "default"
     }
   ]
 }

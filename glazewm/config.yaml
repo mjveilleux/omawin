@@ -29,18 +29,18 @@ general:
 gaps:
   scale_with_dpi: true
   inner_gap: '10px'
-  # The Zebar islands are 36px tall at 8px from the top, and the dock 46px at 8px from the
-  # bottom: leave room for them plus a gap.
+  # The bar is 26px across the top edge (Omarchy's), and there's no dock: room for the bar plus
+  # the gap.
   outer_gap:
-    top: '54px'
+    top: '36px'
     right: '10px'
-    bottom: '64px'
+    bottom: '10px'
     left: '10px'
   # A lone window doesn't stretch edge to edge: a little margin on the sides.
   single_window_outer_gap:
-    top: '54px'
+    top: '36px'
     right: '6%'
-    bottom: '68px'
+    bottom: '14px'
     left: '6%'
 
 window_effects:

@@ -1,12 +1,12 @@
 {
   "$schema": "https://github.com/glzr-io/zebar/raw/v3.0.0/resources/zpack-schema.json",
   "name": "tokyo-islands",
-  "version": "1.0.0",
-  "description": "Floating islands for GlazeWM: a top bar (workspaces | media + clock | system + tray) and a bottom dock (Windows buttons | open windows | quick settings).",
+  "version": "2.0.0",
+  "description": "omawin's bar for GlazeWM, after Omarchy 4's: one strip across the top (menu, workspaces | indicators, clock, update | tray, agents, Bluetooth, network, audio, monitor, power), laid out by bar.json, a file per widget in widgets/.",
   "tags": [
     "topbar",
     "glazewm",
-    "tokyo-night"
+    "omarchy"
   ],
   "previewImages": [],
   "repositoryUrl": "",
@@ -22,13 +22,16 @@
       "includeFiles": [
         "*.html",
         "*.css",
-        "*.js"
+        "*.js",
+        "*.json",
+        "*.ttf",
+        "widgets/*.js"
       ],
       "caching": {
         "defaultDuration": 604800,
         "rules": [
           {
-            "urlRegex": "\\.(html|css|js)$",
+            "urlRegex": "\\.(html|css|js|json)$",
             "duration": 0
           }
         ]
@@ -40,12 +43,12 @@
             "argsRegex": "^$"
           },
           {
-            "program": "cpu-cores",
+            "program": "theme-watch",
             "argsRegex": "^$"
           },
           {
-            "program": "theme-watch",
-            "argsRegex": "^$"
+            "program": "pwsh",
+            "argsRegex": "^-NoProfile -NonInteractive -Command (& \"\\$HOME\\\\omawin\\\\bin\\\\(update-available|agent-usage)\\.ps1\"( -[A-Za-z]+)*|Test-Path \"\\$env:LOCALAPPDATA\\\\launcher\\\\stay-awake\")$"
           },
           {
             "program": "omawin-music",
@@ -58,62 +61,9 @@
           "name": "default",
           "anchor": "top_left",
           "offsetX": "0px",
-          "offsetY": "8px",
-          "width": "100%",
-          "height": "36px",
-          "monitorSelection": {
-            "type": "all"
-          },
-          "dockToEdge": {
-            "enabled": false,
-            "edge": null,
-            "windowMargin": "0px"
-          }
-        }
-      ]
-    },
-    {
-      "name": "dock",
-      "htmlPath": "./dock.html",
-      "zOrder": "normal",
-      "shownInTaskbar": false,
-      "focused": false,
-      "resizable": false,
-      "transparent": true,
-      "includeFiles": [
-        "*.html",
-        "*.css",
-        "*.js"
-      ],
-      "caching": {
-        "defaultDuration": 604800,
-        "rules": [
-          {
-            "urlRegex": "\\.(html|css|js)$",
-            "duration": 0
-          }
-        ]
-      },
-      "privileges": {
-        "shellCommands": [
-          {
-            "program": "app-icons",
-            "argsRegex": "^[0-9 ]+$"
-          },
-          {
-            "program": "theme-watch",
-            "argsRegex": "^$"
-          }
-        ]
-      },
-      "presets": [
-        {
-          "name": "default",
-          "anchor": "bottom_left",
-          "offsetX": "0px",
           "offsetY": "0px",
           "width": "100%",
-          "height": "62px",
+          "height": "26px",
           "monitorSelection": {
             "type": "all"
           },
