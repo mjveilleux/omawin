@@ -96,6 +96,26 @@ if ($unmerged) {
     if (-not $DryRun) { $null = Invoke-Git add -- @unmerged }
 }
 
+# omawin follows main. A checkout left on another branch (a fix branch, say) would pull only that
+# branch and never get main's updates: when everything on it is already in main (merged or
+# cherry-picked), it goes back to main. Commits of its own keep it where it is, with a warning.
+$current = (Invoke-Git symbolic-ref --quiet --short HEAD) -join ''
+if ($current -ne 'main') {
+    $null = Invoke-Git fetch --quiet origin main
+    $null = Invoke-Git rev-parse --verify --quiet origin/main
+    if ($LASTEXITCODE -eq 0) {
+        $own = @(Invoke-Git cherry origin/main HEAD | Where-Object { $_ -like '+*' })
+        $where = if ($current) { "the branch $current" } else { 'no branch (detached)' }
+        if ($own) { Warn "the checkout is on $where, with $($own.Count) commit(s) not in main, so main's updates don't come. To follow main: git -C $Repo switch main" }
+        elseif ($DryRun) { Say "would switch from $where back to main (everything on it is in main)" }
+        else {
+            $out = Invoke-Git switch --quiet main
+            if ($LASTEXITCODE -eq 0) { Say "switched from $where back to main (everything on it is in main)" }
+            else { Warn "couldn't switch from $where to main: $($out -join ' ')"; $problems++ }
+        }
+    }
+}
+
 $branch = (Invoke-Git symbolic-ref --quiet --short HEAD)
 $upstream = if ($branch) { (Invoke-Git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null) } else { $null }
 if (-not $branch) { Warn "the checkout is on no branch (detached); not pulling. To follow main again: git -C $Repo switch main" }

@@ -145,7 +145,16 @@ if ($Local) {
     Write-Step "using the copy at $Target (OMAWIN_LOCAL=1)"
 } else {
     Write-Step "get $Repo"
-    if (Test-Path "$Target\.git") { git -C $Target pull --ff-only }
+    if (Test-Path "$Target\.git") {
+        # omawin follows main: a checkout left on a branch that's all in main goes back to it
+        # (bin/update.ps1 does the same), or the pull would only ever get that branch.
+        git -C $Target fetch --quiet origin main
+        $branch = git -C $Target symbolic-ref --quiet --short HEAD
+        if ($branch -ne 'main' -and -not (git -C $Target cherry origin/main HEAD | Where-Object { $_ -like '+*' })) {
+            git -C $Target switch --quiet main
+        }
+        git -C $Target pull --ff-only
+    }
     else { git clone "https://github.com/$Repo.git" $Target }
     if ($LASTEXITCODE -ne 0) { throw "couldn't get $Repo" }
 
