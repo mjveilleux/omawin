@@ -188,11 +188,25 @@ $helpers = [ordered]@{
     'win-keys' = 'zebar\tokyo-islands\win-keys.cs'; 'app-icons' = 'zebar\tokyo-islands\app-icons.cs'
     'theme-watch' = 'zebar\tokyo-islands\theme-watch.cs'
 }
+# Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
+# this checkout's. A pull gives the sources new dates, so the dates decide only without a
+# record, or for a source edited here.
+$recordedIds = @()
+$binaries = "$env:LOCALAPPDATA\launcher\binaries.txt"
+if (Test-Path $binaries) {
+    $line = Get-Content $binaries | Where-Object { $_ -like "helpers`t*" } | Select-Object -First 1
+    if ($line) { $recordedIds = @((($line -split "`t", 2)[1] -split '\|')[0] -split ',') }
+}
 foreach ($name in $helpers.Keys) {
     $exe = "$HOME\.local\bin\$name.exe"
     $src = Get-Item "$Repo\$($helpers[$name])" -ErrorAction SilentlyContinue
+    $path = $helpers[$name] -replace '\\', '/'
+    $id = if ($recordedIds -and -not (git -C $Repo status --porcelain -- $path 2>$null)) { git -C $Repo rev-parse "HEAD:$path" 2>$null }
     if (-not $src) { Fail "$name.exe" "its source $($helpers[$name]) is missing" }
     elseif (-not (Test-Path $exe)) { Fail "$name.exe" 'not built (run install.ps1 -LinkOnly)' }
+    elseif ($id) {
+        if ($recordedIds -contains $id) { Pass "$name.exe" } else { Warn "$name.exe" 'built from older source (run omawin update)' }
+    }
     elseif ((Get-Item $exe).LastWriteTime -lt $src.LastWriteTime) { Warn "$name.exe" 'older than its source (run install.ps1 -LinkOnly)' }
     else { Pass "$name.exe" }
 }
