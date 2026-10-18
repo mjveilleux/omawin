@@ -94,6 +94,7 @@ function Set-Junction([string]$Link, [string]$Target) {
     $item = Get-Item -LiteralPath $Link -Force -ErrorAction SilentlyContinue
     if ($item -and $item.LinkType -eq 'Junction' -and (@($item.Target)[0].TrimEnd('\') -eq $Target.TrimEnd('\'))) {
         Write-Note "ok  $Link"
+        Add-InstallItem 'Settings' $Link (Split-Path $Link -Leaf) 'have'
         return
     }
     if ($item -and $item.LinkType) { Remove-Item -LiteralPath $Link -Force }  # stale link: drop it
@@ -101,16 +102,18 @@ function Set-Junction([string]$Link, [string]$Target) {
     New-Item -ItemType Directory -Force -Path (Split-Path $Link) | Out-Null
     New-Item -ItemType Junction -Path $Link -Target $Target | Out-Null
     Write-Note "linked $Link -> $Target"
+    Add-InstallItem 'Settings' $Link (Split-Path $Link -Leaf) 'done'
 }
 
 function Set-FileContent([string]$Path, [string]$Content) {
     # Write a small stub file. Whatever was there is backed up, unless it's this stub already
     # or an older one of ours (same first line, or "# Managed by ...": from before the repo moved).
     $old = if (Test-Path -LiteralPath $Path) { Get-Content -LiteralPath $Path -Raw }
-    if ($old -eq $Content) { Write-Note "ok  $Path"; return }
+    if ($old -eq $Content) { Write-Note "ok  $Path"; Add-InstallItem 'Settings' $Path (Split-Path $Path -Leaf) 'have'; return }
     $ours = $old -and ($old.StartsWith(($Content -split "`n")[0]) -or $old.StartsWith('# Managed by '))
     if (-not $ours) { Move-Aside $Path }
     New-Item -ItemType Directory -Force -Path (Split-Path $Path) | Out-Null
     [IO.File]::WriteAllText($Path, $Content)
     Write-Note "wrote $Path"
+    Add-InstallItem 'Settings' $Path (Split-Path $Path -Leaf) 'done'
 }

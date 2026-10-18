@@ -30,7 +30,22 @@ Initialize-InstallUI 'demo-ui.ps1'
 function Wait-Demo([double]$Seconds) { Start-Sleep -Milliseconds ([int](1000 * $Seconds / $Speed)) }
 function Get-PackageName([string]$Id) { $p = $Id -split '\.'; if ($p.Count -lt 2) { return $Id }; $n = ($p[1..($p.Count - 1)] -join '.') -replace '\.(MSVC|LTS)$'; if ($n -in 'cli', 'app') { $p[0] } else { $n } }
 # Each step's lines, said one after another.
-function Invoke-DemoLines([string[]]$Lines) { foreach ($l in $Lines) { if ($l.StartsWith('>')) { Write-Step $l.Substring(1) } elseif ($l.StartsWith('!')) { Write-Warn $l.Substring(1) } else { Write-Note $l }; Wait-Demo 0.5 } }
+# ">heading", "!warning", "+Group|name|state" (an item: run for a moment, then that state), else a note.
+function Invoke-DemoLines([string[]]$Lines) {
+    foreach ($l in $Lines) {
+        if ($l.StartsWith('>')) { Write-Step $l.Substring(1) }
+        elseif ($l.StartsWith('!')) { Write-Warn $l.Substring(1) }
+        elseif ($l.StartsWith('+')) {
+            $f = $l.Substring(1) -split '\|'
+            if ($f[2] -ne 'have') { Add-InstallItem $f[0] $f[1] $f[1] 'run'; Wait-Demo 0.6 }
+            Add-InstallItem $f[0] $f[1] $f[1] $f[2]
+            Wait-Demo 0.15
+            continue
+        }
+        else { Write-Note $l }
+        Wait-Demo 0.4
+    }
+}
 
 $steps = foreach ($line in Get-Content "$PSScriptRoot\steps.txt") {
     if ($line -match '^\s*(#|$)') { continue }
@@ -45,7 +60,7 @@ Write-InstallBanner 'demo' 'nothing is installed'
 Write-InstallPlan
 
 try {
-    if ($UI.Board) { $UI.Board.Legend = 'before it starts' }
+    Send-Board 'enter' 'before it starts'
     Write-Step 'before it starts'
     Invoke-DemoLines @('presets: none (omawin preset list)', 'ok  git user.name You', 'what needs admin ...')
 
@@ -56,12 +71,12 @@ try {
     $adminStarted = Get-Date
 
     $lines = @{
-        'no-ads'  = @('ok  Windows suggestions and promos off', 'ok  Copilot off the taskbar')
-        'shell'   = @('>PowerShell profile', 'wrote Documents\PowerShell\profile.ps1', '>Windows Terminal', 'seeded its settings', '>starship', 'ok  STARSHIP_CONFIG', '>git', '!no git email for this account yet: omawin account new sets it')
-        'desktop' = @('>GlazeWM + Zebar', 'ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml', 'ok  GlazeWM starts at sign-in', "GlazeWM fork v3.10.1-omawin.8 (signed on this PC)", 'Zebar fork v3.3.1-omawin.2', "ports for this account: GlazeWM 24002, Zebar 24003", '>Handy (dictation on Win+H)', 'configured Handy')
-        'helpers' = @('>omawin and the helpers', 'omawin.exe and the bar helpers from release v0.1.5', '>noctty', 'ok  noctty', '>Win+Alt+Space system menu', 'from release v0.1.5', '>Music player (the bar)', 'from release v0.1.5')
-        'look'    = @('>Windows look', 'theme: starship', 'ok  lock screen rotates on unlock', 'taskbar set to auto-hide')
-        'other'   = @('>WSL', 'wrote ~/.wslconfig', '>Claude Code', 'ok  rules: 2 folder(s) imported', 'ok  settings merged')
+        'no-ads'  = @('ok  Windows suggestions and promos off', '+Windows|ads and suggestions off|done', 'ok  Copilot off the taskbar', '+Windows|Copilot off the taskbar|done')
+        'shell'   = @('>PowerShell profile', 'wrote Documents\PowerShell\profile.ps1', '+Settings|profile.ps1|done', '+Settings|Microsoft.PowerShell_profile.ps1|done', '>Windows Terminal', 'seeded its settings', '+Settings|Windows Terminal|done', '>noctty', '+Settings|config.ghostty|done', '>starship', 'ok  STARSHIP_CONFIG', '+Settings|starship prompt|done', '+Settings|fastfetch|done', '+Settings|herdr config|done', '>git', '+Settings|git config|done', '!no git email for this account yet: omawin account new sets it', '>Git Bash', '+Settings|.bashrc|done', '+Settings|.bash_profile|done')
+        'desktop' = @('>GlazeWM + Zebar', 'ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml', '+Settings|GlazeWM config|done', '+Settings|zebar|done', '+Desktop|GlazeWM at sign-in|done', "GlazeWM fork v3.10.1-omawin.8 (signed on this PC)", "+Desktop|omawin's GlazeWM|done", 'Zebar fork v3.3.1-omawin.2', "+Desktop|omawin's Zebar|done", "ports for this account: GlazeWM 24002, Zebar 24003", "+Desktop|this account's ports|done", '>Handy (dictation on Win+H)', 'configured Handy', '+Desktop|dictation (Win+H)|done')
+        'helpers' = @('>omawin and the helpers', 'omawin.exe and the bar helpers from release v0.1.5', '+Tools|omawin.exe|done', '+Tools|btop|done', '>noctty', '+Tools|noctty|done', '>Win+Alt+Space system menu', 'from release v0.1.5', '+Tools|system menu|done', '>Music player (the bar)', 'from release v0.1.5', '+Tools|music player|done')
+        'look'    = @('>Windows look', 'theme: starship', '+Desktop|theme|done', 'ok  lock screen rotates on unlock', '+Desktop|lock screen|done', 'taskbar set to auto-hide', '+Desktop|taskbar hides|done')
+        'other'   = @('>WSL', 'wrote ~/.wslconfig', '+Settings|.wslconfig|done', '>Claude Code', 'ok  rules: 2 folder(s) imported', 'ok  settings merged', '+Settings|Claude Code|done')
     }
     foreach ($s in $steps) {
         Enter-InstallStep $s.Name
@@ -94,7 +109,7 @@ try {
             }
             Set-BoardPackageNote $null
             Write-OkCount
-            Invoke-DemoLines @('>other tools', 'ok  herdr', '>JetBrainsMono Nerd Font', 'installed (restart Windows Terminal to pick it up)', '>Neovim and Neovide', 'linked ~/AppData/Local/nvim -> ~/omawin/nvim')
+            Invoke-DemoLines @('>other tools', '+Tools|herdr|done', '>JetBrainsMono Nerd Font', '+Tools|JetBrainsMono Nerd Font|done', 'installed (restart Windows Terminal to pick it up)', '>Neovim and Neovide', 'linked ~/AppData/Local/nvim -> ~/omawin/nvim', '+Settings|nvim|done', '+Settings|neovide|done', '+Settings|.Rprofile|done')
         } else {
             Invoke-DemoLines $lines[$s.Name]
             if ($Fail -and $s.Name -eq 'desktop') {

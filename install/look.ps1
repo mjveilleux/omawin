@@ -4,10 +4,8 @@
 Write-Step 'Windows look'
 # The theme (themes/set-theme.ps1) owns dark/light mode and the wallpaper: Starship, on
 # its first background (Omarchy's starbase), until another is picked (system menu > Style > Theme).
-if (Test-Path "$env:LOCALAPPDATA\launcher\theme") { Write-Note "ok  theme $(Get-Content "$env:LOCALAPPDATA\launcher\theme")" }
-else {
-    try { & "$Repo\themes\set-theme.ps1" starship } catch { Write-Warn "theme not applied: $_" }
-}
+if (Test-Path "$env:LOCALAPPDATA\launcher\theme") { Write-Note "ok  theme $(Get-Content "$env:LOCALAPPDATA\launcher\theme")"; Add-InstallItem 'Desktop' 'theme' 'theme' 'have' }
+else { Invoke-InstallItem 'Desktop' 'theme' { & "$Repo\themes\set-theme.ps1" starship } }
 # A clean desktop: no Recycle Bin icon (it's still in File Explorer). Files belong in
 # Documents; the desktop is just the wallpaper.
 $icons = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel'
@@ -25,7 +23,8 @@ try {
     $null = Register-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -Trigger $unlock -Action $action -Settings $taskSettings -Principal $principal -Force `
         -Description "Rotates the lock screen through the theme's backgrounds on unlock (omawin/themes/set-lockscreen.ps1)."
     Write-Note "ok  lock screen rotates on unlock (task 'omawin lock screen ($([Environment]::UserName))')"
-} catch { Write-Warn "lock screen rotation task not made: $_" }
+    Add-InstallItem 'Desktop' 'lock screen' 'lock screen' 'have'
+} catch { Write-Warn "lock screen rotation task not made: $_"; Add-InstallItem 'Desktop' 'lock screen' 'lock screen' 'fail' }
 # No taskbar, like Omarchy: it auto-hides (the Zebar bar has workspaces, apps and the
 # tray); pushing the mouse to the bottom edge or pressing Win still brings it up. Set
 # through the app-bar API, so it applies right away and is saved like the Settings toggle.
@@ -35,9 +34,10 @@ Add-Type -Namespace Dotfiles -Name AppBar -MemberDefinition @'
 '@
 $bar = New-Object Dotfiles.AppBar+APPBARDATA
 $bar.cbSize = [Runtime.InteropServices.Marshal]::SizeOf($bar)
-if (([uint64][Dotfiles.AppBar]::SHAppBarMessage(4, [ref]$bar)) -band 1) { Write-Note 'ok  taskbar auto-hides' } # ABM_GETSTATE
+if (([uint64][Dotfiles.AppBar]::SHAppBarMessage(4, [ref]$bar)) -band 1) { Write-Note 'ok  taskbar auto-hides'; Add-InstallItem 'Desktop' 'taskbar' 'taskbar hides' 'have' } # ABM_GETSTATE
 else {
     $bar.lParam = [IntPtr]1 # ABS_AUTOHIDE
     $null = [Dotfiles.AppBar]::SHAppBarMessage(10, [ref]$bar) # ABM_SETSTATE
     Write-Note 'taskbar set to auto-hide'
+    Add-InstallItem 'Desktop' 'taskbar' 'taskbar hides' 'done'
 }

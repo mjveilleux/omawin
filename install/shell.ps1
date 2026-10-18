@@ -39,12 +39,13 @@ function Set-TerminalSettings([string]$LocalState) {
     }
     $settings = Join-Path $LocalState 'settings.json'
     $marker = "$env:LOCALAPPDATA\launcher\seeded-windows-terminal"
-    if ((Test-Path $settings) -and (Test-Path $marker)) { Write-Note "ok  $settings (yours)"; return }
+    if ((Test-Path $settings) -and (Test-Path $marker)) { Write-Note "ok  $settings (yours)"; Add-InstallItem 'Settings' 'wt' 'Windows Terminal' 'have'; return }
     New-Item -ItemType Directory -Force -Path $LocalState, (Split-Path $marker) | Out-Null
     Move-Aside $settings
     Copy-Item "$Repo\windows-terminal\settings.json" $settings
     [IO.File]::WriteAllText($marker, "$settings`n")
     Write-Note "seeded $settings from windows-terminal/settings.json"
+    Add-InstallItem 'Settings' 'wt' 'Windows Terminal' 'done'
 }
 $wtPackage = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.WindowsTerminal_*' -Directory -ErrorAction SilentlyContinue |
     Select-Object -First 1
@@ -77,7 +78,8 @@ $starship = "$Repo\starship\starship.toml"
 if ([Environment]::GetEnvironmentVariable('STARSHIP_CONFIG', 'User') -ne $starship) {
     [Environment]::SetEnvironmentVariable('STARSHIP_CONFIG', $starship, 'User')
     Write-Note "set STARSHIP_CONFIG=$starship"
-} else { Write-Note 'ok  STARSHIP_CONFIG' }
+    Add-InstallItem 'Settings' 'starship' 'starship prompt' 'done'
+} else { Write-Note 'ok  STARSHIP_CONFIG'; Add-InstallItem 'Settings' 'starship' 'starship prompt' 'have' }
 $env:STARSHIP_CONFIG = $starship
 # A leftover ~/.config/starship.toml would just be confusing: it's no longer read.
 Move-Aside "$HOME\.config\starship.toml"
@@ -93,7 +95,8 @@ $herdr = "$Repo\herdr\config.toml"
 if ([Environment]::GetEnvironmentVariable('HERDR_CONFIG_PATH', 'User') -ne $herdr) {
     [Environment]::SetEnvironmentVariable('HERDR_CONFIG_PATH', $herdr, 'User')
     Write-Note "set HERDR_CONFIG_PATH=$herdr"
-} else { Write-Note 'ok  HERDR_CONFIG_PATH' }
+    Add-InstallItem 'Settings' 'herdr' 'herdr config' 'done'
+} else { Write-Note 'ok  HERDR_CONFIG_PATH'; Add-InstallItem 'Settings' 'herdr' 'herdr config' 'have' }
 $env:HERDR_CONFIG_PATH = $herdr
 
 Write-Step 'git'
@@ -101,6 +104,7 @@ $gitRepoConfig = "$Repo\git\gitconfig" -replace '\\', '/'
 $gitIgnore = "$Repo\git\ignore" -replace '\\', '/'
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $includes = @(git config --global --get-all include.path)
+    Add-InstallItem 'Settings' 'git' 'git config' $(if ($includes -contains $gitRepoConfig) { 'have' } else { 'done' })
     if ($includes -notcontains $gitRepoConfig) {
         git config --global --add include.path $gitRepoConfig
         Write-Note "~/.gitconfig now includes $gitRepoConfig"

@@ -177,6 +177,8 @@ function Write-Step([string]$Text) {
 
 function Write-Note([string]$Text) {
     Write-Log "    $Text"
+    # Lines that aren't "ok  ...": something was done (Invoke-InstallItem tells new from already there).
+    if (-not $Text.StartsWith('ok  ')) { $UI.Done++ }
     if (-not $UI.Fancy) { Write-Host "    $Text" -ForegroundColor DarkGray; return }
     if ($UI.Board) { if ($Text.StartsWith('ok  ')) { Add-BoardLine 'ok' $Text.Substring(4) } else { Add-BoardLine 'note' $Text }; return }
     $c = $UI.C
@@ -214,7 +216,7 @@ function Write-Done([string]$Text, [double]$Seconds) {
     Write-Log "    done  $Text ($(Format-Duration $Seconds))"
     # Plain: installs run several at once now, so each says when it's done.
     if (-not $UI.Fancy) { Write-Host "    done  $Text ($(Format-Duration $Seconds))"; return }
-    if ($UI.Board) { return }  # the package grid shows it
+    if ($UI.Board) { return }  # the screen's list shows it
     $c = $UI.C
     Write-UILine ("      {0}{1}{2} {3}  {4}{5}{2}" -f $c.Green, $UI.G.Done, $c.Reset, $Text, $c.Dim, (Format-Duration $Seconds))
 }
@@ -229,6 +231,7 @@ function Add-InstallStep([string]$Name, [string]$Summary, [double]$Expected = 0,
     $step = [hashtable]::Synchronized(@{ Name = $Name; Summary = $Summary; State = $state; Seconds = 0; Warnings = 0
         Expected = $(if ($saved) { $saved } elseif ($Expected) { $Expected } else { 5 }) })
     if ($First) { $UI.Steps.Insert(0, $step) } else { [void]$UI.Steps.Add($step) }
+    if ($UI.Board) { Sync-BoardSteps }
 }
 
 # How long each step took last time (install-times.txt: "<full|link> <step> <seconds>").
@@ -275,14 +278,7 @@ function Enter-InstallStep([string]$Name) {
     $s.Start = Get-Date
     $UI.Current = $s
     Write-Log "[$Name]"
-    if ($UI.Board) {
-        $UI.Board.Log.Clear()
-        $UI.Board.Pkgs.Clear()
-        $UI.BoardIndex = @{}
-        $UI.Board.Mode = 'log'
-        $UI.Board.Legend = $Name
-        return
-    }
+    if ($UI.Board) { Sync-BoardSteps; Send-Board 'enter' $Name; return }
     if (-not $UI.Fancy) { return }
     [void](Enable-VirtualTerminal)
     $todo = @($UI.Steps | Where-Object { $_.State -ne 'skipped' })
@@ -302,7 +298,8 @@ function Exit-InstallStep($Failure) {
     $s.State = if ($Failure) { 'failed' } elseif ($s.Warnings) { 'warned' } else { 'done' }
     if ($Failure) { $s.Failure = "$Failure" }
     Write-Log ("[{0}] {1} in {2}{3}" -f $s.Name, $s.State, (Format-Duration $s.Seconds), $(if ($Failure) { ": $Failure" }))
-    if (-not $UI.Fancy -or $UI.Board) { return }
+    if ($UI.Board) { Sync-BoardSteps; return }
+    if (-not $UI.Fancy) { return }
     $c = $UI.C
     $mark = switch ($s.State) {
         'failed' { $c.Red + $UI.G.Fail }
@@ -440,20 +437,17 @@ function Write-InstallSummary {
 
     if ($UI.Board) {
         $failure = if ($Failed) { @($UI.Steps | Where-Object { $_.Name -eq $Failed })[0].Failure }
-        $UI.Board.Final = @{
-            At = Get-Date
-            Seconds = ((Get-Date) - $Started).TotalSeconds
-            Failed = $Failed
-            Error = $failure
-            Line = "$done steps $($UI.G.Dot) $elapsed" + $(if ($skipped) { " $($UI.G.Dot) $skipped skipped" })
-            Warnings = @($UI.Warnings)
-            Next = $(if ($Failed) {
-                    @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
-                } else {
-                    @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
-                        @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
-                })
+        Sync-BoardSteps
+        foreach ($w in $UI.Warnings) { Send-Board 'warn' $w }
+        $next = if ($Failed) {
+            @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
+        } else {
+            @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
+                @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
         }
+        foreach ($n in $next) { Send-Board 'next' $n[0] $n[1] }
+        $line = "$done steps $($UI.G.Dot) $elapsed" + $(if ($skipped) { " $($UI.G.Dot) $skipped skipped" })
+        Send-Board 'final' $Failed ((Get-Date) - $Started).TotalSeconds.ToString([Globalization.CultureInfo]::InvariantCulture) $line $failure
         # A moment for the logo to light up whole before the screen stops.
         if (-not $Failed) { Start-Sleep -Milliseconds 1600 }
         return

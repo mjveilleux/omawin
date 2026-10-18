@@ -171,10 +171,13 @@ function Install-WingetPackages([string[]]$Ids) {
 }
 
 function Install-Extras([string[]]$Names) {
+    foreach ($name in $Names) { Add-InstallItem 'Tools' "tool:$name" $name 'wait' }
     foreach ($name in $Names) {
-        if (Get-Command $name -ErrorAction SilentlyContinue) { Write-Note "ok  $name"; continue }
+        if (Get-Command $name -ErrorAction SilentlyContinue) { Write-Note "ok  $name"; Add-InstallItem 'Tools' "tool:$name" $name 'have'; continue }
         Write-Note "installing $name"
-        try { & $ExtraInstalls[$name] } catch { Write-Warn "$name failed: $_" }
+        Add-InstallItem 'Tools' "tool:$name" $name 'run'
+        try { & $ExtraInstalls[$name] | ForEach-Object { if ("$_".Trim()) { Write-Note "$_" } }; Add-InstallItem 'Tools' "tool:$name" $name 'done' }
+        catch { Write-Warn "$name failed: $_"; Add-InstallItem 'Tools' "tool:$name" $name 'fail' }
         Update-SessionPath
     }
 }
@@ -214,7 +217,9 @@ function Install-NerdFont {
     $installed = (Get-ItemProperty $fontKey -ErrorAction SilentlyContinue).PSObject.Properties.Name |
         Where-Object { $_ -like "$NerdFont*Nerd Font*" -or $_ -like "$NerdFont NF*" }
     $machine = Get-ChildItem "$env:WINDIR\Fonts" -Filter "$($NerdFont)NerdFont*" -ErrorAction SilentlyContinue
-    if ($installed -or $machine) { Write-Note 'ok  already installed'; return }
+    $font = "$NerdFont Nerd Font"
+    if ($installed -or $machine) { Write-Note 'ok  already installed'; Add-InstallItem 'Tools' 'font' $font 'have'; return }
+    Add-InstallItem 'Tools' 'font' $font 'run'
 
     $tmp = Join-Path $env:TEMP "nerdfont-$Stamp"
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
@@ -239,6 +244,7 @@ function Install-NerdFont {
     }
     Remove-Item $tmp -Recurse -Force
     Write-Note 'installed (restart Windows Terminal to pick it up)'
+    Add-InstallItem 'Tools' 'font' $font 'done'
 }
 
 if (-not $SoftwareFunctionsOnly) {

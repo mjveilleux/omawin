@@ -127,4 +127,5 @@ function Complete-AdminBatch {
     $s.State = if ((Get-AdminState 'end') -eq 'done') { 'done' } else { 'warned' }
     $s.Note = $null
     Write-Log ("[admin] {0} in {1}" -f $s.State, (Format-Duration $s.Seconds))
+    Sync-BoardSteps
 }

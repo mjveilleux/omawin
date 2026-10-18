@@ -73,7 +73,7 @@ try {
     . "$Repo\install\software.ps1"
     $SoftwareFunctionsOnly = $false
     . "$Repo\install\admin.ps1"
-    if ($UI.Board) { $UI.Board.Legend = 'before it starts' }
+    Send-Board 'enter' 'before it starts'
     Write-Step 'before it starts'
     if (-not $LinkOnly) { Initialize-Presets }
     Request-GitIdentity

@@ -6,9 +6,10 @@ Write-Step 'GlazeWM + Zebar'
 # with the theme's colors; so is Windows Terminal's scheme (themes/render.ps1).
 & "$Repo\themes\render.ps1"
 Write-Note "ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml"
+Add-InstallItem 'Settings' 'glazewm-config' 'GlazeWM config' 'have'
 Set-Junction "$HOME\.glzr\zebar" "$Repo\zebar"
 # Start GlazeWM at sign-in (it starts Zebar itself, see glazewm/config.yaml), straight away.
-& "$Repo\install\login-start.ps1" | ForEach-Object { Write-Note $_ }
+Invoke-InstallItem 'Desktop' 'GlazeWM at sign-in' { & "$Repo\install\login-start.ps1" }
 # Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1),
 # and our Zebar fork, the bar on this account's ports (install/zebar-fork.ps1). The admin step put
 # them in (install/admin.ps1), or, when it didn't run, each asks for admin here. Without them the
@@ -21,22 +22,22 @@ foreach ($fork in 'glazewm-fork', 'zebar-fork') {
         Wait-AdminItems @($fork)
         $text = Get-AdminText $fork
         switch (Get-AdminState $fork) {
-            'done' { Write-Note ($text -replace '^installed\s+', '') }
-            'skip' { Write-Note "official $name kept: $text" }
-            default { Write-Warn "$name fork: $(if ($text) { $text } else { 'the admin step stopped' }) (the official $name stays)" }
+            'done' { Write-Note ($text -replace '^installed\s+', ''); Add-InstallItem 'Desktop' $fork "omawin's $name" $(if ($text -like 'installed*') { 'done' } else { 'have' }) -Admin }
+            'skip' { Write-Note "official $name kept: $text"; Add-InstallItem 'Desktop' $fork "official $name" 'have' -Admin }
+            default { Write-Warn "$name fork: $(if ($text) { $text } else { 'the admin step stopped' }) (the official $name stays)"; Add-InstallItem 'Desktop' $fork "omawin's $name" 'fail' -Admin }
         }
         $after = @{}
         if ($fork -eq 'glazewm-fork') { $after.Restart = $text -like 'installed*' }
         try { & "$Repo\install\$fork.ps1" -After @after } catch { Write-Log "    $fork -After: $_" }
     } else {
         $current = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
-        if ($current -ne 'needed') { Write-Note $current; continue }
-        try { & "$Repo\install\$fork.ps1" | ForEach-Object { Write-Note $_ } } catch { Write-Warn "$name fork: $_ (the official $name stays)" }
+        if ($current -ne 'needed') { Write-Note $current; Add-InstallItem 'Desktop' $fork $(if ($current -like 'ok*fork*') { "omawin's $name" } else { "official $name" }) 'have'; continue }
+        Invoke-InstallItem 'Desktop' "omawin's $name" { & "$Repo\install\$fork.ps1" }
     }
 }
 # This account's own ports (bin/ports.ps1), once both forks are in: other accounts signed in
 # on the PC have theirs. They take effect at the next sign-in.
-& "$Repo\bin\ports.ps1" -Set | ForEach-Object { Write-Note $_ }
+Invoke-InstallItem 'Desktop' "this account's ports" { & "$Repo\bin\ports.ps1" -Set }
 
 Write-Step 'Handy (dictation on Win+H)'
 # GlazeWM runs `handy --toggle-transcription` on Win+H, so Handy must be on PATH.
@@ -65,6 +66,7 @@ if (Test-Path "$handyDir\handy.exe") {
         $s.paste_method = 'direct'
         [IO.File]::WriteAllText($store, ($j | ConvertTo-Json -Depth 50), [Text.UTF8Encoding]::new($false))
         Write-Note 'configured Handy; open it from the tray once to download a speech model'
+        Add-InstallItem 'Desktop' 'dictation' 'dictation (Win+H)' 'have'
     }
 } elseif ((Get-Presets) -contains 'dictation') { Write-Warn 'Handy not installed; re-run after installing it' }
 else { Write-Note 'skipped: not installed (omawin preset add dictation)' }

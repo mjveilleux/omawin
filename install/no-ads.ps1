@@ -5,4 +5,4 @@
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
 Write-Step 'no ads'
-try { & "$Repo\no-ads.ps1" -UserOnly | ForEach-Object { Write-Note $_ } } catch { Write-Warn "no-ads: $_" }
+Invoke-InstallItem 'Windows' 'ads and suggestions off' { & "$Repo\no-ads.ps1" -UserOnly }

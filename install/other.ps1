@@ -7,14 +7,15 @@ Write-Step 'WSL'
 $wslConfig = "$HOME\.wslconfig"
 $wslSource = if (Test-Path "$UserLayer\wsl\.wslconfig") { "$UserLayer\wsl\.wslconfig" } else { "$Repo\wsl\.wslconfig" }
 $source = Get-Content $wslSource -Raw
-if ((Test-Path $wslConfig) -and (Get-Content $wslConfig -Raw) -eq $source) { Write-Note 'ok  ~/.wslconfig' }
+if ((Test-Path $wslConfig) -and (Get-Content $wslConfig -Raw) -eq $source) { Write-Note 'ok  ~/.wslconfig'; Add-InstallItem 'Settings' 'wslconfig' '.wslconfig' 'have' }
 else {
     Move-Aside $wslConfig
     Copy-Item $wslSource $wslConfig
     Write-Note "wrote ~/.wslconfig from $wslSource (applies next time WSL starts)"
+    Add-InstallItem 'Settings' 'wslconfig' '.wslconfig' 'done'
 }
 
 Write-Step 'Claude Code'
 # Your rules, skills, settings and plugins, from the shared folder and this account's
 # (bin/claude-sync.ps1; Claude Code rewrites settings.json itself, so it's merged, not linked).
-try { & "$Repo\bin\claude-sync.ps1" | ForEach-Object { Write-Note $_ } } catch { Write-Warn "claude sync: $_" }
+Invoke-InstallItem 'Settings' 'Claude Code' { & "$Repo\bin\claude-sync.ps1" }
