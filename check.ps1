@@ -220,11 +220,13 @@ $ran = @(Get-Content "$env:LOCALAPPDATA\launcher\migrations.txt" -ErrorAction Si
 $migrations = @(Get-ChildItem "$Repo\migrations" -Filter *.ps1 -ErrorAction SilentlyContinue | ForEach-Object BaseName)
 $pending = @($migrations | Where-Object { $ran -notcontains $_ })
 if ($pending) { Warn 'migrations' "not run yet: $($pending -join ', ') (run omawin migrate)" } else { Pass 'migrations' "all $($migrations.Count) run" }
-# Native system menu (menu-app/): built, and running in the background.
+# Native system menu (menu-app/): built, and running in the background. This account's: another
+# account signed in has its own.
+$myMenu = Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId
 if (Test-Path "$Repo\menu-app") {
     $menuExe = "$env:LOCALAPPDATA\system-menu\SystemMenu.exe"
     if (-not (Test-Path $menuExe)) { Fail 'system menu' 'not built (run menu-app\build.ps1)' }
-    elseif (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Pass 'system menu' $menuExe }
+    elseif ($myMenu) { Pass 'system menu' $menuExe }
     else { Warn 'system menu' 'built but not running; Win+Alt+Space starts it' }
     # File search in the launcher (fff's C library, fetched by build.ps1).
     if (Test-Path "$env:LOCALAPPDATA\system-menu\fff_c.dll") { Pass 'launcher file search (fff)' }
@@ -298,7 +300,7 @@ foreach ($proc in 'glazewm', 'zebar') {
     if (Get-Process $proc -ErrorAction SilentlyContinue) { Pass $proc } else { Fail $proc 'not running' }
 }
 # The launcher, file finder and system menu are one native app (menu-app/), running hidden.
-if (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
+if ($myMenu) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
 else { Warn 'launcher / menu (Win+Space, Win+Alt+Space)' 'not running; the first Win+Space starts it' }
 if (Get-Command glazewm -ErrorAction SilentlyContinue) {
     $state = glazewm query monitors 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue

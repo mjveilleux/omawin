@@ -265,7 +265,9 @@ try {
                 if (-not $NoStart) { & "$Repo\menu-app\stop-menu.ps1" -Dir $MenuDir }
                 Expand-Archive -Path $zip -DestinationPath $MenuDir -Force
                 # Unpacked, not built: nothing started it (menu-app\build.ps1 does that itself).
-                if (-not $NoStart -and -not (Get-Process SystemMenu -ErrorAction SilentlyContinue)) {
+                # This account's: another account signed in has its own, and counting it left this
+                # one stopped (stop-menu.ps1 stops only this account's).
+                if (-not $NoStart -and -not (Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId)) {
                     Start-Process (Join-Path $MenuDir 'SystemMenu.exe') -ArgumentList '--start-hidden'
                 }
                 Write-Note 'the system menu from the release'
