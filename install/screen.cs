@@ -927,6 +927,8 @@ static class Screen
             var fresh = new List<string>(); var have = new List<string>(); var failed = new List<string>();
             foreach (var it in Items) if (it.Group == g) { if (it.State == "done") fresh.Add(it.Name); else if (it.State == "fail") failed.Add(it.Name); else if (it.State == "have") have.Add(it.Name); }
             string head = g;
+            // Changes (omawin update's): their titles have commas of their own, so one a line.
+            if (g == "Changes") { for (int i = 0; i < fresh.Count; i++) Wrapped(sb, i == 0 ? head : "", White, Dot + " " + fresh[i], Fg, width); continue; }
             if (fresh.Count > 0) Wrapped(sb, head, White, Done + " " + string.Join(", ", fresh.ToArray()), Ok, width);
             if (failed.Count > 0) Wrapped(sb, fresh.Count > 0 ? "" : head, White, Fail + " " + string.Join(", ", failed.ToArray()), Red, width);
             if (have.Count > 0) Wrapped(sb, fresh.Count + failed.Count > 0 ? "" : head, White, "already there: " + string.Join(", ", have.ToArray()), Dim, width);
