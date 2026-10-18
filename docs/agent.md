@@ -57,7 +57,7 @@ omawin agent ask <request> ─> agent/ask.ps1: the backend's Invoke-AgentBackend
 
 ## Rules it works by (agent/prompt.md)
 
-Never drive the desktop, nothing private in an issue, the account folder's README, never commit unless asked. In the background it never edits the repo and ends with one line for the bar; live (Ctrl+Win+H) it makes quick changes here following AGENTS.md, and hands bigger work to a worktree with its own session (`omawin.exe launch terminal --dir … -- claude "<task>"`). `common.ps1` adds the part for each mode.
+Never drive the desktop, nothing private in an issue, this account's folder's README, never commit unless asked. In the background it never edits the repo and ends with one line for the bar; live (Ctrl+Win+H) it makes quick changes here following AGENTS.md, and hands bigger work to a worktree with its own session (`omawin.exe launch terminal --dir … -- claude "<task>"`). `common.ps1` adds the part for each mode.
 
 ## Steps
 

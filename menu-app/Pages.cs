@@ -141,7 +141,7 @@ public static class Projects
 // ports something listens on (netstat), minus Windows' own and the bar / window manager, each
 // asked for its home page at once (HTTP, then HTTPS; self-signed certificates are fine); only
 // those that answer are listed, named by the page's <title>. Then the favorite sites
-// (launcher/sites.txt, then your account folder's). Opened in Chrome.
+// (launcher/sites.txt, then the shared folder's and this account's). Opened in Chrome.
 public sealed record Server(int Port, string Program, int Pid, string Url, string Title);
 public sealed record Site(string Icon, string Name, string Url);
 

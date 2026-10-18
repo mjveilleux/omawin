@@ -631,23 +631,33 @@ static class Omawin
     // every sign-in from what Program Files holds now: every account shares those files, and
     // another one may have put the forks in, or the official programs back, since this one last
     // looked. Set for GlazeWM (and so the bar and the menu app it starts) and saved for this
-    // account, so what starts from Explorer gets them too.
-    static void SetPorts()
+    // account, so what starts from Explorer gets them too. The forks are in when the fork
+    // installers' kept official files are there (from omawin.7, which replaced the CLI too) and
+    // what runs isn't the official build again: an upgrade that got past the winget pin puts the
+    // official files back and leaves the kept ones behind. Never stops the desktop from starting.
+    static void SetPorts(bool fork)
     {
-        var glzr = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io");
-        bool ready = File.Exists(Path.Combine(glzr, @"GlazeWM\cli\glazewm.official.exe"))
-            && File.Exists(Path.Combine(glzr, @"Zebar\zebar.official.exe"));
-        string glazewm = null, zebar = null;
-        if (ready)
+        try
         {
-            var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value;
-            long number = long.Parse(sid.Substring(sid.LastIndexOf('-') + 1));
-            long port = 22000 + 2 * (number % 4000);
-            glazewm = port.ToString();
-            zebar = (port + 1).ToString();
+            var glzr = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io");
+            var zebarExe = new FileInfo(Path.Combine(glzr, @"Zebar\zebar.exe"));
+            var zebarKept = new FileInfo(Path.Combine(glzr, @"Zebar\zebar.official.exe"));
+            bool ready = fork
+                && File.Exists(Path.Combine(glzr, @"GlazeWM\cli\glazewm.official.exe"))
+                && zebarExe.Exists && zebarKept.Exists && zebarExe.Length != zebarKept.Length;
+            string glazewm = null, zebar = null;
+            if (ready)
+            {
+                var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value;
+                long number = long.Parse(sid.Substring(sid.LastIndexOf('-') + 1));
+                long port = 22000 + 2 * (number % 4000);
+                glazewm = port.ToString();
+                zebar = (port + 1).ToString();
+            }
+            SetPort("GLAZEWM_IPC_PORT", glazewm);
+            SetPort("ZEBAR_ASSET_PORT", zebar);
         }
-        SetPort("GLAZEWM_IPC_PORT", glazewm);
-        SetPort("ZEBAR_ASSET_PORT", zebar);
+        catch (Exception) { }
     }
 
     // At every sign-in, before Claude Code is up to hold its skill folders open: finish moving
@@ -660,7 +670,9 @@ static class Omawin
         var move = Path.Combine(Repo, @"bin\move-settings.ps1");
         var sync = Path.Combine(Repo, @"bin\claude-sync.ps1");
         if (!File.Exists(sync)) return;
-        var command = (File.Exists(move) ? "& '" + move + "' -Quiet; " : "") + "& '" + sync + "'";
+        // A failed move must not cost the sync; a ' in a path is doubled for PowerShell's quotes.
+        var command = (File.Exists(move) ? "try { & '" + move.Replace("'", "''") + "' -Quiet } catch { }; " : "")
+            + "& '" + sync.Replace("'", "''") + "'";
         try
         {
             Process.Start(new ProcessStartInfo("powershell.exe",
@@ -687,13 +699,13 @@ static class Omawin
         var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io", "GlazeWM", "glazewm.exe");
         if (!File.Exists(exe)) return Fail("GlazeWM isn't installed (" + exe + ")");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        SetPorts();
-        SyncClaude();
         // Our fork (install/glazewm-fork.ps1, signed on this PC) starts without the taskbar, so
         // only the official build waits for Explorer.
         bool fork = false;
         try { fork = System.Security.Cryptography.X509Certificates.X509Certificate.CreateFromSignedFile(exe).Subject.StartsWith("CN=omawin code signing"); }
         catch (Exception) { }
+        SetPorts(fork);
+        SyncClaude();
         for (int attempt = 1; attempt <= 6; attempt++)
         {
             var waited = Stopwatch.StartNew();

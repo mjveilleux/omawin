@@ -8,15 +8,15 @@
     then the account's own (~/omawin-account: that job's or client's), which wins where both say
     something. A shared skill named in the account's claude/skills-off.txt is left out there.
 
-      claude/CLAUDE.md       your rules: ~/.claude/CLAUDE.md imports each layer's (@import, so an
-                             edit in the layer is live). A ~/.claude/CLAUDE.md you wrote yourself
+      claude/CLAUDE.md       your rules: ~/.claude/CLAUDE.md imports each folder's (@import, so an
+                             edit in the folder is live). A ~/.claude/CLAUDE.md you wrote yourself
                              (without omawin's first line) is left alone.
       claude/skills/<name>/  linked into ~/.claude/skills (junctions: live). A real folder of the
                              same name already there is left alone and reported; links to a skill
-                             no longer in a layer go. Claude.ai's synced skills aren't touched.
+                             no longer in either folder go. Claude.ai's synced skills aren't touched.
       claude/settings.json   merged into ~/.claude/settings.json: omawin's claude/settings.json
                              fills in what's missing, then the shared folder's and the account's
-                             go on top. A key a layer sets wins;
+                             go on top. A key a folder sets wins;
                              lists are joined; keys only the live file has (what /config, herdr's
                              hook or a plugin install wrote) stay. {home} in a string becomes this
                              account's home folder.
@@ -26,8 +26,8 @@
     Never copied: sign-ins (.credentials.json: sign in in each account, maybe as a different
     Claude account), history, and memory (it's kept per project folder by Claude Code).
 
-    install.ps1 runs this (the other step), and omawin.exe at every sign-in; run it after editing a layer's settings or adding a
-    skill. Safe to run any number of times. Runs under Windows PowerShell 5.1 too.
+    install.ps1 runs this (the other step), and omawin.exe at every sign-in; run it after
+    editing a folder's settings or adding a skill. Safe to run any number of times. Runs under Windows PowerShell 5.1 too.
 #>
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
@@ -44,11 +44,11 @@ $rules = Join-Path $claudeDir 'CLAUDE.md'
 $imports = @($layers | Where-Object { Test-Path (Join-Path $_.Path 'claude\CLAUDE.md') } |
     ForEach-Object { '@' + ((Join-Path $_.Path 'claude\CLAUDE.md') -replace '\\', '/') })
 if ((Test-Path $rules) -and (Get-Content $rules -TotalCount 1) -ne $Mark) {
-    "kept    $rules (yours; add the layers' with: $($imports -join ' '))"
+    "kept    $rules (yours; add the folders' with: $($imports -join ' '))"
 } elseif ($imports) {
     [IO.File]::WriteAllText($rules, (@($Mark) + $imports) -join "`n")
-    "ok      rules: $($imports.Count) layer(s) imported into $rules"
-} elseif (Test-Path $rules) { Remove-Item $rules; 'removed ~/.claude/CLAUDE.md (no layer has rules)' }
+    "ok      rules: $($imports.Count) folder(s) imported into $rules"
+} elseif (Test-Path $rules) { Remove-Item $rules; 'removed ~/.claude/CLAUDE.md (neither folder has rules)' }
 
 # --- skills --------------------------------------------------------------------------------
 $skillsDir = Join-Path $claudeDir 'skills'
@@ -66,19 +66,22 @@ if (Test-Path $off) {
 foreach ($name in $want.Keys) {
     $link = Join-Path $skillsDir $name
     $item = Get-Item $link -Force -ErrorAction SilentlyContinue
-    if ($item -and $item.LinkType -ne 'Junction') { "kept    skill $name (a folder of its own in ~/.claude/skills; move it into a layer to share it)"; continue }
+    if ($item -and $item.LinkType -ne 'Junction') { "kept    skill $name (a folder of its own in ~/.claude/skills; move it into the shared folder or this account's to keep it there)"; continue }
     if ($item -and "$($item.Target)" -eq $want[$name]) { continue }
     if ($item) { [IO.Directory]::Delete($link) } # the junction only, not what it points to
     New-Item -ItemType Junction -Path $link -Target $want[$name] | Out-Null
     "ok      skill $name"
 }
-# Junctions into a layer whose skill is gone.
+# Junctions into a folder whose skill is gone, or off; and ones into the folders' old places
+# (~/omawin-me, ~/omawin-work: bin/move-settings.ps1) that lead nowhere now.
 $roots = @($layers | ForEach-Object { (Join-Path $_.Path 'claude\skills') + '\' })
+$oldRoots = @('omawin-me', 'omawin-work' | ForEach-Object { (Join-Path $HOME "$_\claude\skills") + '\' })
 foreach ($item in Get-ChildItem $skillsDir -Force | Where-Object LinkType -eq 'Junction') {
     $target = "$($item.Target)"
-    if ($want.Keys -notcontains $item.Name -and ($roots | Where-Object { $target.StartsWith($_, 'OrdinalIgnoreCase') })) {
+    $gone = -not (Test-Path $target) -and ($oldRoots | Where-Object { $target.StartsWith($_, 'OrdinalIgnoreCase') })
+    if ($gone -or ($want.Keys -notcontains $item.Name -and ($roots | Where-Object { $target.StartsWith($_, 'OrdinalIgnoreCase') }))) {
         [IO.Directory]::Delete($item.FullName)
-        "removed skill $($item.Name) (no longer in a layer, or off for this account)"
+        "removed skill $($item.Name) (no longer in either folder, or off for this account)"
     }
 }
 
@@ -126,7 +129,7 @@ if (($old | ConvertFrom-Json -ErrorAction SilentlyContinue | ConvertTo-Json -Dep
     if ($old) { Copy-Item $settingsFile "$settingsFile.before-sync" }
     [IO.File]::WriteAllText($settingsFile, $json)
     "ok      settings merged into $settingsFile (the previous one: settings.json.before-sync)"
-} else { 'ok      settings already match the layers' }
+} else { 'ok      settings already match your folders' }
 
 # --- plugins -------------------------------------------------------------------------------
 $claude = Get-Command claude -ErrorAction SilentlyContinue

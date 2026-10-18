@@ -1,6 +1,6 @@
 # Favorite sites for launcher -> Localhost, listed under the servers running on this PC.
 # One per line:  <icon> | <name> | <url>   (or just  <name> | <url>  for a globe icon)
 # Icons are Nerd Font glyphs (https://www.nerdfonts.com/cheat-sheet).
-# Your account folder's launcher/sites.txt (~/omawin-account), if you have one, adds your own after these
+# The shared folder's and this account's launcher/sites.txt (docs/work.md), where there are any, add theirs after these
 # (docs/work.md).
 󰚩 | Claude | https://claude.ai

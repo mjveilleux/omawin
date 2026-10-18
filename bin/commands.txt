@@ -52,7 +52,7 @@ shared | The PC's shared folder (docs/work.md): yours in every account, which ev
 shared backup | Commit what changed in the shared folder and push it to its private backup repo (-Repo <name> the first time) | pwsh bin/shared.ps1 backup
 claude sync | Claude Code's rules, skills, settings and plugins from the shared folder and this account's (docs/work.md); install runs it | pwsh bin/claude-sync.ps1
 
-reports index | Refresh the Reports list now (your account folder's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
+reports index | Refresh the Reports list now (this account's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
 
 update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal

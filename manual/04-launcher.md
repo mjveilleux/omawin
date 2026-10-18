@@ -52,7 +52,7 @@ Projects, Localhost, Clipboard, Audio, Quick settings, Reports, Shortcuts and Ab
 - **Shortcuts**: the searchable key list (`launcher/keys.txt`).
 - **About** (`omawin about`, or **System menu › About**): fastfetch-style facts, one a row: omawin's version (its git tag or commit, and date), Windows edition and build, uptime, CPU, GPU, memory, disk, theme, GlazeWM / Zebar / noctty versions, the menu app's own memory, stay awake. **Enter** copies a row.
 - **VPN items** (`@vpn <name>`, in your account folder's `launcher/items.txt`, say): connect that Windows VPN connection. Windows' own connect box opens already dialing and connects in a couple of seconds with the saved sign-in. When it's connected, the item offers Disconnect and the bar shows **VPN** and its name.
-- **Your own items and sites**: your account folder's `launcher/items.txt` and `launcher/sites.txt` (`~/omawin-account`) add theirs after omawin's: an email profile, a work app, a VPN.
+- **Your own items and sites**: `launcher/items.txt` and `launcher/sites.txt` in the PC's shared folder (`C:\ProgramData\omawin\shared`, every account) and in this account's folder (`~/omawin-account`) add theirs after omawin's: an email profile, a work app, a VPN. ([docs/work.md](../docs/work.md) says which goes where.)
 
 ## File finder (Win+F)
 

@@ -13,7 +13,7 @@
 #     @files      the file finder (Win+F)
 #     @menu       the system menu (Win+Alt+Space)
 #     @vpn <name> connect a Windows VPN connection (or disconnect it)
-# Your account folder's launcher/items.txt (~/omawin-account), if you have one, adds your own after these
+# The shared folder's and this account's launcher/items.txt (docs/work.md), where there are any, add theirs after these
 # (docs/work.md).
 # Icons are Nerd Font glyphs (https://www.nerdfonts.com/cheat-sheet). Order here = order shown.
 󰆍 | Terminal | omawin.exe launch terminal

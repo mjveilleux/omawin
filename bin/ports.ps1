@@ -36,9 +36,15 @@ if (-not $Set) { [pscustomobject]$ports; return }
 # account shares (another account may have put the forks in, or put the official ones back):
 # each fork installer keeps the official file it replaced as <name>.official.exe and -Restore
 # removes it, and the CLI is only replaced from omawin.7, the first build that knows the ports.
-# omawin.exe decides the same way at every sign-in (bin/omawin.cs, PortsReady).
+# And what's there isn't the official build again: an upgrade that got past the winget pin puts
+# the official files back and leaves the kept ones behind. omawin.exe decides the same way at
+# every sign-in (bin/omawin.cs, SetPorts); so does check.ps1.
 $glzr = Join-Path $env:ProgramFiles 'glzr.io'
-$ready = (Test-Path "$glzr\GlazeWM\cli\glazewm.official.exe") -and (Test-Path "$glzr\Zebar\zebar.official.exe")
+$sig = Get-AuthenticodeSignature "$glzr\GlazeWM\glazewm.exe" -ErrorAction SilentlyContinue
+$zebarExe = Get-Item "$glzr\Zebar\zebar.exe" -ErrorAction SilentlyContinue
+$zebarKept = Get-Item "$glzr\Zebar\zebar.official.exe" -ErrorAction SilentlyContinue
+$ready = $sig -and $sig.SignerCertificate -and $sig.SignerCertificate.Subject -like 'CN=omawin code signing*' -and
+    (Test-Path "$glzr\GlazeWM\cli\glazewm.official.exe") -and $zebarExe -and $zebarKept -and $zebarExe.Length -ne $zebarKept.Length
 if (-not $ready) { $ports = [ordered]@{ GLAZEWM_IPC_PORT = $null; ZEBAR_ASSET_PORT = $null } }
 
 $changed = $false

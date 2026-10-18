@@ -121,14 +121,18 @@ else { Warn '~/.wslconfig' "differs from $wslSource (run install.ps1 -LinkOnly)"
 $SharedLayer = & "$Repo\bin\user-layer.ps1" -Shared
 if ($SharedLayer -eq (Join-Path $HOME 'omawin-me')) { Warn 'shared settings' "still in ~/omawin-me (omawin migrate moves it to $env:ProgramData\omawin\shared)" }
 elseif (-not (Test-Path $SharedLayer)) { Warn 'shared settings' "no $SharedLayer (omawin shared -Init)" }
-elseif (-not ((Get-Acl $SharedLayer).Access | Where-Object { $_.IdentityReference -eq 'BUILTIN\Users' -and $_.FileSystemRights -match 'Modify|FullControl' })) { Warn 'shared settings' "$($SharedLayer): only its owner may change it (omawin shared -Init from that account)" }
+elseif (-not ((Get-Acl $SharedLayer).Access | Where-Object { $(try { $_.IdentityReference.Translate([Security.Principal.SecurityIdentifier]).Value } catch { '' }) -eq 'S-1-5-32-545' -and $_.FileSystemRights -match 'Modify|FullControl' })) { Warn 'shared settings' "$($SharedLayer): only its owner may change it (omawin shared -Init from that account)" }
 else {
     # Every account reads it: nothing secret or confidential belongs there.
     $risky = @(Get-ChildItem $SharedLayer -Recurse -File -Force -Include *.pbix, *.env, .credentials.json, *.pfx, *.key -ErrorAction SilentlyContinue | Where-Object FullName -notmatch '\\\.git\\')
+    $oldShared = Join-Path $HOME 'omawin-me'
+    $oldIsCopy = (Test-Path $oldShared) -and -not ((Get-Item $oldShared -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)
     if ($risky) { Warn 'shared settings' "every account can read $($risky[0].FullName): move it to this account's folder" }
+    elseif ($oldIsCopy) { Warn 'shared settings' "an old ~/omawin-me is still here, unused: bin/move-settings.ps1 says whether it holds anything the shared folder lacks, and sets it aside once it doesn't" }
     else { Pass 'shared settings' $SharedLayer }
 }
 if ($UserLayer -eq (Join-Path $HOME 'omawin-work')) { Warn "this account's settings" 'still in ~/omawin-work: it moves to ~/omawin-account at the next sign-in (bin/move-settings.ps1; a running Claude Code keeps it open)' }
+elseif ((Test-Path $UserLayer) -and (Test-Path "$HOME\omawin-work") -and -not ((Get-Item "$HOME\omawin-work" -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { Warn "this account's settings" "$UserLayer is used, but ~/omawin-work is a folder too: move what you need from it" }
 elseif (Test-Path $UserLayer) { Pass "this account's settings" $UserLayer }
 else { Pass "this account's settings" "none (optional: omawin account new)" }
 
@@ -154,8 +158,10 @@ else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate:
 # This account's ports (bin/ports.ps1): its own pair once both forks are in Program Files, which
 # omawin.exe decides at every sign-in. Saved ones that don't match what's installed now mean
 # another account changed Program Files since this one signed in.
-$glzr = Join-Path $env:ProgramFiles 'glzr.io'
-$portsReady = (Test-Path "$glzr\GlazeWM\cli\glazewm.official.exe") -and (Test-Path "$glzr\Zebar\zebar.official.exe")
+$zebarExe = Get-Item "$env:ProgramFiles\glzr.io\Zebar\zebar.exe" -ErrorAction SilentlyContinue
+$zebarKept = Get-Item "$env:ProgramFiles\glzr.io\Zebar\zebar.official.exe" -ErrorAction SilentlyContinue
+$portsReady = $gsig -and $gsig.SignerCertificate -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*' -and
+    (Test-Path "$env:ProgramFiles\glzr.io\GlazeWM\cli\glazewm.official.exe") -and $zebarExe -and $zebarKept -and $zebarExe.Length -ne $zebarKept.Length
 $wantPorts = & "$Repo\bin\ports.ps1"
 $havePort = [Environment]::GetEnvironmentVariable('GLAZEWM_IPC_PORT', 'User')
 if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "this account's own: GlazeWM $($wantPorts.GLAZEWM_IPC_PORT), Zebar $($wantPorts.ZEBAR_ASSET_PORT)" }

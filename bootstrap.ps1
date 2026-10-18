@@ -158,8 +158,10 @@ if ($Local) {
         if ($answer -match '^(https?|git@|ssh)') { $answer } else { "https://github.com/$answer.git" }
     }
     $shared = & "$Target\bin\user-layer.ps1" -Shared
-    if (Test-Path $shared) {
-        Write-Note "shared: $shared, already on this PC (another account made it); this account uses it too"
+    if ($shared -eq "$HOME\omawin-me") {
+        Write-Note "shared: your old $shared; install moves it to the PC's shared folder"
+    } elseif (Test-Path $shared) {
+        Write-Note "shared: $shared, already on this PC; this account uses it too"
     } else {
         Write-Note 'Shared settings are what''s yours in every Windows account on this PC (Claude rules and'
         Write-Note 'skills, launcher items). None here yet. If you backed them up to a private repo, they come from there.'

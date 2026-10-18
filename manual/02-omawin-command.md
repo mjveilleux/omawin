@@ -22,7 +22,8 @@ The groups:
 - `default`: what omawin opens things with (`omawin default terminal wt`, `omawin default editor code`)
 - `music`: the music, podcast and radio player in the bar: open, add, list, toggle, next, prev
 - `restart`: zebar, glazewm, menu, music
-- `reports index` (needs `~/omawin-account`, see [docs/work.md](../docs/work.md))
+- `reports index` (needs a reports script in `~/omawin-account`, see [docs/work.md](../docs/work.md))
+- your own settings ([docs/work.md](../docs/work.md)): `shared` (the PC's shared folder: where, who can change it, its backup), `shared backup`, `account new`, `claude sync`
 - the setup itself: `update` (and `update terminal`), `migrate`, `profile terminal`, `profile ram`, `check`, `install`, `no-ads`, `start` (and `start terminal`, `start glazewm`)
 
 The list is `bin/commands.txt`, one line per command. To add your own, add a line there: no rebuild needed.

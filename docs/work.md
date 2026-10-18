@@ -33,7 +33,7 @@ Sign-ins are in neither. Claude, GitHub, Slack and Gmail keep them inside each W
 - **No forks, no profile repos.** A GitHub fork of a public repo is public, and accounts may or may not share a GitHub sign-in, so nothing depends on GitHub: the folders are the source. Each may be backed up to a private repo under any GitHub account: `omawin shared backup -Repo <name>` the first time, `omawin shared backup` after; `omawin account new -Repo <name>` for an account's.
 - **Two accounts changing the shared folder at once**: the last save wins (there's no merge). The backup keeps every version.
 - **Different omawin versions in two accounts** read the same shared folder, so its layout only grows: nothing in it is renamed or removed without a fallback for older versions.
-- **Off limits per account**: each account folder's `README.md` says what agents in that account must never touch (the employer's repos, a client's folders). Agents in one account can't read another account's files at all.
+- **Off limits per account**: each account's folder has a `README.md` that says what agents in that account must never touch (the employer's repos, a client's folders). Agents in one account can't read another account's files at all.
 - **Signed in at once**: each account runs its own desktop with nothing shared that can collide: its own GlazeWM and Zebar ports (`bin/ports.ps1`, through our forks of both; `omawin.exe` decides them at every sign-in from what Program Files holds, since another account may have changed it), its own OpenCode server (a free port and password of its own), its own pipe names (they carry the account's SID), its own scheduled tasks (named with the account), and scripts only ever stop that account's programs. Program Files is shared: a fork update there sets a running copy aside instead of stopping another account's.
 - **Memory**: each signed-in account runs its own omawin (~0.5 GB, `omawin profile ram`). Sign out of accounts you're not using rather than switching away.
 - **Telling accounts apart**: each keeps its own theme (`omawin theme`).
@@ -47,7 +47,12 @@ Sign-ins are in neither. Claude, GitHub, Slack and Gmail keep them inside each W
 On a brand-new PC the first account makes the shared folder: empty, or from its backup (bootstrap asks).
 
 Tools already on the PC aren't downloaded again (some per-user ones are: they install per account).
-What omawin reads from them (the account's folder; the rows marked **shared** from the shared folder too, the account's after it):
+
+To keep a fresh account's folder in a private repo: `omawin account new -Repo <name>` (asks your git name and email for this account), then `omawin install -LinkOnly`. `omawin shared` shows where the shared folder is, who can change it and its backup; on another PC, `omawin shared -From <owner/name>` starts it from that backup.
+
+## What omawin reads from them
+
+Read from this account's folder, and for the rows marked **shared** from the shared folder too (the account's after it):
 
 | File | What omawin does with it |
 |---|---|
