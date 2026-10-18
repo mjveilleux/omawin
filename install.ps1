@@ -22,10 +22,15 @@
     .\install.ps1                # everything
     .\install.ps1 -LinkOnly      # no installs: relink, rebuild
     .\install.ps1 -Step shell    # one step (install/shell.ps1)
+
+    omawin update (bin/update.ps1) runs it with -LinkOnly -UpdateInfo <file>: what the update
+    pulled, shown as its first step ("update"), the changes as items, and the finale saying
+    what's new.
 #>
 param(
     [switch]$LinkOnly,     # no packages, presets, other installers or the font
-    [string]$Step          # run only install/<Step>.ps1
+    [string]$Step,         # run only install/<Step>.ps1
+    [string]$UpdateInfo    # omawin update's: "<kind>`t<text>" lines (from, to, commit, note, warn, seconds)
 )
 
 $ErrorActionPreference = 'Stop'
@@ -58,16 +63,60 @@ if ($Step) {
     return
 }
 
+# What omawin update did before this ran (bin/update.ps1).
+$Update = $null
+if ($UpdateInfo -and (Test-Path $UpdateInfo)) {
+    $Update = @{ From = ''; To = ''; Commits = @(); Notes = @(); Warnings = @(); Seconds = 0 }
+    foreach ($line in Get-Content $UpdateInfo -Encoding UTF8) {
+        $kind, $text = $line -split "`t", 2
+        switch ($kind) {
+            'from' { $Update.From = $text }
+            'to' { $Update.To = $text }
+            'commit' { $Update.Commits += $text }
+            'note' { $Update.Notes += $text }
+            'warn' { $Update.Warnings += $text }
+            'seconds' { $Update.Seconds = [double]$text }
+        }
+    }
+    Remove-Item $UpdateInfo -ErrorAction SilentlyContinue
+}
+
 $version = Get-InstallVersion $Repo
-$what = if ($LinkOnly) { 'relink and rebuild (-LinkOnly)' } else { 'set up this PC' }
+$what = if ($Update) {
+    if ($Update.From -and $Update.From -ne $Update.To) { "update $($Update.From) -> $($Update.To)" } else { 'update: already up to date' }
+} elseif ($LinkOnly) { 'relink and rebuild (-LinkOnly)' } else { 'set up this PC' }
 $UI.SaveTimes = $true
 foreach ($s in $Steps) { Add-InstallStep $s.Name $s.Summary $s.Seconds }
 Add-InstallStep 'migrations' 'clear away what older versions left' 2
+if ($Update) { Add-InstallStep 'update' 'this setup, from GitHub' 3 -First }
 Start-InstallBoard $version $what
 Write-InstallBanner $version $what
 Write-InstallPlan
 
 try {
+    # --- 0. omawin update: what it pulled ---------------------------------------------------------
+    if ($Update) {
+        Enter-InstallStep 'update'
+        $UI.Current.Start = $UI.Current.Start.AddSeconds(-$Update.Seconds)   # the pull, before this ran
+        Write-Step 'from GitHub'
+        foreach ($n in $Update.Notes) { Write-Note $n }
+        foreach ($w in $Update.Warnings) { Write-Warn $w }
+        $i = 0
+        foreach ($c in $Update.Commits) { $i++; Add-InstallItem 'Changes' "change:$i" $c 'done' }
+        # yt-dlp breaks whenever YouTube changes; the music player needs a current one.
+        if (Get-Command yt-dlp -ErrorAction SilentlyContinue) {
+            Add-InstallItem 'Programs' 'yt-dlp.yt-dlp' 'yt-dlp' 'run'
+            & { $ErrorActionPreference = 'Continue'; winget upgrade --id yt-dlp.yt-dlp -e --silent --accept-package-agreements --accept-source-agreements *> $null }
+            Add-InstallItem 'Programs' 'yt-dlp.yt-dlp' 'yt-dlp' $(if ($LASTEXITCODE -eq 0) { 'done' } else { 'have' })
+        }
+        Exit-InstallStep
+        $n = $Update.Commits.Count
+        $UI.FinaleTitle = if ($n) { "omawin is updated: $n change$(if ($n -ne 1) { 's' })" } else { 'omawin is already up to date' }
+        $UI.FinaleSection = if ($n) { "What's new" } else { '' }
+        $UI.FinaleNext = @(foreach ($c in @($Update.Commits | Select-Object -First $(if ($n -gt 6) { 5 } else { 6 }))) { , @('', $c) })
+        if ($n -gt 6) { $UI.FinaleNext += , @('', "and $($n - 5) more (git -C ~/omawin log)") }
+    }
+
     # --- 1. the questions ------------------------------------------------------------------------
     $SoftwareFunctionsOnly = $true
     . "$Repo\install\software.ps1"

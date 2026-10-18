@@ -17,7 +17,9 @@
     - The repo is never left in the middle of a merge, rebase or stash: each is finished or undone.
     - No network, no upstream, a detached checkout: said, and the relink runs on what's here.
 
-    Then install.ps1 -LinkOnly (relink, rebuild, new migrations) and yt-dlp's upgrade, as always.
+    Then install.ps1 -LinkOnly (relink, rebuild, new migrations, yt-dlp's upgrade), handed what
+    this did (-UpdateInfo): it shows it as its first step, the changes pulled as items, and
+    finishes with what's new, on the install screen when there's a console for it.
 
         omawin update                 the update
         omawin update -DryRun         says what it would do; changes nothing (it does fetch)
@@ -31,8 +33,12 @@ $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $Stamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
 
-function Say([string]$Text) { Write-Host "    $Text" -ForegroundColor DarkGray }
-function Warn([string]$Text) { Write-Host "    ! $Text" -ForegroundColor Yellow }
+# What this says: printed for -DryRun and -SkipInstall, else handed to install.ps1, which shows it
+# as its first step (on its screen, or as lines).
+$Report = $DryRun -or $SkipInstall
+$Notes = New-Object Collections.Generic.List[string]
+function Say([string]$Text) { if ($Report) { Write-Host "    $Text" -ForegroundColor DarkGray } else { $Notes.Add("note`t$Text") } }
+function Warn([string]$Text) { if ($Report) { Write-Host "    ! $Text" -ForegroundColor Yellow } else { $Notes.Add("warn`t$Text") } }
 # git in the repo; its output, and $LASTEXITCODE for the caller. Its own messages (stderr) go
 # along as text: with ErrorActionPreference Stop, PowerShell 5.1 would throw on the first one.
 function Invoke-Git {
@@ -71,7 +77,10 @@ function Restore-Stash([string]$Sha, [string]$Label) {
     return $false
 }
 
-Write-Host "`n==> omawin update" -ForegroundColor Cyan
+if ($Report) { Write-Host "`n==> omawin update" -ForegroundColor Cyan }
+$clock = [Diagnostics.Stopwatch]::StartNew()
+$fromSha = (Invoke-Git rev-parse --short HEAD) -join ''
+$fromName = (Invoke-Git describe --tags --always) -join ''
 $updated = $false
 $problems = 0
 
@@ -156,11 +165,21 @@ if (-not $DryRun) {
 if ($DryRun) { Say 'dry run: would now run install.ps1 -LinkOnly (relink, rebuild, new migrations)'; return }
 if ($SkipInstall) { Say 'skipping install.ps1 -LinkOnly (-SkipInstall)'; if ($problems) { exit 1 } else { return } }
 
+# What the update brought, for install.ps1 to show.
+$toSha = (Invoke-Git rev-parse --short HEAD) -join ''
+$info = Join-Path $env:TEMP "omawin-update-$PID.txt"
+$lines = New-Object Collections.Generic.List[string]
+$lines.Add("from`t$fromName")
+$lines.Add("to`t$((Invoke-Git describe --tags --always) -join '')")
+if ($fromSha -and $toSha -ne $fromSha) {
+    foreach ($subject in @(Invoke-Git log --no-merges --format=%s -n 50 "$fromSha..$toSha")) { $lines.Add("commit`t$subject") }
+}
+foreach ($n in $Notes) { $lines.Add($n) }
+$lines.Add("seconds`t$([Math]::Round($clock.Elapsed.TotalSeconds, 1).ToString([Globalization.CultureInfo]::InvariantCulture))")
+[IO.File]::WriteAllLines($info, $lines, (New-Object Text.UTF8Encoding $false))
+
 # The rest runs from the updated checkout: install.ps1 is read fresh from disk.
 $global:LASTEXITCODE = 0
-& "$Repo\install.ps1" -LinkOnly
+& "$Repo\install.ps1" -LinkOnly -UpdateInfo $info
 $installCode = $LASTEXITCODE
-# yt-dlp breaks whenever YouTube changes; the music player needs a current one.
-winget upgrade --id yt-dlp.yt-dlp -e --silent --accept-package-agreements --accept-source-agreements | Out-Null
-if ($problems) { Write-Host "`n    omawin is updated; see the notes above about your local changes." -ForegroundColor Yellow }
 if ($installCode -ne 0) { exit $installCode }

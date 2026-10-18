@@ -439,9 +439,12 @@ function Write-InstallSummary {
         $failure = if ($Failed) { @($UI.Steps | Where-Object { $_.Name -eq $Failed })[0].Failure }
         Sync-BoardSteps
         foreach ($w in $UI.Warnings) { Send-Board 'warn' $w }
+        # omawin update sets its own: "omawin is updated", "What's new" and the changes (install.ps1 -UpdateInfo).
+        if ($UI.FinaleTitle) { Send-Board 'title' $UI.FinaleTitle }
+        if ($null -ne $UI.FinaleSection) { Send-Board 'section' $UI.FinaleSection }
         $next = if ($Failed) {
             @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
-        } else {
+        } elseif ($null -ne $UI.FinaleNext) { @($UI.FinaleNext) } else {
             @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
                 @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
         }

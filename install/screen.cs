@@ -56,6 +56,7 @@ static class Screen
     static readonly List<string[]> Next = new List<string[]>();
     static bool Final, Failed;
     static string FailedStep = "", FinalLine = "", FinalError = "";
+    static string Title = "omawin is installed", Section = "Next";   // the finale's (omawin update: its own)
     static double FinalSeconds;
     static DateTime FinalAt;
     static volatile bool Paused, Quit, InputEnded, Repaint;
@@ -144,6 +145,8 @@ static class Screen
                     break;
                 case "adminclose": if (Mode == "admin") Mode = "log"; break;
                 case "warn": if (f.Length > 1) Warnings.Add(f[1]); break;
+                case "title": if (f.Length > 1) Title = f[1]; break;
+                case "section": Section = f.Length > 1 ? f[1] : ""; break;
                 case "next": if (f.Length > 2) Next.Add(new[] { f[1], f[2] }); break;
                 case "final":
                 {
@@ -579,12 +582,16 @@ static class Screen
         var rows = new Row[13];
         for (int i = 0; i < 13; i++) rows[i] = new Row();
         int wn = Warnings.Count;
-        rows[1] = new Row { Text = Done + " omawin is installed" + (wn > 0 ? ", with " + wn + " warning" + (wn != 1 ? "s" : "") : ""), Color = wn > 0 ? Warn : Ok, Bold = true, At = 1.9, Typed = true };
+        rows[1] = new Row { Text = Done + " " + Title + (wn > 0 ? ", with " + wn + " warning" + (wn != 1 ? "s" : "") : ""), Color = wn > 0 ? Warn : Ok, Bold = true, At = 1.9, Typed = true };
         rows[2] = new Row { Text = FinalLine, Color = Dim, At = 2.3 };
         rows[4] = new Row { Text = Counts(1), Color = Fg, At = 2.5 };
-        rows[6] = new Row { Text = "Next", Color = White, Bold = true, At = 2.9 };
+        if (Next.Count > 0 && Section.Length > 0) rows[6] = new Row { Text = Section, Color = White, Bold = true, At = 2.9 };
         for (int i = 0; i < Next.Count && 7 + i < 13; i++)
-            rows[7 + i] = new Row { Lead = (i + 1) + "  " + Next[i][0].PadRight(22), LeadColor = White, Text = Next[i][1], Color = Dim, At = 3.05 + 0.14 * i, Slide = true };
+        {
+            // A row with no key (omawin update's "What's new"): a dot and its text.
+            if (Next[i][0].Length == 0) rows[7 + i] = new Row { Text = Dot + " " + Next[i][1], Color = Fg, At = 3.05 + 0.14 * i, Slide = true };
+            else rows[7 + i] = new Row { Lead = (i + 1) + "  " + Next[i][0].PadRight(22), LeadColor = White, Text = Next[i][1], Color = Dim, At = 3.05 + 0.14 * i, Slide = true };
+        }
         return rows;
     }
     static void DrawFinale(double t, double ft)
@@ -806,7 +813,7 @@ static class Screen
         int wn = Warnings.Count;
         if (Failed) Put(ix, y++, Fail + " install stopped at " + FailedStep, Red, iw, true);
         else if (wn > 0) Put(ix, y++, Done + " omawin is installed, with " + wn + " warning" + (wn != 1 ? "s" : ""), Warn, iw, true);
-        else Put(ix, y++, Done + " omawin is installed", Ok, iw, true);
+        else Put(ix, y++, Done + " " + Title, Ok, iw, true);
         Put(ix, y++, FinalLine, Dim, iw);
         y++;
         if (FinalError.Length > 0) { foreach (var l in Wrap(FinalError, iw - 2)) Put(ix + 2, y++, l, Red, iw - 2); y++; }
