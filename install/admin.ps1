@@ -28,7 +28,15 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         }
     }
     $forks = @()
+    $programs = @{ 'glazewm-fork' = 'glzr.io\GlazeWM\glazewm.exe'; 'zebar-fork' = 'glzr.io\Zebar\zebar.exe' }
     foreach ($fork in 'glazewm-fork', 'zebar-fork') {
+        # -Check says "needed" for a program that isn't installed (on an install, this batch
+        # installs it first). An update installs no programs: asking for admin would end in
+        # "not installed".
+        if ($NoPackages -and -not (Test-Path (Join-Path $env:ProgramFiles $programs[$fork]))) {
+            Write-Log "    $($fork): skip  not installed"
+            continue
+        }
         $answer = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
         if ($answer -eq 'needed') { $forks += $fork } else { Write-Log "    $($fork): $answer" }
     }

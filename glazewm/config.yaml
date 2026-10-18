@@ -109,8 +109,10 @@ window_rules:
     match:
       - window_title: { equals: 'rename' }
 
-  # Jobs started from the system menu (installs, updates; launcher/menu.ps1 runs them).
-  - commands: ['set-floating --centered --shown-on-top --width 1000px --height 600px']
+  # Jobs started from the system menu (installs, updates; launcher/menu.ps1 runs them). A share of
+  # the screen, not pixels: at 150% scaling 1000x600 px was under the install screen's 80x24
+  # cells (install/board.ps1), and it fell back to plain lines.
+  - commands: ['set-floating --centered --shown-on-top --width 70% --height 75%']
     on: ['manage', 'title_change']
     match:
       - window_title: { equals: 'menu-task' }

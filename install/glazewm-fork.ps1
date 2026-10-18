@@ -138,6 +138,7 @@ function Say([string]$Line) { if ($Out) { Set-Content $Out $Line -Encoding utf8 
 # --- the admin part ------------------------------------------------------------------------------
 if ($Machine) {
     if (-not $elevated) { throw '-Machine runs elevated (install/admin.ps1, or this script without it)' }
+    $failure = $null
     try {
         # First, whatever happens next: no certificate an account could sign with stays trusted.
         $machineCert = Get-MachineCert
@@ -189,7 +190,7 @@ if ($Machine) {
         } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
         Say "installed  GlazeWM fork $($release.tag_name) (signed on this PC; the official one kept as glazewm.official.exe)"
         exit 0
-    } catch { Say "failed  $_"; exit 1 }
+    } catch { $failure = "$_"; Say "failed  $_"; exit 1 }
     finally {
         # A glazewm.exe still signed by a certificate taken away above (the new one didn't go in:
         # GitHub down, no build for this version) won't start: Windows refuses a uiAccess program
@@ -202,7 +203,9 @@ if ($Machine) {
                 if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
             }
             Remove-Item $state -ErrorAction SilentlyContinue
-            Say "skip  official GlazeWM back: the fork in place was signed by a certificate no longer trusted"
+            # Say writes -Out's one line: a failure above stays a failure, not a skip.
+            if ($failure) { Say "failed  $failure (the official GlazeWM is back)" }
+            else { Say "skip  official GlazeWM back: the fork in place was signed by a certificate no longer trusted" }
         }
     }
 }
