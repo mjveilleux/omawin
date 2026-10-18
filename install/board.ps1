@@ -100,7 +100,8 @@ function Stop-InstallBoard {
     if (-not $B) { return }
     Send-Board 'quit'
     try { $B.W.Close() } catch { }
-    try { if (-not $B.P.WaitForExit(3000)) { $B.P.Kill() } } catch { }
+    # A finished install's finale plays out first (screen.cs, DrawFinale).
+    try { if (-not $B.P.WaitForExit(8000)) { $B.P.Kill() } } catch { }
     $UI.Board = $null
     [Console]::Out.Write("$([char]27)[0m$([char]27)[?25h")
 }

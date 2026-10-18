@@ -305,24 +305,43 @@ static class Screen
         }
         for (int i = 0; i < LitAt.Length; i++) LitAt[i] = -1;
     }
-    static double HeadF;      // where the snake's head is along its road, eased toward the progress
-    static double ShownPct;   // the percentage shown, eased too
-
-    static void DrawLogo(int ox, int oy, double p, double t, bool running)
+    // The snake doesn't follow the progress as it comes (a package finishing jumps it, a long one
+    // stalls it): it follows a smoothed copy that never goes back, at a speed that changes gently,
+    // so the logo builds at a steady pace. In a pause it keeps creeping into a little slack ahead of
+    // the progress, then holds still with a glow rippling down its body.
+    static double HeadF;      // where the snake's head is along its road
+    static double Vel;        // its speed, squares a second
+    static double SmoothP;    // the progress it follows
+    static double ShownPct;   // the percentage shown, eased and never going back
+    static double FinalHead0 = -1;   // where the head was when the install finished
+    static void MoveSnake(double p, double dt)
     {
-        double target = p * (Walk.Count - 1);
+        SmoothP = Math.Max(SmoothP, SmoothP + (p - SmoothP) * Math.Min(1, dt / 2.5));
+        double end = Walk.Count - 1;
+        double ahead = Math.Min(end, SmoothP * end + end * 0.025);
+        double want = HeadF < ahead ? Math.Max(1.5, Math.Min(26, (ahead - HeadF) * 0.6)) : 0;
+        Vel += (want - Vel) * Math.Min(1, dt * 1.8);
+        HeadF = Math.Min(ahead, HeadF + Math.Max(0, Vel) * dt);
+    }
+    static double Ease(double x) { x = Math.Max(0, Math.Min(1, x)); return x < 0.5 ? 4 * x * x * x : 1 - Math.Pow(-2 * x + 2, 3) / 2; }
+
+    static void DrawLogo(int ox, int oy, double t, bool snakeOn, double wave)
+    {
         int head = (int)HeadF;
         for (int i = 0; i <= head && i < Walk.Count; i++) if (LitAt[Walk[i]] < 0) LitAt[Walk[i]] = t;
         var snake = new Dictionary<int, double>();
-        if (!Final && running)
+        if (snakeOn)
         {
+            bool idle = Vel < 0.6;
             for (int k = 0; k < 12 && head - k >= 0; k++)
             {
                 int key = Walk[head - k];
-                if (!snake.ContainsKey(key)) snake[key] = k == 0 ? 1.0 : Math.Max(0.15, 1 - (k - (HeadF - head)) / 12.0);
+                double s = k == 0 ? 1.0 : Math.Max(0.15, 1 - (k - (HeadF - head)) / 12.0);
+                // Holding still: a glow runs down its body, so it never looks stuck.
+                if (idle && k > 0) s *= 0.7 + 0.3 * (0.5 + 0.5 * Math.Sin(t * 5 - k * 0.7));
+                if (!snake.ContainsKey(key)) snake[key] = s;
             }
         }
-        double wave = Final && !Failed ? ((t - (FinalAt - Started).TotalSeconds) * 38) % 110 - 12 : -99;
         for (int r = 0; r < 13; r++)
         {
             for (int x = 0; x < LW; x++)
@@ -407,13 +426,22 @@ static class Screen
             }
         }
         double p = total > 0 ? got / total : 0;
-        if (Final && !Failed) p = 1;
-        bool running = !Final;
-        double target = p * (Walk.Count - 1);
-        if (HeadF < target) HeadF = Math.Min(target, HeadF + Math.Max(dt * 14, (target - HeadF) * Math.Min(1, dt * 3)));
-        else if (HeadF > target) HeadF = target;
-        ShownPct += (p * 100 - ShownPct) * Math.Min(1, dt * 6);
-        if (Final && !Failed) { HeadF = Walk.Count - 1; }
+        // Finished well: the snake hurries to close the logo (the first second), the panes fade (to
+        // 1.4 s), then the finale (DrawFinale).
+        bool finale = Final && !Failed;
+        double ft = Final ? (now - FinalAt).TotalSeconds : 0;
+        if (finale && ft >= 1.4) { DrawFinale(t, ft); Flush(false); return; }
+        if (finale)
+        {
+            if (FinalHead0 < 0) FinalHead0 = HeadF;
+            HeadF = FinalHead0 + (Walk.Count - 1 - FinalHead0) * Ease(ft / 1.0);
+            ShownPct += (100 - ShownPct) * Math.Min(1, dt * 5);
+        }
+        else if (!Final)
+        {
+            MoveSnake(p, dt);
+            ShownPct = Math.Max(ShownPct, ShownPct + (SmoothP * 100 - ShownPct) * Math.Min(1, dt * 4));
+        }
 
         // Header and footer.
         int x0 = 2;
@@ -446,7 +474,8 @@ static class Screen
         int blockH = 13 + 1 + (gap ? 2 : 1) + stepRows.Count;
         int ry = top + 1 + Math.Max(0, (inner - blockH) / 2);
         int lx = rx + (rightW - LW) / 2;
-        DrawLogo(lx, ry, p, t, running);
+        DrawLogo(lx, ry, t, !Final || (finale && ft < 1.0), -99);
+        LogoX = lx; LogoY = ry;
         ry += 13 + (gap ? 1 : 0);
         string pct = Final && Failed ? "stopped" : ((int)Math.Floor(ShownPct + 0.0001)) + "%";
         string eta = "";
@@ -507,12 +536,106 @@ static class Screen
         double pulse = 0.5 + 0.5 * Math.Sin(t * 2.2);
         Box(x0, top, leftW, boxH, Final ? Border : Mix(Border, Hot, 0.55 + 0.45 * pulse), legend, legendColor);
         int iw = leftW - 4, ix = x0 + 2, iy = top + 1;
-        if (Final) DrawDone(ix, iy, iw, inner, t);
+        if (Final && Failed) DrawDone(ix, iy, iw, inner, t);
         else if (Mode == "admin") DrawAdmin(ix, iy, iw, inner, spin);
         else DrawWork(ix, iy, iw, inner, spin, t, now);
 
+        // The panes fade away around the finished logo.
+        if (finale && ft > 1.0)
+        {
+            double fade = Math.Min(1, (ft - 1.0) / 0.4);
+            for (int y = 0; y < Hgt; y++)
+                for (int x = 0; x < W; x++)
+                {
+                    if (x >= LogoX && x < LogoX + LW && y >= LogoY && y < LogoY + 13) continue;
+                    int i = y * W + x;
+                    CFg[i] = Mix(CFg[i] == Default ? Fg : CFg[i], Ground, fade);
+                    if (CBg[i] != Default) CBg[i] = Mix(CBg[i], Ground, fade);
+                }
+        }
         Flush(false);
     }
+
+    // --- the finale ---------------------------------------------------------------------------------------
+    static int LogoX, LogoY;
+    static readonly int Ground = Rgb(14, 14, 18);   // near enough the terminal's own dark background to fade into
+    // How many of each group, "Programs 25  ·  Tools 12 ...", each number counted up to by f (0..1).
+    static string Counts(double f)
+    {
+        var sb = new StringBuilder();
+        foreach (var g in GroupOrder)
+        {
+            int n = 0; foreach (var it in Items) if (it.Group == g && it.State != "wait" && it.State != "run") n++;
+            if (sb.Length > 0) sb.Append("  " + Dot + "  ");
+            sb.Append(g).Append(' ').Append((int)Math.Round(n * f));
+        }
+        return sb.ToString();
+    }
+    // The finale's text: one line per logo row (13), for the screen and for the summary it leaves.
+    // Each: text, color, bold, when it appears (seconds into the finale), and how it appears.
+    class Row { public string Text = ""; public int Color; public bool Bold; public double At; public bool Typed, Slide; public string Lead = ""; public int LeadColor; }
+    static Row[] FinaleRows()
+    {
+        var rows = new Row[13];
+        for (int i = 0; i < 13; i++) rows[i] = new Row();
+        int wn = Warnings.Count;
+        rows[1] = new Row { Text = Done + " omawin is installed" + (wn > 0 ? ", with " + wn + " warning" + (wn != 1 ? "s" : "") : ""), Color = wn > 0 ? Warn : Ok, Bold = true, At = 1.9, Typed = true };
+        rows[2] = new Row { Text = FinalLine, Color = Dim, At = 2.3 };
+        rows[4] = new Row { Text = Counts(1), Color = Fg, At = 2.5 };
+        rows[6] = new Row { Text = "Next", Color = White, Bold = true, At = 2.9 };
+        for (int i = 0; i < Next.Count && 7 + i < 13; i++)
+            rows[7 + i] = new Row { Lead = (i + 1) + "  " + Next[i][0].PadRight(22), LeadColor = White, Text = Next[i][1], Color = Dim, At = 3.05 + 0.14 * i, Slide = true };
+        return rows;
+    }
+    static void DrawFinale(double t, double ft)
+    {
+        double mv = Ease((ft - 1.4) / 0.6);
+        int lx = (int)Math.Round(LogoX + (2 - LogoX) * mv), ly = (int)Math.Round(LogoY + (1 - LogoY) * mv);
+        HeadF = Walk.Count - 1;
+        double wave = ft > 1.7 ? ((ft - 1.7) * 30) % 130 - 14 : -99;
+        DrawLogo(lx, ly, t, false, wave);
+        if (ft < 1.9) return;
+        bool side = W >= 2 + LW + 4 + 40;
+        int bx = side ? 2 + LW + 4 : 2, by = side ? 1 : 15, bw = W - bx - 1;
+        var rows = FinaleRows();
+        for (int r = 0; r < 13; r++)
+        {
+            var row = rows[r];
+            if (row.Text.Length == 0 && row.Lead.Length == 0) continue;
+            double a = ft - row.At;
+            if (a < 0) continue;
+            double e = Ease(a / 0.45);
+            int y = by + r;
+            if (row.Typed)
+            {
+                int n = Math.Min(row.Text.Length, (int)(a * 48));
+                Put(bx, y, row.Text.Substring(0, n), row.Color, bw, row.Bold);
+                if (n < row.Text.Length && ((int)(t * 6)) % 2 == 0) Set(bx + n, y, "█", Acc, Default, false);
+                continue;
+            }
+            int off = row.Slide ? (int)Math.Round((1 - e) * 14) : 0;
+            string text = r == 4 ? Counts(Ease(a / 0.8)) : row.Text;
+            int x = bx + off;
+            if (row.Lead.Length > 0)
+            {
+                Put(x, y, row.Lead.Substring(0, 1), Mix(Ground, Acc, e), 1);
+                x += Put(x + 3, y, row.Lead.Substring(3), Mix(Ground, row.LeadColor, e), bw - 3, true) + 4;
+            }
+            Put(x, y, text, Mix(Ground, row.Color, e), bw - (x - bx), row.Bold);
+        }
+        // The warnings, under it all.
+        int wy = Math.Max(by + 13, 15) + (side ? 1 : 0);
+        double wa = ft - 3.6;
+        if (wa > 0)
+            foreach (var w in Warnings)
+                foreach (var l in Wrap(w, W - 6))
+                {
+                    if (wy >= Hgt - 1) break;
+                    Put(2, wy, l == Wrap(w, W - 6)[0] ? "!" : " ", Mix(Ground, Warn, Ease(wa / 0.5)), 1);
+                    Put(4, wy++, l, Mix(Ground, Warn, Ease(wa / 0.5)), W - 6);
+                }
+    }
+    static bool FinaleRunning() { return Final && !Failed && (DateTime.Now - FinalAt).TotalSeconds < 4.6; }
 
     static void DrawAdmin(int ix, int iy, int iw, int inner, string spin)
     {
@@ -737,19 +860,61 @@ static class Screen
         }
         sb.Append("\r\n");
     }
+    // One row of the logo in its finished colors, as text with color codes.
+    static string LogoRow(int r)
+    {
+        var sb = new StringBuilder();
+        for (int x = 0; x < LW; x++)
+        {
+            int up = On(x, 2 * r) ? Shade[Math.Min(5, 2 * r * 6 / LH)] : Default;
+            int dn = On(x, 2 * r + 1) ? Shade[Math.Min(5, (2 * r + 1) * 6 / LH)] : Default;
+            if (up != Default && dn != Default) sb.Append(Sgr(up)).Append("\x1b[48;2;").Append((dn >> 16) & 255).Append(';').Append((dn >> 8) & 255).Append(';').Append(dn & 255).Append('m').Append(Upper);
+            else if (up != Default) sb.Append("\x1b[49m").Append(Sgr(up)).Append(Upper);
+            else if (dn != Default) sb.Append("\x1b[49m").Append(Sgr(dn)).Append(Lower);
+            else sb.Append("\x1b[0m ");
+        }
+        return sb.Append("\x1b[0m").ToString();
+    }
+    static void AppendRow(StringBuilder sb, Row row, int width)
+    {
+        string text = row.Text;
+        if (row.Lead.Length > 0)
+        {
+            sb.Append(Sgr(Acc)).Append(row.Lead.Substring(0, 1)).Append("  ").Append("\x1b[1m").Append(Sgr(row.LeadColor)).Append(row.Lead.Substring(3)).Append("\x1b[22m  ");
+            width -= row.Lead.Length + 2;
+        }
+        if (text.Length > width) text = text.Substring(0, Math.Max(0, width - 1)) + Ell;
+        if (row.Bold) sb.Append("\x1b[1m");
+        sb.Append(Sgr(row.Color)).Append(text).Append("\x1b[0m");
+    }
     static void PrintSummary()
     {
         int width = Math.Max(40, W - 2);
         var sb = new StringBuilder();
         sb.Append("\x1b[0m\x1b[2J\x1b[H\r\n");
-        sb.Append("  ").Append("\x1b[1m").Append(Sgr(White)).Append("omawin").Append("\x1b[22m").Append(Sgr(Dim)).Append("  ").Append(Version).Append(' ').Append(Dot).Append(' ').Append(What).Append("\x1b[0m\r\n\r\n");
         int wn = Warnings.Count;
-        if (!Final) sb.Append("  ").Append(Sgr(Warn)).Append("! the install stopped before it finished").Append("\x1b[0m\r\n");
+        bool finale = Final && !Failed;
+        if (finale)
+        {
+            // The finale's last frame, as lines: the logo with its text beside it (or under it).
+            bool side = W >= 2 + LW + 4 + 40;
+            var rows = FinaleRows();
+            for (int r = 0; r < 13; r++)
+            {
+                sb.Append("  ").Append(LogoRow(r));
+                if (side) { sb.Append("    "); AppendRow(sb, rows[r], W - LW - 7); }
+                sb.Append("\x1b[0m\r\n");
+            }
+            if (!side) for (int r = 0; r < 13; r++) { if (rows[r].Text.Length + rows[r].Lead.Length == 0) continue; sb.Append("  "); AppendRow(sb, rows[r], W - 4); sb.Append("\x1b[0m\r\n"); }
+            sb.Append("\r\n");
+        }
+        else sb.Append("  ").Append("\x1b[1m").Append(Sgr(White)).Append("omawin").Append("\x1b[22m").Append(Sgr(Dim)).Append("  ").Append(Version).Append(' ').Append(Dot).Append(' ').Append(What).Append("\x1b[0m\r\n\r\n");
+        if (finale) { }
+        else if (!Final) sb.Append("  ").Append(Sgr(Warn)).Append("! the install stopped before it finished").Append("\x1b[0m\r\n");
         else if (Failed) sb.Append("  ").Append(Sgr(Red)).Append("\x1b[1m").Append(Fail).Append(" install stopped at ").Append(FailedStep).Append("\x1b[0m\r\n");
-        else sb.Append("  ").Append(Sgr(wn > 0 ? Warn : Ok)).Append("\x1b[1m").Append(Done).Append(" omawin is installed").Append(wn > 0 ? ", with " + wn + " warning" + (wn != 1 ? "s" : "") : "").Append("\x1b[0m\r\n");
-        if (FinalLine.Length > 0) sb.Append("  ").Append(Sgr(Dim)).Append(FinalLine).Append("\x1b[0m\r\n");
+        if (!finale && FinalLine.Length > 0) sb.Append("  ").Append(Sgr(Dim)).Append(FinalLine).Append("\x1b[0m\r\n");
         if (FinalError.Length > 0) sb.Append("\r\n  ").Append(Sgr(Red)).Append(FinalError).Append("\x1b[0m\r\n");
-        sb.Append("\r\n");
+        if (!finale) sb.Append("\r\n");
         foreach (var g in GroupOrder)
         {
             var fresh = new List<string>(); var have = new List<string>(); var failed = new List<string>();
@@ -764,7 +929,7 @@ static class Screen
             sb.Append("\r\n");
             foreach (var w in Warnings) Wrapped(sb, "!", Warn, w, Warn, width);
         }
-        if (Next.Count > 0)
+        if (Next.Count > 0 && !finale)
         {
             sb.Append("\r\n  \x1b[1m").Append(Sgr(White)).Append("Next").Append("\x1b[0m\r\n");
             int k = 0;
@@ -842,12 +1007,9 @@ static class Screen
             bool full = Size() || Repaint || wasPaused;
             if (full) { var clr = Encoding.UTF8.GetBytes("\x1b[2J"); Out.Write(clr, 0, clr.Length); for (int i = 0; i < PCh.Length; i++) PCh[i] = null; Repaint = false; wasPaused = false; }
             try { lock (Gate) Frame(t); } catch (Exception e) { try { File.AppendAllText(Path.Combine(Path.GetTempPath(), "omawin-screen.err"), e + "\r\n"); } catch { } }
-            if (done)
-            {
-                // One more second for the logo to light up whole, when it ended well.
-                if (Final && !Failed && t - (FinalAt - Started).TotalSeconds < 0) { }
-                break;
-            }
+            // Done, unless the finale is still playing (the install waits for it).
+            bool playing; lock (Gate) playing = FinaleRunning();
+            if (done && !playing) break;
             double spent = clock.Elapsed.TotalSeconds - t;
             int wait = (int)Math.Max(1, 16 - spent * 1000);
             Thread.Sleep(wait);

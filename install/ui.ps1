@@ -448,8 +448,7 @@ function Write-InstallSummary {
         foreach ($n in $next) { Send-Board 'next' $n[0] $n[1] }
         $line = "$done steps $($UI.G.Dot) $elapsed" + $(if ($skipped) { " $($UI.G.Dot) $skipped skipped" })
         Send-Board 'final' $Failed ((Get-Date) - $Started).TotalSeconds.ToString([Globalization.CultureInfo]::InvariantCulture) $line $failure
-        # A moment for the logo to light up whole before the screen stops.
-        if (-not $Failed) { Start-Sleep -Milliseconds 1600 }
+        # The screen plays its finale (about 4.5 s) before it closes; Stop-InstallBoard waits for it.
         return
     }
 
