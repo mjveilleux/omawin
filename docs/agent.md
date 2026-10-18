@@ -37,7 +37,7 @@ omawin agent ask <request> ─> agent/ask.ps1: the backend's Invoke-AgentBackend
 }
 ```
 
-- **`backend`** picks `agent/backends/<name>.ps1`; each backend's block holds its own settings, such as the model. Your user layer's `agent/config.json` ([work.md](work.md)), if there is one, goes on top: `{"backend": "claude"}` switches backend, `{"backends": {"opencode": {"model": "opencode/glm-5.3-flash"}}}` switches model.
+- **`backend`** picks `agent/backends/<name>.ps1`; each backend's block holds its own settings, such as the model. Your account folder's `agent/config.json` ([work.md](work.md)), if there is one, goes on top: `{"backend": "claude"}` switches backend, `{"backends": {"opencode": {"model": "opencode/glm-5.3-flash"}}}` switches model.
 - **`allow`** is what the agent may do, the same for every backend: these commands (and their arguments), reading files, the web. Everything else is refused, never asked: nobody is there to answer, so the agent says what it needed in its answer.
 - **A backend** is one function, `Invoke-AgentBackend`: it turns `allow` into its own rules, runs the request with the system prompt, calls `OnStep` for each tool call (the bar's "working: …") and returns the answer, the cost and the command that carries on with the run in a terminal. `ask.ps1` does the rest: the config, the prompt (agent/prompt.md plus what `allow` lets it do), the state, the history.
 
@@ -57,7 +57,7 @@ omawin agent ask <request> ─> agent/ask.ps1: the backend's Invoke-AgentBackend
 
 ## Rules it works by (agent/prompt.md)
 
-Never drive the desktop, nothing private in an issue, the user layer's README, never commit unless asked. In the background it never edits the repo and ends with one line for the bar; live (Ctrl+Win+H) it makes quick changes here following AGENTS.md, and hands bigger work to a worktree with its own session (`omawin.exe launch terminal --dir … -- claude "<task>"`). `common.ps1` adds the part for each mode.
+Never drive the desktop, nothing private in an issue, the account folder's README, never commit unless asked. In the background it never edits the repo and ends with one line for the bar; live (Ctrl+Win+H) it makes quick changes here following AGENTS.md, and hands bigger work to a worktree with its own session (`omawin.exe launch terminal --dir … -- claude "<task>"`). `common.ps1` adds the part for each mode.
 
 ## Steps
 

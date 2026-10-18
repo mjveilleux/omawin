@@ -122,7 +122,7 @@ Zebar only lets the bar run `omawin-music` with the arguments `zpack.json` allow
   - `-SetWallpaper` and `-SearchPackage`
 - `launcher/common.ps1`: the fzf look and helpers for the terminal pieces that remain.
 - `launcher/rename-workspace.ps1`: Alt+N (`omawin workspace rename`), in a small terminal titled "rename".
-- Reports: the page is omawin's, the folders and the import are the user layer's (`~/omawin-work`, see [work.md](work.md)).
+- Reports: the page is omawin's, the folders and the import are the account folder's (`~/omawin-account`, see [work.md](work.md)).
 - `themes/*.ps1`: themes; see [themes.md](themes.md).
 
 ## State (`%LOCALAPPDATA%\launcher\`)

@@ -37,13 +37,28 @@ public static class MenuModel
     public static readonly string Repo =
         Environment.GetEnvironmentVariable("DOTFILES") is { Length: > 0 } d ? d
         : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin");
-    // Your user layer: what's yours but not omawin's (your own launcher items and sites, work
-    // shares, a VPN, reports), in ~/omawin-work, optional (docs/work.md). Its launcher items,
-    // sites and shortcuts are added to omawin's, and the Reports page runs its reports script.
-    // OMAWIN_USER_LAYER overrides where it is, as for omawin.exe and bin/user-layer.ps1.
-    public static readonly string Work =
-        Environment.GetEnvironmentVariable("OMAWIN_USER_LAYER") is { Length: > 0 } w ? w
-        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-work");
+    // Your own folders (docs/work.md), both optional. Work: this account's (its employer's or
+    // client's launcher items and sites, shares, a VPN, reports), ~/omawin-account. Shared: yours
+    // in every account on the PC, C:\ProgramData\omawin\shared. Their launcher items, sites and
+    // shortcuts are added to omawin's (Layered), and the Reports page runs the account's reports
+    // script. OMAWIN_USER_LAYER / OMAWIN_SHARED_LAYER override where they are, as for omawin.exe
+    // and bin/user-layer.ps1; until the move (migrations/2026-10-17-shared-folder.ps1) the old
+    // ~/omawin-work and ~/omawin-me are used.
+    public static readonly string Work = Folder("OMAWIN_USER_LAYER",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-account"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-work"));
+    public static readonly string Shared = Folder("OMAWIN_SHARED_LAYER",
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "omawin", "shared"),
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-me"));
+    static string Folder(string variable, string now, string before) =>
+        Environment.GetEnvironmentVariable(variable) is { Length: > 0 } set ? set
+        : !Directory.Exists(now) && Directory.Exists(before) ? before : now;
+    // A launcher file (launcher/<name>): omawin's, then the shared folder's, then this account's.
+    public static string[] Layered(string name) =>
+        [Path.Combine(Repo, "launcher", name), Path.Combine(Shared, "launcher", name), Path.Combine(Work, "launcher", name)];
+    // Their lines, one after the other; a file that isn't there adds nothing.
+    public static IEnumerable<string> LayeredLines(string name) =>
+        Layered(name).Where(File.Exists).SelectMany(File.ReadAllLines);
     public static readonly string StateDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "launcher");
     public static string MenuFile => Path.Combine(Repo, "launcher", "menu.txt");

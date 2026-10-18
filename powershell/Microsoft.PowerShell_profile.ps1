@@ -164,7 +164,7 @@ function iex {
 }
 
 # --- your own additions ---------------------------------------------------------------
-# Your own shortcuts and tool paths live in your user layer (docs/work.md), if it's here.
+# Your own shortcuts and tool paths live in your account folder (docs/work.md), if it's here.
 # profile.ps1 (run first, in every host) set $OmawinUserLayer.
 $workProfile = "$OmawinUserLayer\powershell\profile.ps1"
 if (Test-Path $workProfile) { . $workProfile }

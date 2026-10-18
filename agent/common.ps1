@@ -5,7 +5,7 @@ $AgentRepo = Split-Path $PSScriptRoot -Parent
 $AgentDir = Join-Path $env:LOCALAPPDATA 'launcher\agent'
 New-Item -ItemType Directory -Force $AgentDir | Out-Null
 
-# agent/config.json, with the user layer's agent/config.json on top: backend, allow and live
+# agent/config.json, with the account folder's agent/config.json on top: backend, allow and live
 # replace the repo's; a backend's own settings (its model) merge into the repo's.
 function Get-AgentConfig {
     $config = Get-Content (Join-Path $PSScriptRoot 'config.json') -Raw | ConvertFrom-Json

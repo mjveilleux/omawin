@@ -80,9 +80,8 @@ public static class Launcher
     public static readonly System.Text.RegularExpressions.Regex Link =
         new(@"^[a-z][\w+.-]*:(//|[^\\])", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
 
-    // omawin's items, then your own from ~/omawin-work (MenuModel.Work), if it's there.
-    static readonly string[] ItemsFiles =
-        [Path.Combine(MenuModel.Repo, "launcher", "items.txt"), Path.Combine(MenuModel.Work, "launcher", "items.txt")];
+    // omawin's items, then the shared folder's and this account's (MenuModel.Layered), where they're there.
+    static readonly string[] ItemsFiles = MenuModel.Layered("items.txt");
     static string AppsFile => Path.Combine(MenuModel.StateDir, "apps.tsv");
 
     // Read and parsed again only when one of the files has changed (each opening asks), like

@@ -8,7 +8,7 @@ The repo you're in is omawin itself; AGENTS.md and docs/architecture.md say how 
 
 - **Through omawin's commands.** `omawin.exe help` lists every one (`bin/commands.txt`). Always call it `omawin.exe`, never bare `omawin`.
 - **Never drive the desktop**: no keys, no clicks, no opening windows, unless the job is to open something (a worktree's session, a project).
-- **Private things stay private**: nothing personal goes into an issue, a commit or the repo. The user layer (`~/omawin-work`, its README.md) says what's off limits on this PC; work repos there are never touched.
+- **Private things stay private**: nothing personal goes into an issue, a commit or the repo. This account's folder (`~/omawin-account`, its README.md) says what's off limits on this PC; work repos there are never touched.
 - **Never commit, merge or push** unless the request says to.
 - **Be quick.** Don't explore when a command answers it. Don't verify what a command's reply already confirms.
 

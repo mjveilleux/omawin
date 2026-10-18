@@ -30,13 +30,15 @@ $ports = [ordered]@{ GLAZEWM_IPC_PORT = "$glazewm"; ZEBAR_ASSET_PORT = "$($glaze
 
 if (-not $Set) { [pscustomobject]$ports; return }
 
-# Only with both forks in place (install/glazewm-fork.ps1 from omawin.7, which ships the CLI and
-# watcher too; install/zebar-fork.ps1): the official programs keep 6123 / 6124 whatever these
-# say, and the launcher would look for GlazeWM where it isn't. Without them, everything stays
-# on the official ports (one account's desktop at a time).
-$state = Join-Path $env:LOCALAPPDATA 'launcher'
-$glazeTag = if (Test-Path "$state\glazewm-fork.txt") { (Get-Content "$state\glazewm-fork.txt" -Raw).Trim() } else { '' }
-$ready = ($glazeTag -match 'omawin\.(\d+)$' -and [int]$Matches[1] -ge 7) -and (Test-Path "$state\zebar-fork.txt")
+# Only with both forks in place: the official programs keep 6123 / 6124 whatever these say, and
+# the launcher would look for GlazeWM where it isn't. Without them, everything stays on the
+# official ports (one account's desktop at a time). Told from Program Files itself, which every
+# account shares (another account may have put the forks in, or put the official ones back):
+# each fork installer keeps the official file it replaced as <name>.official.exe and -Restore
+# removes it, and the CLI is only replaced from omawin.7, the first build that knows the ports.
+# omawin.exe decides the same way at every sign-in (bin/omawin.cs, PortsReady).
+$glzr = Join-Path $env:ProgramFiles 'glzr.io'
+$ready = (Test-Path "$glzr\GlazeWM\cli\glazewm.official.exe") -and (Test-Path "$glzr\Zebar\zebar.official.exe")
 if (-not $ready) { $ports = [ordered]@{ GLAZEWM_IPC_PORT = $null; ZEBAR_ASSET_PORT = $null } }
 
 $changed = $false

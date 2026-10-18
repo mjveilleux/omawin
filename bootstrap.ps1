@@ -12,9 +12,10 @@
 
       1. installs git with winget
       2. clones omawin to ~/omawin (or pulls it if it's already there)
-      3. your layers, if you have them (docs/work.md), each asked for, Enter skips:
-         this Windows account's user layer to ~/omawin-work, your shared one to ~/omawin-me.
-         A private one opens Git's sign-in window.
+      3. your own settings (docs/work.md): the PC's shared folder (C:\ProgramData\omawin\shared,
+         yours in every account; found if another account made it, else started empty or from
+         a private backup repo) and this account's (~/omawin-account, from a private repo or
+         started fresh). A private repo opens Git's sign-in window.
       4. runs install.ps1, which sets up everything else
 
     Safe to run again. Runs under Windows PowerShell 5.1, which every Windows PC has.
@@ -97,7 +98,7 @@ if ($Fancy) {
     [Console]::Out.WriteLine('')
     $d = " $($Boot.Dot) "
     [Console]::Out.WriteLine("  $($Boot.Bold)Omakase Windows$($Boot.Reset)$($Boot.Dim)$($d)keyboard-driven developer desktop$($d)bootstrap$($Boot.Reset)")
-    [Console]::Out.WriteLine("  $($Boot.Dim)winget$($d)git$($d)omawin$($d)your layers$($d)install.ps1$($Boot.Reset)")
+    [Console]::Out.WriteLine("  $($Boot.Dim)winget$($d)git$($d)omawin$($d)your settings$($d)install.ps1$($Boot.Reset)")
 }
 
 # Each step's line; the next one (or the end) marks the one before done, with its time.
@@ -148,19 +149,40 @@ if ($Local) {
     else { git clone "https://github.com/$Repo.git" $Target }
     if ($LASTEXITCODE -ne 0) { throw "couldn't get $Repo" }
 
-    # The layers (docs/work.md), before install so it uses them. Optional: Enter skips.
-    function Get-Layer([string]$Path, [string]$Question) {
-        if (Test-Path "$Path\.git") { git -C $Path pull --ff-only; return }
-        if (Test-Path $Path) { return }
-        $answer = (Read-Host "    $Question (owner/name or a git URL; Enter: none)").Trim()
-        if (-not $answer) { return }
-        $url = if ($answer -match '^(https?|git@|ssh)') { $answer } else { "https://github.com/$answer.git" }
-        Write-Step "get $answer"
-        git clone $url $Path
-        if ($LASTEXITCODE -ne 0) { Write-Host "    couldn't clone $answer; carrying on without it" -ForegroundColor Yellow }
+    # Your own settings (docs/work.md), before install so it uses them. Two folders: the PC's
+    # shared one (yours in every account) and this account's. Both optional: Enter starts empty.
+    Write-Step 'your settings'
+    function Get-Answer([string]$Question) {
+        $answer = (Read-Host "    $Question").Trim()
+        if (-not $answer) { return $null }
+        if ($answer -match '^(https?|git@|ssh)') { $answer } else { "https://github.com/$answer.git" }
     }
-    Get-Layer "$HOME\omawin-work" "This account's user layer repo, if you have one"
-    Get-Layer "$HOME\omawin-me" 'Your shared layer repo, if you have one'
+    $shared = & "$Target\bin\user-layer.ps1" -Shared
+    if (Test-Path $shared) {
+        Write-Note "shared: $shared, already on this PC (another account made it); this account uses it too"
+    } else {
+        Write-Note 'Shared settings are what''s yours in every Windows account on this PC (Claude rules and'
+        Write-Note 'skills, launcher items). None here yet. If you backed them up to a private repo, they come from there.'
+        $url = Get-Answer 'Shared settings backup (owner/name or a git URL; Enter: start empty)'
+        try { if ($url) { & "$Target\bin\shared.ps1" -From $url } else { & "$Target\bin\shared.ps1" -Init } }
+        catch { Write-Host "    $($_.Exception.Message); carrying on with an empty one" -ForegroundColor Yellow; & "$Target\bin\shared.ps1" -Init }
+    }
+    $account = & "$Target\bin\user-layer.ps1"
+    if (Test-Path "$account\.git") {
+        # (Windows PowerShell turns a native program's stderr into an error under 'Stop'.)
+        try { git -C $account pull --ff-only -q 2>$null } catch { }
+        Write-Note "this account: $account"
+    } elseif (Test-Path $account) {
+        Write-Note "this account: $account"
+    } else {
+        Write-Note 'This account''s own settings are who you are here: git name and email, the employer''s'
+        Write-Note 'or client''s launcher items, shares. Keep them in a private repo? Install asks your git name otherwise.'
+        $url = Get-Answer "This account's settings repo (owner/name or a git URL; Enter: start fresh)"
+        if ($url) {
+            git clone -q $url $account
+            if ($LASTEXITCODE -ne 0) { Write-Host "    couldn't clone $url; carrying on without it" -ForegroundColor Yellow }
+        }
+    }
 }
 
 # install.ps1 shows the same look; it skips the logo, shown a moment ago.

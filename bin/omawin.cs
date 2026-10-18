@@ -29,11 +29,19 @@ static class Omawin
     static readonly string Repo = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTFILES"))
         ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin")
         : Environment.GetEnvironmentVariable("DOTFILES");
-    // Your user layer (docs/work.md), {user} in commands.txt. OMAWIN_USER_LAYER overrides where it
-    // is, as for the menu app (MenuModel.Work) and PowerShell (bin/user-layer.ps1); normally ~/omawin-work.
-    static readonly string UserLayer = string.IsNullOrEmpty(Environment.GetEnvironmentVariable("OMAWIN_USER_LAYER"))
-        ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-work")
-        : Environment.GetEnvironmentVariable("OMAWIN_USER_LAYER");
+    // This account's folder (docs/work.md), {user} in commands.txt. OMAWIN_USER_LAYER overrides where
+    // it is, as for the menu app (MenuModel.Work) and PowerShell (bin/user-layer.ps1); normally
+    // ~/omawin-account, or ~/omawin-work where it hasn't moved yet.
+    static readonly string UserLayer = AccountFolder();
+    static string AccountFolder()
+    {
+        var set = Environment.GetEnvironmentVariable("OMAWIN_USER_LAYER");
+        if (!string.IsNullOrEmpty(set)) return set;
+        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        var now = Path.Combine(home, "omawin-account");
+        var before = Path.Combine(home, "omawin-work");
+        return !Directory.Exists(now) && Directory.Exists(before) ? before : now;
+    }
     static readonly string StateDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "launcher");
 
@@ -143,7 +151,7 @@ static class Omawin
             case "app":
                 return Send((rest + " " + string.Join(" ", extra)).Trim());
             case "pwsh":
-                // A script of this repo, path from the repo root (or from your user layer, {user}/...),
+                // A script of this repo, path from the repo root (or from your account folder, {user}/...),
                 // then its fixed arguments. {user} is filled in after the split: the path may have spaces.
                 var script = rest.Split(new[] { ' ' }, 2);
                 var scriptPath = script[0].Replace("{user}", UserLayer).Replace('/', '\\');
@@ -619,11 +627,68 @@ static class Omawin
         catch (Exception) { return DateTime.MinValue; }
     }
 
+    // This account's own ports for GlazeWM and Zebar (bin/ports.ps1 says why and how), decided at
+    // every sign-in from what Program Files holds now: every account shares those files, and
+    // another one may have put the forks in, or the official programs back, since this one last
+    // looked. Set for GlazeWM (and so the bar and the menu app it starts) and saved for this
+    // account, so what starts from Explorer gets them too.
+    static void SetPorts()
+    {
+        var glzr = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io");
+        bool ready = File.Exists(Path.Combine(glzr, @"GlazeWM\cli\glazewm.official.exe"))
+            && File.Exists(Path.Combine(glzr, @"Zebar\zebar.official.exe"));
+        string glazewm = null, zebar = null;
+        if (ready)
+        {
+            var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value;
+            long number = long.Parse(sid.Substring(sid.LastIndexOf('-') + 1));
+            long port = 22000 + 2 * (number % 4000);
+            glazewm = port.ToString();
+            zebar = (port + 1).ToString();
+        }
+        SetPort("GLAZEWM_IPC_PORT", glazewm);
+        SetPort("ZEBAR_ASSET_PORT", zebar);
+    }
+
+    // At every sign-in, before Claude Code is up to hold its skill folders open: finish moving
+    // your settings folders if a running program kept the move from happening
+    // (bin/move-settings.ps1), then Claude Code's rules, skills and settings from the shared
+    // folder and this account's (bin/claude-sync.ps1; another account may have added a shared
+    // skill). Hidden, in the background; nothing waits for it.
+    static void SyncClaude()
+    {
+        var move = Path.Combine(Repo, @"bin\move-settings.ps1");
+        var sync = Path.Combine(Repo, @"bin\claude-sync.ps1");
+        if (!File.Exists(sync)) return;
+        var command = (File.Exists(move) ? "& '" + move + "' -Quiet; " : "") + "& '" + sync + "'";
+        try
+        {
+            Process.Start(new ProcessStartInfo("powershell.exe",
+                "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"" + command + "\"")
+            { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Repo });
+        }
+        catch (Exception) { }
+    }
+
+    static void SetPort(string name, string value)
+    {
+        Environment.SetEnvironmentVariable(name, value);
+        try
+        {
+            // Saved only when it changed: saving tells every window, which takes a moment.
+            if (Environment.GetEnvironmentVariable(name, EnvironmentVariableTarget.User) != value)
+                Environment.SetEnvironmentVariable(name, value, EnvironmentVariableTarget.User);
+        }
+        catch (Exception) { }
+    }
+
     static int StartGlazeWM()
     {
         var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io", "GlazeWM", "glazewm.exe");
         if (!File.Exists(exe)) return Fail("GlazeWM isn't installed (" + exe + ")");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        SetPorts();
+        SyncClaude();
         // Our fork (install/glazewm-fork.ps1, signed on this PC) starts without the taskbar, so
         // only the official build waits for Explorer.
         bool fork = false;

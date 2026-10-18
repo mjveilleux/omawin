@@ -76,7 +76,7 @@ The plan for replacing the taskbar, from the research (ManagedShell's `ExplorerH
 - [ ] Win32 layer ported from ManagedShell (Apache-2.0, NOTICE file): window tracking, shell hook, AppUserModelID grouping, icons
 - [ ] Dock UI at parity with `zebar/tokyo-islands/dock.html`: launcher buttons, open windows by workspace, focused highlighted, click to focus, hover title; themed from the palette
 - [ ] Progress bars, attention flashing, overlay badges, fullscreen detection (auto-hide the dock for fullscreen apps)
-- [ ] Pinned apps (in the user layer), right-click menu (close, pin, new window)
+- [ ] Pinned apps (in the account folder), right-click menu (close, pin, new window)
 - [ ] Window previews on hover (`DwmRegisterThumbnail`)
 - [ ] System tray in the dock (or the top bar): the fake `Shell_TrayWnd` with forwarding; the riskiest piece, so it lands last and behind a setting
 - [ ] Win+1..9 to the dock's order (keys agreed first)

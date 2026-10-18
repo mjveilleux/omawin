@@ -1,4 +1,4 @@
-# Shared by the few terminal pieces left: rename-workspace.ps1 (Alt+N), ~/omawin-work's reports
+# Shared by the few terminal pieces left: rename-workspace.ps1 (Alt+N), ~/omawin-account's reports
 # script (importing a report) and menu.ps1's jobs that run in a "menu-task" window (wallpaper, winget search):
 # the fzf look in the theme's colors.
 

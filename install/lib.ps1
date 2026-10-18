@@ -6,10 +6,10 @@
 . "$PSScriptRoot\ui.ps1"
 Initialize-InstallUI (Split-Path -Leaf $MyInvocation.PSCommandPath)
 
-# Your user layer: what's yours and not omawin's (your git identity, Claude settings, launcher
+# Your account folder: what's yours and not omawin's (your git identity, Claude settings, launcher
 # items, profile additions), in a folder of your own next to the repo (docs/work.md). Each step
 # picks up what it finds there and works without it. Where it is: bin/user-layer.ps1
-# (~/omawin-work, or OMAWIN_USER_LAYER).
+# (~/omawin-account, or OMAWIN_USER_LAYER).
 $UserLayer = & "$Repo\bin\user-layer.ps1"
 
 # Whether a person is there to answer a question (not a scheduled or piped run).

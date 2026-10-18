@@ -11,7 +11,7 @@
     on a theme switch:
 
       glazewm/config.yaml                   ->  ~/.glzr/glazewm/config.yaml (what GlazeWM reads)
-                                                plus your user layer's glazewm/config.yaml
+                                                plus your account folder's glazewm/config.yaml
                                                 (keybindings, window_rules: Merge-GlazeUser)
       themes/templates/noctty.ghostty       ->  %LOCALAPPDATA%\launcher\theme.ghostty (noctty includes it)
       themes/templates/windows-terminal.json ->  Windows Terminal's fragment folder: the scheme
@@ -66,7 +66,7 @@ function Write-Rendered([string]$Template, [string]$Target) {
     Write-Text $Target (Expand-Template ([IO.File]::ReadAllText($Template)) $Template)
 }
 
-# Your user layer's glazewm/config.yaml (docs/work.md) adds to omawin's GlazeWM config: its
+# Your account folder's glazewm/config.yaml (docs/work.md) adds to omawin's GlazeWM config: its
 # top-level keybindings: and window_rules: lists are appended to omawin's (the same YAML as
 # GlazeWM's own, theme placeholders allowed). A key you bind there is first taken off omawin's
 # binding for it, so yours replaces it; an item with commands: [] only frees its keys. The
@@ -139,7 +139,7 @@ function Merge-GlazeUser([string]$Text, [string]$UserText, [string]$UserFile) {
         $end = $start + 1
         while ($end -lt $lines.Count -and $lines[$end] -notmatch '^[A-Za-z_]') { $end++ }
         while ($end -gt $start + 1 -and ($lines[$end - 1].Trim() -eq '' -or $lines[$end - 1].TrimStart().StartsWith('#'))) { $end-- }
-        $add = @("  # From your user layer: $UserFile")
+        $add = @("  # From your account folder: $UserFile")
         foreach ($item in $items) {
             if (($item -join "`n") -match '(^|\n)\s*(- )?commands:\s*\[\s*\]') { continue }  # only frees its keys
             $add += $item
@@ -155,7 +155,7 @@ $glazeItem = Get-Item $glazeDir -Force -ErrorAction SilentlyContinue
 # The old link to this repo: removed as a link only (Remove-Item could follow it into the repo).
 if ($glazeItem -and $glazeItem.LinkType) { [IO.Directory]::Delete($glazeDir, $false) }
 $glazeText = Expand-Template ([IO.File]::ReadAllText("$Repo\glazewm\config.yaml")) "$Repo\glazewm\config.yaml"
-# Plus your user layer's keybindings and window rules (Merge-GlazeUser above). A mistake there
+# Plus your account folder's keybindings and window rules (Merge-GlazeUser above). A mistake there
 # never costs you the desktop: it's reported, and omawin's config is written without them.
 $glazeUser = Join-Path (& "$Repo\bin\user-layer.ps1") 'glazewm\config.yaml'
 if (Test-Path $glazeUser) {

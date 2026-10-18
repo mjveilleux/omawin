@@ -39,7 +39,7 @@ function Test-Link([string]$Path, [string]$Target, [string]$Name) {
 Section 'tools on PATH'
 # The core's, then those of the presets this PC picked (packages.ps1, omawin preset list).
 . "$Repo\packages.ps1"
-$UserLayer = & "$Repo\bin\user-layer.ps1"   # your user layer (docs/work.md)
+$UserLayer = & "$Repo\bin\user-layer.ps1"   # your account folder (docs/work.md)
 $chosen = @(Get-Content "$env:LOCALAPPDATA\launcher\presets.txt" -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
 $tools = @('pwsh', 'git', 'gh', 'wt', 'starship', 'zoxide', 'fzf', 'fd', 'rg', 'eza', 'bat', 'jq', 'lazygit',
 'glazewm', 'zebar', 'nvim', 'node', 'uv', 'herdr',
@@ -112,10 +112,25 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
     $gitName = git config --global --includes --get user.name
     if ($gitName) { Pass 'git identity' $gitName } else { Warn 'git identity' 'no user.name (install.ps1 -Step shell asks for it)' }
 }
-# ~/.wslconfig is your user layer's wsl/.wslconfig if it has one, else omawin's (install/other.ps1).
+# ~/.wslconfig is your account folder's wsl/.wslconfig if it has one, else omawin's (install/other.ps1).
 $wslSource = if (Test-Path "$UserLayer\wsl\.wslconfig") { "$UserLayer\wsl\.wslconfig" } else { "$Repo\wsl\.wslconfig" }
 if ((Test-Path "$HOME\.wslconfig") -and (Get-Content "$HOME\.wslconfig" -Raw) -eq (Get-Content $wslSource -Raw)) { Pass '~/.wslconfig' $wslSource }
 else { Warn '~/.wslconfig' "differs from $wslSource (run install.ps1 -LinkOnly)" }
+# Your own settings (docs/work.md): the PC's shared folder, which every account may change, and
+# this account's. Both optional; the old ~/omawin-me and ~/omawin-work mean the move hasn't run.
+$SharedLayer = & "$Repo\bin\user-layer.ps1" -Shared
+if ($SharedLayer -eq (Join-Path $HOME 'omawin-me')) { Warn 'shared settings' "still in ~/omawin-me (omawin migrate moves it to $env:ProgramData\omawin\shared)" }
+elseif (-not (Test-Path $SharedLayer)) { Warn 'shared settings' "no $SharedLayer (omawin shared -Init)" }
+elseif (-not ((Get-Acl $SharedLayer).Access | Where-Object { $_.IdentityReference -eq 'BUILTIN\Users' -and $_.FileSystemRights -match 'Modify|FullControl' })) { Warn 'shared settings' "$($SharedLayer): only its owner may change it (omawin shared -Init from that account)" }
+else {
+    # Every account reads it: nothing secret or confidential belongs there.
+    $risky = @(Get-ChildItem $SharedLayer -Recurse -File -Force -Include *.pbix, *.env, .credentials.json, *.pfx, *.key -ErrorAction SilentlyContinue | Where-Object FullName -notmatch '\\\.git\\')
+    if ($risky) { Warn 'shared settings' "every account can read $($risky[0].FullName): move it to this account's folder" }
+    else { Pass 'shared settings' $SharedLayer }
+}
+if ($UserLayer -eq (Join-Path $HOME 'omawin-work')) { Warn "this account's settings" 'still in ~/omawin-work: it moves to ~/omawin-account at the next sign-in (bin/move-settings.ps1; a running Claude Code keeps it open)' }
+elseif (Test-Path $UserLayer) { Pass "this account's settings" $UserLayer }
+else { Pass "this account's settings" "none (optional: omawin account new)" }
 
 # --- startup and helpers ------------------------------------------------------------------
 Section 'startup and helpers'
@@ -136,6 +151,17 @@ $gsig = Get-AuthenticodeSignature "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe
 if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
 elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
 else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
+# This account's ports (bin/ports.ps1): its own pair once both forks are in Program Files, which
+# omawin.exe decides at every sign-in. Saved ones that don't match what's installed now mean
+# another account changed Program Files since this one signed in.
+$glzr = Join-Path $env:ProgramFiles 'glzr.io'
+$portsReady = (Test-Path "$glzr\GlazeWM\cli\glazewm.official.exe") -and (Test-Path "$glzr\Zebar\zebar.official.exe")
+$wantPorts = & "$Repo\bin\ports.ps1"
+$havePort = [Environment]::GetEnvironmentVariable('GLAZEWM_IPC_PORT', 'User')
+if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "this account's own: GlazeWM $($wantPorts.GLAZEWM_IPC_PORT), Zebar $($wantPorts.ZEBAR_ASSET_PORT)" }
+elseif ($portsReady) { Warn 'ports' "still the shared 6123 / 6124, though the forks are in: sign out and back in (or omawin install -Step desktop)" }
+elseif ($havePort) { Warn 'ports' "set to $havePort, but the official GlazeWM or Zebar is back: sign out and back in" }
+else { Pass 'ports' 'the official 6123 / 6124 (forks not both in: one account''s desktop at a time)' }
 $stuck = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3' -ErrorAction SilentlyContinue).Settings
 if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn 'taskbar auto-hides' 'off; install.ps1 turns it on' }
 # No ads (no-ads.ps1): Windows' suggestions off, and the PC maker's upsells gone. The OEM ones
@@ -221,7 +247,7 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
     if ($action -match '^pwsh\s+(\S+)') {
         $script = [IO.Path]::GetFullPath([IO.Path]::Combine($Repo, $Matches[1].Replace('{user}', $UserLayer)))
         if (Test-Path $script) { }
-        # A script outside this repo (your user layer's, {user}/: docs/work.md) is there only on PCs that have it.
+        # A script outside this repo (your account folder's, {user}/: docs/work.md) is there only on PCs that have it.
         elseif (-not $script.StartsWith("$Repo\", [StringComparison]::OrdinalIgnoreCase)) { Pass "omawin $name" "skipped ($($Matches[1]) isn't on this PC)" }
         else { $commandProblems += "$name runs $($Matches[1]), which is missing" }
     }

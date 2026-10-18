@@ -9,7 +9,7 @@ namespace SystemMenu;
 //   - the installed apps (apps.tsv), every 10 minutes, and seconds after an install or removal
 //   - the projects (the Ubuntu ones cached in wsl-projects.txt), every 10 minutes, and seconds
 //     after a git repo appears or goes in your home folder
-//   - the reports (reports.tsv), every 2 hours, where ~/omawin-work has a reports script
+//   - the reports (reports.tsv), every 2 hours, where ~/omawin-account has a reports script
 public static class Background
 {
     public static void Start()
@@ -143,7 +143,7 @@ public static class Background
 
     // --- reports ---------------------------------------------------------------------------
     // The reports script's -Index writes reports.tsv (Pages.cs, Reports); it's run here, hidden,
-    // only where there is one (~/omawin-work).
+    // only where there is one (~/omawin-account).
     static void IndexReports()
     {
         while (true)

@@ -5,7 +5,7 @@
 
 .DESCRIPTION
     Never stops because something in the checkout was changed by hand (your own changes belong in
-    your user layer, docs/work.md, but an update mustn't break when they aren't):
+    your account folder, docs/work.md, but an update mustn't break when they aren't):
 
     - Local changes (and new files) are put in a stash named "omawin update <time>", the update
       is pulled (fast-forward only), and the stash is put back. If it doesn't go back cleanly,
@@ -67,7 +67,7 @@ function Restore-Stash([string]$Sha, [string]$Label) {
     Warn "your local changes clash with the update, so they're kept aside in the stash ""$Label"" ($ref)."
     Warn "omawin is updated without them. To see them:   git -C $Repo stash show -p --include-untracked $ref"
     Warn "to put them back (fix the conflicts it marks): git -C $Repo stash pop $ref"
-    Warn "better: move what you changed to your user layer (docs/work.md), then: git -C $Repo stash drop $ref"
+    Warn "better: move what you changed to your account folder (docs/work.md), then: git -C $Repo stash drop $ref"
     return $false
 }
 
@@ -135,7 +135,7 @@ if ($upstream) {
                         $null = Invoke-Git reset --hard --quiet $upstream
                         $updated = $true
                         Warn "your $ahead local commit(s) clash with the update; they're kept on the branch $keep, and $branch is now the update"
-                        Warn "to look: git -C $Repo log $keep   (move what you need to your user layer, docs/work.md)"
+                        Warn "to look: git -C $Repo log $keep   (move what you need to your account folder, docs/work.md)"
                     } else { Warn "couldn't keep your commits on a branch, so $branch stays as it was"; $problems++ }
                 }
             } else { Warn "the update didn't apply: $($out -join ' ')"; $problems++ }

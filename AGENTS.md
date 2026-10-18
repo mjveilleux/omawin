@@ -7,7 +7,7 @@ Read before working:
 - [`docs/architecture.md`](docs/architecture.md): how the pieces fit (keys → GlazeWM → `omawin.exe` → the menu app or a script), where state lives
 - [`docs/install.md`](docs/install.md): install steps, what's linked where, migrations
 - [`docs/themes.md`](docs/themes.md): how a theme reaches every app
-- [`docs/work.md`](docs/work.md): the user layer (`~/omawin-work`): what's one person's (identity, their own launcher items and sites, tool paths, work shares, VPN, reports) stays out of omawin and lives there
+- [`docs/work.md`](docs/work.md): your own settings, outside omawin: the PC's shared folder (`C:\ProgramData\omawin\shared`: yours in every Windows account, which every account reads and may change, so nothing secret or employer-specific) and each account's folder (`~/omawin-account`: identity, an employer's or client's launcher items and sites, tool paths, work shares, VPN, reports)
 - [`manual/`](manual/): what the user sees and uses; keep it current when behavior changes
 
 ## Rules
@@ -15,7 +15,7 @@ Read before working:
 - **Keys never change by guesswork.** Win+Space = launcher, Win+Alt+Space = system menu, Win+Enter = always the terminal, Win+F = file finder, Win+Shift+S = screenshot, Win+Shift+T = text from the screen, Win+Shift+V = clipboard, Win+M = music. The user dictates, so a key name in a request can be mistranscribed ("enter" may mean "space"); confirm before rebinding anything.
 - **Questions go in `open-questions/<slug>.md`**, one file each: the question, the context, the options, and the default you went with. Keep working with that default; delete the file once it's answered.
 - **A theme switch never changes a tracked file.** Each theme is one palette (`themes/colors/<name>.toml`, Omarchy's format); apps read it live, or get a copy rendered from a template outside the repo (`themes/render.ps1`: `glazewm/config.yaml` is a template, Windows Terminal uses the scheme `omawin` from a fragment). Never hard-code a theme color in a config: use `{{ accent }}`-style placeholders in a template, or read the palette.
-- **Private things stay private:** nothing personal goes in the repo: no names, emails, employers or clients, no paths or accounts of one PC; those go in the user layer ([`docs/work.md`](docs/work.md)), and the user layer's own notes (`~/omawin-work/README.md`, when there is one: read it) say what else is off limits on that PC, such as work repos agents must never run git in. Never commit `.pbix` files or other work documents.
+- **Private things stay private:** nothing personal goes in the repo: no names, emails, employers or clients, no paths or accounts of one PC; those go in the account's folder ([`docs/work.md`](docs/work.md)), and that folder's own notes (`~/omawin-account/README.md`, when there is one: read it) say what else is off limits on that PC, such as work repos agents must never run git in. Never commit `.pbix` files or other work documents.
 - **The public history started fresh on 2026-10-17.** The old private history is archived in a private repo; never merge or push a branch made before that date (it carries the old commits). Bring its changes over by cherry-picking or rebasing onto `origin/main`. A local pre-push hook refuses such pushes.
 - **Ask before driving the live desktop** (sending keys, clicking, opening windows to test). It's the user's working PC. GlazeWM ignores simulated keypresses anyway, so key bindings can only be tested with real keys.
 - **After a visible change, show it**: a screenshot of the result.

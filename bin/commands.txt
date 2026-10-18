@@ -11,8 +11,8 @@
 #   run <program> [args]   start a program
 #   builtin <name> [args]  done by omawin.exe itself: launch-terminal, launch-project,
 #                          launch-editor, terminal-here, terminal-warm, update-terminal, default
-# {repo} in an action is this repo's folder; a pwsh script's path may start with {user}/, your
-# user layer (docs/work.md: ~/omawin-work, or OMAWIN_USER_LAYER).
+# {repo} in an action is this repo's folder; a pwsh script's path may start with {user}/, this
+# account's own folder (docs/work.md: ~/omawin-account, or OMAWIN_USER_LAYER).
 # Words typed after the command are added to the end.
 
 launcher | The launcher (Win+Space); with a page name, that page: projects, clipboard, localhost, reports, keys, audio (the sound: speakers, what plays on them, microphones), quick (Quick settings: the switches above the sound), about | app --launcher
@@ -47,10 +47,12 @@ agent start | Start omawin's agent's herdr session in the background, with OpenC
 agent cancel | Stop listening for the agent and drop what was said | run omawin-listen.exe cancel
 agent ask | Ask omawin's agent, typed: it does it in the background (OpenCode or Claude Code, agent/config.json) it adds music and podcasts, opens issues, starts work in a worktree (docs/agent.md) | pwsh agent/ask.ps1
 
-user new | Start this Windows account's user layer (docs/work.md): git identity, empty launcher / shell files, a git repo; -Repo <name> keeps it in a private GitHub repo | pwsh bin/user-new.ps1
-claude sync | Claude Code's rules, skills, settings and plugins from your shared layer and this account's (docs/work.md); install runs it | pwsh bin/claude-sync.ps1
+account new | Start this Windows account's own folder, ~/omawin-account (docs/work.md): git identity, empty launcher / shell files, a git repo; -Repo <name> keeps it in a private GitHub repo | pwsh bin/account-new.ps1
+shared | The PC's shared folder (docs/work.md): yours in every account, which every account reads and may change; -From owner/name starts it from a backup | pwsh bin/shared.ps1
+shared backup | Commit what changed in the shared folder and push it to its private backup repo (-Repo <name> the first time) | pwsh bin/shared.ps1 backup
+claude sync | Claude Code's rules, skills, settings and plugins from the shared folder and this account's (docs/work.md); install runs it | pwsh bin/claude-sync.ps1
 
-reports index | Refresh the Reports list now (your user layer's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
+reports index | Refresh the Reports list now (your account folder's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
 
 update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal

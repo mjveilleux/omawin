@@ -1,7 +1,7 @@
 # Shared git settings. ~/.gitconfig includes this file (install.ps1 adds the include),
 # so machine-specific entries git writes itself (safe.directory, etc.) stay out of the repo.
 # Your name and email aren't here: install asks for them once and writes them to your own
-# ~/.gitconfig, or your user layer's git/gitconfig has them (docs/work.md).
+# ~/.gitconfig, or your account folder's git/gitconfig has them (docs/work.md).
 [credential "https://github.com"]
 	helper =
 	helper = !gh auth git-credential

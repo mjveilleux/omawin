@@ -46,13 +46,13 @@ Projects, Localhost, Clipboard, Audio, Quick settings, Reports, Shortcuts and Ab
   - **Space** works the selected switch: Wi-Fi or Bluetooth on or off (off takes a second press: the first says "Press again to turn Wi-Fi off", and any other key cancels), the next power mode. **← →** (or **+ −**) set a monitor's brightness, 5% a press (**Shift** for 1%), never below 5%.
   - **Enter** opens what a switch holds: the networks nearby (Enter joins one Windows has saved, on the one in use it disconnects), the paired devices, the three power modes. The lists open on the first network or device; turning the radio off is the last row.
   - Night light and do not disturb have no API Windows lets a program use, so those two open the Settings page that owns them; so does a Wi-Fi network Windows hasn't saved (the launcher's box would show the password as you typed it).
-- **Reports** (only when your user layer, `~/omawin-work`, has a reports script: [docs/work.md](../docs/work.md)): reports from your own folders and shares, newest first. A share you can't reach right now (VPN off) keeps its last list.
+- **Reports** (only when your account folder, `~/omawin-account`, has a reports script: [docs/work.md](../docs/work.md)): reports from your own folders and shares, newest first. A share you can't reach right now (VPN off) keeps its last list.
   - Picking one runs your script's import; a share that's offline asks to connect the VPN first.
   - The list refreshes in the background every 2 hours, or now with `omawin reports index`.
 - **Shortcuts**: the searchable key list (`launcher/keys.txt`).
 - **About** (`omawin about`, or **System menu › About**): fastfetch-style facts, one a row: omawin's version (its git tag or commit, and date), Windows edition and build, uptime, CPU, GPU, memory, disk, theme, GlazeWM / Zebar / noctty versions, the menu app's own memory, stay awake. **Enter** copies a row.
-- **VPN items** (`@vpn <name>`, in your user layer's `launcher/items.txt`, say): connect that Windows VPN connection. Windows' own connect box opens already dialing and connects in a couple of seconds with the saved sign-in. When it's connected, the item offers Disconnect and the bar shows **VPN** and its name.
-- **Your own items and sites**: your user layer's `launcher/items.txt` and `launcher/sites.txt` (`~/omawin-work`) add theirs after omawin's: an email profile, a work app, a VPN.
+- **VPN items** (`@vpn <name>`, in your account folder's `launcher/items.txt`, say): connect that Windows VPN connection. Windows' own connect box opens already dialing and connects in a couple of seconds with the saved sign-in. When it's connected, the item offers Disconnect and the bar shows **VPN** and its name.
+- **Your own items and sites**: your account folder's `launcher/items.txt` and `launcher/sites.txt` (`~/omawin-account`) add theirs after omawin's: an email profile, a work app, a VPN.
 
 ## File finder (Win+F)
 

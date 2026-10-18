@@ -1,11 +1,12 @@
 <#
 .SYNOPSIS
-    omawin claude sync: Claude Code's rules, skills, settings and plugins from your layers.
+    omawin claude sync: Claude Code's rules, skills, settings and plugins from the shared folder and this account's.
 
 .DESCRIPTION
-    Your Claude setup lives in the layers (docs/work.md), so every Windows account gets it:
-    the shared layer's claude/ (~/omawin-me: yours in every account), then the account's own
-    (~/omawin-work: that job's or client's), which wins where both say something.
+    Your Claude setup lives in your own folders (docs/work.md), so every Windows account gets it:
+    the PC's shared folder's claude/ (C:\ProgramData\omawin\shared: yours in every account),
+    then the account's own (~/omawin-account: that job's or client's), which wins where both say
+    something. A shared skill named in the account's claude/skills-off.txt is left out there.
 
       claude/CLAUDE.md       your rules: ~/.claude/CLAUDE.md imports each layer's (@import, so an
                              edit in the layer is live). A ~/.claude/CLAUDE.md you wrote yourself
@@ -14,7 +15,7 @@
                              same name already there is left alone and reported; links to a skill
                              no longer in a layer go. Claude.ai's synced skills aren't touched.
       claude/settings.json   merged into ~/.claude/settings.json: omawin's claude/settings.json
-                             fills in what's missing, then the shared layer's and the account's
+                             fills in what's missing, then the shared folder's and the account's
                              go on top. A key a layer sets wins;
                              lists are joined; keys only the live file has (what /config, herdr's
                              hook or a plugin install wrote) stay. {home} in a string becomes this
@@ -25,7 +26,7 @@
     Never copied: sign-ins (.credentials.json: sign in in each account, maybe as a different
     Claude account), history, and memory (it's kept per project folder by Claude Code).
 
-    install.ps1 runs this (the other step); run it after editing a layer's settings or adding a
+    install.ps1 runs this (the other step), and omawin.exe at every sign-in; run it after editing a layer's settings or adding a
     skill. Safe to run any number of times. Runs under Windows PowerShell 5.1 too.
 #>
 $ErrorActionPreference = 'Stop'
@@ -57,6 +58,11 @@ foreach ($layer in $layers) {
     $from = Join-Path $layer.Path 'claude\skills'
     if (Test-Path $from) { foreach ($d in Get-ChildItem $from -Directory) { $want[$d.Name] = $d.FullName } }
 }
+# Shared skills this account goes without: one name a line in its claude/skills-off.txt.
+$off = Join-Path (& "$PSScriptRoot\user-layer.ps1") 'claude\skills-off.txt'
+if (Test-Path $off) {
+    foreach ($name in Get-Content $off | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') }) { $want.Remove($name) }
+}
 foreach ($name in $want.Keys) {
     $link = Join-Path $skillsDir $name
     $item = Get-Item $link -Force -ErrorAction SilentlyContinue
@@ -72,7 +78,7 @@ foreach ($item in Get-ChildItem $skillsDir -Force | Where-Object LinkType -eq 'J
     $target = "$($item.Target)"
     if ($want.Keys -notcontains $item.Name -and ($roots | Where-Object { $target.StartsWith($_, 'OrdinalIgnoreCase') })) {
         [IO.Directory]::Delete($item.FullName)
-        "removed skill $($item.Name) (no longer in a layer)"
+        "removed skill $($item.Name) (no longer in a layer, or off for this account)"
     }
 }
 

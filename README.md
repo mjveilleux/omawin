@@ -34,7 +34,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 
 The one-liner above:
 1. installs git and clones omawin to `~/omawin` (it must live there);
-2. asks for your **user layer** repo, if you have one (Enter skips; see [Make it yours](#make-it-yours));
+2. sets up your own settings: the PC's **shared folder** (found if another account made it, else empty or from your private backup) and this account's folder (from a private repo, or fresh; see [Make it yours](#make-it-yours));
 3. runs `install.ps1`, which asks which presets you want, and your name and email for git.
 
 By hand instead:
@@ -86,7 +86,7 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Make it yours
 
-Don't edit `~/omawin`: `omawin update` replaces it. Your things go in your **user layer**, a folder of your own at `~/omawin-work` (keep it in a private repo if you like): your git identity, launcher items and sites, GlazeWM keys and window rules, Neovim plugins, PowerShell additions, Claude Code's rules and skills. `omawin user new` starts one. Several Windows accounts (personal, a client, a job) each get their own, plus an optional shared one. [docs/work.md](docs/work.md).
+Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folders of your own: the PC's **shared folder** (`C:\ProgramData\omawin\shared`), what's yours in every Windows account (Claude Code's rules and skills, launcher items and sites), and **this account's folder** (`~/omawin-account`), who you are in that account (git identity, an employer's or client's launcher items, GlazeWM keys, Neovim plugins, PowerShell additions). Several Windows accounts (personal, a client, a job) each run their own omawin, borrow the shared folder and keep their own sign-ins. Either folder can be backed up to a private repo: `omawin shared backup`, `omawin account new -Repo <name>`. [docs/work.md](docs/work.md).
 
 ## Updating and health
 
@@ -98,7 +98,7 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in your **use
 ## Read more
 
 - [`manual/`](manual/01-welcome.md): using it (keys, launcher, menu, screenshots, bar, themes, dictation, terminal, troubleshooting)
-- [`docs/`](docs/architecture.md): how it's built ([architecture](docs/architecture.md), [install](docs/install.md), [themes](docs/themes.md), [releases](docs/releases.md), [the user layer](docs/work.md)), and where it's going ([mission](docs/mission.md), [to do](docs/mission-todo.md))
+- [`docs/`](docs/architecture.md): how it's built ([architecture](docs/architecture.md), [install](docs/install.md), [themes](docs/themes.md), [releases](docs/releases.md), [your own settings](docs/work.md)), and where it's going ([mission](docs/mission.md), [to do](docs/mission-todo.md))
 - [`AGENTS.md`](AGENTS.md): rules and conventions for working on it, for people and coding agents (Claude reads it through `CLAUDE.md`)
 
 ## What's where

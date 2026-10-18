@@ -4,7 +4,7 @@
 Write-Step 'PowerShell profile'
 # Documents may be redirected to OneDrive; ask Windows where it really is. Documents\PowerShell is
 # a folder of its own (pwsh writes there: powershell.config.json, Install-Module's Modules), with
-# two stubs that load omawin's profile from the repo. Your own lines go in your user layer
+# two stubs that load omawin's profile from the repo. Your own lines go in your account folder
 # (docs/work.md), not in the stubs: they're rewritten here.
 $docs = [Environment]::GetFolderPath('MyDocuments')
 $psDir = "$docs\PowerShell"
@@ -17,7 +17,7 @@ if ($psItem -and $psItem.LinkType -and (@($psItem.Target)[0].TrimEnd('\') -eq "$
     New-Item -ItemType Directory -Force -Path $psDir | Out-Null
     foreach ($name in 'profile.ps1', 'Microsoft.PowerShell_profile.ps1') {
         $profilePath = ("$Repo\powershell\$name") -replace "'", "''"
-        Set-FileContent "$psDir\$name" "# Managed by omawin: loads $Repo\powershell\$name. Your own lines go in your user layer's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n"
+        Set-FileContent "$psDir\$name" "# Managed by omawin: loads $Repo\powershell\$name. Your own lines go in your account folder's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n"
     }
     # The execution policy (RemoteSigned), seeded once; pwsh rewrites it (Set-ExecutionPolicy).
     if (-not (Test-Path "$psDir\powershell.config.json")) { Copy-Item "$Repo\powershell\powershell.config.json" $psDir; Write-Note "seeded $psDir\powershell.config.json" }
@@ -109,7 +109,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
         git config --global core.excludesFile $gitIgnore
         Write-Note "core.excludesFile = $gitIgnore"
     } else { Write-Note 'ok  core.excludesFile' }
-    # Your user layer's git settings (your identity, say), included after omawin's, if it has any.
+    # Your account folder's git settings (your identity, say), included after omawin's, if it has any.
     $gitUserConfig = "$UserLayer\git\gitconfig" -replace '\\', '/'
     if ((Test-Path $gitUserConfig) -and ($includes -notcontains $gitUserConfig)) {
         git config --global --add include.path $gitUserConfig

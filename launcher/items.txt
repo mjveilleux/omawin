@@ -5,7 +5,7 @@
 #     @projects   git repos on Windows and in WSL, opened as the project's herdr session (shell | nvim | claude | opencode)
 #     @localhost  web servers running on this PC (and in WSL) + favorite sites (sites.txt)
 #     @clipboard  what you've copied, newest first; Enter pastes it (Win+Shift+V)
-#     @reports    reports from your own folders and shares (needs a reports script in your user layer: docs/work.md)
+#     @reports    reports from your own folders and shares (needs a reports script in your account folder: docs/work.md)
 #     @keys       the shortcuts cheat sheet (keys.txt)
 #     @audio      speakers and microphones, what plays on each, their volume (Win+A)
 #     @quick      Quick settings: Wi-Fi, Bluetooth, brightness, power mode, night light, do not
@@ -13,7 +13,7 @@
 #     @files      the file finder (Win+F)
 #     @menu       the system menu (Win+Alt+Space)
 #     @vpn <name> connect a Windows VPN connection (or disconnect it)
-# Your user layer's launcher/items.txt (~/omawin-work), if you have one, adds your own after these
+# Your account folder's launcher/items.txt (~/omawin-account), if you have one, adds your own after these
 # (docs/work.md).
 # Icons are Nerd Font glyphs (https://www.nerdfonts.com/cheat-sheet). Order here = order shown.
 󰆍 | Terminal | omawin.exe launch terminal

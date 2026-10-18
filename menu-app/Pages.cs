@@ -141,7 +141,7 @@ public static class Projects
 // ports something listens on (netstat), minus Windows' own and the bar / window manager, each
 // asked for its home page at once (HTTP, then HTTPS; self-signed certificates are fine); only
 // those that answer are listed, named by the page's <title>. Then the favorite sites
-// (launcher/sites.txt, then your user layer's). Opened in Chrome.
+// (launcher/sites.txt, then your account folder's). Opened in Chrome.
 public sealed record Server(int Port, string Program, int Pid, string Url, string Title);
 public sealed record Site(string Icon, string Name, string Url);
 
@@ -220,10 +220,8 @@ public static class Localhost
     {
         try
         {
-            // omawin's, then your own from your user layer (MenuModel.Work), if it has any.
-            var own = Path.Combine(MenuModel.Work, "launcher", "sites.txt");
-            return [.. File.ReadAllLines(Path.Combine(MenuModel.Repo, "launcher", "sites.txt"))
-                .Concat(File.Exists(own) ? File.ReadAllLines(own) : [])
+            // omawin's, then the shared folder's and this account's (MenuModel.Layered).
+            return [.. MenuModel.LayeredLines("sites.txt")
                 .Where(l => l.Trim().Length > 0 && !l.TrimStart().StartsWith('#'))
                 .Select(l => l.Split('|', 3).Select(p => p.Trim()).ToArray())
                 .Select(p => p.Length == 3 ? new Site(p[0], p[1], p[2]) : new Site(char.ConvertFromUtf32(0xF059F), p[0], p.Length > 1 ? p[1] : p[0]))];
@@ -250,7 +248,7 @@ public static class Localhost
 
 // --- Reports ---------------------------------------------------------------------------------
 // Files from your own folders and shares, newest first, for a reports script that isn't
-// omawin's: ~/omawin-work/reports/reports.ps1 (MenuModel.Work). Without one, the page and its
+// omawin's: ~/omawin-account/reports/reports.ps1 (MenuModel.Work). Without one, the page and its
 // launcher item are hidden. The script keeps reports.tsv fresh (-Index: "<modified unix>
 // TAB <size> TAB <tag> TAB <path>" lines; run by Background.cs) and handles a pick (-Import
 // <path>, in a small terminal).
@@ -300,10 +298,8 @@ public static class Shortcuts
     {
         try
         {
-            // omawin's, then your own from ~/omawin-work, if it has any.
-            var own = Path.Combine(MenuModel.Work, "launcher", "keys.txt");
-            return [.. File.ReadAllLines(Path.Combine(MenuModel.Repo, "launcher", "keys.txt"))
-                .Concat(File.Exists(own) ? File.ReadAllLines(own) : [])
+            // omawin's, then the shared folder's and this account's (MenuModel.Layered).
+            return [.. MenuModel.LayeredLines("keys.txt")
                 .Where(l => l.Trim().Length > 0 && !l.TrimStart().StartsWith('#'))
                 .Select(l => l.Split('|', 3).Select(p => p.Trim()).ToArray()).Where(p => p.Length == 3)
                 .Select(p => new Shortcut(p[0], p[1], p[2]))];

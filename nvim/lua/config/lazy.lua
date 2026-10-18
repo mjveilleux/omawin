@@ -28,12 +28,17 @@ for _, name in ipairs({ "lazy-lock.json", "lazyvim.json" }) do
   end
 end
 
--- Your user layer (omawin's docs/work.md: ~/omawin-work, or OMAWIN_USER_LAYER): its nvim/ folder
--- joins the runtimepath, its lua/user/plugins/*.lua are plugin specs loaded after omawin's (add
--- or override plugins, LazyVim's opts), and lua/user/init.lua runs once LazyVim is up.
+-- This account's folder (omawin's docs/work.md: ~/omawin-account, or OMAWIN_USER_LAYER; the
+-- older ~/omawin-work until it has moved): its nvim/ folder joins the runtimepath, its
+-- lua/user/plugins/*.lua are plugin specs loaded after omawin's (add or override plugins,
+-- LazyVim's opts), and lua/user/init.lua runs once LazyVim is up.
 local user_layer = vim.env.OMAWIN_USER_LAYER
 if not user_layer or user_layer == "" then
-  user_layer = vim.fn.expand("~") .. "/omawin-work"
+  user_layer = vim.fn.expand("~") .. "/omawin-account"
+  local before = vim.fn.expand("~") .. "/omawin-work"
+  if vim.fn.isdirectory(user_layer) == 0 and vim.fn.isdirectory(before) == 1 then
+    user_layer = before
+  end
 end
 local user_nvim = user_layer .. "/nvim"
 local user_spec = {}
@@ -70,7 +75,7 @@ require("lazy").setup({
   }, -- automatically check for plugin updates
   performance = {
     rtp = {
-      -- lazy.nvim resets the runtimepath; keep the user layer's nvim/ on it
+      -- lazy.nvim resets the runtimepath; keep the account folder's nvim/ on it
       paths = has_user and { user_nvim } or nil,
       -- disable some rtp plugins
       disabled_plugins = {
@@ -87,7 +92,7 @@ require("lazy").setup({
   },
 })
 
--- The user layer's lua/user/init.lua: on VeryLazy, registered after LazyVim's own handler there
+-- The account folder's lua/user/init.lua: on VeryLazy, registered after LazyVim's own handler there
 -- (which loads its keymaps), so your options and keymaps win.
 if has_user and (vim.uv or vim.loop).fs_stat(user_nvim .. "/lua/user/init.lua") then
   vim.api.nvim_create_autocmd("User", {

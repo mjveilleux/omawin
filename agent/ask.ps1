@@ -2,7 +2,7 @@
 # and answers in one line. Typed in a terminal it prints its steps and the answer.
 #
 # What runs it is a backend (agent/backends/<name>.ps1: opencode, claude), picked in
-# agent/config.json with its model, and the same allow list for all of them. Your user layer's
+# agent/config.json with its model, and the same allow list for all of them. Your account folder's
 # agent/config.json (docs/work.md), if there is one, overrides it: {"backend": "claude"}, or
 # {"backends": {"opencode": {"model": "opencode/glm-5.3-flash"}}}.
 #
