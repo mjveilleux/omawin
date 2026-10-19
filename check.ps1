@@ -78,6 +78,17 @@ else { Fail 'PowerShell profile' "$psDir\Microsoft.PowerShell_profile.ps1 doesn'
 # Files apps write live outside the repo: Neovim's plugin lockfile (nvim/lua/config/lazy.lua).
 if (Test-Path "$env:LOCALAPPDATA\nvim-data\lazy-lock.json") { Pass 'Neovim lockfile' "$env:LOCALAPPDATA\nvim-data\lazy-lock.json" }
 else { Warn 'Neovim lockfile' 'not in nvim-data yet (the first nvim start seeds it)' }
+# LazyVim's extras: each of nvim/lazyvim.json's is turned on in nvim-data's copy once, at the next
+# nvim start (nvim/lua/config/lazy.lua), and noted as offered; one you then turned off is your pick.
+# Warn about any of omawin's that's off and was never offered.
+$extrasLive = "$env:LOCALAPPDATA\nvim-data\lazyvim.json"
+if (Test-Path $extrasLive) {
+    $have = @((Get-Content $extrasLive -Raw | ConvertFrom-Json).extras)
+    $offered = @(Get-Content "$env:LOCALAPPDATA\nvim-data\omawin-extras-offered.txt" -ErrorAction SilentlyContinue)
+    $missing = @((Get-Content "$Repo\nvim\lazyvim.json" -Raw | ConvertFrom-Json).extras | Where-Object { $have -notcontains $_ -and $offered -notcontains $_ } | ForEach-Object { $_ -replace '^lazyvim\.plugins\.extras\.', '' })
+    if ($missing.Count) { Warn 'Neovim extras' "omawin's $($missing -join ', ') not on yet in $extrasLive (start nvim once)" }
+    else { Pass 'Neovim extras' "$($have.Count) on" }
+}
 # GlazeWM's config and Windows Terminal's scheme: rendered from their templates (themes/render.ps1).
 $glazeLive = "$HOME\.glzr\glazewm\config.yaml"
 if (-not (Test-Path $glazeLive)) { Fail 'GlazeWM config' 'not rendered (omawin restart glazewm)' }
