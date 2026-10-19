@@ -6,8 +6,8 @@
 -- Neovide switches as soon as the file changes, without a restart.
 local M = {}
 
-local dir = vim.fn.expand("~/omawin/themes/nvim")
-local state = vim.env.LOCALAPPDATA and (vim.env.LOCALAPPDATA .. "/launcher/nvim-theme")
+local dir = require("omawin").repo .. "/themes/nvim"
+local state = require("omawin").localappdata .. "/launcher/nvim-theme"
 
 -- The chosen theme's name; nil while the file is being rewritten (it's briefly empty).
 local function read()

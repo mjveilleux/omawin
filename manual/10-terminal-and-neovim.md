@@ -50,4 +50,6 @@ LazyVim (Neovim 0.12) plus a personal layer in `nvim/lua/`:
 - **Running code:** `Space r…` runs Lua / Python (uv / poetry aware).
 - **SQL** is formatted with sqlfluff.
 
+**In Ubuntu (WSL)** it's the same Neovim and the same config: `omawin preset add wsl` sets up Ubuntu for your account and links its `~/.config/nvim` to omawin's (Windows' theme and agent default included). Its plugins are its own, installed the first time `nvim` runs there; the markdown preview opens in Windows' browser.
+
 Treesitter builds parsers with the tree-sitter CLI and zig. Don't run Neovim from an admin shell: its plugin folders would become admin-owned.

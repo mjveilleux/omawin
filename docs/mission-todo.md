@@ -84,7 +84,7 @@ Decided 2026-10-15: no Zebar fork. The bar and dock move into the menu app (the 
 
 - [ ] Dev environments through mise (`jdx.mise`): Node / Bun, Python, Go, Rust, Ruby, Java, .NET, Elixir, Zig, PHP, one menu row each, like `omarchy-install-dev-env`
 - [ ] Databases in Docker from the menu (Postgres, MySQL, Redis), like `omarchy-install-docker-dbs`; Docker Desktop or Podman as the engine
-- [ ] WSL as an option: install a distro, link the Linux dotfiles, projects from WSL in the launcher (works today, needs to be optional and tested without WSL)
+- [x] WSL as an option: install a distro, link the Linux dotfiles, projects from WSL in the launcher (2026-10-19: the `wsl` preset, `wsl/`; WSL itself still by hand, open-questions/wsl-in-admin-step.md)
 - [ ] Defaults beyond terminal and editor: browser, coding agent (Omarchy's `a`), dictation
 - [ ] Coding agents first-class: install, sign in, a key for the default agent, project tabs (herdr), crash help
 - [ ] Fonts: a font switcher that renders into every app's config, like the theme

@@ -910,6 +910,9 @@ static class Omawin
             foreach (System.Collections.DictionaryEntry e in Environment.GetEnvironmentVariables(target))
             {
                 var name = (string)e.Key;
+                // The machine's USERNAME is SYSTEM; Windows sets the real one per sign-in, so this
+                // process's stays.
+                if (name.Equals("USERNAME", StringComparison.OrdinalIgnoreCase)) continue;
                 if (!name.Equals("Path", StringComparison.OrdinalIgnoreCase))
                     info.EnvironmentVariables[name] = Environment.ExpandEnvironmentVariables((string)e.Value);
             }
