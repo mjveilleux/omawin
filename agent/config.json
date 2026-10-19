@@ -5,7 +5,7 @@
       "model": "opencode/deepseek-v4.1-flash"
     },
     "claude": {
-      "model": ""
+      "model": "haiku"
     }
   },
   "allow": {

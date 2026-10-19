@@ -32,12 +32,12 @@ omawin agent ask <request> ─> agent/ask.ps1: the backend's Invoke-AgentBackend
 ```json
 {
   "backend": "opencode",
-  "backends": { "opencode": { "model": "opencode/deepseek-v4.1-flash" }, "claude": { "model": "" } },
+  "backends": { "opencode": { "model": "opencode/deepseek-v4.1-flash" }, "claude": { "model": "haiku" } },
   "allow": { "commands": ["omawin.exe", "omawin-music", "yt-dlp", "gh issue", "..."], "read": true, "web": true }
 }
 ```
 
-- **`backend`** picks `agent/backends/<name>.ps1`; each backend's block holds its own settings, such as the model. Your account folder's `agent/config.json` ([work.md](work.md)), if there is one, goes on top: `{"backend": "claude"}` switches backend, `{"backends": {"opencode": {"model": "opencode/glm-5.3-flash"}}}` switches model.
+- **`backend`** picks `agent/backends/<name>.ps1`; each backend's block holds its own settings, such as the model. The account's agent default (`omawin default agent claude|opencode`, the one Neovim's split opens) goes on top of the repo's pick, so one setting moves both. Your account folder's `agent/config.json` ([work.md](work.md)), if there is one, goes on top: `{"backend": "claude"}` switches backend, `{"backends": {"opencode": {"model": "opencode/glm-5.3-flash"}}}` switches model.
 - **`allow`** is what the agent may do, the same for every backend: these commands (and their arguments), reading files, the web. Everything else is refused, never asked: nobody is there to answer, so the agent says what it needed in its answer.
 - **A backend** is one function, `Invoke-AgentBackend`: it turns `allow` into its own rules, runs the request with the system prompt, calls `OnStep` for each tool call (the bar's "working: …") and returns the answer, the cost and the command that carries on with the run in a terminal. `ask.ps1` does the rest: the config, the prompt (agent/prompt.md plus what `allow` lets it do), the state, the history.
 
@@ -47,7 +47,7 @@ omawin agent ask <request> ─> agent/ask.ps1: the backend's Invoke-AgentBackend
 - OpenCode's free models (`*-free`) refuse anything but OpenCode's own agents ("free tier can only be used from within OpenCode"), so the default is a cheap Zen model: `opencode/deepseek-v4.1-flash`, about $0.002 a request.
 - Its shell tool is `shell`, and each part of a chained command is checked on its own, so the prompt asks for one plain command at a time.
 
-**Claude Code** (`backends/claude.ps1`): `claude -p` with the prompt appended, `--permission-mode dontAsk` and `allow` as `--allowedTools`. About $0.20 a request.
+**Claude Code** (`backends/claude.ps1`): `claude -p` with the prompt appended, `--permission-mode dontAsk` and `allow` as `--allowedTools`, on Haiku (`--model haiku`, the latest Haiku): about $0.01 a request and 10 s for a question.
 
 ## State (`%LOCALAPPDATA%\launcher\agent\`)
 
