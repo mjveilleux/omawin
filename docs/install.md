@@ -81,7 +81,7 @@ Configs are **live**: the apps read omawin's configs straight from this repo, so
 
 | Repo path | Live location | How |
 |---|---|---|
-| `nvim/` | `%LOCALAPPDATA%\nvim` (Neovide uses it too); `nvim/lazy-lock.json` and `nvim/lazyvim.json` only seed `%LOCALAPPDATA%\nvim-data\`, where lazy.nvim and LazyVim keep theirs (`nvim/lua/config/lazy.lua`) | junction |
+| `nvim/` | `%LOCALAPPDATA%\nvim` (Neovide uses it too); `nvim/lazy-lock.json` and `nvim/lazyvim.json` only seed `%LOCALAPPDATA%\nvim-data\`, where lazy.nvim and LazyVim keep theirs (`nvim/lua/config/lazy.lua`); an extra added to `nvim/lazyvim.json` later is still turned on there once, at the next nvim start (noted in `omawin-extras-offered.txt`, so one you then turn off stays off) | junction |
 | `neovide/` | `%APPDATA%\neovide` (only Neovide's own `config.toml`) | junction |
 | `powershell/*.ps1` | `Documents\PowerShell\`, a folder of its own: `$PROFILE` and `profile.ps1` there are two-line stubs that load the repo's; pwsh's own `powershell.config.json` (seeded once) and `Modules\` stay there | stub |
 | `windows-terminal/settings.json` | `%LOCALAPPDATA%\Packages\Microsoft.WindowsTerminal_*\LocalState\settings.json`: seeded once (`%LOCALAPPDATA%\launcher\seeded-windows-terminal` says so), then Terminal's own; seeded again only if it's gone | copied once |

@@ -57,12 +57,11 @@ neovim | Space r s / r l | run Lua file / line
 neovim | Space r p | run Python file or selection (uv / poetry aware)
 neovim | Space i s | Elixir: start IEx (iex -S mix in a Mix project)
 neovim | Space i r | Elixir: send file / selection to IEx
-neovim | Space o a | opencode: ask about cursor / selection
-neovim | Space o s | opencode: pick a prompt or command
-neovim | Space o r | opencode: review uncommitted changes
-neovim | Space o i / o c | opencode: interrupt / compact session
-neovim | Ctrl+.  /  Space o t | opencode split
-neovim | g o {motion} / g o o | send range / line to opencode
+neovim | Space a a  /  Ctrl+. | AI agent split: toggle / focus (omawin default agent)
+neovim | Space a t | agent: send this line, or the selected lines
+neovim | Space a v / a f | agent: send the selected text / the file
+neovim | Space a p | agent: pick a prompt (explain, fix, diagnostics, review…)
+neovim | Space a s / a d | agent: start another / close one
 neovim | Y Y / P P | yank whole buffer / replace it with paste
 neovim | Space w a | save all
 neovim | Tab h / Tab l | start / end of line

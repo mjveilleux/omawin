@@ -28,6 +28,36 @@ for _, name in ipairs({ "lazy-lock.json", "lazyvim.json" }) do
   end
 end
 
+-- An extra omawin adds to nvim/lazyvim.json later reaches this PC too: each of the repo's extras
+-- is turned on here once, and noted in omawin-extras-offered.txt, so one you then turn off in
+-- :LazyExtras stays off. (A PC from before this note gets every missing one back, once.)
+pcall(function()
+  local offered_file = data .. "/omawin-extras-offered.txt"
+  local offered = {}
+  for _, name in ipairs(vim.fn.filereadable(offered_file) == 1 and vim.fn.readfile(offered_file) or {}) do
+    offered[name] = true
+  end
+  local new = vim.tbl_filter(function(name)
+    return not offered[name]
+  end, vim.json.decode(table.concat(vim.fn.readfile(config .. "/lazyvim.json"), "\n")).extras)
+  if #new == 0 then
+    return
+  end
+  local live = vim.json.decode(table.concat(vim.fn.readfile(vim.g.lazyvim_json), "\n"))
+  local changed = false
+  for _, name in ipairs(new) do
+    if not vim.tbl_contains(live.extras, name) then
+      table.insert(live.extras, name)
+      changed = true
+    end
+  end
+  if changed then
+    table.sort(live.extras)
+    vim.fn.writefile(vim.split(vim.json.encode(live, { indent = "  ", sort_keys = true }), "\n"), vim.g.lazyvim_json)
+  end
+  vim.fn.writefile(new, offered_file, "a")
+end)
+
 -- This account's folder (omawin's docs/work.md: ~/omawin-account, or OMAWIN_USER_LAYER; the
 -- older ~/omawin-work until it has moved): its nvim/ folder joins the runtimepath, its
 -- lua/user/plugins/*.lua are plugin specs loaded after omawin's (add or override plugins,
@@ -55,6 +85,9 @@ require("lazy").setup({
   spec = vim.list_extend({
     -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    -- The AI agent's split (nvim/lua/plugins/ai.lua). Imported here rather than listed in
+    -- lazyvim.json, so it reaches PCs whose lazyvim.json predates it.
+    { import = "lazyvim.plugins.extras.ai.sidekick" },
     -- import/override with your plugins
     { import = "plugins" },
   }, user_spec),

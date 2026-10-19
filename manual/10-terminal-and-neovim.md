@@ -20,7 +20,7 @@ The terminal is [noctty](https://noctty.com): Ghostty's terminal core in a nativ
 
 ### Another terminal
 
-`omawin default terminal wt` makes Windows Terminal the default instead (System menu › Setup › Defaults); `omawin default terminal noctty` switches back. Everything that opens a terminal follows it. The editor works the same way: `omawin default editor nvim|neovide|code`.
+`omawin default terminal wt` makes Windows Terminal the default instead (System menu › Setup › Defaults); `omawin default terminal noctty` switches back. Everything that opens a terminal follows it. The editor works the same way: `omawin default editor nvim|neovide|code`, and so does the AI agent in Neovim: `omawin default agent opencode|claude`.
 
 Terminals don't run as admin, because GlazeWM can't tile admin windows. In Windows Terminal, use the `PowerShell (Admin)` profile when you need it.
 
@@ -44,7 +44,7 @@ LazyVim (Neovim 0.12) plus a personal layer in `nvim/lua/`:
 - **The colorscheme:** follows the desktop theme live.
 - **Neovide:** JetBrainsMono, no title bar, quick animations; `Ctrl+=` / `Ctrl+-` / `Ctrl+0` zoom.
 - **Elixir:** with Expert (the official LSP). `Space i s` starts IEx (`iex -S mix` in Mix projects); `Space i r` sends the file or selection.
-- **opencode:** `Space o…`.
+- **The AI agent:** your agent's own screen in a split on the right (LazyVim's sidekick extra). `Space a a` (or `Ctrl+.`) opens it, `Space a t` sends the line you're on, or the lines you've selected, as a reference it reads (`@file#L3-7`), and `Space a p` picks a prompt: explain, fix, diagnostics, review. Which agent opens is a default: `omawin default agent claude|opencode` (System menu › Setup › Defaults), per account; `Space a s` starts another beside it.
 - **Databases:** dadbod on `Space db`.
 - **The floating terminal:** `Ctrl+\`.
 - **Running code:** `Space r…` runs Lua / Python (uv / poetry aware).
