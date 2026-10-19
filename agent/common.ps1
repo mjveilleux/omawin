@@ -6,9 +6,16 @@ $AgentDir = Join-Path $env:LOCALAPPDATA 'launcher\agent'
 New-Item -ItemType Directory -Force $AgentDir | Out-Null
 
 # agent/config.json, with the account folder's agent/config.json on top: backend, allow and live
-# replace the repo's; a backend's own settings (its model) merge into the repo's.
+# replace the repo's; a backend's own settings (its model) merge into the repo's. Between the two,
+# the account's agent default (`omawin default agent claude`, the one Neovim's split opens) picks
+# the backend, when there's a backend of that name.
 function Get-AgentConfig {
     $config = Get-Content (Join-Path $PSScriptRoot 'config.json') -Raw | ConvertFrom-Json
+    $pick = Join-Path $env:LOCALAPPDATA 'launcher\defaults\agent'
+    if (Test-Path $pick) {
+        $name = (Get-Content $pick -Raw).Trim()
+        if ($name -and (Test-Path (Join-Path $PSScriptRoot "backends\$name.ps1"))) { $config.backend = $name }
+    }
     $mine = Join-Path (& "$AgentRepo\bin\user-layer.ps1") 'agent\config.json'
     if (Test-Path $mine) {
         $over = Get-Content $mine -Raw | ConvertFrom-Json
