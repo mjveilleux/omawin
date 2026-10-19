@@ -14,3 +14,6 @@ terminal | wt | Windows Terminal | Microsoft.WindowsTerminal | wt.exe
 editor | nvim | Neovim (in the terminal) | Neovim.Neovim | nvim.exe
 editor | neovide | Neovide | Neovide.Neovide | neovide.exe
 editor | code | VS Code | Microsoft.VisualStudioCode | code.cmd
+
+agent | opencode | OpenCode | SST.opencode | opencode.exe
+agent | claude | Claude Code | Anthropic.ClaudeCode | claude.exe

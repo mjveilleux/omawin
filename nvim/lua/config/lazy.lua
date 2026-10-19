@@ -85,6 +85,9 @@ require("lazy").setup({
   spec = vim.list_extend({
     -- add LazyVim and import its plugins
     { "LazyVim/LazyVim", import = "lazyvim.plugins" },
+    -- The AI agent's split (nvim/lua/plugins/ai.lua). Imported here rather than listed in
+    -- lazyvim.json, so it reaches PCs whose lazyvim.json predates it.
+    { import = "lazyvim.plugins.extras.ai.sidekick" },
     -- import/override with your plugins
     { import = "plugins" },
   }, user_spec),

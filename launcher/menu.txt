@@ -69,7 +69,7 @@ setup.bluetooth | 󰂯 | Bluetooth | run ms-settings:bluetooth
 setup.sound | 󰕾 | Sound | run ms-settings:sound
 setup.defaults | 󰄬 | Default apps | run ms-settings:defaultapps
 setup.startup | 󰐥 | Startup apps | run ms-settings:startupapps
-setup.default | 󰄬 | Defaults (terminal, editor)
+setup.default | 󰄬 | Defaults (terminal, editor, agent)
 setup.default.terminal | 󰆍 | Terminal
 setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty
 setup.default.terminal.wt | 󰆍 | Windows Terminal | omawin default terminal wt
@@ -77,6 +77,9 @@ setup.default.editor | 󰏫 | Editor
 setup.default.editor.nvim |  | Neovim (in the terminal) | omawin default editor nvim
 setup.default.editor.neovide |  | Neovide | omawin default editor neovide
 setup.default.editor.code | 󰨞 | VS Code | omawin default editor code
+setup.default.agent | 󰚩 | AI agent (in Neovim)
+setup.default.agent.opencode | 󰚩 | OpenCode | omawin default agent opencode
+setup.default.agent.claude | 󰚩 | Claude Code | omawin default agent claude
 setup.check | 󰄬 | Health check | task omawin check
 setup.noads | 󰀧 | No ads (Windows; Lenovo / McAfee / Adobe upsells when found) | task omawin no-ads
 
