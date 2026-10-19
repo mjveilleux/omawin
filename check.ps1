@@ -59,6 +59,11 @@ foreach ($tool in $tools | Select-Object -Unique) {
     }
     if ($cmd) { Pass $tool $found } elseif ($found) { Pass $tool "$found (not on PATH)" } else { Fail $tool 'not found' }
 }
+# The dictation preset: Win+H does nothing until Handy has a speech model (install/desktop.ps1).
+if ($chosen -contains 'dictation' -and (Test-Path "$env:APPDATA\com.pais.handy\settings_store.json")) {
+    $handyModel = (Get-Content "$env:APPDATA\com.pais.handy\settings_store.json" -Raw | ConvertFrom-Json).settings.selected_model
+    if ($handyModel) { Pass 'Handy speech model' $handyModel } else { Fail 'Handy speech model' 'none, so Win+H does nothing (install.ps1 -Step desktop)' }
+}
 # The wsl preset: this account's Ubuntu (listing distros doesn't start WSL).
 if ($chosen -contains 'wsl') {
     $env:WSL_UTF8 = '1'
