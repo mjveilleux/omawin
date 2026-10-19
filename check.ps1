@@ -59,6 +59,12 @@ foreach ($tool in $tools | Select-Object -Unique) {
     }
     if ($cmd) { Pass $tool $found } elseif ($found) { Pass $tool "$found (not on PATH)" } else { Fail $tool 'not found' }
 }
+# The wsl preset: this account's Ubuntu (listing distros doesn't start WSL).
+if ($chosen -contains 'wsl') {
+    $env:WSL_UTF8 = '1'
+    if (@(wsl.exe --list --quiet 2>$null | ForEach-Object { "$_".Trim() }) -contains 'Ubuntu') { Pass 'Ubuntu (WSL)' 'wsl -d Ubuntu' }
+    else { Fail 'Ubuntu (WSL)' 'not installed for this account (omawin preset add wsl)' }
+}
 $font = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts', 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' -ErrorAction SilentlyContinue |
         ForEach-Object { $_.PSObject.Properties.Name } | Where-Object { $_ -like 'JetBrainsMono*' })
 if ($font) { Pass 'JetBrainsMono Nerd Font' "$(@($font).Count) faces" } else { Fail 'JetBrainsMono Nerd Font' 'not installed' }

@@ -11,12 +11,12 @@ return {
   config = function()
     local _99 = require("99")
     local basename = vim.fs.basename(vim.uv.cwd())
-    local tmp = vim.env.TEMP or vim.env.TMP or "C:\\Temp"
+    local tmp = vim.env.TEMP or vim.env.TMP or vim.fs.dirname(vim.fn.tempname())
 
     _99.setup({
       logger = {
         level = _99.WARN,
-        path = tmp .. "\\" .. basename .. ".99.log",
+        path = tmp .. "/" .. basename .. ".99.log",
         print_on_error = true,
       },
       completion = {

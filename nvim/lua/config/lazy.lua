@@ -64,8 +64,8 @@ end)
 -- LazyVim's opts), and lua/user/init.lua runs once LazyVim is up.
 local user_layer = vim.env.OMAWIN_USER_LAYER
 if not user_layer or user_layer == "" then
-  user_layer = vim.fn.expand("~") .. "/omawin-account"
-  local before = vim.fn.expand("~") .. "/omawin-work"
+  user_layer = require("omawin").home .. "/omawin-account" -- Windows' home, from WSL too
+  local before = require("omawin").home .. "/omawin-work"
   if vim.fn.isdirectory(user_layer) == 0 and vim.fn.isdirectory(before) == 1 then
     user_layer = before
   end

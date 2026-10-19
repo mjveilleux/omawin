@@ -56,7 +56,7 @@ Every line, with winget's output for a failed package, also goes to `%LOCALAPPDA
 By hand, once:
 - Open a terminal and run `nvim` once: lazy.nvim installs the plugins, mason.nvim the LSPs.
 - **Handy**: open it from the tray and download a speech model (Parakeet V3 for English).
-- **WSL**: set up your distro with your own Linux dotfiles.
+- **WSL**: the `wsl` preset sets up Ubuntu for your account (below); with your own distro instead, set it up with your own Linux dotfiles.
 - **Your account folder** (if you didn't clone it before installing): `~/omawin-account` ([work.md](work.md)), then `.\install.ps1 -LinkOnly`.
 - Sign out and back in, or start GlazeWM: it starts Zebar and the menu app.
 
@@ -104,7 +104,8 @@ Anything already at a live location is moved to `<path>.backup-<timestamp>` firs
 
 ## Presets
 
-`packages.ps1` is a lean core (shell tools, the desktop, the editor and what it needs, Git, the .NET desktop runtime the menu app and the music player run on; the 1 GB SDK only where they have to be built, [releases.md](releases.md)) plus presets, opt-in groups: `python`, `node`, `go`, `elixir`, `r`, `c`, `data` (DuckDB, harlequin, sqlcmd), `typst`, `docker`, `cli-extras`, `ai-agents` (Claude Code, opencode), `music` (yt-dlp and mpv for the bar's player), `dictation` (Handy), `powerbi-fabric`.
+`packages.ps1` is a lean core (shell tools, the desktop, the editor and what it needs, Git, the .NET desktop runtime the menu app and the music player run on; the 1 GB SDK only where they have to be built, [releases.md](releases.md)) plus presets, opt-in groups: `python`, `node`, `go`, `elixir`, `r`, `c`, `data` (DuckDB, harlequin, sqlcmd), `typst`, `docker`, `cli-extras`, `ai-agents` (Claude Code, opencode), `music` (yt-dlp and mpv for the bar's player), `dictation` (Handy), `wsl`, `powerbi-fabric`.
+- `wsl`: Ubuntu in WSL for this account (`wsl/install.ps1`, then `wsl/setup.sh` inside it): the shell and Neovim tools (Neovim and tree-sitter from their releases, the rest from apt), a Linux user named after the account (its password asked for once, for sudo), `~/.config/nvim` linked to the repo's `nvim/` (`nvim/lua/omawin.lua` finds Windows' folders from there, so the theme and the agent default follow Windows'), the prompt (`bash/bashrc`), herdr for Ubuntu projects, the agents this account has on Windows, and git with Windows' sign-in and this account's identity. It needs WSL itself, which takes admin and a restart: `wsl --install --no-distribution` in an admin PowerShell first.
 - `omawin preset list` shows them, the picked ones marked; `omawin preset add <name>` picks one and installs it now; `omawin preset remove <name>` unpicks it (what it installed stays). Also in the system menu: Install > Presets.
 - The picks are per PC, in `%LOCALAPPDATA%\launcher\presets.txt`; `install.ps1` installs the core and those. The first install asks (or starts with none when nobody's there to answer).
 - `omawin check` expects the tools of the picked presets only.

@@ -6,7 +6,7 @@
 
 -- The pick in %LOCALAPPDATA%\launcher\defaults\agent, else the first agent row of bin/defaults.txt.
 local function default_agent()
-  local f = io.open(vim.env.LOCALAPPDATA .. "/launcher/defaults/agent", "r")
+  local f = io.open(require("omawin").localappdata .. "/launcher/defaults/agent", "r")
   if f then
     local name = vim.trim(f:read("*a"))
     f:close()
@@ -14,8 +14,7 @@ local function default_agent()
       return name
     end
   end
-  local repo = vim.fs.dirname((vim.uv or vim.loop).fs_realpath(vim.fn.stdpath("config")) or "")
-  for _, line in ipairs(vim.fn.readfile(repo .. "/bin/defaults.txt")) do
+  for _, line in ipairs(vim.fn.readfile(require("omawin").repo .. "/bin/defaults.txt")) do
     local name = line:match("^agent%s*|%s*([%w_-]+)")
     if name then
       return name

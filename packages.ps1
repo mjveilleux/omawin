@@ -57,6 +57,7 @@ $Presets = [ordered]@{
     'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
     'music'          = @{ Summary = "yt-dlp and mpv, for the bar's music player (music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv'); Tools = @('yt-dlp', 'mpv') }
     'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
+    'wsl'            = @{ Summary = "Ubuntu in WSL with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('ubuntu') }
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
 }
 
@@ -97,6 +98,8 @@ $ExtraInstalls = [ordered]@{
     'opencode'  = { & "$env:ProgramFiles\Git\bin\bash.exe" -lc 'curl -fsSL https://opencode.ai/install | bash' }
     'harlequin' = { uv tool install 'harlequin[odbc]' }
     'fab'       = { uv tool install ms-fabric-cli }
+    # Ubuntu for this account, set up by wsl/setup.sh (the wsl preset)
+    'ubuntu'    = { & "$Repo\wsl\install.ps1" }
 }
 $CoreExtras = @('herdr')
 
