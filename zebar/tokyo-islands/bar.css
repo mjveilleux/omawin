@@ -33,7 +33,11 @@ body {
 }
 .side { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .left { justify-self: start; }
-.middle { justify-self: center; display: flex; align-items: center; gap: 10px; }
+/* The clock stays put: what's beside it (the mic while listening, an update) takes two equal
+   columns, so one appearing widens both sides alike and the clock keeps the middle. */
+.middle { justify-self: center; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+#centerBegin { justify-self: end; }
+#centerEnd { justify-self: start; }
 .right { justify-self: end; }
 .slot { display: flex; align-items: center; gap: 2px; }
 
