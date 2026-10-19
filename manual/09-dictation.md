@@ -4,7 +4,7 @@
 
 GlazeWM catches Win+H, so Windows' own voice typing popup (which can't be hidden or restyled) never opens. Handy shows no overlay and works as tap to toggle. Its own keys are parked on Ctrl+Alt+Shift+F9/F10, out of the way.
 
-The first time, open Handy from the tray and download a speech model (Parakeet V3 for English). Everything stays on the PC.
+It needs a speech model: the install downloads Parakeet V3 (English, about 460 MB) unless you've picked one in Handy; to change it, open Handy from the tray. Everything stays on the PC. `omawin check` says when there's none, since Win+H then does nothing at all.
 
 ## Ask omawin (Ctrl+Win+H)
 

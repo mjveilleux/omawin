@@ -57,15 +57,45 @@ if (Test-Path "$handyDir\handy.exe") {
         Start-Sleep 2
         Get-Process handy -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId | Stop-Process -Force
     }
+    # A speech model: without one Win+H does nothing at all (Handy only logs "no model can
+    # transcribe it"). With none picked yet, Parakeet V3, Handy's pick for English, fetched from
+    # where Handy fetches it and checked against the SHA-256 Handy lists for it (about 460 MB,
+    # once per account). One you picked in Handy is left alone.
+    $models = "$env:APPDATA\com.pais.handy\models"
+    $model = 'parakeet-tdt-0.6b-v3-int8'
+    $picked = (Test-Path $store) -and (Get-Content $store -Raw | ConvertFrom-Json).settings.selected_model
+    if (-not $picked -and -not (Test-Path "$models\$model\encoder-model.int8.onnx")) {
+        Invoke-InstallItem 'Desktop' 'speech model (Parakeet V3)' {
+            $archive = Join-Path $env:TEMP "omawin-$model.tar.gz"
+            $ProgressPreference = 'SilentlyContinue'
+            Invoke-WebRequest 'https://blob.handy.computer/parakeet-v3-int8.tar.gz' -OutFile $archive -UseBasicParsing
+            if ((Get-FileHash $archive -Algorithm SHA256).Hash -ne '43D37191602727524A7D8C6DA0EEF11C4BA24320F5B4730F1A2497BEFC2EFA77') {
+                Remove-Item $archive; throw 'the download is not the one Handy lists (SHA-256 mismatch)'
+            }
+            New-Item -ItemType Directory -Force -Path $models | Out-Null
+            # (the archive's ._* files are macOS's leftovers)
+            & tar.exe -xzf $archive -C $models --exclude '._*'
+            if ($LASTEXITCODE -ne 0) { throw "tar couldn't unpack $archive" }
+            Remove-Item $archive
+        }
+    }
     if (Test-Path $store) {
         $j = Get-Content $store -Raw | ConvertFrom-Json; $s = $j.settings
+        # Handy reads its settings when it starts: picking the model restarts a running one.
+        $restart = $false
+        if (-not $s.selected_model -and (Test-Path "$models\$model\encoder-model.int8.onnx")) {
+            $s.selected_model = 'parakeet-tdt-0.6b-v3'
+            $running = @(Get-Process handy -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId)
+            if ($running) { $running | Stop-Process -Force; Start-Sleep 1; $restart = $true }
+        }
         $s.overlay_style = 'none'; $s.shortcut_activation = 'toggle'
         $s.bindings.transcribe.current_binding = 'ctrl+alt+shift+f9'
         $s.bindings.transcribe_with_post_process.current_binding = 'ctrl+alt+shift+f10'
         $s.autostart_enabled = $true; $s.start_hidden = $true
         $s.paste_method = 'direct'
         [IO.File]::WriteAllText($store, ($j | ConvertTo-Json -Depth 50), [Text.UTF8Encoding]::new($false))
-        Write-Note 'configured Handy; open it from the tray once to download a speech model'
+        if ($restart) { Start-Process "$handyDir\handy.exe" }
+        Write-Note "configured Handy$(if (-not $s.selected_model) { '; open it from the tray once to pick a speech model' })"
         Add-InstallItem 'Desktop' 'dictation' 'dictation (Win+H)' 'have'
     }
 } elseif ((Get-Presets) -contains 'dictation') { Write-Warn 'Handy not installed; re-run after installing it' }

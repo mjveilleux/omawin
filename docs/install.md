@@ -55,7 +55,7 @@ Every line, with winget's output for a failed package, also goes to `%LOCALAPPDA
 
 By hand, once:
 - Open a terminal and run `nvim` once: lazy.nvim installs the plugins, mason.nvim the LSPs.
-- **Handy**: open it from the tray and download a speech model (Parakeet V3 for English).
+- **Handy**: nothing; the desktop step downloads its speech model (Parakeet V3) when none is picked. Another one: open Handy from the tray.
 - **WSL**: the `wsl` preset sets up Ubuntu for your account (below); with your own distro instead, set it up with your own Linux dotfiles.
 - **Your account folder** (if you didn't clone it before installing): `~/omawin-account` ([work.md](work.md)), then `.\install.ps1 -LinkOnly`.
 - Sign out and back in, or start GlazeWM: it starts Zebar and the menu app.
