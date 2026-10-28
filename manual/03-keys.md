@@ -16,7 +16,9 @@ The full, searchable list is in the launcher: **Win+Space → Shortcuts** (`laun
 | `Win+Ctrl+Space` | next background for the current theme |
 | `Win+H` | dictate: tap to start, tap again to stop |
 | `Win+Arrows` / `Alt+H J K L` | focus a window; add `Shift` to move it |
-| `Alt+1..9` / `Alt+Shift+1..9` | go to / send window to workspace |
+| `Win+1..9` | go to workspace |
+| `Win+Shift+1..9` | send the window to a workspace and go with it |
+| `Win+Shift+Alt+1..9` | send the window to a workspace, stay here |
 | `Alt+N` | name the current workspace |
 | `Alt+F` / `Alt+Shift+Space` | fullscreen / float |
 | `F11` / `Ctrl+Enter` | fullscreen the terminal (noctty) |

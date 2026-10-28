@@ -39,8 +39,9 @@ windows | Alt+Space | cycle focus: tiled -> floating -> fullscreen
 windows | Alt+M | minimize
 windows | Alt+Shift+Q | close window
 
-workspaces | Alt+1..9 | go to workspace
-workspaces | Alt+Shift+1..9 | send window to workspace
+workspaces | Win+1..9 | go to workspace
+workspaces | Win+Shift+1..9 | send window to workspace, and go with it
+workspaces | Win+Shift+Alt+1..9 | send window to workspace, stay here
 workspaces | Alt+S / Alt+A | next / previous workspace in use
 workspaces | Alt+D | last workspace
 workspaces | Alt+Shift+A F D S | move workspace to monitor left / right / up / down

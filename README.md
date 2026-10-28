@@ -12,7 +12,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 
 ## What you get
 
-- **Tiling**: [GlazeWM](https://github.com/glzr-io/glazewm) (our [fork](https://github.com/mjveilleux/glazewm), which starts the moment you sign in). Alt+1..9 workspaces, Alt+H J K L focus.
+- **Tiling**: [GlazeWM](https://github.com/glzr-io/glazewm) (our [fork](https://github.com/mjveilleux/glazewm), which starts the moment you sign in). Win+1..9 workspaces, Alt+H J K L focus.
 - **Launcher** (`Win+Space`): your items and every app, projects, clipboard, servers on localhost, the key cheat sheet. A native app that's always running, so it opens instantly.
 - **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
@@ -72,7 +72,7 @@ There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) list
 | `Win+Enter` / `Alt+Enter` | terminal in the focused window's folder / in ~ |
 | `Win+F` · `Win+Shift+V` · `Win+A` | files · clipboard history · audio |
 | `Win+Shift+S` · `Win+Shift+T` | screenshot · text from the screen |
-| `Alt+1..9` / `Alt+Shift+1..9` | go to / send the window to a workspace |
+| `Win+1..9` / `Win+Shift+1..9` | go to / send the window to a workspace (Win+Shift+Alt: send it, stay here) |
 | `Alt+H J K L` (or `Win+Arrows`) | focus a window; add `Shift` to move it |
 | `Alt+F` · `Alt+Shift+Space` · `Alt+R` | fullscreen · float · resize mode |
 | `Alt+Shift+Q` · `Alt+Shift+R` | close the window · reload the window manager |

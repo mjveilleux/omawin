@@ -5,6 +5,10 @@
 # No first-run notification setup screen.
 onboarding = false
 
+[ui.sound]
+# No sounds when agents finish or need attention in background workspaces: the sidebar shows it.
+enabled = false
+
 [theme]
 # The terminal's own 16 colors, which noctty takes from the omawin theme: herdr follows a theme
 # switch with no colors of its own.
