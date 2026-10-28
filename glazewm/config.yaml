@@ -36,12 +36,13 @@ gaps:
     right: '10px'
     bottom: '10px'
     left: '10px'
-  # A lone window doesn't stretch edge to edge: a little margin on the sides.
+  # A lone window fills the screen like any other layout, as in Omarchy (its narrower lone
+  # window is an opt-in toggle there).
   single_window_outer_gap:
     top: '36px'
-    right: '6%'
-    bottom: '14px'
-    left: '6%'
+    right: '10px'
+    bottom: '10px'
+    left: '10px'
 
 # Window animations, after Omarchy's Hyprland ones (easeOutQuint) but quicker. They need
 # omawin's GlazeWM fork (install/glazewm-fork.ps1); the official GlazeWM ignores this section.
