@@ -1,13 +1,22 @@
 -- The colorscheme follows the desktop theme, live. The theme picker (system menu > Style >
 -- Theme, which runs themes/set-theme.ps1) writes the theme's name to
 -- %LOCALAPPDATA%\launcher\nvim-theme; its spec is ~/omawin/themes/nvim/<name>.lua
--- (Omarchy's neovim.lua for that theme: a colorscheme plugin, and LazyVim's colorscheme).
+-- (Omarchy's neovim.lua for that theme: a colorscheme plugin, and LazyVim's colorscheme), or
+-- an installed theme's in %LOCALAPPDATA%\launcher\themes\nvim (themes/theme.ps1), which wins.
 -- Every theme's plugin is installed (and loaded only when used), so a running Neovim or
 -- Neovide switches as soon as the file changes, without a restart.
 local M = {}
 
-local dir = require("omawin").repo .. "/themes/nvim"
-local state = require("omawin").localappdata .. "/launcher/nvim-theme"
+local omawin = require("omawin")
+local themes = omawin.repo .. "/themes"
+local installed = omawin.localappdata .. "/launcher/themes"
+local state = omawin.localappdata .. "/launcher/nvim-theme"
+
+-- A theme's file (e.g. "nvim/nord.lua"): the installed one, else Omarchy's.
+local function theme_file(relative)
+  local mine = installed .. "/" .. relative
+  return vim.uv.fs_stat(mine) and mine or (themes .. "/" .. relative)
+end
 
 -- The chosen theme's name; nil while the file is being rewritten (it's briefly empty).
 local function read()
@@ -51,7 +60,7 @@ function M.spec(name)
   if name == "tokyo-night" then
     return tokyonight()
   end
-  local ok, spec = pcall(dofile, dir .. "/" .. name .. ".lua")
+  local ok, spec = pcall(dofile, theme_file("nvim/" .. name .. ".lua"))
   return ok and type(spec) == "table" and spec or tokyonight()
 end
 
@@ -75,7 +84,7 @@ end
 
 -- Dark or light, as the theme is (themes/<name>.json).
 local function set_background(name)
-  local file = io.open(vim.fn.expand("~/omawin/themes/" .. name .. ".json"), "r")
+  local file = io.open(theme_file(name .. ".json"), "r")
   if file then
     local ok, json = pcall(vim.json.decode, file:read("*a"))
     file:close()
@@ -92,8 +101,19 @@ function M.lazy_specs()
     table.insert(specs, p)
     seen[plugin_name(p)] = true
   end
-  for _, file in ipairs(vim.fn.glob(dir .. "/*.lua", false, true)) do
-    for _, p in ipairs((split(M.spec(vim.fn.fnamemodify(file, ":t:r"))))) do
+  local found, theme_names = {}, {}
+  for _, dir in ipairs({ themes .. "/nvim", installed .. "/nvim" }) do
+    for _, file in ipairs(vim.fn.glob(dir .. "/*.lua", false, true)) do
+      local theme = vim.fn.fnamemodify(file, ":t:r")
+      if not found[theme] then
+        found[theme] = true
+        table.insert(theme_names, theme)
+      end
+    end
+  end
+  table.sort(theme_names)
+  for _, theme in ipairs(theme_names) do
+    for _, p in ipairs((split(M.spec(theme)))) do
       local name = plugin_name(p)
       if not seen[name] then
         seen[name] = true

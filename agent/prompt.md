@@ -41,4 +41,4 @@ Reply with the branch's name.
 
 ### The desktop
 
-Themes (`omawin.exe theme set <name>`; the names are `themes/colors/*.toml`), toggles, defaults, restarts, menus: all `omawin.exe` commands.
+Themes (`omawin.exe theme set <name>`; `omawin.exe theme list` names them, Omarchy's and installed ones; `omawin.exe theme install <git link>` adds one), toggles, defaults, restarts, menus: all `omawin.exe` commands.

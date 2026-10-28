@@ -29,7 +29,7 @@ public sealed class Theme
     public string Green { get; set; } = "#9ece6a";
     public string Yellow { get; set; } = "#e0af68";
     public string[] Gradient { get; set; } = ["#bb9af7", "#7aa2f7", "#7dcfff", "#73daca", "#9ece6a"];
-    public string[] Backgrounds { get; set; } = []; // URLs, or paths in the repo
+    public string[] Backgrounds { get; set; } = []; // URLs, paths in the repo, or an installed theme's own files
 }
 
 public static class MenuModel
@@ -73,6 +73,15 @@ public static class MenuModel
     }
     public static string InstalledFile => Path.Combine(StateDir, "installed.txt");
     public static string ThemesDir => Path.Combine(Repo, "themes");
+    // Themes installed from a git link (themes/theme.ps1), laid out like ThemesDir; one of these
+    // wins over Omarchy's own of the same name, as in Omarchy.
+    public static string InstalledThemesDir => Path.Combine(StateDir, "themes");
+    // A theme's file (e.g. "nord.json", "colors/nord.toml"): the installed one, else Omarchy's.
+    public static string ThemeFile(string relative)
+    {
+        var mine = Path.Combine(InstalledThemesDir, relative);
+        return File.Exists(mine) ? mine : Path.Combine(ThemesDir, relative);
+    }
     // The chosen theme's file name (without .json); written by themes/set-theme.ps1.
     public static string CurrentThemeFile => Path.Combine(StateDir, "theme");
 
@@ -168,15 +177,19 @@ public static class MenuModel
     {
         try
         {
-            var json = File.ReadAllText(Path.Combine(ThemesDir, name + ".json"));
+            var json = File.ReadAllText(ThemeFile(name + ".json"));
             return JsonSerializer.Deserialize<Theme>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new Theme();
         }
         catch { return name != "starship" ? LoadTheme("starship") : new Theme(); } // omawin's default theme
     }
 
+    // Omarchy's themes and installed ones, each name once.
     public static List<(string File, Theme Theme)> Themes() =>
-        Directory.Exists(ThemesDir)
-            ? Directory.GetFiles(ThemesDir, "*.json").Select(f => (Path.GetFileNameWithoutExtension(f), LoadTheme(Path.GetFileNameWithoutExtension(f))))
-                .OrderBy(t => t.Item2.Name).ToList()
-            : [];
+        new[] { ThemesDir, InstalledThemesDir }
+            .Where(Directory.Exists)
+            .SelectMany(dir => Directory.GetFiles(dir, "*.json"))
+            .Select(f => Path.GetFileNameWithoutExtension(f))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Select(name => (name, LoadTheme(name)))
+            .OrderBy(t => t.Item2.Name).ToList();
 }

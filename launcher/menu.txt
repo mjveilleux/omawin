@@ -14,7 +14,8 @@
 #   run <command>    start a program, a URL or a settings page, like items.txt
 #   omawin <command> one of omawin's commands (bin/commands.txt), hidden
 #   @<page>          one of the launcher's pages (@keys, @clipboard, @localhost, ...)
-#   themes           the theme picker (themes/*.json, applied by themes/set-theme.ps1)
+#   themes           the theme picker (themes/*.json and installed themes, applied by
+#                    themes/set-theme.ps1)
 # A ! in front of the action asks before doing it.
 
 learn | 󰧑 | Learn
@@ -48,6 +49,10 @@ quick.dnd | 󰂛 | Do not disturb | omawin toggle dnd
 style | 󰏘 | Style
 style.theme | 󰸌 | Theme | themes
 style.background | 󰸉 | Next background | omawin theme next-background
+style.themes-browse | 󰖟 | More themes (omarchy.org) | omawin theme browse
+style.themes-install | 󰏗 | Install a theme (git link) | task omawin.exe theme install
+style.themes-update | 󰚰 | Update installed themes | task omawin.exe theme update
+style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme remove
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\launcher\menu.ps1" -SetWallpaper
 style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
 style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\glazewm\config.yaml

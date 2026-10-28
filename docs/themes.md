@@ -13,7 +13,24 @@ Omarchy's themes, applied to everything at once. For picking one, see [manual/08
 | `themes/vscode/<name>.json` | the theme's own VS Code extension, when Omarchy names one |
 | `themes/vscode/<name>.color-theme.json` | otherwise, a VS Code theme made from the palette with Omarchy's template, installed as a local "Omarchy" extension |
 
-`themes\import-omarchy.ps1` (`omawin theme import`) reads an Omarchy checkout and writes all of these. Rerun it for new Omarchy themes.
+`themes\convert-theme.ps1` makes these from one Omarchy theme folder, with Omarchy's own templates (`themes/templates/omarchy`) for the files a theme doesn't ship. It reads both of Omarchy's palette formats (named colors, or the older `color0`..`color15`) and, for the oldest themes, `alacritty.toml`, filling in missing colors the way Omarchy's `omarchy-theme-color` does, and writes the full palette to `colors/<name>.toml`. Only colors are taken from a palette: they're filled into GlazeWM's and the terminal's configs.
+
+`themes\import-omarchy.ps1` (`omawin theme import`, for maintainers) updates an Omarchy checkout, copies its templates in and converts each of its themes into this repo, saying which are new. Rerun it when Omarchy adds themes.
+
+## Installed themes
+
+Like Omarchy's `omarchy theme install`, any theme made for Omarchy installs from its git link (`themes\theme.ps1`: `omawin theme install|update|remove|list|browse`; Style › Install a theme). Omarchy keeps installed themes in `~/.config/omarchy/themes`; here:
+
+| Path | What it is |
+|---|---|
+| `%LOCALAPPDATA%\launcher\themes\sources\<name>` | the theme's git clone (`theme update` pulls it) |
+| `%LOCALAPPDATA%\launcher\themes\<name>.json`, `colors\`, `nvim\`, `btop\`, `vscode\` | its files, made by `convert-theme.ps1 -Untrusted`, in the same layout as `themes/` |
+
+Every reader looks there first, then in `themes/` (`set-theme.ps1` and `render.ps1`'s `Find-ThemeFile`, the menu app's `MenuModel.ThemeFile`, `launcher/common.ps1`, `nvim/lua/live_theme.lua`), so an installed theme with one of Omarchy's names replaces it, as in Omarchy. Its wallpapers are used from the clone.
+
+As Omarchy does with installed themes, nothing that runs code is taken from them: their `neovim.lua` is replaced by one made from the palette (Neovim runs Lua) and their `vscode.json` (an extension to install) is left out; `btop.theme` keeps only its `theme[...]` color lines. The theme's name comes from the link (`omarchy-` and `-theme` dropped) and is held to `[a-z0-9_][a-z0-9._+-]*`; the link must be a network git URL (no options, local paths or transport helpers).
+
+The catalog is a web page (omarchy.org/themes), not a list a program can read, so `theme browse` opens it rather than listing it.
 
 ## Applying one
 

@@ -3,7 +3,8 @@
     Switch the whole desktop to a theme, like Omarchy's theme picker.
 
 .DESCRIPTION
-    themes/<name>.json (made from Omarchy's themes by import-omarchy.ps1) is applied to:
+    themes/<name>.json (made from Omarchy's themes by import-omarchy.ps1), or an installed theme's
+    in %LOCALAPPDATA%\launcher\themes (theme.ps1, which wins), is applied to:
       wallpaper        the theme's first background (downloaded once, kept in
                        %LOCALAPPDATA%\launcher\backgrounds)
       lock screen      the same picture (set-lockscreen.ps1), so signing in matches
@@ -61,11 +62,19 @@ $Repo = Split-Path $PSScriptRoot
 $State = Join-Path $env:LOCALAPPDATA 'launcher'
 New-Item -ItemType Directory -Force $State | Out-Null
 
+# A theme's file: an installed theme's (%LOCALAPPDATA%\launcher\themes, theme.ps1) before
+# Omarchy's own here, as Omarchy prefers a theme you installed.
+$Installed = Join-Path $State 'themes'
+function Find-ThemeFile([string]$Relative) {
+    $mine = Join-Path $Installed $Relative
+    if (Test-Path $mine) { $mine } else { Join-Path $PSScriptRoot $Relative }
+}
+
 $current = Get-Content "$State\theme" -ErrorAction SilentlyContinue
 if (-not $current) { $current = 'starship' }
 if ($NextBackground -or -not $Name) { $Name = $current }
-$file = Join-Path $PSScriptRoot "$Name.json"
-if (-not (Test-Path $file)) { throw "No theme '$Name' (themes/*.json)." }
+$file = Find-ThemeFile "$Name.json"
+if (-not (Test-Path $file)) { throw "No theme '$Name' (omawin theme list)." }
 $theme = Get-Content $file -Raw | ConvertFrom-Json
 
 # --- the colors first: what you see change at once ----------------------------------------------
@@ -126,7 +135,8 @@ if ($backgrounds) {
             Invoke-WebRequest $source -OutFile "$image.part" -UseBasicParsing
             Move-Item "$image.part" $image -Force
         }
-    } else { $image = Join-Path $Repo $source }
+    } elseif ([IO.Path]::IsPathRooted($source)) { $image = $source } # an installed theme's own
+    else { $image = Join-Path $Repo $source }
     Add-Type -Namespace Theme -Name Desktop -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(uint action, uint param, string value, uint flags);'
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' WallpaperStyle '10' # fill
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' TileWallpaper '0'
@@ -155,7 +165,7 @@ if (Test-Path $rstudio) {
     $rs = @"
 /* rs-theme-name: $rsName */
 /* rs-theme-is-dark: $dark */
-/* Written by omawin/themes/set-theme.ps1 from themes/$Name.json. */
+/* Written by omawin/themes/set-theme.ps1 from the theme $Name. */
 .ace_editor, .ace_scroller, .rstudio-themes-flat.ace_editor_theme .profvis-flamegraph,
 .rstudio-themes-flat.ace_editor_theme, .rstudio-themes-flat .ace_editor_theme {
   background-color: $($t.background); color: $($t.foreground);
@@ -201,9 +211,10 @@ if (Test-Path $rstudio) {
 # exe: the theme goes in as themes\omarchy.theme, and btop.conf picks it, with the terminal's
 # own (matching) background showing through. It's read when btop starts.
 $btopDir = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\aristocratos.btop4win*\btop4win" -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($btopDir -and (Test-Path "$PSScriptRoot\btop\$Name.theme")) {
+$btopTheme = Find-ThemeFile "btop\$Name.theme"
+if ($btopDir -and (Test-Path $btopTheme)) {
     New-Item -ItemType Directory -Force "$($btopDir.FullName)\themes" | Out-Null
-    Copy-Item "$PSScriptRoot\btop\$Name.theme" "$($btopDir.FullName)\themes\omarchy.theme" -Force
+    Copy-Item $btopTheme "$($btopDir.FullName)\themes\omarchy.theme" -Force
     $conf = "$($btopDir.FullName)\btop.conf"
     if (Test-Path $conf) {
         $text = [IO.File]::ReadAllText($conf)
@@ -271,7 +282,12 @@ $editors = @(
     @{ Name = 'vscode'; Cli = "$env:LOCALAPPDATA\Programs\Microsoft VS Code\bin\code.cmd"; Settings = "$env:APPDATA\Code\User\settings.json"; Extensions = "$HOME\.vscode\extensions" }
     @{ Name = 'positron'; Cli = "$env:ProgramFiles\Positron\bin\positron.cmd"; Settings = "$env:APPDATA\Positron\User\settings.json"; Extensions = "$HOME\.positron\extensions" }
 )
-$descriptor = Get-Content "$PSScriptRoot\vscode\$Name.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+# An installed theme never names an extension (convert-theme.ps1 leaves its vscode.json out):
+# Omarchy's own of the same name doesn't apply to it either.
+$descriptor = if ((Find-ThemeFile "$Name.json") -eq (Join-Path $PSScriptRoot "$Name.json")) {
+    Get-Content "$PSScriptRoot\vscode\$Name.json" -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json
+}
+$colorTheme = Find-ThemeFile "vscode\$Name.color-theme.json"
 foreach ($e in $editors | Where-Object { Test-Path $_.Cli }) {
     New-Item -ItemType Directory -Force $e.Extensions | Out-Null
     $label = $null
@@ -281,8 +297,8 @@ foreach ($e in $editors | Where-Object { Test-Path $_.Cli }) {
         }
         if (Test-ExtensionInstalled $e.Extensions $descriptor.extension) { $label = $descriptor.name }
     }
-    if (-not $label -and (Test-Path "$PSScriptRoot\vscode\$Name.color-theme.json")) {
-        Install-GeneratedTheme $e.Extensions "$PSScriptRoot\vscode\$Name.color-theme.json" $theme.mode
+    if (-not $label -and (Test-Path $colorTheme)) {
+        Install-GeneratedTheme $e.Extensions $colorTheme $theme.mode
         $label = 'Omarchy'
     }
     if ($label) {

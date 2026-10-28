@@ -24,7 +24,12 @@ capture text | Text from the screen (Win+Shift+T): drag over it, its text is cop
 
 theme set | Apply a theme: omawin theme set gruvbox [-Background village-square] | pwsh themes/set-theme.ps1
 theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
-theme import | Bring in Omarchy's themes (rerun for new ones) | pwsh themes/import-omarchy.ps1
+theme install | Install a theme from its git link, like Omarchy's: omawin theme install https://github.com/<someone>/omarchy-<name>-theme | pwsh themes/theme.ps1 install
+theme update | Update installed themes (git pull), or one: omawin theme update <name> | pwsh themes/theme.ps1 update
+theme remove | Remove an installed theme: omawin theme remove <name> (asks which if left out) | pwsh themes/theme.ps1 remove
+theme list | Every theme, Omarchy's and installed ones; * is the one in use | pwsh themes/theme.ps1 list
+theme browse | Omarchy's page of extra themes, to find a link to install | pwsh themes/theme.ps1 browse
+theme import | Remake this repo's themes from Omarchy's own (for omawin's maintainers; rerun for new ones) | pwsh themes/import-omarchy.ps1
 theme lockscreen | The lock screen's next background | pwsh themes/set-lockscreen.ps1 -Next
 
 terminal here | A terminal in the focused window's folder (Win+Enter) | builtin terminal-here

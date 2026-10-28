@@ -3,7 +3,11 @@ omawin includes or adapts work from these projects.
 Omarchy (https://github.com/basecamp/omarchy), MIT License,
 Copyright (c) David Heinemeier Hansson.
   - the theme palettes (themes/colors) and the btop, Neovim and VS Code theme files
-    made from them (themes/btop, themes/nvim, themes/vscode), by themes/import-omarchy.ps1
+    made from them (themes/btop, themes/nvim, themes/vscode), by themes/import-omarchy.ps1;
+    the templates they're made from (themes/templates/omarchy, unchanged); how a palette's
+    missing colors are filled in and how themes install from a git link
+    (themes/convert-theme.ps1 and theme.ps1, after omarchy-theme-color and
+    omarchy-theme-install)
   - fastfetch/logo.txt (Omarchy's icon, unchanged; see fastfetch/NOTICE)
   - the About window's sheen (menu-app/AboutWindow.xaml.cs, ported from
     omarchy-branding-about-animation)

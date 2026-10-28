@@ -34,7 +34,7 @@ public sealed class AnsiPalette
     public static AnsiPalette Load(string theme)
     {
         var p = new AnsiPalette();
-        var file = Path.Combine(MenuModel.ThemesDir, "colors", theme + ".toml");
+        var file = MenuModel.ThemeFile(Path.Combine("colors", theme + ".toml"));
         if (!File.Exists(file)) file = Path.Combine(MenuModel.ThemesDir, "colors", "starship.toml"); // omawin's default
         try
         {

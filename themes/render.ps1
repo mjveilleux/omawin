@@ -34,7 +34,12 @@ $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $State = Join-Path $env:LOCALAPPDATA 'launcher'
 if (-not $Name) { $Name = if (Test-Path "$State\theme") { (Get-Content "$State\theme" -Raw).Trim() } else { 'starship' } }
-$palette = "$PSScriptRoot\colors\$Name.toml"
+# An installed theme's files (%LOCALAPPDATA%\launcher\themes, theme.ps1) before Omarchy's own here.
+function Find-ThemeFile([string]$Relative) {
+    $mine = Join-Path $State "themes\$Relative"
+    if (Test-Path $mine) { $mine } else { Join-Path $PSScriptRoot $Relative }
+}
+$palette = Find-ThemeFile "colors\$Name.toml"
 if (-not (Test-Path $palette)) { $palette = "$PSScriptRoot\colors\gruvbox.toml" }
 
 # The palette, with the fallbacks Omarchy's templates use for keys a theme leaves out.
@@ -180,7 +185,7 @@ if (Get-Process WindowsTerminal -ErrorAction SilentlyContinue) {
 # pack's folder). The running bar and dock are told it changed (theme-watch.exe) and recolor
 # within ~0.1 s (theme.js), so a switch doesn't restart them. From themes/<name>.json, whose surface / comment / teal /
 # gradient the bar uses and colors.toml doesn't have.
-$json = "$PSScriptRoot\$Name.json"
+$json = Find-ThemeFile "$Name.json"
 if (-not (Test-Path $json)) { $json = "$PSScriptRoot\gruvbox.json" }
 $t = [IO.File]::ReadAllText($json) | ConvertFrom-Json
 $bgRgb = (1, 3, 5 | ForEach-Object { [Convert]::ToInt32($t.background.Substring($_, 2), 16) }) -join ', '

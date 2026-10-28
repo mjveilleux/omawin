@@ -17,7 +17,19 @@ From a terminal:
 omawin theme set gruvbox                        a theme
 omawin theme set gruvbox -Background village    on a background (part of its name)
 omawin theme next-background
-omawin theme import                             pick up new Omarchy themes
+omawin theme list                               every theme; * is the one in use
 ```
+
+## More themes
+
+Beyond Omarchy's own, any theme made for Omarchy installs from its git link, as in Omarchy: find one on [Omarchy's extra themes page](https://omarchy.org/themes/) (Style › More themes), then Style › Install a theme and paste its link, or:
+
+```
+omawin theme install https://github.com/<someone>/omarchy-<name>-theme
+omawin theme update                             every installed theme, from its repo
+omawin theme remove <name>
+```
+
+It's applied at once and shows in Style › Theme with the others, everywhere Omarchy's do. An installed theme with the name of one of Omarchy's replaces it until you remove it. An installed theme can't run anything: its colors and wallpapers are used, but its own Neovim and VS Code settings are made from its colors instead (Omarchy does the same).
 
 Starship, on its starbase background, is the default; a new machine starts with it. How it works: [docs/themes.md](../docs/themes.md).
