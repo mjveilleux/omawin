@@ -35,6 +35,9 @@ foreach ($fork in 'glazewm-fork', 'zebar-fork') {
         Invoke-InstallItem 'Desktop' "omawin's $name" { & "$Repo\install\$fork.ps1" }
     }
 }
+# Window animations snapshot windows as they move: Windows' privacy switch for capturing without
+# a border, on, or each window flashes a yellow outline (install/capture-borderless.ps1).
+Invoke-InstallItem 'Desktop' 'window snapshots without a border' { & "$Repo\install\capture-borderless.ps1" }
 # This account's own ports (bin/ports.ps1), once both forks are in: other accounts signed in
 # on the PC have theirs. They take effect at the next sign-in.
 Invoke-InstallItem 'Desktop' "this account's ports" { & "$Repo\bin\ports.ps1" -Set }
