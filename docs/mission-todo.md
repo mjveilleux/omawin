@@ -44,7 +44,7 @@ Personal things move to the owner's own user layer (today `~/omawin-work`, which
 ## 3. Window manager (GlazeWM fork, toward Hyprland)
 
 - [ ] Scratchpad / special workspace (Omarchy's Super+S): a hidden workspace and a toggle, in the fork or through IPC
-- [ ] Window animations (move, resize, workspace switch), off by default to keep it light
+- [ ] Window animations: new windows fade in where they tile, the others slide (snapshots, Omarchy's easeOutQuint, quicker). Built 2026-10-28 on upstream's `animations-test` (fork branch `claude/smooth-window-animations`), on in `glazewm/config.yaml`; not yet tried on a PC or released. Workspace switches stay instant, as in Omarchy
 - [ ] Window groups / tabbed containers (Omarchy's Super+G)
 - [ ] Layout cycling, pop-out (float and center), restore sizes
 - [ ] Corner style and transparency toggles in the menu (GlazeWM already supports both)
