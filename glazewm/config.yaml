@@ -44,22 +44,22 @@ gaps:
     bottom: '10px'
     left: '10px'
 
-# Window animations, Omarchy's Hyprland ones. They need omawin's GlazeWM fork
-# (install/glazewm-fork.ps1); the official GlazeWM ignores this section. Like Hyprland, they move
-# the real windows, live: windows glide to their new place ('move'), and a new window grows from
-# 87% of its size while fading in ('popin'), together with the others making room. Workspace
-# switches stay instant, as in Omarchy.
+# Window animations. They need omawin's GlazeWM fork (install/glazewm-fork.ps1); the official
+# GlazeWM ignores this section. A new window fades in where it tiles instead of first showing
+# where the app put it; the windows making room for it slide there. Workspace switches stay
+# instant, as in Omarchy. ('move' and 'popin' animate the real windows instead, as Hyprland
+# does, but on Windows apps can't redraw fast enough while they resize, so they judder.)
 animations:
   window_move:
-    effect_type: 'move'
-    duration_ms: 379
+    effect_type: 'slide'
+    duration_ms: 200
     easing: 'ease_out_quint'
     # Smaller moves (a border, a pixel of rounding) just jump.
     trigger_threshold: '10px'
   window_open:
-    effect_type: 'popin'
-    duration_ms: 410
-    easing: 'ease_out_quint'
+    effect_type: 'fade'
+    duration_ms: 200
+    easing: 'ease_out_cubic'
 
 window_effects:
   focused_window:
