@@ -13,7 +13,7 @@ namespace SystemMenu;
 // leaves SystemMenu's windows alone: glazewm/config.yaml). Its widgets sit in bar.json's five
 // places as Zebar's bar.html lays them out: left, then the clock's three in the middle (the clock
 // kept centred however wide what's beside it is), then right.
-public sealed unsafe class BarWindow : Window
+public sealed unsafe partial class BarWindow : Window
 {
     public const int Height = 26;
     public const string WindowTitle = "omawin bar"; // omawin.exe's strip waits for a window of this name

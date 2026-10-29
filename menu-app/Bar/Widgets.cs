@@ -54,7 +54,7 @@ public abstract class BarWidget
 
 // A button-sized cell, as bar.css's: 26 px high, at least 27 wide (Omarchy's icon slot), the
 // theme's text, a faint highlight under the mouse. Click, right click and the wheel are its own.
-public sealed class Cell : Grid
+public sealed partial class Cell : Grid
 {
     public readonly TextBlock Icon = new() { FontFamily = BarWidget.Mono, FontSize = 13, VerticalAlignment = VerticalAlignment.Center };
     public readonly TextBlock Text = new() { FontFamily = BarWidget.Mono, FontSize = 12, VerticalAlignment = VerticalAlignment.Center };

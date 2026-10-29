@@ -34,6 +34,15 @@ public static class QuickSettingsSelfTest
         catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
     }
 
+    // `SystemMenu.exe --snip-selftest`: the screenshot tool's own (Snip.SelfTest), printed the same way.
+    public static int RunSnip()
+    {
+        if (!AttachConsole(-1)) AllocConsole();
+        var output = new StreamWriter(Console.OpenStandardOutput(), Encoding.UTF8) { AutoFlush = true };
+        try { output.Write(Snip.SelfTest().GetAwaiter().GetResult()); return 0; }
+        catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
+    }
+
     static void Report(TextWriter w)
     {
         w.WriteLine("omawin quick settings — self test (read only)");

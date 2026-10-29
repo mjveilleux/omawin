@@ -84,6 +84,7 @@ public static class Program
         // The self test is read only and must run whatever else is running: it is done before the
         // single-copy check, so it is never handed to a running copy (which couldn't print).
         if (args.Contains("--qs-selftest")) return QuickSettingsSelfTest.Run();
+        if (args.Contains("--snip-selftest")) return QuickSettingsSelfTest.RunSnip();
 
         Trace("main");
         mutex = new Mutex(true, MutexName, out bool first);

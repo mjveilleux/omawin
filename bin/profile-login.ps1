@@ -50,7 +50,7 @@ if (Test-Path $traceLog) {
     $nowTicks = [Diagnostics.Stopwatch]::GetTimestamp(); $now = Get-Date
     $labels = @{ 'omawin explorer-ready' = 'taskbar ready (omawin)'; 'omawin glazewm-started' = 'GlazeWM started (omawin)'
         'omawin zebar-started' = 'bar started (omawin)'; 'omawin zebar-serving' = 'bar up: its widgets load'
-        'omawin zebar-exited' = 'bar exited at start (omawin)'; 'omawin zebar-fallback' = 'bar: handed to zebar/start.ps1'; 'menu main' = 'menu app running its code'; 'menu ready' = 'menu app ready' }
+        'omawin zebar-exited' = 'bar exited at start (omawin)'; 'omawin bar-native-up' = 'bar up (native, the menu app)'; 'omawin strip-shown' = 'strip shown (omawin)'; 'omawin zebar-fallback' = 'bar: handed to zebar/start.ps1'; 'menu main' = 'menu app running its code'; 'menu ready' = 'menu app ready' }
     # The counter starts again at every boot: only marks after the last time it went back by more
     # than a minute (and none from after now) are from this boot. Some marks are written late with
     # an earlier time (a process's creation), which goes back by far less.

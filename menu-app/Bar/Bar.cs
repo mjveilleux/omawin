@@ -200,9 +200,19 @@ public static class Bar
             {
                 try
                 {
-                    var profile = Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile();
-                    ethernet = profile != null && !profile.IsWlanConnectionProfile && profile.NetworkAdapter?.IanaInterfaceType == 6;
-                    wifi = QuickSettings.Wifi();
+                    // The connection itself, not Quick settings' Wi-Fi read: its network's name
+                    // needs location consent on Windows 11, so it can say "not connected" while
+                    // you are. Signal bars (0..5) are there without it; the name only with it.
+                    var profile = RealLink();
+                    ethernet = profile != null && !profile.IsWlanConnectionProfile;
+                    if (profile is { IsWlanConnectionProfile: true })
+                    {
+                        string? name = null;
+                        try { name = profile.WlanConnectionProfileDetails?.GetConnectedSsid(); } catch { }
+                        if (string.IsNullOrEmpty(name)) name = profile.ProfileName;
+                        wifi = new WifiState(true, true, string.IsNullOrEmpty(name) ? "Wi-Fi" : name, (profile.GetSignalBars() ?? 5) * 20, null);
+                    }
+                    else wifi = null;
                 }
                 catch (Exception ex) { App.Log(ex); }
                 ui?.TryEnqueue(Push);
@@ -221,6 +231,21 @@ public static class Bar
             }
         }) { IsBackground = true, Name = "bar updates" }.Start();
         new Thread(VoiceMeter) { IsBackground = true, Name = "bar voice" }.Start();
+    }
+
+    // The link the internet goes over: past a VPN or a virtual adapter (Tailscale, WSL's) to the
+    // Wi-Fi or ethernet under it, as Zebar's network widget did. Null when there's none.
+    static Windows.Networking.Connectivity.ConnectionProfile? RealLink()
+    {
+        static bool Real(Windows.Networking.Connectivity.ConnectionProfile p) =>
+            p.IsWlanConnectionProfile || p.NetworkAdapter?.IanaInterfaceType == 6; // Wi-Fi, or ethernet
+        var internet = Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile();
+        if (internet != null && Real(internet)) return internet;
+        var all = Windows.Networking.Connectivity.NetworkInformation.GetConnectionProfiles();
+        for (int i = 0; i < all.Count; i++) // by index: WinRT lists can't always be enumerated here
+            if (Real(all[i]) && all[i].GetNetworkConnectivityLevel() is Windows.Networking.Connectivity.NetworkConnectivityLevel.InternetAccess
+                or Windows.Networking.Connectivity.NetworkConnectivityLevel.ConstrainedInternetAccess) return all[i];
+        return null;
     }
 
     static int UpdatesWaiting()

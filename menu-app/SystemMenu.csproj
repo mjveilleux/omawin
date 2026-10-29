@@ -46,25 +46,17 @@
     <!-- Omarchy's icon font (its logo is the native bar's menu button), the same file Zebar's bar uses. -->
     <Content Include="..\zebar\tokyo-islands\omarchy.ttf" CopyToOutputDirectory="PreserveNewest" Link="omarchy.ttf" />
   </ItemGroup>
-  <!-- build.ps1 -Aot: one native program (Native AOT), to see what it does for a start at sign-in
-       (the bar is to live here, docs/native-bar.md). WinForms can't be compiled that way, so
-       for now that build has no screenshot overlay (Aot/SnipStub.cs stands in for Snip.cs). -->
+  <!-- build.ps1 -Aot: one native program (Native AOT), so it's up seconds sooner at sign-in (the
+       bar lives here, docs/native-bar.md). The same code as the normal build. -->
   <PropertyGroup Condition="'$(OmawinAot)' == 'true'">
     <PublishAot>true</PublishAot>
     <PublishReadyToRun>false</PublishReadyToRun>
     <SelfContained>true</SelfContained>
-    <DefineConstants>$(DefineConstants);OMAWIN_AOT</DefineConstants>
   </PropertyGroup>
-  <ItemGroup Condition="'$(OmawinAot)' == 'true'">
-    <Compile Remove="Snip.cs" />
+  <ItemGroup>
+    <!-- GDI+ for the screenshot overlay's drawing (Snip.cs, plain Win32 windows) and the About
+         sheet's PNG; not WinForms, which can't be compiled as one native program. -->
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(OmawinAot)' != 'true'">
-    <Compile Remove="Aot\**" />
-    <!-- The screenshot overlay (Snip.cs) is a plain WinForms window; referenced as a framework
-         only, since UseWindowsForms would also switch on WPF's XAML build, which clashes with
-         WinUI's. -->
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
