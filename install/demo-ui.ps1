@@ -74,7 +74,7 @@ try {
         'no-ads'  = @('ok  Windows suggestions and promos off', '+Windows|ads and suggestions off|done', 'ok  Copilot off the taskbar', '+Windows|Copilot off the taskbar|done')
         'shell'   = @('>PowerShell profile', 'wrote Documents\PowerShell\profile.ps1', '+Settings|profile.ps1|done', '+Settings|Microsoft.PowerShell_profile.ps1|done', '>Windows Terminal', 'seeded its settings', '+Settings|Windows Terminal|done', '>noctty', '+Settings|config.ghostty|done', '>starship', 'ok  STARSHIP_CONFIG', '+Settings|starship prompt|done', '+Settings|fastfetch|done', '+Settings|herdr config|done', '>git', '+Settings|git config|done', '!no git email for this account yet: omawin account new sets it', '>Git Bash', '+Settings|.bashrc|done', '+Settings|.bash_profile|done')
         'desktop' = @('>GlazeWM + Zebar', 'ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml', '+Settings|GlazeWM config|done', '+Settings|zebar|done', '+Desktop|GlazeWM at sign-in|done', "GlazeWM fork v3.10.1-omawin.8 (signed on this PC)", "+Desktop|omawin's GlazeWM|done", 'Zebar fork v3.3.1-omawin.2', "+Desktop|omawin's Zebar|done", "ports for this account: GlazeWM 24002, Zebar 24003", "+Desktop|this account's ports|done", '>Handy (dictation on Win+H)', 'configured Handy', '+Desktop|dictation (Win+H)|done')
-        'helpers' = @('>omawin and the helpers', 'omawin.exe and the bar helpers from release v0.1.5', '+Tools|omawin.exe|done', '+Tools|btop|done', '>noctty', '+Tools|noctty|done', '>Win+Alt+Space system menu', 'from release v0.1.5', '+Tools|system menu|done', '>Music player (the bar)', 'from release v0.1.5', '+Tools|music player|done')
+        'helpers' = @('>omawin and the helpers', 'omawin.exe and the bar helpers from release v0.1.5', '+Tools|omawin.exe|done', '>noctty', '+Tools|noctty|done', '>Win+Alt+Space system menu', 'from release v0.1.5', '+Tools|system menu|done', '>Music player (the bar)', 'from release v0.1.5', '+Tools|music player|done')
         'look'    = @('>Windows look', 'theme: starship', '+Desktop|theme|done', 'ok  lock screen rotates on unlock', '+Desktop|lock screen|done', 'taskbar set to auto-hide', '+Desktop|taskbar hides|done')
         'other'   = @('>WSL', 'wrote ~/.wslconfig', '+Settings|.wslconfig|done', '>Claude Code', 'ok  rules: 2 folder(s) imported', 'ok  settings merged', '+Settings|Claude Code|done')
     }
@@ -85,7 +85,7 @@ try {
             $all = @(@('Microsoft.PowerShell', 9, 1), @('Microsoft.WindowsTerminal', 4, 0), @('Git.Git', 0, 1), @('GitHub.cli', 5, 1), @('Starship.Starship', 3, 0),
                 @('ajeetdsouza.zoxide', 2, 0), @('junegunn.fzf', 2, 0), @('sharkdp.fd', 2, 0), @('BurntSushi.ripgrep.MSVC', 3, 0), @('eza-community.eza', 2, 0),
                 @('sharkdp.bat', 3, 0), @('jqlang.jq', 1, 0), @('JesseDuffield.lazygit', 3, 0), @('Fastfetch-cli.Fastfetch', 3, 0), @('glzr-io.glazewm', 5, 1),
-                @('glzr-io.zebar', 4, 1), @('aristocratos.btop4win', 3, 0), @('Oven-sh.Bun', 4, 0), @('Neovim.Neovim', 5, 1), @('Neovide.Neovide', 4, 1),
+                @('glzr-io.zebar', 4, 1), @('Oven-sh.Bun', 4, 0), @('Neovim.Neovim', 5, 1), @('Neovide.Neovide', 4, 1),
                 @('tree-sitter.tree-sitter-cli', 2, 0), @('zig.zig', 7, 0), @('OpenJS.NodeJS.LTS', 5, 1), @('astral-sh.uv', 2, 0), @('Microsoft.DotNet.DesktopRuntime.9', 6, 1))
             $queue = New-Object Collections.ArrayList
             foreach ($p in $all) {

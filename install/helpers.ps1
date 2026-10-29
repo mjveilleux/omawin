@@ -1,4 +1,4 @@
-# install.ps1 step: omawin and the other small exes in ~/.local/bin, btop, noctty, the menu app
+# install.ps1 step: omawin and the other small exes in ~/.local/bin, noctty, the menu app
 # and the music player.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
@@ -10,17 +10,6 @@ $bin = "$HOME\.local\bin"
 New-Item -ItemType Directory -Force -Path $bin | Out-Null
 if (Add-UserPath $bin -Prepend) { Write-Note "added $bin to PATH" }
 Invoke-InstallItem 'Tools' 'omawin.exe' { & "$Repo\bin\install-binaries.ps1" -What helpers }
-# `btop` (btop4win, the task manager), like on Linux: a shim in ~/.local/bin, which is on
-# the PATH GlazeWM and the launcher already have (winget's own PATH entry needs a sign-out).
-$btop = Get-ChildItem "$env:LOCALAPPDATA\Microsoft\WinGet\Packages\aristocratos.btop4win*\btop4win\btop4win.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($btop) {
-    $shim = "@`"$($btop.FullName)`" %*"
-    $had = (Test-Path "$bin\btop.cmd") -and (Get-Content "$bin\btop.cmd" -Raw).Trim() -eq $shim
-    Set-Content "$bin\btop.cmd" $shim -Encoding ascii
-    Write-Note "ok  btop -> $($btop.FullName)"
-    Add-InstallItem 'Tools' 'btop' 'btop' $(if ($had) { 'have' } else { 'done' })
-}
-else { Write-Warn 'btop4win not installed (packages.ps1); no btop'; Add-InstallItem 'Tools' 'btop' 'btop' 'fail' }
 
 Write-Step 'noctty'
 # The default terminal, per-user (bin/noctty.ps1; `omawin update terminal` takes a newer one).

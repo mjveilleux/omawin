@@ -37,6 +37,6 @@ The record at the right of the bar is a music, podcast and radio player. It wear
 
 ## Task manager
 
-btop (btop4win, by btop's author): from the launcher, or `btop` in a shell. It follows the theme from its next start. Windows' own Task Manager is in the launcher too.
+Windows' Task Manager, from the launcher. btop (btop4win) isn't installed any more; System menu › Install › Tools offers it, and once there it follows the theme from its next start.
 
 If the bar is missing or blank: `omawin restart zebar` (System menu › Update › Restart › Zebar).

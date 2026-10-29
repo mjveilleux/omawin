@@ -26,7 +26,6 @@
 󰕾 | Audio | @audio
 󰊯 | Chrome | chrome
 󰉋 | File Explorer | explorer
-󰨇 | Task manager (btop) | omawin.exe launch terminal --title btop -- btop.cmd
 󰓅 | Task Manager (Windows) | taskmgr
 󰒓 | Quick settings | @quick
 󰏓 | Packages | @packages

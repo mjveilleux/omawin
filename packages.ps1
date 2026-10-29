@@ -24,7 +24,6 @@ $WingetPackages = @(
     # desktop
     'glzr-io.glazewm'               # tiling window manager
     'glzr-io.zebar'                 # the top bar and the dock
-    'aristocratos.btop4win'         # task manager (btop), from the dock and the launcher
     'Oven-sh.Bun'                   # omawin's JavaScript runtime
 
     # editor

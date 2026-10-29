@@ -43,7 +43,7 @@ $UserLayer = & "$Repo\bin\user-layer.ps1"   # your account folder (docs/work.md)
 $chosen = @(Get-Content "$env:LOCALAPPDATA\launcher\presets.txt" -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
 $tools = @('pwsh', 'git', 'gh', 'wt', 'starship', 'zoxide', 'fzf', 'fd', 'rg', 'eza', 'bat', 'jq', 'lazygit',
 'glazewm', 'zebar', 'nvim', 'node', 'uv', 'herdr',
-'omawin', 'voice-meter', 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch', 'btop', 'omawin-music')
+'omawin', 'voice-meter', 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch', 'omawin-music')
 foreach ($name in $chosen) {
     if ($Presets.Contains($name)) { $tools += @($Presets[$name].Tools | Where-Object { $_ }) }
     else { Warn "preset $name" "picked, but packages.ps1 has no such preset (omawin preset remove $name)" }
