@@ -57,14 +57,15 @@ $Presets = [ordered]@{
     'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
     'music'          = @{ Summary = "yt-dlp and mpv, for the bar's music player (music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv'); Tools = @('yt-dlp', 'mpv') }
     'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
-    'wsl'            = @{ Summary = "Ubuntu in WSL with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('ubuntu') }
+    'wsl'            = @{ Summary = "Linux in WSL, Arch (Omarchy's packages) or Ubuntu, with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('linux') }
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
 }
 
 # Packages that install for the whole PC (into Program Files, with Windows' admin prompt each).
 # install.ps1 hands them to its one admin step (install/admin.ps1) instead, which installs them
-# all after a single prompt; the rest install for this account alone. A package missing here only
-# costs its own prompt; one listed that has no whole-PC installer falls back to this account's.
+# all after a single prompt; the rest install for this account alone. A package missing here may
+# raise a prompt of its own; one listed that has no whole-PC installer falls back to this
+# account's. Declined, the listed ones install for this account where they can (--scope user).
 $WholePC = @(
     'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'glzr-io.zebar', 'Neovim.Neovim',
     'Neovide.Neovide', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.DesktopRuntime.9',
@@ -98,8 +99,10 @@ $ExtraInstalls = [ordered]@{
     'opencode'  = { & "$env:ProgramFiles\Git\bin\bash.exe" -lc 'curl -fsSL https://opencode.ai/install | bash' }
     'harlequin' = { uv tool install 'harlequin[odbc]' }
     'fab'       = { uv tool install ms-fabric-cli }
-    # Ubuntu for this account, set up by wsl/setup.sh (the wsl preset)
-    'ubuntu'    = { & "$Repo\wsl\install.ps1" }
+    # This account's Linux in WSL (omawin default linux), set up by wsl/setup.sh: the wsl preset.
+    # WSL itself comes from the one admin prompt; just installed, it works after a restart, and
+    # the setup then finishes at the next sign-in (Get-WslRestart: install/admin.ps1, bin/preset.ps1).
+    'linux'     = { & "$Repo\wsl\install.ps1" -RestartPending:$(if (Get-Command Get-WslRestart -ErrorAction SilentlyContinue) { Get-WslRestart } else { $false }) }
 }
 $CoreExtras = @('herdr')
 

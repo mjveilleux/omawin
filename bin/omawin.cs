@@ -307,15 +307,18 @@ static class Omawin
         }
         var pick = ofKind.FirstOrDefault(c => c.Name == args[1]);
         if (pick == null) return Fail("no " + args[0] + " \"" + args[1] + "\"; the choices: " + string.Join(", ", ofKind.Select(c => c.Name)));
-        if (Find(pick.Program) == null)
+        // A Linux is there when WSL has the distro; anything else when its program is found.
+        var linux = args[0] == "linux";
+        Func<bool> installed = () => linux ? DistroRegistered(pick.Program) : Find(pick.Program) != null;
+        if (!installed())
         {
             // Install it where you can watch: here in a terminal, or in a small one from a key.
             if (!InTerminal) return LaunchTerminal(new[] { "--title", "menu-task", "--", "pwsh", "-NoLogo", "-NoExit", "-Command", "omawin default " + args[0] + " " + pick.Name });
             Say("installing " + pick.Label);
             var code = pick.Winget.EndsWith(".ps1")
-                ? Start("pwsh", "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, pick.Winget.Replace('/', '\\'))))
+                ? Start("pwsh", "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, pick.Winget.Replace('/', '\\'))) + (linux ? " -Linux " + pick.Name : ""))
                 : Start("winget", "install --id " + pick.Winget + " --exact --accept-source-agreements --accept-package-agreements");
-            if (code != 0 || Find(pick.Program) == null) return Fail(pick.Label + " didn't install; the default stays " + Current(args[0]).Name);
+            if (code != 0 || !installed()) return Fail(pick.Label + " didn't install; the default stays " + Current(args[0]).Name);
         }
         Directory.CreateDirectory(Path.GetDirectoryName(DefaultFile(args[0])));
         File.WriteAllText(DefaultFile(args[0]), pick.Name);
@@ -324,7 +327,25 @@ static class Omawin
     }
 
     // --- launch: a terminal, a project, an editor, in whichever is the default -------------
-    const string Distro = "Ubuntu";
+    // The Linux in WSL that --wsl opens: the pick of `omawin default linux` (its WSL name).
+    static string Distro { get { var c = Current("linux"); return c != null ? c.Program : "archlinux"; } }
+
+    // Whether WSL has a distro of that name for this account (its registry, so WSL isn't started).
+    static bool DistroRegistered(string name)
+    {
+        try
+        {
+            using (var lxss = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss"))
+            {
+                if (lxss == null) return false;
+                foreach (var id in lxss.GetSubKeyNames())
+                    using (var d = lxss.OpenSubKey(id))
+                        if (d != null && string.Equals(d.GetValue("DistributionName") as string, name, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+        }
+        catch (System.Security.SecurityException) { }
+        return false;
+    }
 
     class Launch { public string Dir, Title; public bool Wsl; public string[] Command = new string[0]; }
 
@@ -410,7 +431,7 @@ static class Omawin
     // and it keeps sessions running with no window, so agents carry on and reopening the project
     // reattaches). A session that isn't running is started headless and, if it comes up empty,
     // given a tab per launcher/project-tabs.txt line before the window opens; then a noctty
-    // window attaches to it. Ubuntu projects use the herdr in WSL, the same way.
+    // window attaches to it. Linux projects (WSL) use the herdr there, the same way.
 
     // A program on the PATH a new sign-in would have (herdr's installer puts a versioned folder
     // there, so the PATH omawin inherited can be out of date).
@@ -460,7 +481,7 @@ static class Omawin
         return NocttyWindow(noctty, new Launch { Dir = l.Dir, Wsl = l.Wsl, Title = session, Command = attach });
     }
 
-    // herdr's arguments as a command line for `file`: herdr itself on Windows; in Ubuntu, wsl.exe
+    // herdr's arguments as a command line for `file`: herdr itself on Windows; in Linux, wsl.exe
     // running it through a login shell (~/.local/bin, where herdr lives, is only on a login
     // shell's PATH), in the project folder when `inFolder`.
     static List<string> HerdrArgs(Launch l, string[] args, bool inFolder)
@@ -552,7 +573,7 @@ static class Omawin
     }
 
     // noctty: a plain shell is a new window of the running instance (+new-window: fast, no
-    // start-up); anything that runs a command (an Ubuntu shell, a project's nvim) is a window
+    // start-up); anything that runs a command (a Linux shell, a project's nvim) is a window
     // of its own process, since the running one refuses commands from outside by design.
     static int NocttyWindow(string exe, Launch l)
     {
@@ -803,7 +824,7 @@ static class Omawin
         if (exe == null || terminal.Name != "noctty") return 0;
         // noctty can run with no window (its config keeps it open after the last one). Only
         // the shared instance answers +list-windows: a one-off window's own process (a
-        // project, an Ubuntu terminal) doesn't count as it running.
+        // project, a Linux terminal) doesn't count as it running.
         string ignored;
         if (Capture(Path.Combine(Path.GetDirectoryName(exe), "noctty.com"), new List<string> { "+list-windows", "--timeout=1000" }, out ignored) == 0) return 0;
         return Detach(exe, new List<string> { "--initial-window=false" });
@@ -829,7 +850,7 @@ static class Omawin
     //                    their folder, OSC 7)
     //   Windows Terminal the tab's folder: the PowerShell profile titles tabs with the folder
     //                    name and records name -> full path in %LOCALAPPDATA%\launcher\dirs; an
-    //                    Ubuntu tab's title is its path (bash-init in the Linux dotfiles)
+    //                    Linux tab's title is its path (bash-init in the Linux dotfiles)
     //   File Explorer    the folder it's showing
 
     [DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
@@ -873,7 +894,7 @@ static class Omawin
             var text = new StringBuilder(512);
             GetWindowText(hwnd, text, text.Capacity);
             var title = text.ToString().Trim();
-            // Ubuntu: "~/apps/myapp" or "/etc", maybe after "user@host: " (Ubuntu's own prompt).
+            // Linux: "~/apps/myapp" or "/etc", maybe after "user@host: " (a distro's own prompt).
             var linux = System.Text.RegularExpressions.Regex.Match(title, @"^(?:[\w.-]+@[\w.-]+:\s*)?((?:~|/)\S*)$");
             if (linux.Success) return LaunchTerminal(new[] { "--wsl", "--dir", linux.Groups[1].Value });
             // PowerShell: a full path (C:\ at a drive root) or the folder name the profile recorded.

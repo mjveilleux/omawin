@@ -105,11 +105,14 @@ public sealed partial class MainWindow
             case "projects":
                 Placeholder.Text = "Search projects…";
                 if (projects == null) { AddRow(Glyph(0xF0996), "Finding projects…", Hex(theme.Comment), () => { }, dim: true); break; }
+                // Linux projects carry their distro's logo and name (Nerd Font: Arch, Ubuntu, Tux).
+                var linux = Projects.Linux.Name;
+                var linuxGlyph = linux switch { "arch" => 0xF303, "ubuntu" => 0xF31B, _ => 0xF31A };
                 foreach (var (p, hits) in Filter(projects, query, p => p.Name))
                 {
                     var project = p;
-                    AddRow(Glyph(p.Wsl ? 0xF31B : 0xE83A), p.Name, Hex(p.Wsl ? theme.Accent : theme.Green), () => { HideMenu(); Projects.Open(project); },
-                        Tag.Text, p.Wsl ? "ubuntu" : "windows", sub: p.Shown, highlight: hits);
+                    AddRow(Glyph(p.Wsl ? linuxGlyph : 0xE83A), p.Name, Hex(p.Wsl ? theme.Accent : theme.Green), () => { HideMenu(); Projects.Open(project); },
+                        Tag.Text, p.Wsl ? linux : "windows", sub: p.Shown, highlight: hits);
                 }
                 if (projects.Count == 0) AddRow(Glyph(0xF0156), "No git repos found", Hex(theme.Comment), () => { }, dim: true);
                 FooterLeft.Text = $"{projects.Count} projects · zoxide's first";

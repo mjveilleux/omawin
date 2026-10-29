@@ -17,3 +17,8 @@ editor | code | VS Code | Microsoft.VisualStudioCode | code.cmd
 
 agent | opencode | OpenCode | SST.opencode | opencode.exe
 agent | claude | Claude Code | Anthropic.ClaudeCode | claude.exe
+
+# Linux in WSL (the wsl preset), what `--wsl` opens. The program is the distro's WSL name; picking
+# one sets it up (wsl/install.ps1). Arch gets Omarchy's package repositories (wsl/setup.sh).
+linux | arch | Arch Linux, with Omarchy's packages | wsl/install.ps1 | archlinux
+linux | ubuntu | Ubuntu | wsl/install.ps1 | Ubuntu

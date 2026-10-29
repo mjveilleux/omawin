@@ -67,6 +67,9 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scrip
                 $id = $queue.Dequeue()
                 $wingetArgs = @('install', '--id', $id, '--exact', '--silent', '--accept-source-agreements', '--accept-package-agreements', '--disable-interactivity')
                 if ($WingetOverrides[$id]) { $wingetArgs += '--override', $WingetOverrides[$id] }
+                # After the one admin prompt (install.ps1), a whole-PC package installs for this
+                # account if it can, or fails, but never raises a prompt of its own.
+                if ($env:OMAWIN_NO_ADMIN -and $WholePC -contains $id) { $wingetArgs += '--scope', 'user' }
                 $psi = New-Object Diagnostics.ProcessStartInfo
                 $psi.FileName = $Winget
                 $psi.Arguments = (@($wingetArgs | ForEach-Object { ConvertTo-NativeArgument $_ }) -join ' ')
@@ -154,7 +157,7 @@ function Install-WingetPackages([string[]]$Ids) {
     # the end, alone, before it counts as failed.
     $failed = @(Invoke-WingetBatch $winget $mine 4 $tick)
     if ($admin) { Wait-AdminItems $admin $tick }
-    # The admin step couldn't: this account installs them, each with its own prompt.
+    # The admin step couldn't: this account installs them for itself where they can be (above).
     foreach ($id in $admin) {
         if ((Get-AdminState $id) -ne 'done') {
             Write-Log "    admin step: $id $(Get-AdminState $id) $(Get-AdminText $id)"
@@ -163,7 +166,11 @@ function Install-WingetPackages([string[]]$Ids) {
     }
     Set-BoardPackageNote $null
     if ($failed) { $failed = @(Invoke-WingetBatch $winget @($failed | ForEach-Object Id) 1) }
-    foreach ($f in $failed) { Set-BoardPackage $f.Id 'fail'; Write-Warn "winget install $($f.Id) exited with $($f.ExitCode)"; Write-OutputTail $f.Output }
+    foreach ($f in $failed) {
+        Set-BoardPackage $f.Id 'fail'
+        if ($env:OMAWIN_NO_ADMIN -and $WholePC -contains $f.Id) { Write-Warn "$($f.Id) installs for the whole PC only, which takes admin: run install.ps1 again and approve its one prompt" }
+        else { Write-Warn "winget install $($f.Id) exited with $($f.ExitCode)"; Write-OutputTail $f.Output }
+    }
     Write-OkCount
     Update-SessionPath
     Add-ToolPaths @(Get-WantedTools)
@@ -218,17 +225,34 @@ function Get-WantedPackages {
     @($WingetPackages) + @(foreach ($name in Get-ChosenPresets) { $Presets[$name].Winget }) | Where-Object { $_ } | Select-Object -Unique
 }
 
-# First install: no presets file yet. Ask which presets (a person is there), else start with none.
-# install.ps1 asks this before anything starts, with its other questions.
+# First install: no presets file yet. Ask which presets and which Linux for WSL (a person is
+# there), else start with none. install.ps1 asks this before anything starts, with its other
+# questions, so the one admin prompt can include WSL.
 function Initialize-Presets {
     if (Test-Path $PresetsFile) { return }
     $picked = @()
     if (Test-Interactive) {
         Write-Note 'Presets: opt-in groups on top of the core'
-        foreach ($name in $Presets.Keys) { Write-Note ("  {0,-15} {1}" -f $name, $Presets[$name].Summary) }
+        foreach ($name in $Presets.Keys) { if ($name -ne 'wsl') { Write-Note ("  {0,-15} {1}" -f $name, $Presets[$name].Summary) } }
         $answer = Read-InstallAnswer 'Which presets? (names separated by spaces, Enter for none; omawin preset add <name> later)'
         $picked = @($answer -split '[\s,]+' | Where-Object { $_ } | ForEach-Object {
                 if ($Presets.Contains($_)) { $_ } else { Write-Warn "no preset '$_'" } })
+        $picked = @($picked | Where-Object { $_ -ne 'wsl' })
+        # Linux in WSL (the wsl preset): Arch unless this account already has one of the others.
+        $choices = @(Get-LinuxChoices)
+        $have = @(Get-WslDistros)
+        $default = $choices | Where-Object { $have -contains $_.Distro } | Select-Object -First 1
+        if (-not $default) { $default = $choices[0] }
+        $names = @($choices | ForEach-Object Name) + 'none'
+        $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? (Enter for $($default.Name))").Trim().ToLower()
+        if (-not $answer) { $answer = $default.Name }
+        $linux = $choices | Where-Object Name -eq $answer | Select-Object -First 1
+        if ($linux) {
+            $picked += 'wsl'
+            New-Item -ItemType Directory -Force -Path (Split-Path $LinuxPickFile) | Out-Null
+            Set-Content $LinuxPickFile $linux.Name -NoNewline
+            Write-Note "Linux: $($linux.Label)$(if (-not (Test-WslInstalled)) { ' (WSL goes in with the admin prompt; then a restart)' })"
+        } elseif ($answer -ne 'none') { Write-Warn "no Linux '$answer': none for now (omawin preset add wsl later)" }
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
     Set-Content $PresetsFile (@('# omawin presets on this PC (packages.ps1); omawin preset add|remove <name>') + $picked) -Encoding utf8

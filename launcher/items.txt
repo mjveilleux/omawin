@@ -18,7 +18,7 @@
 # (docs/work.md).
 # Icons are Nerd Font glyphs (https://www.nerdfonts.com/cheat-sheet). Order here = order shown.
 󰆍 | Terminal | omawin.exe launch terminal
- | Ubuntu (WSL) | omawin.exe launch terminal --wsl
+ | Linux (WSL) | omawin.exe launch terminal --wsl
  | Projects | @projects
 󰷊 | Files | @files
 󰒋 | Localhost | @localhost

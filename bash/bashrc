@@ -1,4 +1,4 @@
-# Git Bash, and Ubuntu in WSL (wsl/setup.sh sources it): same prompt, keys and colors as PowerShell
+# Git Bash, and Linux in WSL (wsl/setup.sh sources it): same prompt, keys and colors as PowerShell
 # (starship, zoxide, fzf, eza, bat; Tokyo Night). Starship config: $STARSHIP_CONFIG (omawin/starship/starship.toml)
 # Init scripts are cached in ~/.cache/bash (starting processes is slow in Git Bash);
 # after upgrading starship/zoxide/fzf run: update-shell-cache

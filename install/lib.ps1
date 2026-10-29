@@ -55,6 +55,30 @@ function Get-Presets {
         Where-Object { $_ -and -not $_.StartsWith('#') })
 }
 
+# The Linux choices for WSL (bin/defaults.txt's linux rows: Name, Label, Distro, Arch first), and
+# the one this PC picked (omawin default linux), else the one this account has, else the first.
+function Get-LinuxChoices {
+    foreach ($line in Get-Content "$Repo\bin\defaults.txt") {
+        $p = @($line -split '\|' | ForEach-Object { $_.Trim() })
+        if ($p.Count -ge 5 -and $p[0] -eq 'linux') { [pscustomobject]@{ Name = $p[1]; Label = ($p[2] -split ',')[0]; Distro = $p[4] } }
+    }
+}
+$LinuxPickFile = "$env:LOCALAPPDATA\launcher\defaults\linux"
+function Get-LinuxPick {
+    $choices = @(Get-LinuxChoices)
+    $picked = if (Test-Path $LinuxPickFile) { "$(Get-Content $LinuxPickFile -TotalCount 1)".Trim() }
+    $have = @(Get-WslDistros)
+    @($choices | Where-Object Name -eq $picked) + @($choices | Where-Object { $have -contains $_.Distro }) + $choices | Select-Object -First 1
+}
+
+# WSL itself: the WSL package (what `wsl --install` puts in). And this account's distros, from
+# WSL's registry, so WSL isn't started to ask.
+function Test-WslInstalled { Test-Path "$env:ProgramFiles\WSL\wsl.exe" }
+function Get-WslDistros {
+    Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
+        ForEach-Object { $_.GetValue('DistributionName') } | Where-Object { $_ }
+}
+
 function Test-Admin {
     ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
         [Security.Principal.WindowsBuiltInRole]::Administrator)
