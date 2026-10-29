@@ -290,8 +290,8 @@ public static class Packages
         RunMenu($"-Install \"{string.Join(";", keys)}\"");
     }
 
-    // The manager itself, when it isn't on this PC: Chocolatey from winget (it asks for admin),
-    // Scoop with its own installer (get.scoop.sh).
+    // The manager itself, when it isn't on this PC: winget registered or put in (App Installer),
+    // Chocolatey from winget or its own installer (it asks for admin), Scoop from get.scoop.sh.
     public static void InstallManager(string source) => RunMenu($"-InstallManager {source}");
 
     static void RunMenu(string args) =>

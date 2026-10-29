@@ -37,7 +37,12 @@ public sealed partial class MainWindow
 
         if (!Packages.Available(pkgSource))
         {
-            string what = pkgSource == "choco" ? "from winget, asks for admin" : "from scoop.sh, into your user folder";
+            string what = pkgSource switch
+            {
+                "winget" => "Microsoft's App Installer",
+                "choco" => "from chocolatey.org, asks for admin",
+                _ => "from scoop.sh, into your user folder",
+            };
             AddRow(Glyph(0xF03D3), $"{Packages.Label(pkgSource)} isn't on this PC: install it", Hex(SourceColor(pkgSource)),
                 () => { HideMenu(); Packages.InstallManager(pkgSource); }, Tag.Text, what);
             FooterLeft.Text = $"no {Packages.Label(pkgSource)}";

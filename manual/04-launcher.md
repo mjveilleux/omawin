@@ -35,7 +35,7 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 - **Beside the list:** what the package is, its version, its homepage and license (winget's take a second or two), and whether it's already here (also ✓ in the list).
 - **Ctrl+Space picks several**, from any of the three; Enter installs them one after another.
 - **Installs run in a small terminal you can watch** (it stays open at the end). Chocolatey asks for admin first; Scoop installs into your user folder without.
-- **Chocolatey or Scoop not on the PC?** Its tab offers to install it: Chocolatey from winget, Scoop with its own installer from scoop.sh.
+- **A manager not on the PC?** Its tab offers to install it: winget (Microsoft's App Installer) registered for your account or put in, Chocolatey from winget or its own installer (asks for admin), Scoop with its own installer from scoop.sh.
 
 `omawin pkg install` is the same for winget in a terminal, with fzf.
 
