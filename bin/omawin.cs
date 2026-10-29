@@ -753,14 +753,17 @@ static class Omawin
         }
         catch (Exception) { return Start("pwsh", script); }
         Trace("zebar-started");
-        // Its widgets load from its own server; if that never listens, they'd stay blank.
+        // Its widgets load from its own server; if that never listens, they'd stay blank. At
+        // sign-in, with everything else starting, it has taken from 4 s to over 6 s: 20 s here,
+        // as the script it falls back to costs far more (~40 s of PowerShell at sign-in).
         var waited = Stopwatch.StartNew();
-        while (waited.ElapsedMilliseconds < 6000)
+        while (waited.ElapsedMilliseconds < 20000)
         {
             if (Listening(port)) { Trace("zebar-serving"); return 0; }
-            if (zebar.HasExited) break;
+            if (zebar.HasExited) { Trace("zebar-exited"); break; }
             Thread.Sleep(100);
         }
+        Trace("zebar-fallback");
         try { zebar.Kill(); } catch (Exception) { }
         return Start("pwsh", script);
     }
