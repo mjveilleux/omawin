@@ -8,6 +8,7 @@ Start with `omawin check`: it lists anything missing, stale or not running.
 - **A key does nothing:** `omawin restart glazewm` reloads GlazeWM's config. Errors are in `~/.glzr/glazewm/errors.log`. GlazeWM ignores simulated keypresses, so test keys with real ones.
 - **Something left over from an older setup:** `omawin migrate`.
 - **The PC feels heavy:** `omawin profile ram` lists what holds the memory and the processor, by app (an app's hidden browser processes counted as the app's), omawin's parts first against what they should cost while idle. `-Save` keeps a history and shows what grew since last time. An agent asked to profile RAM uses the `profile-ram` skill (`.claude/skills/`), which reads the same numbers.
+- **Signing in is slow:** `omawin profile login` lists how many seconds after you signed in GlazeWM, the bar, the menu app, the terminal and the agent were up. Apps that start with Windows weigh most: turn them off in Settings › Apps › Startup.
 - **Terminals feel slow:** `omawin profile terminal` presses Win+Enter a few times on workspace 8 and prints where each millisecond went (`-Video file.mp4` records the screen too).
 - **Terminal out of date or misbehaving:** `omawin update terminal` installs the latest release of our noctty fork (or upgrades Windows Terminal, if that's your default).
 - **Lazy says "dubious ownership":** Neovim was run from an admin shell, so plugin folders became admin-owned. `git/gitconfig` trusts `~/AppData/Local/nvim-data/lazy/*`; better not to run nvim as admin.
