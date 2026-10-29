@@ -136,7 +136,6 @@ Write-Host "``n  done · press any key to close" -ForegroundColor DarkGray
     & omawin.exe launch terminal --title menu-task -- pwsh -NoLogo -File $file
 }
 
-# --- run on its own ------------------------------------------------------------------------
 # --- the Packages page's installs ------------------------------------------------------------
 # What each manager's ids look like (the app checks the same): nothing else reaches a command.
 $SafeId = '^[A-Za-z0-9][A-Za-z0-9._+-]*(/[A-Za-z0-9][A-Za-z0-9._+-]*)?$'
@@ -194,6 +193,7 @@ Write-Host '  Open the launcher''s Packages page again: Scoop is there now.' -Fo
 "@
 }
 
+# --- run on its own ------------------------------------------------------------------------
 if ($RefreshInstalled) { Update-InstalledList }
 if ($Run) {
     $entry = (Get-MenuEntries)[$Run]

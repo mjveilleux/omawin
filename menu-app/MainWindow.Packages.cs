@@ -178,7 +178,7 @@ public sealed partial class MainWindow
                     Orientation = Orientation.Horizontal, Spacing = 6,
                     Children =
                     {
-                        new TextBlock { Text = Glyph(source switch { "winget" => 0xF05B3, "choco" => 0xF0176, _ => 0xF0E07 }), FontFamily = iconFont, FontSize = 13, Foreground = Brush(color), VerticalAlignment = VerticalAlignment.Center },
+                        new TextBlock { Text = Glyph(source switch { "winget" => 0xF05B3, "choco" => 0xF0176, _ => 0xF082A }), FontFamily = iconFont, FontSize = 13, Foreground = Brush(color), VerticalAlignment = VerticalAlignment.Center },
                         new TextBlock { Text = here ? Packages.Label(source) : $"{Packages.Label(source)} (not here)", FontFamily = textFont, FontSize = 12.5, FontWeight = on ? FontWeights.SemiBold : FontWeights.Normal, Foreground = Brush(color), VerticalAlignment = VerticalAlignment.Center },
                     },
                 },
