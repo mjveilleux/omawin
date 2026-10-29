@@ -66,6 +66,7 @@ public sealed record LaunchItem(string Icon, string Name, string Command, string
         "quick" => "wi-fi, bluetooth, sound ›",
         "menu" => "install, setup, power ›",
         "files" => "files + folders ›",
+        "packages" => "winget, choco, scoop ›",
         "vpn" => "vpn",
         _ when IsApp => "app",
         _ when Launcher.Link.IsMatch(Command) => "link",

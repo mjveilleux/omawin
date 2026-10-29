@@ -5,6 +5,7 @@
 #     @projects   git repos on Windows and in WSL, opened as the project's herdr session (shell | nvim | claude | opencode)
 #     @localhost  web servers running on this PC (and in WSL) + favorite sites (sites.txt)
 #     @clipboard  what you've copied, newest first; Enter pastes it (Win+Shift+V)
+#     @packages   winget's, Chocolatey's or Scoop's packages, fuzzy found; Enter installs
 #     @reports    reports from your own folders and shares (needs a reports script in your account folder: docs/work.md)
 #     @keys       the shortcuts cheat sheet (keys.txt)
 #     @audio      speakers and microphones, what plays on each, their volume (Win+A)
@@ -28,5 +29,6 @@
 󰨇 | Task manager (btop) | omawin.exe launch terminal --title btop -- btop.cmd
 󰓅 | Task Manager (Windows) | taskmgr
 󰒓 | Quick settings | @quick
+󰏓 | Packages | @packages
 󰌌 | Shortcuts | @keys
 󰍜 | Menu | @menu

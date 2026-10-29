@@ -89,7 +89,7 @@ setup.check | 󰄬 | Health check | task omawin check
 setup.noads | 󰀧 | No ads (Windows; Lenovo / McAfee / Adobe upsells when found) | task omawin no-ads
 
 install | 󰉉 | Install
-install.package | 󰏓 | Package | task omawin pkg install
+install.package | 󰏓 | Package | @packages
 install.preset | 󰏓 | Presets (groups of tools)
 install.preset.list | 󰆍 | Which are picked | task omawin preset list
 install.preset.python | 󰌠 | Python | task omawin preset add python

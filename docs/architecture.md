@@ -120,6 +120,7 @@ Zebar only lets the bar run `omawin-music` with the arguments `zpack.json` allow
   - runs the system menu's longer jobs, which the menu app hands it as `-Run <row id>`, in a small floating "menu-task" terminal: installs, removals, `task` rows
   - keeps `installed.txt`
   - `-SetWallpaper` and `-SearchPackage`
+  - `-Install "<source>:<id>;..."` and `-InstallManager choco|scoop` for the launcher's Packages page (`menu-app/Packages.cs`, `MainWindow.Packages.cs`): winget's catalog from `bin/pkg-index.ps1`, Scoop's from its cloned buckets, Chocolatey's community feed asked as you type
 - `launcher/common.ps1`: the fzf look and helpers for the terminal pieces that remain.
 - `launcher/rename-workspace.ps1`: Alt+N (`omawin workspace rename`), in a small terminal titled "rename".
 - Reports: the page is omawin's, the folders and the import are the account folder's (`~/omawin-account`, see [work.md](work.md)).
@@ -134,7 +135,7 @@ Never in the repo:
 | `clipboard\` | clipboard history, newest 200, one file each |
 | `launch-history.json` | what you open, so it ranks higher |
 | `apps.tsv` | the installed-apps index |
-| `installed.txt` | installed winget / choco packages |
+| `installed.txt` | installed winget / choco / scoop packages |
 | `reports.tsv` | the reports index |
 | `wsl-projects.txt` | WSL repos, reused while WSL is off |
 | `fff\` | the file finder's indexes |

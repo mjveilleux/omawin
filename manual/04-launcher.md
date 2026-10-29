@@ -26,7 +26,18 @@ Type a sum and its value is the top row: **Enter copies it** (and closes the lau
 
 ### Pages
 
-Projects, Localhost, Clipboard, Audio, Quick settings, Reports, Shortcuts and About open in the same window: type to search, Esc to go back.
+Projects, Localhost, Clipboard, Audio, Quick settings, Packages, Reports, Shortcuts and About open in the same window: type to search, Esc to go back.
+
+### Packages
+
+Like Omarchy's package picker, in the launcher (System menu › Install › Package, the Packages item, or `omawin pkg find`): pick a package manager, type to find a package, Enter installs it.
+- **Tab switches between winget, Chocolatey and Scoop** (or click their chips). winget's ~16,000 packages and Scoop's buckets are searched on the PC as you type, with the launcher's fuzzy matching; Chocolatey has no catalog on the PC, so its community site is asked once you stop typing.
+- **Beside the list:** what the package is, its version, its homepage and license (winget's take a second or two), and whether it's already here (also ✓ in the list).
+- **Ctrl+Space picks several**, from any of the three; Enter installs them one after another.
+- **Installs run in a small terminal you can watch** (it stays open at the end). Chocolatey asks for admin first; Scoop installs into your user folder without.
+- **Chocolatey or Scoop not on the PC?** Its tab offers to install it: Chocolatey from winget, Scoop with its own installer from scoop.sh.
+
+`omawin pkg install` is the same for winget in a terminal, with fzf.
 
 - **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in WSL Ubuntu (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`launcher/project-tabs.txt`).

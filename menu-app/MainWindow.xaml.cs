@@ -168,8 +168,8 @@ public sealed partial class MainWindow : Window
         Input.SelectionStart = text.Length;
     }
 
-    // --key down / up / left / right / tab / shift-tab / enter / esc: as if pressed; for scripted
-    // walkthroughs.
+    // --key down / up / left / right / tab / shift-tab / enter / esc / pick (Ctrl+Space on the
+    // Packages page): as if pressed; for scripted walkthroughs.
     public void PressKey(string key)
     {
         if (!appWindow.IsVisible) return;
@@ -181,8 +181,9 @@ public sealed partial class MainWindow : Window
             case "right": if (tileMode) NavTile(1, 0); else RunSelected(); break;
             case "enter": RunSelected(); break;
             case "esc": if (Input.Text.Length > 0) Input.Text = ""; else Back(hideAtTop: true); break;
-            case "tab": if (finding) CycleScope(1); else Move(1); break;
-            case "shift-tab": if (finding) CycleScope(-1); else Move(-1); break;
+            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else Move(1); break;
+            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else Move(-1); break;
+            case "pick": if (launching && page == "packages") TogglePackagePick(); break; // Ctrl+Space
         }
     }
 
@@ -518,8 +519,9 @@ public sealed partial class MainWindow : Window
         Placeholder.Visibility = Input.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         FooterLeft.Text = theme.Name;
         pageRows.Clear();
-        // Folder chips are the file finder's; the preview its and the clipboard page's.
-        Scopes.Visibility = finding ? Visibility.Visible : Visibility.Collapsed;
+        // Folder chips are the file finder's (and source chips the Packages page's); the preview
+        // theirs and the clipboard page's.
+        Scopes.Visibility = finding || (launching && page == "packages") ? Visibility.Visible : Visibility.Collapsed;
         Preview.Visibility = Wide ? Visibility.Visible : Visibility.Collapsed;
         PreviewColumn.Width = new GridLength(Wide ? 400 : 0);
 
@@ -1073,6 +1075,7 @@ public sealed partial class MainWindow : Window
         ScrollToSelected(animate: !jump);
         if (finding) ShowPreview();
         else if (launching && page == "clipboard") ShowClipPreview();
+        else if (launching && page == "packages") ShowPackagePreview();
     }
 
     // The selected row: lighter, ringed in the accent, its icon tile filled with its color.
@@ -1111,6 +1114,11 @@ public sealed partial class MainWindow : Window
         {
             case VirtualKey.X when ctrl && launching && page is "clipboard" or "localhost":
                 PageDelete(); break;
+            // The Packages page: Tab moves between the sources; Ctrl+Space picks several.
+            case VirtualKey.Tab when launching && page == "packages":
+                CyclePackageSource(shift ? -1 : 1); break;
+            case VirtualKey.Space when ctrl && launching && page == "packages":
+                TogglePackagePick(); break;
             // The tiles (Quick settings' switches and the sound under them): Space mutes a speaker
             // or works a switch, + / − turn a volume or a brightness up or down. Only while the
             // search is empty: once you've typed something, they're letters of the search.
