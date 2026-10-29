@@ -14,10 +14,13 @@ glazewm/*
 zebar/*
 !zebar/settings.json
 !zebar/start.ps1
+!zebar/build-client.ps1
 !zebar/tokyo-islands/
 
 # Written by themes/set-theme.ps1 for the chosen theme.
 zebar/tokyo-islands/theme.css
+# Zebar's client, built on each PC (zebar/build-client.ps1): GPL-3.0, so never committed.
+zebar/tokyo-islands/lib/
 music/bin/
 music/obj/
 

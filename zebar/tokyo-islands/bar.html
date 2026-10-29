@@ -24,10 +24,14 @@
 
     <!-- Plain JS, no build step. -->
     <script type="module">
-      import * as zebar from 'https://esm.sh/zebar@3.3';
+      // Zebar's client from disk (zebar/build-client.ps1): never the network at sign-in. esm.sh
+      // only where it was never built. Fetched alongside bar.json.
+      const [zebar, config] = await Promise.all([
+        import('./lib/zebar.js').catch(() => import('https://esm.sh/zebar@3.3')),
+        fetch('./bar.json', { cache: 'no-store' }).then(r => r.json()),
+      ]);
 
       const $ = id => document.getElementById(id);
-      const config = await (await fetch('./bar.json', { cache: 'no-store' })).json();
       const clock = config.clock ?? {};
       const providers = zebar.createProviderGroup({
         glazewm: { type: 'glazewm' },
@@ -112,20 +116,37 @@
         fitWindow,
       };
 
-      // The widgets, in bar.json's order, each in its place.
+      // The widgets, in bar.json's order, each in its place: loaded all at once, added in order.
+      const places = ['left', 'centerBegin', 'center', 'centerEnd', 'right'];
+      const wanted = places.flatMap(place => (config[place] ?? []).map(name => ({ place, name })));
+      const mods = await Promise.all(wanted.map(({ name }) =>
+        import(`./widgets/${name}.js`).catch(err => { console.error(`widget ${name}`, err); return null; })));
       const widgets = [];
-      for (const place of ['left', 'centerBegin', 'center', 'centerEnd', 'right']) {
-        for (const name of config[place] ?? []) {
-          try {
-            const mod = await import(`./widgets/${name}.js`);
-            const w = mod.create(ctx);
-            $(place).appendChild(w.el);
-            widgets.push(w);
-          } catch (err) {
-            console.error(`widget ${name}`, err);
-          }
+      wanted.forEach(({ place, name }, i) => {
+        if (!mods[i]) return;
+        try {
+          const w = mods[i].create(ctx);
+          w.el.classList.add('arriving');
+          $(place).appendChild(w.el);
+          widgets.push(w);
+        } catch (err) {
+          console.error(`widget ${name}`, err);
         }
+      });
+
+      // The bar's strip is up from the first paint; its widgets fade in, left to right, once
+      // the providers' first output fills them (or after 0.6 s, whatever has come by then).
+      let arrived = false;
+      function arrive() {
+        if (arrived) return;
+        arrived = true;
+        widgets.forEach((w, i) => {
+          w.el.style.animationDelay = `${i * 25}ms`;
+          w.el.classList.replace('arriving', 'arrive');
+          w.el.addEventListener('animationend', () => { w.el.classList.remove('arrive'); w.el.style.animationDelay = ''; }, { once: true });
+        });
       }
+      setTimeout(arrive, 600);
 
       function render() {
         const o = providers.outputMap;
@@ -142,7 +163,7 @@
       window.addEventListener('blur', () => drops.forEach(d => d.hide()));
       document.addEventListener('contextmenu', e => e.preventDefault());
 
-      providers.onOutput(render);
+      providers.onOutput(() => { render(); if (providers.outputMap.glazewm) requestAnimationFrame(arrive); });
       render();
     </script>
   </body>

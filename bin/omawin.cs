@@ -676,7 +676,7 @@ static class Omawin
             + "& '" + sync.Replace("'", "''") + "'";
         try
         {
-            Process.Start(new ProcessStartInfo("powershell.exe",
+            Process.Start(new ProcessStartInfo("pwsh",
                 "-NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"" + command + "\"")
             { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = Repo });
         }
@@ -743,6 +743,13 @@ static class Omawin
         if (!File.Exists(exe) || !File.Exists(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"))
             || InSession("zebar").Length > 0 || ZebarWebviewsLeft() || Listening(port))
             return Start("pwsh", script);
+        var strip = Strip.Show(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"));
+        try { return StartZebar(exe, script, port); }
+        finally { strip.Close(); }
+    }
+
+    static int StartZebar(string exe, string script, int port)
+    {
         Process zebar;
         try
         {
@@ -759,13 +766,110 @@ static class Omawin
         var waited = Stopwatch.StartNew();
         while (waited.ElapsedMilliseconds < 20000)
         {
-            if (Listening(port)) { Trace("zebar-serving"); return 0; }
+            if (Listening(port))
+            {
+                Trace("zebar-serving");
+                // The strip stays until Zebar's page has drawn over it: it loads from that
+                // server, all from disk, in well under this.
+                Thread.Sleep(1500);
+                return 0;
+            }
             if (zebar.HasExited) { Trace("zebar-exited"); break; }
             Thread.Sleep(100);
         }
         Trace("zebar-fallback");
         try { zebar.Kill(); } catch (Exception) { }
         return Start("pwsh", script);
+    }
+
+    // The bar's strip, drawn at once while Zebar's web engine starts (seconds at sign-in): a plain
+    // band in the theme's background, the bar's size, across the top of every monitor. Zebar's
+    // window opens above it and draws the same band with its widgets; then this goes.
+    class Strip
+    {
+        [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+        [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
+        [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
+
+        readonly List<System.Windows.Forms.Form> forms = new List<System.Windows.Forms.Form>();
+        readonly ManualResetEvent shown = new ManualResetEvent(false);
+
+        class Band : System.Windows.Forms.Form
+        {
+            protected override bool ShowWithoutActivation { get { return true; } }
+            protected override System.Windows.Forms.CreateParams CreateParams
+            {
+                get
+                {
+                    var p = base.CreateParams;
+                    p.ExStyle |= 0x80 | 0x08000000; // a tool window that's never activated: GlazeWM leaves it alone
+                    return p;
+                }
+            }
+        }
+
+        public static Strip Show(string themeCss)
+        {
+            var strip = new Strip();
+            try
+            {
+                var color = System.Drawing.ColorTranslator.FromHtml(ThemeBackground(themeCss));
+                var thread = new Thread(() =>
+                {
+                    try
+                    {
+                        SetProcessDpiAwarenessContext(new IntPtr(-4)); // per monitor: real pixels
+                        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
+                        {
+                            var b = screen.Bounds;
+                            uint dpi = 96, ignored;
+                            try { GetDpiForMonitor(MonitorFromPoint(new System.Drawing.Point(b.X + 1, b.Y + 1), 2), 0, out dpi, out ignored); }
+                            catch (Exception) { }
+                            var band = new Band
+                            {
+                                FormBorderStyle = System.Windows.Forms.FormBorderStyle.None,
+                                ShowInTaskbar = false,
+                                StartPosition = System.Windows.Forms.FormStartPosition.Manual,
+                                BackColor = color,
+                                Bounds = new System.Drawing.Rectangle(b.X, b.Y, b.Width, (int)Math.Round(26 * dpi / 96.0)),
+                            };
+                            band.Show();
+                            band.Bounds = new System.Drawing.Rectangle(b.X, b.Y, b.Width, (int)Math.Round(26 * dpi / 96.0));
+                            lock (strip.forms) strip.forms.Add(band);
+                        }
+                        Trace("strip-shown");
+                    }
+                    catch (Exception) { }
+                    strip.shown.Set();
+                    System.Windows.Forms.Application.Run();
+                }) { IsBackground = true };
+                thread.SetApartmentState(ApartmentState.STA);
+                thread.Start(); // not waited for: Zebar's window takes far longer to open
+            }
+            catch (Exception) { strip.shown.Set(); }
+            return strip;
+        }
+
+        // theme.css's --bg-solid, the bar's background (themes/render.ps1 writes it).
+        static string ThemeBackground(string themeCss)
+        {
+            foreach (var line in File.ReadAllLines(themeCss))
+            {
+                var t = line.Trim();
+                if (t.StartsWith("--bg-solid:")) return t.Substring(11).Trim().TrimEnd(';').Trim();
+            }
+            return "#000000";
+        }
+
+        public void Close()
+        {
+            shown.WaitOne(2000);
+            lock (forms)
+                foreach (var f in forms)
+                {
+                    try { f.Invoke(new Action(f.Close)); } catch (Exception) { }
+                }
+        }
     }
 
     // A bar stopped by force (GlazeWM's shutdown) can leave its webviews running, and a new bar

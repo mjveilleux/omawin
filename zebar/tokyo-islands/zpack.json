@@ -25,7 +25,8 @@
         "*.js",
         "*.json",
         "*.ttf",
-        "widgets/*.js"
+        "widgets/*.js",
+        "lib/*.js"
       ],
       "caching": {
         "defaultDuration": 604800,
