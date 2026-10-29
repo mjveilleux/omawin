@@ -69,8 +69,8 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 
 Also the launcher's **Files** item. A wider window:
 - results on the left: the name with matched letters, the folders it's in, and when it changed or its git status
-- a preview on the right: a thumbnail for pictures, the first lines of text and code, a folder's contents
-- chips on top: All, **Folders** (only folders), then each place it searches; **Tab** moves between them. Ending what you type with `/` also shows only folders.
+- a preview on the right: the picture itself for pictures (and how big it is), the first lines of text and code, a folder's contents
+- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), then each place it searches; **Tab** moves between them. Ending what you type with `/` also shows only folders.
 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 

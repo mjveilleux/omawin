@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-    Builds the menu app and walks through the launcher's Packages page on a Windows desktop,
+    Builds the menu app and walks through the launcher's Packages page, then the file finder's
+    Images chip, on a Windows desktop,
     recording the screen: for .github/workflows/menu-check.yml, on a CI runner, never this PC.
 
 .DESCRIPTION
@@ -70,9 +71,24 @@ function Step([string]$Text, [string]$Shot, [double]$Seconds, [string[]]$Argumen
     Save-Shot $Shot
 }
 
+# A few pictures where the file finder looks (Documents), for its Images chip.
+Add-Type -AssemblyName System.Drawing
+$pictures = New-Item -ItemType Directory -Force (Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'menu-check')
+foreach ($p in @(@{ Name = 'red-square.png'; Color = 'Firebrick' }, @{ Name = 'blue-square.jpg'; Color = 'SteelBlue' }, @{ Name = 'green-wide.png'; Color = 'SeaGreen'; Width = 1600 })) {
+    $width = if ($p.Width) { $p.Width } else { 800 }
+    $bitmap = New-Object System.Drawing.Bitmap $width, 800
+    $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+    $graphics.Clear([System.Drawing.Color]::FromName($p.Color))
+    $graphics.FillEllipse([System.Drawing.Brushes]::White, 200, 200, 400, 400)
+    $format = if ($p.Name -like '*.jpg') { [System.Drawing.Imaging.ImageFormat]::Jpeg } else { [System.Drawing.Imaging.ImageFormat]::Png }
+    $bitmap.Save((Join-Path $pictures $p.Name), $format)
+    $graphics.Dispose(); $bitmap.Dispose()
+}
+'notes, not a picture' | Set-Content (Join-Path $pictures 'square-notes.txt')
+
 Start-Process $exe -ArgumentList '--start-hidden'
 Start-Sleep -Seconds 6
-$rec = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "`"$recorder`"", "`"$Out\frames`"", $start, 60 -PassThru -WindowStyle Hidden
+$rec = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "`"$recorder`"", "`"$Out\frames`"", $start, 90 -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds 1
 
 Step 'open Packages (winget)' 'winget' 8 '--launcher', 'packages'
@@ -83,6 +99,12 @@ Step 'tab: Chocolatey' 'choco' 2 '--key', 'tab'
 Step 'type: git' 'choco-git' 6 '--type', 'git'
 Step 'tab: Scoop' 'scoop' 3 '--key', 'tab'
 Step 'type: 7zip' 'scoop-7zip' 3 '--type', '7zip'
+Step 'esc: back' 'back' 1 '--key', 'esc'
+Step 'file finder' 'files' 3 '--files'
+Step 'tab: Folders' 'files-folders' 1 '--key', 'tab'
+Step 'tab: Images' 'files-images' 2 '--key', 'tab'
+Step 'type: square (the .txt must not show)' 'files-images-square' 3 '--type', 'square'
+Step 'down: the next picture' 'files-images-next' 3 '--key', 'down'
 Write-Event 'done'
 
 $rec | Stop-Process -ErrorAction SilentlyContinue

@@ -58,6 +58,11 @@ public sealed partial class MainWindow : Window
     bool findFromLauncher;         // opened from the launcher's Files item (Esc goes back to it)
     string? findScope;             // the folder the finder searches (null: all of them; FoldersOnly: folders, in all of them)
     const string FoldersOnly = "*folders*"; // not a path
+    const string ImagesOnly = "*images*";   // not a path either: pictures, in all the folders
+
+    // What the Images chip finds (fff's *.ext constraints, any of them) and shows as pictures.
+    static readonly string[] ImageExtensions = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tif", "tiff", "heic", "avif", "svg"];
+    static bool IsImage(string name) => ImageExtensions.Contains(Path.GetExtension(name).TrimStart('.').ToLowerInvariant());
     List<FileSearch.Hit> findHits = [];
     int previewToken;              // drops a slow preview that's no longer the selected one
     IntPtr previous;               // the window that had focus before it opened (Dismiss returns there)
@@ -642,11 +647,17 @@ public sealed partial class MainWindow : Window
     void RenderFinder(string query)
     {
         SetCrumbs("", "Files");
-        Placeholder.Text = findScope == null ? "Search files and folders…" : findScope == FoldersOnly ? "Search folders…" : $"Search {Path.GetFileName(findScope)}…";
+        Placeholder.Text = findScope switch
+        {
+            null => "Search files and folders…",
+            FoldersOnly => "Search folders…",
+            ImagesOnly => "Search pictures…",
+            _ => $"Search {Path.GetFileName(findScope)}…",
+        };
 
         Scopes.Children.Clear();
         var scopes = FileSearch.Scopes();
-        if (findScope is not (null or FoldersOnly) && !scopes.Any(s => s.Root == findScope)) findScope = null;
+        if (findScope is not (null or FoldersOnly or ImagesOnly) && !scopes.Any(s => s.Root == findScope)) findScope = null;
         void Chip(string label, string? root, string glyph)
         {
             bool on = findScope == root;
@@ -670,16 +681,21 @@ public sealed partial class MainWindow : Window
         }
         Chip("All", null, char.ConvertFromUtf32(0xF0C4B)); // all-inclusive
         Chip("Folders", FoldersOnly, char.ConvertFromUtf32(0xF0770)); // folder-search
+        Chip("Images", ImagesOnly, char.ConvertFromUtf32(0xF02E9)); // image
         foreach (var (root, label) in scopes)
             Chip(label, root, char.ConvertFromUtf32(label switch
             {
                 "Desktop" or "OneDrive Desktop" => 0xF01C4, "Documents" or "OneDrive Documents" => 0xF0219, "Downloads" => 0xF0B4F, _ => 0xF024B,
             }));
 
-        // Folders only: the Folders chip, or a query ending in / or \.
-        bool foldersOnly = findScope == FoldersOnly || query.EndsWith('/') || query.EndsWith('\\');
+        // Folders only: the Folders chip, or a query ending in / or \. Images: the Images chip,
+        // fff told to keep only those extensions (its *.png constraints, any of them).
+        bool imagesOnly = findScope == ImagesOnly;
+        bool foldersOnly = !imagesOnly && (findScope == FoldersOnly || query.EndsWith('/') || query.EndsWith('\\'));
         string bare = query.TrimEnd('/', '\\'); // the name part, for searching and highlighting
-        findHits = FileSearch.Search(bare, findScope == FoldersOnly ? null : findScope, foldersOnly: foldersOnly);
+        string fffQuery = imagesOnly ? $"{bare} {string.Join(" ", ImageExtensions.Select(e => "*." + e))}".Trim() : bare;
+        findHits = FileSearch.Search(fffQuery, findScope is FoldersOnly or ImagesOnly ? null : findScope, foldersOnly: foldersOnly);
+        if (imagesOnly) findHits = [.. findHits.Where(h => !h.IsDir && IsImage(h.Name))];
         foreach (var hit in findHits) AddFileRow(hit, bare);
         if (findHits.Count == 0)
             AddRow(char.ConvertFromUtf32(scopes.Count == 0 ? 0xF0996 : 0xF0156),
@@ -736,12 +752,45 @@ public sealed partial class MainWindow : Window
         PreviewArt.Visibility = Visibility.Visible;
         PreviewText.TextWrapping = TextWrapping.NoWrap;
         PreviewArt.Background = Brush(Hex(theme.Background), 0x90);
+        bool picture = !hit.IsDir && IsImage(hit.Name);
+        PreviewArt.Height = picture ? 300 : 150;
         PreviewArt.Child = new TextBlock
         {
-            Text = char.ConvertFromUtf32(hit.IsDir ? 0xF024B : 0xF0214), FontFamily = iconFont, FontSize = 64,
+            Text = char.ConvertFromUtf32(hit.IsDir ? 0xF024B : picture ? 0xF02E9 : 0xF0214), FontFamily = iconFont, FontSize = 64,
             Foreground = Brush(hit.IsDir ? theme.Accent : theme.Muted), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
         };
-        if (!hit.IsDir)
+        if (picture)
+        {
+            // The picture itself, decoded at the preview's size (Windows' own decoders, WebP and
+            // HEIC included where Windows has them), and how big it really is.
+            try
+            {
+                ImageSource source;
+                var uri = new Uri(hit.Path);
+                if (hit.Name.EndsWith(".svg", StringComparison.OrdinalIgnoreCase)) source = new Microsoft.UI.Xaml.Media.Imaging.SvgImageSource(uri);
+                else
+                {
+                    source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(uri)
+                    {
+                        DecodePixelWidth = 380, DecodePixelType = Microsoft.UI.Xaml.Media.Imaging.DecodePixelType.Logical,
+                    };
+                }
+                PreviewArt.Child = new Image { Source = source, Stretch = Stretch.Uniform, Margin = new Thickness(6) };
+                // Its real size (the picture above is decoded small), next to its kind.
+                string file = hit.Path;
+                Task.Run(async () =>
+                {
+                    var props = await (await Windows.Storage.StorageFile.GetFileFromPathAsync(file)).Properties.GetImagePropertiesAsync();
+                    return (props.Width, props.Height);
+                }).ContinueWith(t => DispatcherQueue.TryEnqueue(() =>
+                {
+                    if (token != previewToken || !t.IsCompletedSuccessfully || t.Result.Width == 0) return;
+                    PreviewFacts.Children.Insert(Math.Min(1, PreviewFacts.Children.Count), Pill($"{t.Result.Width} × {t.Result.Height}", theme.Accent));
+                }));
+            }
+            catch (Exception ex) { App.Log(ex); }
+        }
+        else if (!hit.IsDir)
             AppIcons.Get("big:" + hit.Path, image =>
             {
                 if (token != previewToken) return;
@@ -1094,7 +1143,7 @@ public sealed partial class MainWindow : Window
     // Tab / Shift+Tab in the file finder: the next / previous folder chip.
     void CycleScope(int by)
     {
-        var scopes = new List<string?> { null, FoldersOnly };
+        var scopes = new List<string?> { null, FoldersOnly, ImagesOnly };
         scopes.AddRange(FileSearch.Scopes().Select(s => (string?)s.Root));
         int at = Math.Max(0, scopes.IndexOf(findScope));
         findScope = scopes[(at + by + scopes.Count) % scopes.Count];

@@ -236,6 +236,7 @@ public sealed partial class MainWindow
         Preview.BorderBrush = Brush(Hex(theme.Border), 0x80);
 
         PreviewArt.Visibility = Visibility.Visible;
+        PreviewArt.Height = 150;
         PreviewArt.Background = Brush(Hex(theme.Background), 0x90);
         PreviewArt.Child = new TextBlock
         {
