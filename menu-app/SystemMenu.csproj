@@ -28,6 +28,8 @@
     <!-- Use the Windows App SDK's own resource (PRI) tools, so `dotnet build` works without Visual Studio. -->
     <EnableMsixTooling>true</EnableMsixTooling>
     <SelfContained>false</SelfContained>
+    <!-- Not ReadyToRun: measured 2026-10-29, it starts no faster (~0.6 s either way, WinUI's
+         own start-up is the time) and the app grows 14 MB. -->
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>

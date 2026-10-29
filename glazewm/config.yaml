@@ -5,12 +5,15 @@
 # Docs: https://github.com/glzr-io/glazewm
 
 general:
-  # Zebar draws the floating top bar and the dock (pack: zebar/tokyo-islands): `omawin restart
-  # zebar` runs zebar/start.ps1, which runs `zebar startup` without a GPU process (see that file).
+  # Zebar draws the floating top bar and the dock (pack: zebar/tokyo-islands): `omawin start
+  # zebar` starts it straight away, without a GPU process, or runs zebar/start.ps1 (`omawin
+  # restart zebar`) when an old bar is still around (bin/omawin.cs, StartZebar).
   # `omawin start` starts the native launcher / menu (menu-app/) hidden, so the first press is
   # instant; `omawin start terminal` keeps noctty running with no window, so terminals open fast too.
-  # `omawin agent start` starts the agent's herdr session (OpenCode's service), headless, for Ctrl+Win+H.
-  startup_commands: ['shell-exec --hide-window omawin.exe restart zebar', 'shell-exec --hide-window omawin.exe start', 'shell-exec --hide-window omawin.exe start terminal', 'shell-exec --hide-window omawin.exe agent start']
+  # `omawin agent start -After 45` starts the agent's herdr session (OpenCode's service), headless,
+  # for Ctrl+Win+H, 45 s on, so it isn't in the way while the desktop comes up (Ctrl+Win+H before
+  # then starts it itself).
+  startup_commands: ['shell-exec --hide-window omawin.exe start zebar', 'shell-exec --hide-window omawin.exe start', 'shell-exec --hide-window omawin.exe start terminal', 'shell-exec --hide-window omawin.exe agent start -After 45']
   shutdown_commands: ['shell-exec taskkill /IM zebar.exe /F']
   config_reload_commands: []
 

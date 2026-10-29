@@ -214,6 +214,7 @@ static class Omawin
             case "terminal-here": return TerminalHere();
             case "terminal-warm": return TerminalWarm();
             case "start-glazewm": return StartGlazeWM();
+            case "start-zebar": return StartZebar();
             case "update-terminal":
                 {
                     var t = Current("terminal");
@@ -727,6 +728,71 @@ static class Omawin
         }
         return Fail("GlazeWM kept exiting at start");
     }
+    // --- the bar at sign-in -----------------------------------------------------------------------
+    // GlazeWM runs this at login (omawin start zebar). zebar/start.ps1 first looks for an old bar
+    // to stop, which costs ~2 s of PowerShell and queries; at sign-in there's none, so the bar
+    // starts straight away. If one is running (GlazeWM restarted), or the theme was never
+    // rendered, or the bar's server doesn't come up, the script does it all as before.
+    static int StartZebar()
+    {
+        var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"glzr.io\Zebar\zebar.exe");
+        var script = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, @"zebar\start.ps1"));
+        int port;
+        if (!int.TryParse(Environment.GetEnvironmentVariable("ZEBAR_ASSET_PORT"), out port)) port = 6124;
+        // The port taken already is a leftover too (the bar's music feed can hold it).
+        if (!File.Exists(exe) || !File.Exists(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"))
+            || InSession("zebar").Length > 0 || ZebarWebviewsLeft() || Listening(port))
+            return Start("pwsh", script);
+        Process zebar;
+        try
+        {
+            // As zebar/start.ps1 says: software drawing, ~100 MB less for the same look. Set here
+            // and inherited, and started as the script's Start-Process does (shell, hidden).
+            Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--disable-gpu");
+            zebar = Process.Start(new ProcessStartInfo(exe, "startup") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
+        }
+        catch (Exception) { return Start("pwsh", script); }
+        Trace("zebar-started");
+        // Its widgets load from its own server; if that never listens, they'd stay blank.
+        var waited = Stopwatch.StartNew();
+        while (waited.ElapsedMilliseconds < 6000)
+        {
+            if (Listening(port)) { Trace("zebar-serving"); return 0; }
+            if (zebar.HasExited) break;
+            Thread.Sleep(100);
+        }
+        try { zebar.Kill(); } catch (Exception) { }
+        return Start("pwsh", script);
+    }
+
+    // A bar stopped by force (GlazeWM's shutdown) can leave its webviews running, and a new bar
+    // started beside them comes up blank. They hold their profile's lockfile open, so a lockfile
+    // that can't be opened means some are left (the script waits for them).
+    static bool ZebarWebviewsLeft()
+    {
+        var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"zebar\webview-cache");
+        if (!Directory.Exists(cache)) return false;
+        foreach (var dir in Directory.GetDirectories(cache))
+        {
+            var lockfile = Path.Combine(dir, @"EBWebView\lockfile");
+            if (!File.Exists(lockfile)) continue;
+            try { using (File.Open(lockfile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { } }
+            catch (IOException) { return true; }
+            catch (UnauthorizedAccessException) { return true; }
+        }
+        return false;
+    }
+
+    static bool Listening(int port)
+    {
+        try
+        {
+            return System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
+                .GetActiveTcpListeners().Any(e => e.Port == port);
+        }
+        catch (Exception) { return false; }
+    }
+
     // --- the terminal, kept running ---------------------------------------------------------------
     // GlazeWM runs this at login (omawin start terminal): every terminal after it is a new window
     // of that warm process, so no start-up, and closing your last terminal doesn't shut it down.

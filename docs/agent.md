@@ -5,7 +5,7 @@ Ask the desktop for something in a sentence and omawin's agent does it: "add Har
 ## How it works
 
 ```
-login ─> GlazeWM's startup commands ─> omawin.exe agent start (agent/start.ps1)
+login ─> GlazeWM's startup commands ─> omawin.exe agent start -After 45 (agent/start.ps1, 45 s on)
    the herdr session "omawin-agent", headless; its tab "opencode" runs agent/server.ps1, which
    runs OpenCode's background service there (and takes it over from a hidden one a client started)
 Ctrl+Win+H ─> omawin.exe agent listen ─> omawin-listen.exe (agent/omawin-listen.cs, native: no wait)

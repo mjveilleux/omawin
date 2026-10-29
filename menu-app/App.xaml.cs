@@ -45,6 +45,15 @@ public static class Program
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
 
     static Mutex? mutex;
+
+    // Timing marks for `omawin profile login`, as omawin.exe writes them: only while
+    // %LOCALAPPDATA%\launcher\trace-on exists.
+    static readonly string TraceLog = Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace.log");
+    internal static void Trace(string label)
+    {
+        if (!File.Exists(Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace-on"))) return;
+        try { File.AppendAllText(TraceLog, "menu " + label + "\t" + Stopwatch.GetTimestamp() + "\n"); } catch (IOException) { }
+    }
     // What a `--render-about` run is drawing (App.OnLaunched reads it and exits when it's done).
     internal static (string Path, int Frame)? Render;
 
@@ -72,6 +81,7 @@ public static class Program
         // single-copy check, so it is never handed to a running copy (which couldn't print).
         if (args.Contains("--qs-selftest")) return QuickSettingsSelfTest.Run();
 
+        Trace("main");
         mutex = new Mutex(true, MutexName, out bool first);
         var signal = new EventWaitHandle(false, EventResetMode.AutoReset, SignalName);
         // A copy that was stopped can hang in Windows for minutes, exited but still holding the
@@ -157,6 +167,7 @@ public partial class App : Application
         Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
         StayAwake.Reset(); // a fresh start is never keeping the PC awake
         new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
+        Program.Trace("ready");
         if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
     }
 

@@ -297,7 +297,7 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
         else { $commandProblems += "$name runs $($Matches[1]), which is missing" }
     }
     elseif ($action -match '^builtin\s+(\S+)') {
-        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
+        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-zebar', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
     }
     elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
 }

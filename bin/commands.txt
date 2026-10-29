@@ -63,6 +63,7 @@ update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
+profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
 profile ram | What's using the memory and the processor, by app, omawin's parts against their budgets (-Save keeps a history and shows what changed, -Json for agents) | pwsh bin/profile-ram.ps1
 check | Health check: is everything in place and running | pwsh check.ps1
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
@@ -77,6 +78,7 @@ preset list |The presets: opt-in groups of tools on top of the core (packages.ps
 preset add | Pick a preset and install it now: omawin preset add data | pwsh bin/preset.ps1 add
 preset remove | Unpick a preset (what it installed stays): omawin preset remove data | pwsh bin/preset.ps1 remove
 start | Start the menu app in the background (GlazeWM does this at login) | app --start-hidden
+start zebar | Start the bar and the dock (GlazeWM does this at login): straight away, or as omawin restart zebar when an old one is still around | builtin start-zebar
 start terminal | Keep the default terminal running in the background, so new ones open fast (GlazeWM does this at login) | builtin terminal-warm
 start glazewm | Start GlazeWM once Windows' taskbar is up, again if it crashes at start (the sign-in task runs this) | builtin start-glazewm
 
