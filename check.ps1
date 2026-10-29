@@ -64,11 +64,17 @@ if ($chosen -contains 'dictation' -and (Test-Path "$env:APPDATA\com.pais.handy\s
     $handyModel = (Get-Content "$env:APPDATA\com.pais.handy\settings_store.json" -Raw | ConvertFrom-Json).settings.selected_model
     if ($handyModel) { Pass 'Handy speech model' $handyModel } else { Fail 'Handy speech model' 'none, so Win+H does nothing (install.ps1 -Step desktop)' }
 }
-# The wsl preset: this account's Ubuntu (listing distros doesn't start WSL).
+# The wsl preset: this account's Linux, the one `omawin default linux` picked (bin/defaults.txt),
+# in WSL's registry (so WSL isn't started to ask).
 if ($chosen -contains 'wsl') {
-    $env:WSL_UTF8 = '1'
-    if (@(wsl.exe --list --quiet 2>$null | ForEach-Object { "$_".Trim() }) -contains 'Ubuntu') { Pass 'Ubuntu (WSL)' 'wsl -d Ubuntu' }
-    else { Fail 'Ubuntu (WSL)' 'not installed for this account (omawin preset add wsl)' }
+    $linux = @(foreach ($line in Get-Content "$Repo\bin\defaults.txt") { $p = @($line -split '\|' | ForEach-Object { $_.Trim() }); if ($p.Count -ge 5 -and $p[0] -eq 'linux') { , $p } })
+    $picked = "$(Get-Content "$env:LOCALAPPDATA\launcher\defaults\linux" -TotalCount 1 -ErrorAction SilentlyContinue)".Trim()
+    $pick = @($linux | Where-Object { $_[1] -eq $picked }) + , $linux[0] | Select-Object -First 1
+    $distros = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $_.GetValue('DistributionName') })
+    $what = "$(($pick[2] -split ',')[0]) (WSL)"
+    if ($distros -contains $pick[4]) { Pass $what "wsl -d $($pick[4])" }
+    elseif (Test-Path "$env:LOCALAPPDATA\launcher\wsl-restart") { Warn $what 'WSL is in; it finishes setting up after Windows restarts' }
+    else { Fail $what 'not installed for this account (omawin preset add wsl)' }
 }
 $font = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts', 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts' -ErrorAction SilentlyContinue |
         ForEach-Object { $_.PSObject.Properties.Name } | Where-Object { $_ -like 'JetBrainsMono*' })

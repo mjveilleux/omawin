@@ -147,7 +147,7 @@ function Show-AdminRequest([string[]]$What) {
     Write-Step 'one admin prompt'
     Write-Note "Windows asks for admin once, now, for what every account on this PC shares:"
     foreach ($w in $What) { $p = $w -split '\|', 2; Write-Note "  $($p[0])$(if ($p.Count -gt 1) { "  ($($p[1]))" })" }
-    Write-Note 'Nothing asks again after this. Say no, and each one asks on its own as it installs.'
+    Write-Note 'Nothing asks again after this. Say no, and omawin installs what it can for this account alone.'
 }
 function Close-AdminRequest([bool]$Approved) {
     $s = Get-InstallStep 'admin'

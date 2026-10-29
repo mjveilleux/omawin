@@ -39,10 +39,10 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 
 `omawin pkg install` is the same for winget in a terminal, with fzf.
 
-- **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in WSL Ubuntu (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
+- **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in your Linux in WSL (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`launcher/project-tabs.txt`).
   - The session keeps running when the window closes, agents and all; opening the project again reattaches to it.
-  - Ubuntu repos open inside WSL. WSL is only asked when it's already running (a cold start takes ~8 s); otherwise the last list is reused.
+  - Linux repos open inside WSL, marked with your distro's logo (Arch or Ubuntu). WSL is only asked when it's already running (a cold start takes ~8 s); otherwise the last list is reused.
 - **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. Under them are your favorite sites from `launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.

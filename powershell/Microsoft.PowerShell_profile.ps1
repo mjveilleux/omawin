@@ -1,4 +1,4 @@
-# PowerShell profile: same look and tools as the Ubuntu dotfiles
+# PowerShell profile: same look and tools as the Linux dotfiles
 # (starship prompt, zoxide, fzf), plus eza and bat.
 #
 # Kept fast: starship and zoxide init scripts are generated once into ~/.cache/pwsh

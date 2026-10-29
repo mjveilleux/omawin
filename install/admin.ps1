@@ -3,13 +3,17 @@
 # Dot-sourced by install.ps1 (after lib.ps1 and software.ps1's functions). Runs under Windows
 # PowerShell 5.1 too.
 #
-# Declined, or no admin password at hand: the install goes on as before it had this, each whole-PC
-# package and fork asking on its own as it comes.
+# It's the only prompt: after it, install.ps1 sets OMAWIN_NO_ADMIN and nothing asks again.
+# Declined, or no admin password at hand (the non-admin path): the install goes on without it,
+# installing what it can for this account alone (the whole-PC packages with winget --scope user
+# where they have such an installer) and leaving out what only admin can do (the forks: the
+# official GlazeWM and Zebar stay; WSL), each said in the summary.
 
 $AdminBatch = $null
 
 # What needs admin: the whole-PC packages not installed yet ($WholePC in packages.ps1, among
-# $Ids), and the forks unless they're in and current.
+# $Ids), the forks unless they're in and current, and WSL itself when the wsl preset is picked
+# and the PC hasn't got it.
 function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
     $packages = @()
     if (-not $NoPackages) {
@@ -40,7 +44,17 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         $answer = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
         if ($answer -eq 'needed') { $forks += $fork } else { Write-Log "    $($fork): $answer" }
     }
-    [pscustomobject]@{ Packages = $packages; Forks = $forks }
+    # An update installs no programs, WSL neither (omawin preset add wsl does, with its own prompt).
+    $wsl = (-not $NoPackages) -and (@(Get-ChosenPresets) -contains 'wsl') -and -not (Test-WslInstalled)
+    [pscustomobject]@{ Packages = $packages; Forks = $forks; Wsl = $wsl }
+}
+
+# Whether WSL went in just now and works only once Windows restarts: waits for the admin step's
+# word on it (the wsl preset's installer asks, packages.ps1). $false when it wasn't on the list.
+function Get-WslRestart {
+    if (-not ($script:AdminBatch -and $script:AdminBatch.Plan.Wsl)) { return $false }
+    Wait-AdminItems @('wsl')
+    (Get-AdminState 'wsl') -eq 'done' -and (Get-AdminText 'wsl') -eq 'restart'
 }
 
 # Shows what it's for, asks once (Windows' prompt), and starts the batch. $false if declined.
@@ -51,6 +65,7 @@ function Start-AdminBatch($Plan) {
         $what += "$($Plan.Packages.Count) program$(if ($Plan.Packages.Count -ne 1) { 's' }) for the whole PC|$(($names | Select-Object -First 5) -join ', ')$(if ($names.Count -gt 5) { ' ...' })"
     }
     if ($Plan.Forks.Count) { $what += "omawin's $((@($Plan.Forks | ForEach-Object { if ($_ -eq 'glazewm-fork') { 'GlazeWM' } else { 'Zebar' } })) -join ' and ')|signed on this PC" }
+    if ($Plan.Wsl) { $what += "WSL, for $((Get-LinuxPick).Label)|it's ready after Windows restarts" }
     Show-AdminRequest $what
 
     $status = Join-Path $env:TEMP "omawin-admin-$Stamp.txt"
@@ -58,12 +73,13 @@ function Start-AdminBatch($Plan) {
     $arguments = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$Repo\install\admin-batch.ps1`"", '-Status', "`"$status`"")
     if ($Plan.Packages.Count) { $arguments += '-Packages', ($Plan.Packages -join ',') }
     if ($Plan.Forks.Count) { $arguments += '-Forks' }
+    if ($Plan.Wsl) { $arguments += '-Wsl' }
     $started = Get-Date
     try {
         $p = Start-Process powershell.exe -Verb RunAs -WindowStyle Hidden -PassThru -ArgumentList $arguments
     } catch {
         Close-AdminRequest $false
-        Write-Note "no admin: each whole-PC program and fork asks on its own as it installs ($($_.Exception.Message))"
+        Write-Note "no admin: this account gets what it can install alone, and nothing asks again ($($_.Exception.Message))"
         return $false
     }
     Close-AdminRequest $true

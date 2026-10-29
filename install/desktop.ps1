@@ -12,8 +12,9 @@ Set-Junction "$HOME\.glzr\zebar" "$Repo\zebar"
 Invoke-InstallItem 'Desktop' 'GlazeWM at sign-in' { & "$Repo\install\login-start.ps1" }
 # Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1),
 # and our Zebar fork, the bar on this account's ports (install/zebar-fork.ps1). The admin step put
-# them in (install/admin.ps1), or, when it didn't run, each asks for admin here. Without them the
-# official ones stay: GlazeWM starts a few seconds later, one account's bar at a time.
+# them in (install/admin.ps1); declined there, they're left out (nothing asks after that prompt),
+# and on its own (-Step desktop) each asks for admin here. Without them the official ones stay:
+# GlazeWM starts a few seconds later, one account's bar at a time.
 $forkNames = @{ 'glazewm-fork' = 'GlazeWM'; 'zebar-fork' = 'Zebar' }
 foreach ($fork in 'glazewm-fork', 'zebar-fork') {
     $name = $forkNames[$fork]
@@ -32,6 +33,11 @@ foreach ($fork in 'glazewm-fork', 'zebar-fork') {
     } else {
         $current = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
         if ($current -ne 'needed') { Write-Note $current; Add-InstallItem 'Desktop' $fork $(if ($current -like 'ok*fork*') { "omawin's $name" } else { "official $name" }) 'have'; continue }
+        if ($env:OMAWIN_NO_ADMIN) {
+            Write-Note "official $name kept: omawin's takes admin (install.ps1 -Step desktop asks once)"
+            Add-InstallItem 'Desktop' $fork "official $name" 'have'
+            continue
+        }
         Invoke-InstallItem 'Desktop' "omawin's $name" { & "$Repo\install\$fork.ps1" }
     }
 }

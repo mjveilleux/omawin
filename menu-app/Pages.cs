@@ -10,11 +10,12 @@ namespace SystemMenu;
 
 // --- Projects ------------------------------------------------------------------------------
 // Git repos on Windows (two levels under the folders below, and in your home folder or one
-// folder down: ~/omawin, ~/src/glazewm) and in WSL Ubuntu (three levels under ~). Repos zoxide
-// knows (visited often or recently) come first, then the rest by their latest git activity. WSL
-// is only asked when it's already running (booting it takes ~8 s); otherwise its list from last
-// time is used (wsl-projects.txt). The background index (Background.cs) searches again seconds
-// after a repo appears or goes, and keeps the result in Latest.
+// folder down: ~/omawin, ~/src/glazewm) and in the Linux in WSL (three levels under ~). Repos
+// zoxide knows (visited often or recently) come first, then the rest by their latest git
+// activity. WSL is only asked when it's already running (booting it takes ~8 s); otherwise its
+// list from last time is used (wsl-projects.txt, headed by the distro it came from). The
+// background index (Background.cs) searches again seconds after a repo appears or goes, and
+// keeps the result in Latest.
 public sealed record Project(bool Wsl, string Path, double Time, bool Visited)
 {
     public string Name => Wsl ? Path.TrimEnd('/').Split('/')[^1] : System.IO.Path.GetFileName(Path.TrimEnd('\\'));
@@ -24,7 +25,29 @@ public sealed record Project(bool Wsl, string Path, double Time, bool Visited)
 public static class Projects
 {
     public static readonly string Home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-    public const string Distro = "Ubuntu";
+    // The Linux in WSL omawin opens (omawin default linux, bin/defaults.txt): its name there
+    // ("arch", "ubuntu") and its WSL name. Read each time, so a new pick shows without a restart.
+    public static (string Name, string Distro) Linux
+    {
+        get
+        {
+            var rows = new List<(string Name, string Distro)>();
+            try
+            {
+                foreach (var line in File.ReadLines(Path.Combine(MenuModel.Repo, "bin", "defaults.txt")))
+                {
+                    var p = line.Split('|').Select(s => s.Trim()).ToArray();
+                    if (p.Length >= 5 && p[0] == "linux") rows.Add((p[1], p[4]));
+                }
+            }
+            catch { }
+            string? picked = null;
+            try { picked = File.ReadAllText(Path.Combine(MenuModel.StateDir, "defaults", "linux")).Trim(); } catch { }
+            foreach (var r in rows) if (r.Name == picked) return r;
+            return rows.Count > 0 ? rows[0] : ("arch", "archlinux");
+        }
+    }
+    public static string Distro => Linux.Distro;
     static readonly string[] Roots = [Path.Combine(Home, "Documents"), Path.Combine(Home, "OneDrive", "Documents"), Path.Combine(Home, "source", "repos"), Path.Combine(Home, "repos")];
     static string WslCache => Path.Combine(MenuModel.StateDir, "wsl-projects.txt");
 
@@ -108,13 +131,15 @@ public static class Projects
     static IEnumerable<Project> FindWsl()
     {
         string[] lines;
-        if (Run("wsl.exe", "-l --running -q", utf16: true).Contains(Distro))
+        var distro = Distro;
+        if (Run("wsl.exe", "-l --running -q", utf16: true).Contains(distro, StringComparer.OrdinalIgnoreCase))
         {
             const string script = "zoxide query -l 2>/dev/null; echo ---; find ~ -maxdepth 3 -name .git -type d -not -path '*/.cache/*' -not -path '*/.local/*' -printf '%T@ %h\\n' 2>/dev/null | sort -rn";
-            lines = Run("wsl.exe", $"-d {Distro} -e bash -lc \"{script}\"", 15_000);
-            if (lines.Contains("---")) { try { File.WriteAllLines(WslCache, lines); } catch { } }
+            lines = Run("wsl.exe", $"-d {distro} -e bash -lc \"{script}\"", 15_000);
+            if (lines.Contains("---")) { try { File.WriteAllLines(WslCache, lines.Prepend("# " + distro)); } catch { } }
         }
-        else if (File.Exists(WslCache)) lines = File.ReadAllLines(WslCache);
+        // The list from last time, if it's this distro's (another one's repos aren't in this one).
+        else if (File.Exists(WslCache) && File.ReadLines(WslCache).FirstOrDefault() == "# " + distro) lines = File.ReadAllLines(WslCache)[1..];
         else yield break;
         int split = Array.IndexOf(lines, "---");
         var visited = split > 0 ? lines[..split].ToHashSet() : [];
