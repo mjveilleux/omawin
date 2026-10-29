@@ -707,6 +707,10 @@ static class Omawin
         catch (Exception) { }
         SetPorts(fork);
         SyncClaude();
+        // The menu app (the launcher, and the native bar) from here, alongside GlazeWM rather than
+        // after it: it takes seconds to come up at sign-in. GlazeWM's own `omawin start` then
+        // finds it running. (After SetPorts: it reads GlazeWM's port.)
+        try { Send("--start-hidden"); Trace("menu-started"); } catch (Exception) { }
         for (int attempt = 1; attempt <= 6; attempt++)
         {
             var waited = Stopwatch.StartNew();
@@ -795,96 +799,122 @@ static class Omawin
         return Start("pwsh", script);
     }
 
-    // The bar's strip, drawn at once while Zebar's web engine starts (seconds at sign-in): a plain
-    // band in the theme's background, the bar's size, across the top of every monitor. Zebar's
-    // window opens above it and draws the same band with its widgets; then this goes.
+    // The bar's strip, drawn at once while the bar starts (seconds at sign-in): a plain band in
+    // the theme's background, the bar's size, across the top of every monitor. The bar's own
+    // window opens above it and draws the same band with its widgets; then this goes. Plain
+    // Win32 (a window whose class brush is the colour): WinForms took ~2.4 s to load at sign-in.
     class Strip
     {
-        [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
-        [DllImport("user32.dll")] static extern IntPtr MonitorFromPoint(System.Drawing.Point pt, uint flags);
-        [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
-
-        readonly List<System.Windows.Forms.Form> forms = new List<System.Windows.Forms.Form>();
-        readonly ManualResetEvent shown = new ManualResetEvent(false);
-
-        class Band : System.Windows.Forms.Form
+        delegate IntPtr WndProc(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+        delegate bool MonitorProc(IntPtr monitor, IntPtr dc, ref RECT rect, IntPtr data);
+        [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+        [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
+        [StructLayout(LayoutKind.Sequential)] struct MSG { public IntPtr hwnd; public uint message; public IntPtr wParam, lParam; public uint time; public POINT pt; }
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        struct WNDCLASS
         {
-            protected override bool ShowWithoutActivation { get { return true; } }
-            protected override System.Windows.Forms.CreateParams CreateParams
-            {
-                get
-                {
-                    var p = base.CreateParams;
-                    p.ExStyle |= 0x80 | 0x08000000; // a tool window that's never activated: GlazeWM leaves it alone
-                    return p;
-                }
-            }
+            public uint style; public IntPtr lpfnWndProc; public int cbClsExtra, cbWndExtra;
+            public IntPtr hInstance, hIcon, hCursor, hbrBackground; public string lpszMenuName, lpszClassName;
         }
+        [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
+        [DllImport("user32.dll")] static extern bool EnumDisplayMonitors(IntPtr dc, IntPtr clip, MonitorProc proc, IntPtr data);
+        [DllImport("shcore.dll")] static extern int GetDpiForMonitor(IntPtr monitor, int type, out uint dpiX, out uint dpiY);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern ushort RegisterClass(ref WNDCLASS cls);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr CreateWindowEx(uint ex, string cls, string name, uint style, int x, int y, int w, int h, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr DefWindowProc(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetMessage(out MSG msg, IntPtr hwnd, uint min, uint max);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern IntPtr DispatchMessage(ref MSG msg);
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern bool PostThreadMessage(uint thread, uint message, IntPtr wParam, IntPtr lParam);
+        [DllImport("user32.dll")] static extern bool DestroyWindow(IntPtr hwnd);
+        [DllImport("gdi32.dll")] static extern IntPtr CreateSolidBrush(int colorRef);
+        [DllImport("kernel32.dll")] static extern uint GetCurrentThreadId();
+        [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(IntPtr name);
+
+        static readonly WndProc Proc = DefWindowProc; // kept, so it isn't collected while windows use it
+        readonly List<IntPtr> bands = new List<IntPtr>();
+        readonly ManualResetEvent shown = new ManualResetEvent(false);
+        uint threadId;
 
         public static Strip Show(string themeCss)
         {
             var strip = new Strip();
+            int colorRef = ColorRef(ThemeBackground(themeCss));
+            var thread = new Thread(() =>
+            {
+                try
+                {
+                    strip.threadId = GetCurrentThreadId();
+                    SetProcessDpiAwarenessContext(new IntPtr(-4)); // per monitor: real pixels
+                    var instance = GetModuleHandle(IntPtr.Zero);
+                    var cls = new WNDCLASS { lpfnWndProc = Marshal.GetFunctionPointerForDelegate(Proc), hInstance = instance, hbrBackground = CreateSolidBrush(colorRef), lpszClassName = "omawin strip" };
+                    RegisterClass(ref cls);
+                    var screens = new List<RECT>();
+                    var dpis = new List<uint>();
+                    EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, (IntPtr monitor, IntPtr dc, ref RECT r, IntPtr data) =>
+                    {
+                        uint dpi = 96, ignored;
+                        try { GetDpiForMonitor(monitor, 0, out dpi, out ignored); } catch (Exception) { }
+                        screens.Add(r);
+                        dpis.Add(dpi);
+                        return true;
+                    }, IntPtr.Zero);
+                    for (int i = 0; i < screens.Count; i++)
+                    {
+                        var r = screens[i];
+                        // A popup tool window that's never activated (GlazeWM leaves it alone), shown at once.
+                        var band = CreateWindowEx(0x80 | 0x08000000, "omawin strip", "omawin strip", 0x80000000 | 0x10000000,
+                            r.Left, r.Top, r.Right - r.Left, (int)Math.Round(26 * dpis[i] / 96.0), IntPtr.Zero, IntPtr.Zero, instance, IntPtr.Zero);
+                        if (band != IntPtr.Zero) lock (strip.bands) strip.bands.Add(band);
+                    }
+                    Trace("strip-shown");
+                }
+                catch (Exception) { }
+                strip.shown.Set();
+                MSG msg;
+                while (GetMessage(out msg, IntPtr.Zero, 0, 0) > 0)
+                {
+                    if (msg.message == 0x8001) break; // Close: done
+                    DispatchMessage(ref msg);
+                }
+                lock (strip.bands) foreach (var b in strip.bands) DestroyWindow(b);
+            }) { IsBackground = true };
+            thread.Start(); // not waited for: the bar's window takes far longer to open
+            return strip;
+        }
+
+        // #rrggbb as GDI's COLORREF (0x00bbggrr).
+        static int ColorRef(string hex)
+        {
             try
             {
-                var color = System.Drawing.ColorTranslator.FromHtml(ThemeBackground(themeCss));
-                var thread = new Thread(() =>
-                {
-                    try
-                    {
-                        SetProcessDpiAwarenessContext(new IntPtr(-4)); // per monitor: real pixels
-                        foreach (var screen in System.Windows.Forms.Screen.AllScreens)
-                        {
-                            var b = screen.Bounds;
-                            uint dpi = 96, ignored;
-                            try { GetDpiForMonitor(MonitorFromPoint(new System.Drawing.Point(b.X + 1, b.Y + 1), 2), 0, out dpi, out ignored); }
-                            catch (Exception) { }
-                            var band = new Band
-                            {
-                                FormBorderStyle = System.Windows.Forms.FormBorderStyle.None,
-                                ShowInTaskbar = false,
-                                StartPosition = System.Windows.Forms.FormStartPosition.Manual,
-                                BackColor = color,
-                                Bounds = new System.Drawing.Rectangle(b.X, b.Y, b.Width, (int)Math.Round(26 * dpi / 96.0)),
-                            };
-                            band.Show();
-                            band.Bounds = new System.Drawing.Rectangle(b.X, b.Y, b.Width, (int)Math.Round(26 * dpi / 96.0));
-                            lock (strip.forms) strip.forms.Add(band);
-                        }
-                        Trace("strip-shown");
-                    }
-                    catch (Exception) { }
-                    strip.shown.Set();
-                    System.Windows.Forms.Application.Run();
-                }) { IsBackground = true };
-                thread.SetApartmentState(ApartmentState.STA);
-                thread.Start(); // not waited for: Zebar's window takes far longer to open
+                hex = hex.TrimStart('#');
+                int r = Convert.ToInt32(hex.Substring(0, 2), 16), g = Convert.ToInt32(hex.Substring(2, 2), 16), b = Convert.ToInt32(hex.Substring(4, 2), 16);
+                return r | (g << 8) | (b << 16);
             }
-            catch (Exception) { strip.shown.Set(); }
-            return strip;
+            catch (Exception) { return 0; }
         }
 
         // theme.css's --bg-solid, the bar's background (themes/render.ps1 writes it).
         static string ThemeBackground(string themeCss)
         {
-            foreach (var line in File.ReadAllLines(themeCss))
+            try
             {
-                var t = line.Trim();
-                if (t.StartsWith("--bg-solid:")) return t.Substring(11).Trim().TrimEnd(';').Trim();
+                foreach (var line in File.ReadAllLines(themeCss))
+                {
+                    var t = line.Trim();
+                    if (t.StartsWith("--bg-solid:")) return t.Substring(11).Trim().TrimEnd(';').Trim();
+                }
             }
+            catch (Exception) { }
             return "#000000";
         }
 
         public void Close()
         {
             shown.WaitOne(2000);
-            lock (forms)
-                foreach (var f in forms)
-                {
-                    try { f.Invoke(new Action(f.Close)); } catch (Exception) { }
-                }
+            PostThreadMessage(threadId, 0x8001, IntPtr.Zero, IntPtr.Zero);
         }
     }
-
     // A bar stopped by force (GlazeWM's shutdown) can leave its webviews running, and a new bar
     // started beside them comes up blank. They hold their profile's lockfile open, so a lockfile
     // that can't be opened means some are left (the script waits for them).

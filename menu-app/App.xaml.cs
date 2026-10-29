@@ -167,15 +167,23 @@ public partial class App : Application
             return;
         }
         if (Program.BarPreview) { Bar.Preview(); return; }
-        window = new MainWindow();
-        FileSearch.Start(); // the launcher's file indexes (fff), built in the background
-        Background.Start(); // clipboard history, installed apps, reports (Background.cs)
-        Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
-        StayAwake.Reset(); // a fresh start is never keeping the PC awake
-        new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
-        Bar.Start(HandleRequest); // the native bar, when it's the one picked (Bar/Bar.cs)
-        Program.Trace("ready");
-        if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
+        Program.Trace("launched");
+        // The bar first (when it's the one picked, Bar/Bar.cs): at sign-in it's what you see. Its
+        // windows draw once this returns, so the rest comes after, queued behind that first frame.
+        Bar.Start(HandleRequest);
+        Program.Trace("bar");
+        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            window = new MainWindow();
+            Program.Trace("window");
+            FileSearch.Start(); // the launcher's file indexes (fff), built in the background
+            Background.Start(); // clipboard history, installed apps, reports (Background.cs)
+            Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
+            StayAwake.Reset(); // a fresh start is never keeping the PC awake
+            new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
+            Program.Trace("ready");
+            if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
+        });
     }
 
     public static void Log(Exception ex)

@@ -43,6 +43,9 @@ public static unsafe class Tray
     {
         try
         {
+            // Not before Explorer's taskbar: at sign-in this app can start first, and a window of
+            // the taskbar's class must never be there without the real one behind it.
+            for (int i = 0; i < 1200 && Explorer() == IntPtr.Zero; i++) Thread.Sleep(100);
             var name = Marshal.StringToHGlobalUni("Shell_TrayWnd");
             var cls = new WNDCLASSEX { cbSize = (uint)sizeof(WNDCLASSEX), lpfnWndProc = &WndProc, hInstance = GetModuleHandle(IntPtr.Zero), lpszClassName = name };
             if (RegisterClassEx(ref cls) == 0) App.Log(new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error(), "tray: RegisterClassEx"));
