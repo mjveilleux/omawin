@@ -208,6 +208,7 @@ public partial class App : Application
         }
         else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "stay-awake") StayAwake.Toggle();
         else if (args.Length > 1 && args[0] == "--bar") Bar.Set(args[1]);
+        else if (args.Length > 1 && args[0] == "--say") Snip.Say(string.Join(' ', args[1..])); // the note, for other programs (the music player)
         else if (args.Length > 1 && args[0] == "--qs")
         {
             // One Quick settings toggle, off the UI thread (the radios, WLAN and WMI calls block),

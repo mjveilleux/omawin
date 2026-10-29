@@ -11,15 +11,16 @@ using Microsoft.UI.Xaml.Media.Animation;
 namespace SystemMenu;
 
 // The native bar (docs/native-bar.md): Zebar's bar, drawn by the menu app itself, one window per
-// monitor. On while %LOCALAPPDATA%\launcher\bar says "native" (omawin bar native; omawin bar
-// zebar goes back). Its layout is Zebar's bar.json; its data comes straight from GlazeWM's IPC
-// and Windows, gathered here and handed to every widget (Widgets.cs).
+// monitor. The default bar; Zebar's instead while %LOCALAPPDATA%\launcher\bar says "zebar"
+// (omawin bar zebar; omawin bar native comes back). Its layout is Zebar's bar.json; its data
+// comes straight from GlazeWM's IPC and Windows, gathered here and handed to every widget
+// (Widgets.cs).
 public static class Bar
 {
     static string SettingFile => Path.Combine(MenuModel.StateDir, "bar");
     static string LayoutFile => Path.Combine(MenuModel.Repo, @"zebar\tokyo-islands\bar.json");
-    public static bool Native => File.Exists(SettingFile) && File.ReadAllText(SettingFile).Trim() == "native";
-
+    // The default: only "zebar" in the file picks Zebar's.
+    public static bool Native => !File.Exists(SettingFile) || File.ReadAllText(SettingFile).Trim() != "zebar";
     public static readonly GlazeWm Wm = new();
     public static FontFamily LogoFont { get; } = new("ms-appx:///omarchy.ttf#omarchy");
     static readonly List<BarWindow> windows = [];

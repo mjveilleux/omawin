@@ -763,7 +763,7 @@ static class Omawin
         // The native bar picked (omawin bar native): the menu app draws it, so no Zebar; the strip
         // covers the wait for its window (menu-app/Bar/BarWindow.cs, "omawin bar").
         var picked = Path.Combine(StateDir, "bar");
-        if (File.Exists(picked) && File.ReadAllText(picked).Trim() == "native")
+        if (!File.Exists(picked) || File.ReadAllText(picked).Trim() != "zebar") // the default
         {
             var cover = Strip.Show(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"));
             var waited = Stopwatch.StartNew();

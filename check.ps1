@@ -327,7 +327,7 @@ Section 'running now'
 if (Get-Process glazewm -ErrorAction SilentlyContinue) { Pass 'glazewm' } else { Fail 'glazewm' 'not running' }
 # The bar: Zebar, or the menu app's own (omawin bar native, docs/native-bar.md), whose window is "omawin bar".
 $barFile = "$env:LOCALAPPDATA\launcher\bar"
-if ((Test-Path $barFile) -and (Get-Content $barFile -Raw).Trim() -eq 'native') {
+if (-not (Test-Path $barFile) -or (Get-Content $barFile -Raw).Trim() -ne 'zebar') { # native: the default
     $bar = Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'omawin bar' }
     if ($bar) { Pass 'bar' 'native (the menu app)' } else { Fail 'bar' 'native, but not up (omawin restart menu)' }
 }

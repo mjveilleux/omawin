@@ -38,7 +38,7 @@ workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal 
 launch terminal | A terminal, in the default terminal: [--dir <folder>] [--title <title>] [--wsl: in your Linux] [-- <command>] | builtin launch-terminal
 launch project | A project window (launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
 launch editor | A file or folder in the default editor | builtin launch-editor
-default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch|ubuntu, the Linux in WSL | builtin default
+default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch (or ubuntu), the Linux in WSL | builtin default
 
 restart zebar | Restart the bar and the dock | pwsh zebar/start.ps1
 restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+R) | pwsh themes/render.ps1 -Reload
