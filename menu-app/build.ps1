@@ -15,7 +15,9 @@ param(
     # and for a build into a scratch folder, which must leave the running desktop alone.
     [switch]$BuildOnly,
     # The release this build is from (SystemMenu --version); CI passes the tag.
-    [string]$Release
+    [string]$Release,
+    # One native program (Native AOT; SystemMenu.csproj says what it leaves out for now).
+    [switch]$Aot
 )
 $ErrorActionPreference = 'Stop'
 
@@ -36,6 +38,7 @@ if (-not $BuildOnly) {
 $publish = @('-c', 'Release', '-o', $out, '-nologo', '-v', 'q')
 if ($Arch -ne 'x64') { $publish += @("-p:RuntimeIdentifier=win-$Arch", "-p:Platform=$Arch", "-p:Platforms=$Arch") }
 if ($Release) { $publish += "-p:OmawinRelease=$Release" }
+if ($Aot) { $publish += '-p:OmawinAot=true' }
 # From the project folder, so the repo's global.json (the pinned SDK) applies.
 Push-Location $PSScriptRoot
 try { dotnet publish "$PSScriptRoot\SystemMenu.csproj" @publish }
