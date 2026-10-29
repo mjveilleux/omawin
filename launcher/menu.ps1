@@ -5,6 +5,9 @@
 # and, inside a menu-task window (menu.txt rows start them), two jobs that need more than a line:
 #   menu.ps1 -SetWallpaper      pick an image and make it the wallpaper
 #   menu.ps1 -SearchPackage     search winget for anything and install it
+#   menu.ps1 -Install "<source>:<id>;..."   the launcher's Packages page: install those, one
+#                                after another (sources: winget, choco, scoop)
+#   menu.ps1 -InstallManager winget|choco|scoop   the manager itself, when it isn't here
 #
 # Install rows are winget (or Chocolatey) packages. Which ones this PC already has comes from
 # a list refreshed in the background (`winget export` takes ~20s, too slow to run
@@ -13,14 +16,15 @@
 #
 # Longer jobs (installs, updates) run in their own small terminal window titled "menu-task",
 # so the menu is free again right away and you can watch them.
-param([string]$Run, [switch]$RefreshInstalled, [switch]$SetWallpaper, [switch]$SearchPackage)
+param([string]$Run, [switch]$RefreshInstalled, [switch]$SetWallpaper, [switch]$SearchPackage, [string]$Install,
+    [ValidateSet('', 'winget', 'choco', 'scoop')][string]$InstallManager = '')
 
 $MenuFile = Join-Path $PSScriptRoot 'menu.txt'
 $InstalledFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
 $TaskDir = Join-Path $env:LOCALAPPDATA 'launcher\tasks'
 
 # --- what's installed ---------------------------------------------------------------------
-# installed.txt: one "winget:<id>" or "choco:<id>" per line, lowercase.
+# installed.txt: one "winget:<id>", "choco:<id>" or "scoop:<app>" per line, lowercase.
 function Update-InstalledList {
     $json = Join-Path ([IO.Path]::GetTempPath()) "launcher-winget-$PID.json"
     winget export -o $json --accept-source-agreements *> $null
@@ -29,6 +33,11 @@ function Update-InstalledList {
     Remove-Item $json -ErrorAction SilentlyContinue
     if (Get-Command choco -ErrorAction SilentlyContinue) {
         $ids += @(choco list --limit-output 2>$null | ForEach-Object { 'choco:' + ($_ -split '\|')[0].ToLower() })
+    }
+    # Scoop's apps are its folders (scoop list is slow and prints a table).
+    $scoopApps = Join-Path $(if ($env:SCOOP) { $env:SCOOP } else { Join-Path $HOME 'scoop' }) 'apps'
+    if (Test-Path $scoopApps) {
+        $ids += @(Get-ChildItem $scoopApps -Directory | Where-Object Name -ne 'scoop' | ForEach-Object { "scoop:$($_.Name.ToLower())" })
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $InstalledFile) | Out-Null
     Set-Content $InstalledFile $ids -Encoding utf8
@@ -125,6 +134,84 @@ Write-Host "``n  done · press any key to close" -ForegroundColor DarkGray
 `$null = [Console]::ReadKey(`$true)
 "@
     & omawin.exe launch terminal --title menu-task -- pwsh -NoLogo -File $file
+}
+
+# --- the Packages page's installs ------------------------------------------------------------
+# What each manager's ids look like (the app checks the same): nothing else reaches a command.
+$SafeId = '^[A-Za-z0-9][A-Za-z0-9._+-]*(/[A-Za-z0-9][A-Za-z0-9._+-]*)?$'
+
+function Get-InstallScript([string]$Source, [string]$Id) {
+    $installed = $InstalledFile.Replace("'", "''")
+    switch ($Source) {
+        'winget' { @"
+Write-Host '  winget  $Id' -ForegroundColor Cyan
+winget install --id $Id --exact --accept-source-agreements --accept-package-agreements
+if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'winget:$($Id.ToLower())' }
+"@ }
+        # Chocolatey needs admin: Windows asks first.
+        'choco' { @"
+Write-Host '  Chocolatey  $Id' -ForegroundColor Cyan
+Start-Process choco -Verb RunAs -Wait -ArgumentList 'install', '$Id', '-y'
+if (choco list --limit-output --exact '$Id') { Add-Content '$installed' 'choco:$($Id.ToLower())' }
+"@ }
+        # Scoop: <bucket>/<app>, into your user folder, no admin.
+        'scoop' {
+            $app = ($Id -split '/')[-1]
+            @"
+Write-Host '  Scoop  $Id' -ForegroundColor Cyan
+scoop install $Id
+if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'scoop:$($app.ToLower())' }
+"@ }
+    }
+}
+
+if ($Install) {
+    $scripts = foreach ($key in $Install -split ';') {
+        $source, $id = $key -split ':', 2
+        if ($source -notin 'winget', 'choco', 'scoop' -or $id -notmatch $SafeId) { Write-Warning "skipped $key"; continue }
+        Get-InstallScript $source $id
+    }
+    $count = @($scripts).Count
+    if ($count) { Start-MenuTask $(if ($count -eq 1) { "Install $(($Install -split ':', 2)[1])" } else { "Install $count packages" }) ($scripts -join "`n") }
+}
+
+if ($InstallManager -eq 'winget') {
+    # winget is Microsoft's App Installer. Most often it's on the PC but not yet registered for
+    # this account (a new account, before the Store has run): registering it is enough. Else
+    # Microsoft's WinGet module puts in the latest, with what it needs.
+    Start-MenuTask 'Install winget' @'
+Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe -ErrorAction SilentlyContinue
+if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Install-Module Microsoft.WinGet.Client -Scope CurrentUser -Force -AllowClobber
+    Repair-WinGetPackageManager -Latest -Force
+}
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    Write-Host '  Open the launcher''s Packages page again: winget is there now.' -ForegroundColor DarkGray
+} else { Write-Host '  winget is still missing: install App Installer from the Microsoft Store.' -ForegroundColor Yellow }
+'@
+}
+if ($InstallManager -eq 'choco') {
+    # From winget when it's here; else Chocolatey's own installer (chocolatey.org), as admin.
+    Start-MenuTask 'Install Chocolatey' @'
+if (Get-Command winget -ErrorAction SilentlyContinue) {
+    winget install --id Chocolatey.Chocolatey --exact --accept-source-agreements --accept-package-agreements
+} else {
+    Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command',
+        '[Net.ServicePointManager]::SecurityProtocol = 3072; Invoke-Expression ((New-Object Net.WebClient).DownloadString(''https://community.chocolatey.org/install.ps1''))'
+}
+Write-Host '  Open the launcher''s Packages page again: Chocolatey is there now.' -ForegroundColor DarkGray
+'@
+}
+if ($InstallManager -eq 'scoop') {
+    # Scoop's own installer (scoop.sh): into ~\scoop, no admin. Then its extras bucket, where
+    # most desktop programs are.
+    Start-MenuTask 'Install Scoop' @"
+Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+`$env:PATH = "`$HOME\scoop\shims;`$env:PATH"
+scoop install git
+scoop bucket add extras
+Write-Host '  Open the launcher''s Packages page again: Scoop is there now.' -ForegroundColor DarkGray
+"@
 }
 
 # --- run on its own ------------------------------------------------------------------------

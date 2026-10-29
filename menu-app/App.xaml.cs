@@ -25,12 +25,12 @@ namespace SystemMenu;
 //                              the single-copy check, so it works while the menu app runs
 //   SystemMenu --about         About omawin and this PC, in its own window (AboutWindow.xaml.cs)
 //   SystemMenu --page <name>   the launcher on one of its pages: projects, clipboard (Win+Shift+V),
-//                              localhost, reports, keys, vpn <connection>
+//                              localhost, reports, keys, packages, vpn <connection>
 //   SystemMenu --open <id>     show it on a submenu, e.g. --open install
 //   SystemMenu --select <id>   show the submenu a row is in, with that row picked out
 //                              (--select theme:<name> in the theme list); for walkthroughs
 //   SystemMenu --type <text>   show it with that typed into the search; for walkthroughs too
-//   SystemMenu --key <key>     down / up / tab / shift-tab, as if pressed; walkthroughs too
+//   SystemMenu --key <key>     down / up / tab / shift-tab / pick, as if pressed; walkthroughs too
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a

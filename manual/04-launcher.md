@@ -26,7 +26,18 @@ Type a sum and its value is the top row: **Enter copies it** (and closes the lau
 
 ### Pages
 
-Projects, Localhost, Clipboard, Audio, Quick settings, Reports, Shortcuts and About open in the same window: type to search, Esc to go back.
+Projects, Localhost, Clipboard, Audio, Quick settings, Packages, Reports, Shortcuts and About open in the same window: type to search, Esc to go back.
+
+### Packages
+
+Like Omarchy's package picker, in the launcher (System menu › Install › Package, the Packages item, or `omawin pkg find`): pick a package manager, type to find a package, Enter installs it.
+- **Tab switches between winget, Chocolatey and Scoop** (or click their chips). winget's ~16,000 packages and Scoop's buckets are searched on the PC as you type, with the launcher's fuzzy matching; Chocolatey has no catalog on the PC, so its community site is asked once you stop typing.
+- **Beside the list:** what the package is, its version, its homepage and license (winget's take a second or two), and whether it's already here (also ✓ in the list).
+- **Ctrl+Space picks several**, from any of the three; Enter installs them one after another.
+- **Installs run in a small terminal you can watch** (it stays open at the end). Chocolatey asks for admin first; Scoop installs into your user folder without.
+- **A manager not on the PC?** Its tab offers to install it: winget (Microsoft's App Installer) registered for your account or put in, Chocolatey from winget or its own installer (asks for admin), Scoop with its own installer from scoop.sh.
+
+`omawin pkg install` is the same for winget in a terminal, with fzf.
 
 - **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in WSL Ubuntu (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`launcher/project-tabs.txt`).
@@ -58,8 +69,8 @@ Projects, Localhost, Clipboard, Audio, Quick settings, Reports, Shortcuts and Ab
 
 Also the launcher's **Files** item. A wider window:
 - results on the left: the name with matched letters, the folders it's in, and when it changed or its git status
-- a preview on the right: a thumbnail for pictures, the first lines of text and code, a folder's contents
-- chips on top: All, **Folders** (only folders), then each place it searches; **Tab** moves between them. Ending what you type with `/` also shows only folders.
+- a preview on the right: the picture itself for pictures (and how big it is), the first lines of text and code, a folder's contents
+- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), then each place it searches; **Tab** moves between them. Ending what you type with `/` also shows only folders.
 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 

@@ -3,14 +3,15 @@ using Microsoft.UI.Xaml;
 
 namespace SystemMenu;
 
-// The launcher's own pages: Projects, Clipboard, Localhost, Reports, Shortcuts, Audio (Win+A)
-// and Quick settings (Audio with the switches) (and a VPN that's up offers to disconnect). Each is a
+// The launcher's own pages: Projects, Clipboard, Localhost, Reports, Shortcuts, Audio (Win+A),
+// Quick settings (Audio with the switches) and Packages (MainWindow.Packages.cs) (and a VPN
+// that's up offers to disconnect). Each is a
 // list or tiles in this same window; Esc goes back to the launcher. Their data is in Pages.cs,
 // Background.cs and QuickSettings.cs (Quick settings' switches). About is not one of them: it
 // is its own window, drawn like the terminal's fastfetch (AboutWindow.xaml.cs).
 public sealed partial class MainWindow
 {
-    static readonly string[] PageNames = ["projects", "clipboard", "localhost", "reports", "keys", "audio", "quick", "vpn"];
+    static readonly string[] PageNames = ["projects", "clipboard", "localhost", "reports", "keys", "audio", "quick", "vpn", "packages"];
     public static bool IsPage(string? builtIn) => builtIn != null && PageNames.Contains(builtIn);
 
     string? page;                  // the page on screen (launcher only), or null for the launcher's list
@@ -18,7 +19,7 @@ public sealed partial class MainWindow
     List<Project>? projects;       // null while they're being found
     List<Server>? servers;         // null while ports are being asked
     Server? stopping;              // asking "Stop this server?"
-    bool Wide => finding || (launching && page == "clipboard");
+    bool Wide => finding || (launching && page is "clipboard" or "packages");
 
     // --page <name> / --launcher <name> (Win+Shift+V: clipboard): the launcher, on that page
     // (just the launcher for a name that isn't one).
@@ -97,7 +98,7 @@ public sealed partial class MainWindow
     // Lists, except Audio's tiles (returned to be drawn as tiles).
     TileLayout? RenderPage(string query)
     {
-        string title = page switch { "projects" => "Projects", "clipboard" => "Clipboard", "localhost" => "Localhost", "reports" => "Reports", "keys" => "Shortcuts", "audio" => quickSwitches ? "Quick settings" : "Audio", _ => "VPN" };
+        string title = page switch { "projects" => "Projects", "clipboard" => "Clipboard", "localhost" => "Localhost", "reports" => "Reports", "keys" => "Shortcuts", "audio" => quickSwitches ? "Quick settings" : "Audio", "packages" => "Packages", _ => "VPN" };
         SetCrumbs("", title);
         switch (page)
         {
@@ -191,6 +192,10 @@ public sealed partial class MainWindow
 
             case "audio":
                 return QuickPage(query);
+
+            case "packages":
+                RenderPackages(query);
+                break;
 
             case "vpn":
                 SetCrumbs("", "VPN connected");
