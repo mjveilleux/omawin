@@ -7,7 +7,7 @@ namespace SystemMenu;
 // are ready when you open them:
 //   - the clipboard history (Clipboard page, Win+Shift+V): every text you copy
 //   - the installed apps (apps.tsv), every 10 minutes, and seconds after an install or removal
-//   - the projects (the Ubuntu ones cached in wsl-projects.txt), every 10 minutes, and seconds
+//   - the projects (the Linux ones cached in wsl-projects.txt), every 10 minutes, and seconds
 //     after a git repo appears or goes in your home folder
 //   - the reports (reports.tsv), every 2 hours, where ~/omawin-account has a reports script
 public static class Background
@@ -88,7 +88,7 @@ public static class Background
 
     // --- projects ---------------------------------------------------------------------------
     // The Projects page searches each time it opens; this keeps Projects.Latest (the launcher's
-    // home) and the Ubuntu list from last time (wsl-projects.txt, used while WSL isn't running)
+    // home) and the Linux list from last time (wsl-projects.txt, used while WSL isn't running)
     // current: every 10 minutes, and seconds after a repo appears or goes anywhere in your home
     // folder (a clone, a git init, a deleted repo, a repo folder moved in).
     static readonly AutoResetEvent reposChanged = new(false);

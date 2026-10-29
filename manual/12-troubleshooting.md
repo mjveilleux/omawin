@@ -20,4 +20,4 @@ Start with `omawin check`: it lists anything missing, stale or not running.
 - **RAM:**
   - Each Claude Code session is ~0.9 GB; a PowerShell tab is ~40 MB.
   - Stop idle herdr sessions (`herdr session stop <project>`).
-  - `wsl --shutdown` when Ubuntu isn't needed.
+  - `wsl --shutdown` when Linux isn't needed.

@@ -9,16 +9,19 @@
 
       1. the whole-PC winget packages it's given (-Packages), --scope machine, three at once
          (Windows runs one MSI at a time; one that finds another busy gets one more go, alone)
-      2. omawin's GlazeWM and Zebar (-Forks): install/glazewm-fork.ps1 and zebar-fork.ps1, -Machine
+      2. WSL itself (-Wsl), for the wsl preset: `wsl --install --no-distribution`, which wants a
+         restart before it works ("done restart"); the distro is the account's, installed
+         without admin (wsl/install.ps1)
+      3. omawin's GlazeWM and Zebar (-Forks): install/glazewm-fork.ps1 and zebar-fork.ps1, -Machine
 
     It takes nothing from the account that started it but these arguments: package ids (checked
     against the shape of one) and a file to report to. Each line there is
-    "<item>`t<state>`t<text>": a package id, "packages", "glazewm-fork", "zebar-fork" or "end";
-    run, done, fail or skip. install/admin.ps1 reads it as it grows.
+    "<item>`t<state>`t<text>": a package id, "packages", "wsl", "glazewm-fork", "zebar-fork" or
+    "end"; run, done, fail or skip. install/admin.ps1 reads it as it grows.
 
     Runs under Windows PowerShell 5.1.
 #>
-param([Parameter(Mandatory)][string]$Status, [string]$Packages, [switch]$Forks)
+param([Parameter(Mandatory)][string]$Status, [string]$Packages, [switch]$Wsl, [switch]$Forks)
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 
@@ -37,7 +40,7 @@ try {
         $winget = Get-Command winget -ErrorAction SilentlyContinue
         if (-not $winget) {
             # The admin account may never have signed in, so it has no winget: this account
-            # installs them instead, each with its own prompt.
+            # installs what it can of them for itself instead (--scope user).
             foreach ($id in $ids) { Say $id 'fail' 'winget is missing for the admin account' }
         } else {
             $queue = New-Object Collections.Generic.Queue[string]
@@ -91,7 +94,38 @@ try {
         Say 'packages' 'done'
     }
 
-    # --- 2. omawin's GlazeWM and Zebar ---------------------------------------------------------
+    # --- 2. WSL ----------------------------------------------------------------------------------
+    if ($Wsl) {
+        Say 'wsl' 'run'
+        if (Test-Path "$env:ProgramFiles\WSL\wsl.exe") { Say 'wsl' 'done' 'already there' }
+        else {
+            # Windows' own wsl.exe fetches the WSL package (from GitHub: no Store needed) and turns
+            # on the Virtual Machine Platform, which takes effect at the next restart.
+            $psi = New-Object Diagnostics.ProcessStartInfo
+            $psi.FileName = "$env:SystemRoot\System32\wsl.exe"
+            $psi.Arguments = '--install --no-distribution --web-download'
+            $psi.UseShellExecute = $false
+            $psi.CreateNoWindow = $true
+            $psi.RedirectStandardOutput = $true
+            $psi.RedirectStandardError = $true
+            $p = [Diagnostics.Process]::Start($psi)
+            $out = $p.StandardOutput.ReadToEndAsync(); $err = $p.StandardError.ReadToEndAsync()
+            $present = { Test-Path "$env:ProgramFiles\WSL\wsl.exe" }
+            if (-not $p.WaitForExit(15 * 60 * 1000)) { try { $p.Kill() } catch { }; Say 'wsl' 'fail' 'gave up after 15 minutes' }
+            # Done: it's in, or it said so (0; 3010: a restart finishes it, as some Windows
+            # versions put the package in only then).
+            elseif ((& $present) -or $p.ExitCode -in 0, 3010) {
+                $platform = try { (Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform).State } catch { 'Unknown' }
+                Say 'wsl' 'done' $(if ((& $present) -and "$platform" -eq 'Enabled') { '' } else { 'restart' })
+            } else {
+                # (wsl.exe writes UTF-16: the NULs out.)
+                $tail = (($out.Result + $err.Result) -replace "`0", '' -split "[`r`n]+" | Where-Object { $_.Trim() } | Select-Object -Last 1)
+                Say 'wsl' 'fail' "exit $($p.ExitCode)$(if ($tail) { ": $($tail.Trim())" })"
+            }
+        }
+    }
+
+    # --- 3. omawin's GlazeWM and Zebar ---------------------------------------------------------
     if ($Forks) {
         foreach ($fork in 'glazewm-fork', 'zebar-fork') {
             Say $fork 'run'

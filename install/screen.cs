@@ -672,7 +672,7 @@ static class Screen
             y++;
         }
         y++;
-        foreach (var l in Wrap("Nothing asks again after this. Say no, and each one asks on its own as it installs.", iw)) Put(ix, y++, l, Dim, iw);
+        foreach (var l in Wrap("Nothing asks again after this. Say no, and omawin installs what it can for this account alone.", iw)) Put(ix, y++, l, Dim, iw);
         y++;
         Put(ix, y, spin, Acc, 1); Put(ix + 2, y, "waiting for the Windows prompt", Fg, iw - 2);
     }

@@ -7,12 +7,12 @@ The terminal is [noctty](https://noctty.com): Ghostty's terminal core in a nativ
 - It runs in the background from login with no window, and keeps one PowerShell started ahead of time, so Win+Enter gives a window with its prompt in ~0.3 s, and a new tab in ~0.12 s. The first terminal after login takes ~1 s: there's no spare shell yet, and PowerShell's own start-up is half of that. `omawin profile terminal` measures it (`-Scenario window|cold|tab`).
 - Its keys: `Ctrl+Shift+V` paste, `Ctrl+Shift+\` / `Ctrl+Shift+E` split, `Alt+arrows` between panes, `Ctrl+Shift+P` command palette. Tabs are herdr's (below).
 - noctty has no tabs of its own (no tab strip; `Ctrl+Shift+T` and the other tab keys pass through): [herdr](https://herdr.dev) is the multiplexer. A **project** (Win+Space › Projects) is a herdr session named after the folder, started with tabs shell, nvim, claude and opencode (`launcher/project-tabs.txt`). It keeps running with no window, so agents carry on, and opening the project again reattaches. herdr's keys: `Ctrl+Space` (as in tmux) then `1..9` (tab N), `c` (new tab), `n` / `p` (next / previous). Its config is `herdr/config.toml` in this repo; it takes its colors from the terminal, so it follows the theme.
-- Ubuntu terminals and projects open as their own noctty window, with a slightly slower start.
+- Linux terminals and projects (WSL) open as their own noctty window, with a slightly slower start.
 - `omawin update terminal` installs the fork's latest release (checked against its published checksums).
 
 **Win+Enter** opens a terminal in the folder you're working in:
 - the focused noctty window's folder
-- a Windows Terminal tab's folder or Ubuntu path
+- a Windows Terminal tab's folder or Linux path
 - the folder open in File Explorer
 - otherwise ~
 
@@ -50,6 +50,6 @@ LazyVim (Neovim 0.12) plus a personal layer in `nvim/lua/`:
 - **Running code:** `Space r…` runs Lua / Python (uv / poetry aware).
 - **SQL** is formatted with sqlfluff.
 
-**In Ubuntu (WSL)** it's the same Neovim and the same config: `omawin preset add wsl` sets up Ubuntu for your account and links its `~/.config/nvim` to omawin's (Windows' theme and agent default included). Its plugins are its own, installed the first time `nvim` runs there; the markdown preview opens in Windows' browser.
+**In Linux (WSL)** it's the same Neovim and the same config: `omawin preset add wsl` sets up your Linux (Arch by default, or Ubuntu: `omawin default linux`) for your account and links its `~/.config/nvim` to omawin's (Windows' theme and agent default included). Its plugins are its own, installed the first time `nvim` runs there; the markdown preview opens in Windows' browser.
 
 Treesitter builds parsers with the tree-sitter CLI and zig. Don't run Neovim from an admin shell: its plugin folders would become admin-owned.

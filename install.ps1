@@ -14,7 +14,8 @@
       1. the questions, all at once (which presets, on a first install; your git name, if git has
          none), so nothing waits on a person after that
       2. the one admin prompt (install/admin.ps1), when anything needs admin: the whole-PC
-         packages and omawin's GlazeWM and Zebar, done in the background from then on
+         packages, omawin's GlazeWM and Zebar, and WSL for the wsl preset, done in the
+         background from then on. Nothing asks for admin after it, approved or not.
       3. the steps listed in install/steps.txt, each its file in install/ (-Step runs just one)
       4. the migrations not run on this PC yet (bin/migrate.ps1: what older versions left behind)
 
@@ -130,12 +131,15 @@ try {
     # --- 2. the one admin prompt -----------------------------------------------------------------
     Write-Note 'what needs admin ...'
     $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages }) -NoPackages:$LinkOnly
-    if ($plan.Packages.Count -or $plan.Forks.Count) {
+    if ($plan.Packages.Count -or $plan.Forks.Count -or $plan.Wsl) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
         # omawin update's pull came before it.
         if ($Update) { $u = Get-InstallStep 'update'; $UI.Steps.Remove($u); $UI.Steps.Insert(0, $u); Sync-BoardSteps }
         [void](Start-AdminBatch $plan)
     } else { Write-Note 'ok  nothing needs admin' }
+    # That was the one prompt, approved or not: from here on nothing asks for admin (the steps,
+    # the scripts they run, the migrations). What only admin can do is left out and said.
+    $env:OMAWIN_NO_ADMIN = '1'
 
     # --- 3. the steps ----------------------------------------------------------------------------
     foreach ($s in $Steps) {
@@ -163,4 +167,6 @@ try {
     Write-InstallSummary
 } finally {
     Close-InstallUI
+    # (The shell that ran this keeps its environment: a later -Step may ask for admin again.)
+    Remove-Item Env:OMAWIN_NO_ADMIN -ErrorAction SilentlyContinue
 }

@@ -270,7 +270,7 @@ keybindings:
   - commands: ['shell-exec --hide-window omawin.exe launch terminal']
     bindings: ['alt+enter']
 
-  # A terminal in the focused window's folder (terminal tab, Ubuntu tab, File Explorer),
+  # A terminal in the focused window's folder (terminal tab, Linux tab, File Explorer),
   # else ~ (omawin terminal here, in bin/omawin.cs).
   - commands: ['shell-exec --hide-window omawin.exe terminal here']
     bindings: ['lwin+enter']
