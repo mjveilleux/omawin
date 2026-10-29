@@ -66,13 +66,9 @@ public static class Background
         {
             try
             {
-                dynamic shell = Activator.CreateInstance(Type.GetTypeFromProgID("Shell.Application")!)!;
                 var rows = new SortedSet<string>(StringComparer.Ordinal);
-                foreach (var item in shell.NameSpace("shell:AppsFolder").Items())
-                {
-                    string name = item.Name, id = item.Path;
+                foreach (var (name, id) in AppsFolder.Items())
                     if (!string.IsNullOrWhiteSpace(name) && !Noise.IsMatch(name)) rows.Add($"{name}\t{id}");
-                }
                 if (rows.Count > 0)
                 {
                     Directory.CreateDirectory(MenuModel.StateDir);

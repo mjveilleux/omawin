@@ -33,6 +33,8 @@
          whether skipping .NET's compiling helps there (omawin profile login). -->
     <PublishReadyToRun>true</PublishReadyToRun>
     <Nullable>enable</Nullable>
+    <!-- Source-generated COM (Audio.cs) needs it. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Program.Main (App.xaml.cs) checks for a running copy before starting WinUI. -->
@@ -67,7 +69,5 @@
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
     <!-- QR reading in the snip overlay (omawin capture qr): ZXing's decoder, managed, ~0.5 MB. -->
     <PackageReference Include="ZXing.Net" Version="0.16.9" />
-    <!-- The built-in display's brightness is only reachable over WMI (root\wmi). -->
-    <PackageReference Include="System.Management" Version="9.0.0" />
   </ItemGroup>
 </Project>

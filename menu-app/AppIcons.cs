@@ -8,15 +8,16 @@ namespace SystemMenu;
 
 // Real app icons: the shell's own icon for shell:AppsFolder\<app id> (desktop programs and
 // Store apps alike), made on a background STA thread and cached while the menu runs.
-public static class AppIcons
+public static unsafe class AppIcons
 {
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
-    static extern void SHCreateItemFromParsingName(string path, IntPtr bindCtx, [MarshalAs(UnmanagedType.LPStruct)] Guid riid, out IShellItemImageFactory factory);
+    static extern void SHCreateItemFromParsingName(string path, IntPtr bindCtx, in Guid riid, out IntPtr factory);
     [DllImport("gdi32.dll")] static extern bool DeleteObject(IntPtr obj);
     [DllImport("gdi32.dll")] static extern int GetObject(IntPtr obj, int size, ref BITMAP bitmap);
 
-    [ComImport, Guid("bcc18b79-ba16-442f-80c4-8a59c30c463b"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IShellItemImageFactory { void GetImage(SIZE size, int flags, out IntPtr bitmap); }
+    // IShellItemImageFactory, called by its vtable (GetImage is its one method, slot 3): built-in
+    // COM ([ComImport]) can't be compiled as one native program (Native AOT).
+    static readonly Guid ImageFactoryIid = new("bcc18b79-ba16-442f-80c4-8a59c30c463b");
     [StructLayout(LayoutKind.Sequential)] struct SIZE { public int cx, cy; }
     [StructLayout(LayoutKind.Sequential)] struct BITMAP { public int bmType, bmWidth, bmHeight, bmWidthBytes; public ushort bmPlanes, bmBitsPixel; public IntPtr bmBits; }
 
@@ -84,8 +85,14 @@ public static class AppIcons
     // Top-down BGRA, premultiplied: what WriteableBitmap wants.
     static (byte[], int, int) Pixels(string path, int size)
     {
-        SHCreateItemFromParsingName(path, IntPtr.Zero, typeof(IShellItemImageFactory).GUID, out var factory);
-        factory.GetImage(new SIZE { cx = size, cy = size }, 0, out var hbitmap);
+        SHCreateItemFromParsingName(path, IntPtr.Zero, ImageFactoryIid, out var factory);
+        IntPtr hbitmap;
+        try
+        {
+            var getImage = (delegate* unmanaged[Stdcall]<IntPtr, SIZE, int, IntPtr*, int>)Vtable.Slot(factory, 3);
+            Vtable.Check(getImage(factory, new SIZE { cx = size, cy = size }, 0, &hbitmap));
+        }
+        finally { Marshal.Release(factory); }
         try
         {
             var info = new BITMAP();

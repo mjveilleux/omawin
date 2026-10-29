@@ -188,7 +188,7 @@ public sealed class History
     {
         var stamp = File.Exists(FilePath) ? File.GetLastWriteTimeUtc(FilePath) : DateTime.MinValue;
         if (cached != null && stamp == cachedAt) return cached;
-        try { cached = System.Text.Json.JsonSerializer.Deserialize<History>(File.ReadAllText(FilePath)) ?? new(); }
+        try { cached = System.Text.Json.JsonSerializer.Deserialize(File.ReadAllText(FilePath), Json.Default.History) ?? new(); }
         catch { cached = new(); }
         cachedAt = stamp;
         return cached;
@@ -203,7 +203,7 @@ public sealed class History
         try
         {
             Directory.CreateDirectory(MenuModel.StateDir);
-            File.WriteAllText(FilePath, System.Text.Json.JsonSerializer.Serialize(this));
+            File.WriteAllText(FilePath, System.Text.Json.JsonSerializer.Serialize(this, Json.Default.History));
         }
         catch { }
     }

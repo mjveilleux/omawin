@@ -178,7 +178,7 @@ public static class MenuModel
         try
         {
             var json = File.ReadAllText(ThemeFile(name + ".json"));
-            return JsonSerializer.Deserialize<Theme>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new Theme();
+            return JsonSerializer.Deserialize(json, Json.Default.Theme) ?? new Theme();
         }
         catch { return name != "starship" ? LoadTheme("starship") : new Theme(); } // omawin's default theme
     }

@@ -1,4 +1,3 @@
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using RadioKind = Windows.Devices.Radios.RadioKind;
@@ -833,9 +832,8 @@ static class Brightness
     public static List<(Display Display, string Code)> Internal(HashSet<string> active, Dictionary<string, string> friendly)
     {
         var list = new List<(Display, string)>();
-        using var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT CurrentBrightness, InstanceName FROM WmiMonitorBrightness");
-        using var results = searcher.Get();
-        foreach (var instance in results)
+        using var wmi = Wmi.Connect(@"root\wmi");
+        foreach (var instance in wmi.Query("SELECT CurrentBrightness, InstanceName FROM WmiMonitorBrightness"))
             using (instance)
                 try
                 {
@@ -855,14 +853,13 @@ static class Brightness
         var names = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         try
         {
-            using var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT InstanceName, UserFriendlyName FROM WmiMonitorID");
-            using var results = searcher.Get();
-            foreach (var instance in results)
+            using var wmi = Wmi.Connect(@"root\wmi");
+            foreach (var instance in wmi.Query("SELECT InstanceName, UserFriendlyName FROM WmiMonitorID"))
                 using (instance)
                     try
                     {
                         string code = Short(instance["InstanceName"] as string ?? "");
-                        if (code.Length == 0 || instance["UserFriendlyName"] is not ushort[] letters) continue;
+                        if (code.Length == 0 || instance["UserFriendlyName"] is not int[] letters) continue;
                         string text = new([.. letters.TakeWhile(c => c != 0).Select(c => (char)c)]);
                         if (text.Trim().Length > 0) names[code] = text.Trim();
                     }
@@ -897,16 +894,14 @@ static class Brightness
 
     static string? SetInternal(int level)
     {
-        using var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT * FROM WmiMonitorBrightnessMethods");
-        using var results = searcher.Get();
-        foreach (ManagementObject instance in results)
+        using var wmi = Wmi.Connect(@"root\wmi");
+        foreach (var instance in wmi.Query("SELECT __PATH FROM WmiMonitorBrightnessMethods"))
             using (instance)
                 try
                 {
-                    using var inParameters = instance.GetMethodParameters("WmiSetBrightness");
-                    inParameters["Timeout"] = 0u; // wait forever: the panel answers at once
-                    inParameters["Brightness"] = (byte)Math.Clamp(level, 0, 100);
-                    using var _ = instance.InvokeMethod("WmiSetBrightness", inParameters, null);
+                    wmi.Call(instance["__PATH"] as string ?? "", "WmiMonitorBrightnessMethods", "WmiSetBrightness",
+                        ("Timeout", Variant.FromInt(0)), // wait forever: the panel answers at once
+                        ("Brightness", Variant.FromByte((byte)Math.Clamp(level, 0, 100))));
                 }
                 catch (Exception ex) { App.Log(ex); return ex.Message; }
         return null;

@@ -6,12 +6,9 @@ Until it matches Zebar, both exist: Zebar stays the default and the native bar i
 
 ## Steps
 
-0. **Native AOT for the menu app** (`build.ps1 -Aot`, `-p:OmawinAot=true`). Measured 2026-10-29 on an idle PC, against the current build: first start 0.34 s (was 1.04 s), ready 0.26 s (was 0.38 s), 114 MB (was 173 MB), ~95 files (was 309). What it can't compile yet, each to port before it's the build installed:
-   - the screenshot overlay (`Snip.cs`, WinForms): onto WinUI / plain Win32; `Aot/SnipStub.cs` stands in
-   - audio (`Audio.cs`): `[ComImport]` classes (MMDeviceEnumerator, PolicyConfigClient) throw under AOT; to `CoCreateInstance` with `[GeneratedComInterface]`
-   - the display's brightness (`System.Management`, WMI): broken under AOT; to WMI's COM interfaces or another API
-   - JSON (`Launcher.cs`, `MenuModel.cs`): to source-generated serializers
-   - `Background.cs`: late-bound COM (`dynamic`), `AppIcons.cs`: COM marshalling, `AboutWindow.xaml.cs`: `SheenBrush` to be `partial`
+0. **Native AOT for the menu app** (`build.ps1 -Aot`, `-p:OmawinAot=true`). Measured 2026-10-29 on an idle PC, against the current build: first start 0.34 s (was 1.04 s), ready 0.26 s (was 0.38 s), 114 MB (was 173 MB), ~95 files (was 309). Ported so the same code runs in both builds (`SystemMenu.exe --qs-selftest` prints the same, line for line, from each):
+   - done: audio (`Audio.cs`, source-generated COM), the display's brightness (`Wmi.cs` in place of System.Management), the Apps folder (`AppsFolder.cs` in place of late-bound `Shell.Application`), app icons (`AppIcons.cs`), JSON (`Json.cs`, generated serializers), `SheenBrush` partial. The native build compiles with no AOT warnings.
+   - left: the screenshot overlay (`Snip.cs`, WinForms), onto plain Win32; `Aot/SnipStub.cs` stands in until then
    - the build needs Visual Studio's C++ tools (link.exe) and `vswhere.exe` on the path; PCs without them get the release's build
 1. **The bar's window and simple widgets**: one borderless, never-activated window per monitor, 26 px, `bar.json`'s layout, the theme's colors, Nerd Font icons. `omawin.exe`'s strip covers the start. Data straight from Windows and GlazeWM: workspaces and monitor (GlazeWM's IPC), clock, audio (`Audio.cs`), network, battery, Bluetooth, the update arrow, indicators, the menu button.
 2. **The tray and media**: other apps' tray icons (taken the way Zebar does: a window that receives what apps tell the taskbar), and Windows' media controls.
