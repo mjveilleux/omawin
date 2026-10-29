@@ -34,6 +34,15 @@ public static class QuickSettingsSelfTest
         catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
     }
 
+    // `SystemMenu.exe --snip-selftest`: the screenshot tool's own (Snip.SelfTest), printed the same way.
+    public static int RunSnip()
+    {
+        if (!AttachConsole(-1)) AllocConsole();
+        var output = new StreamWriter(Console.OpenStandardOutput(), Encoding.UTF8) { AutoFlush = true };
+        try { output.Write(Snip.SelfTest().GetAwaiter().GetResult()); return 0; }
+        catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
+    }
+
     static void Report(TextWriter w)
     {
         w.WriteLine("omawin quick settings — self test (read only)");
@@ -45,7 +54,32 @@ public static class QuickSettingsSelfTest
         Displays(w);
         Power(w);
         Notifications(w);
+        AudioDevices(w);
+        MenuFiles(w);
         w.Flush();
+    }
+
+    // The menu app's own files, read as it reads them (its JSON, the Apps folder): to compare the
+    // normal build with the native one (build.ps1 -Aot).
+    static void MenuFiles(TextWriter w)
+    {
+        var theme = MenuModel.LoadTheme(MenuModel.CurrentThemeName());
+        w.WriteLine("Menu app");
+        w.WriteLine($"  theme: {MenuModel.CurrentThemeName()} = {theme.Name}, {theme.Mode}, background {theme.Background}, accent {theme.Accent}");
+        w.WriteLine($"  launch history: {History.Load().Items.Count} entries");
+        w.WriteLine($"  Apps folder: {AppsFolder.Items().Count} items");
+        w.WriteLine();
+    }
+
+    // Compare with Sound settings and its volume mixer (Get-PnpDevice -Class AudioEndpoint).
+    static void AudioDevices(TextWriter w)
+    {
+        w.WriteLine("Audio  (Core Audio)");
+        foreach (var d in Audio.List())
+            w.WriteLine($"  {(d.Input ? "mic    " : "speaker")} {d.Name}{(d.Default ? "  [default]" : "")}  {d.Volume}%{(d.Muted ? " muted" : "")}");
+        foreach (var a in Audio.Apps())
+            w.WriteLine($"  app     {a.Name}  {a.Volume}%{(a.Muted ? " muted" : "")}{(a.Playing ? " playing" : "")}{(a.Output != null ? "  -> " + a.Output : "")}");
+        w.WriteLine();
     }
 
     static void Wifi(TextWriter w)

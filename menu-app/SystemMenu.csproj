@@ -28,9 +28,13 @@
     <!-- Use the Windows App SDK's own resource (PRI) tools, so `dotnet build` works without Visual Studio. -->
     <EnableMsixTooling>true</EnableMsixTooling>
     <SelfContained>false</SelfContained>
-    <!-- Not ReadyToRun: measured 2026-10-29, it starts no faster (~0.6 s either way, WinUI's
-         own start-up is the time) and the app grows 14 MB. -->
+    <!-- Compiled ahead of time (14 MB more). On an idle PC it starts no faster (~0.6 s either
+         way), but at sign-in, with the processor busy, it took 16 s to be ready; this is to see
+         whether skipping .NET's compiling helps there (omawin profile login). -->
+    <PublishReadyToRun>true</PublishReadyToRun>
     <Nullable>enable</Nullable>
+    <!-- Source-generated COM (Audio.cs) needs it. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <!-- Program.Main (App.xaml.cs) checks for a running copy before starting WinUI. -->
@@ -39,19 +43,25 @@
   <ItemGroup>
     <!-- fff's C library (file search), fetched by build.ps1. -->
     <None Include="lib\fff_c.dll" CopyToOutputDirectory="PreserveNewest" Link="fff_c.dll" Condition="Exists('lib\fff_c.dll')" />
+    <!-- Omarchy's icon font (its logo is the native bar's menu button), the same file Zebar's bar uses. -->
+    <Content Include="..\zebar\tokyo-islands\omarchy.ttf" CopyToOutputDirectory="PreserveNewest" Link="omarchy.ttf" />
   </ItemGroup>
+  <!-- build.ps1 -Aot: one native program (Native AOT), so it's up seconds sooner at sign-in (the
+       bar lives here, docs/native-bar.md). The same code as the normal build. -->
+  <PropertyGroup Condition="'$(OmawinAot)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
   <ItemGroup>
-    <!-- The screenshot overlay (Snip.cs) is a plain WinForms window; referenced as a framework
-         only, since UseWindowsForms would also switch on WPF's XAML build, which clashes with
-         WinUI's. -->
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <!-- GDI+ for the screenshot overlay's drawing (Snip.cs, plain Win32 windows) and the About
+         sheet's PNG; not WinForms, which can't be compiled as one native program. -->
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
     <!-- QR reading in the snip overlay (omawin capture qr): ZXing's decoder, managed, ~0.5 MB. -->
     <PackageReference Include="ZXing.Net" Version="0.16.9" />
-    <!-- The built-in display's brightness is only reachable over WMI (root\wmi). -->
-    <PackageReference Include="System.Management" Version="9.0.0" />
   </ItemGroup>
 </Project>

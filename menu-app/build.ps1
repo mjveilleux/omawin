@@ -15,7 +15,12 @@ param(
     # and for a build into a scratch folder, which must leave the running desktop alone.
     [switch]$BuildOnly,
     # The release this build is from (SystemMenu --version); CI passes the tag.
-    [string]$Release
+    [string]$Release,
+    # One native program (Native AOT): up in a fraction of the time, which counts at sign-in.
+    # It's the build wherever Visual Studio's C++ tools are (its linker needs them); -Aot asks
+    # for it anyway, -Jit for the ordinary .NET build.
+    [switch]$Aot,
+    [switch]$Jit
 )
 $ErrorActionPreference = 'Stop'
 
@@ -33,14 +38,30 @@ if (-not $BuildOnly) {
     & "$PSScriptRoot\stop-menu.ps1" -Dir $out
 }
 
+# Native when the C++ tools are here (vswhere says; the linker needs vswhere on the PATH too).
+$installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
+$cpp = (Test-Path "$installer\vswhere.exe") -and [bool](& "$installer\vswhere.exe" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null)
+$native = -not $Jit -and ($Aot -or $cpp)
+if ($native) { $env:PATH = "$installer;$env:PATH" }
+# The two builds leave different files: switching from one to the other starts the folder afresh.
+$kind = if ($native) { 'native' } else { 'jit' }
+$marker = Join-Path $out 'build-kind.txt'
+if ((Test-Path "$out\SystemMenu.exe") -and -not ((Test-Path $marker) -and (Get-Content $marker -Raw).Trim() -eq $kind)) {
+    Get-ChildItem $out -Force | Remove-Item -Recurse -Force
+}
+
 $publish = @('-c', 'Release', '-o', $out, '-nologo', '-v', 'q')
 if ($Arch -ne 'x64') { $publish += @("-p:RuntimeIdentifier=win-$Arch", "-p:Platform=$Arch", "-p:Platforms=$Arch") }
 if ($Release) { $publish += "-p:OmawinRelease=$Release" }
+if ($native) { $publish += '-p:OmawinAot=true' }
 # From the project folder, so the repo's global.json (the pinned SDK) applies.
 Push-Location $PSScriptRoot
 try { dotnet publish "$PSScriptRoot\SystemMenu.csproj" @publish }
 finally { Pop-Location }
 if ($LASTEXITCODE -ne 0) { throw 'build failed (see above)' }
+# The native build's debugging symbols (~90 MB) aren't needed to run it.
+if ($native) { Remove-Item "$out\SystemMenu.pdb" -ErrorAction SilentlyContinue }
+Set-Content $marker $kind -Encoding ASCII
 if ($BuildOnly) { Write-Host "  built $out\SystemMenu.exe" }
 else {
     Start-Process "$out\SystemMenu.exe" -ArgumentList '--start-hidden'

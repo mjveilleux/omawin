@@ -105,6 +105,9 @@ public static class Program
                 {
                     // Never starts the player: opening the panel shouldn't leave one idling.
                     var done = Watch.RequestOpen();
+                    // The native bar (the default, docs/native-bar.md) has no player panel yet: say so
+                    // where you'll see it (Win+M runs this hidden), through the menu app's note.
+                    if (done == null) Say("The music player is in Zebar's bar for now: omawin bar zebar");
                     Reply(new { ok = done != null, did = done }, done ?? "No bar is running");
                     return 0;
                 }
@@ -119,6 +122,17 @@ public static class Program
             Reply(new { ok = false, error = ex.Message }, ex.Message);
             return 1;
         }
+    }
+
+    // The menu app's note at the bottom of the screen (SystemMenu --say): handed to its running copy.
+    static void Say(string text)
+    {
+        try
+        {
+            var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "system-menu", "SystemMenu.exe");
+            if (File.Exists(exe)) System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe) { ArgumentList = { "--say", text }, UseShellExecute = false });
+        }
+        catch { }
     }
 
     // JSON for the bar; a plain sentence when you typed it in a terminal.

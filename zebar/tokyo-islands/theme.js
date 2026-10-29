@@ -3,7 +3,8 @@
 // this reads it again and swaps the new colors in: they show ~0.1 s after the file is written.
 // A restart of the bar and dock took ~3 s, with both gone meanwhile.
 // Pages that compute something from the colors listen for the 'omawin-theme' event.
-import * as zebar from 'https://esm.sh/zebar@3.3';
+// Zebar's client from disk, as bar.html loads it (esm.sh only where it was never built).
+const zebar = await import('./lib/zebar.js').catch(() => import('https://esm.sh/zebar@3.3'));
 
 const live = document.createElement('style');
 document.head.appendChild(live); // after theme.css's <link>, so it wins

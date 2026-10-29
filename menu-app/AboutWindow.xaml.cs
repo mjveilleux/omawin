@@ -467,7 +467,7 @@ public sealed partial class AboutWindow : Window
     // is 1/112 of it and the five cells the terminal lights — two before the band's column, three
     // after (the slice runs from at-HALF to at+HALF) — are 2/112 and 3/112 either side of the
     // middle. Half a cell of feather either side keeps the diagonal from stair-stepping.
-    sealed class SheenBrush : XamlCompositionBrushBase
+    sealed partial class SheenBrush : XamlCompositionBrushBase
     {
         const double Cell = 1.0 / 112;
         readonly Compositor compositor;

@@ -2,6 +2,8 @@
 
 One strip across the top of the screen, as in Omarchy 4: the theme's background, 26 pixels tall. There is no dock: the launcher (Win+Space) and the system menu (Win+Alt+Space) take its place, and the Windows taskbar auto-hides (the very bottom edge or the Win key still shows it).
 
+The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the record and the music player, and the agents panel. `omawin bar zebar` switches to the bar as it was before, drawn by Zebar, which has them; `omawin bar native` comes back. Win+M with the native bar says so.
+
 - **Left:**
   - **The menu**: Omarchy's logo. Click: the system menu; right-click: a terminal.
   - **Workspaces**: 1 to 5 always, and any others in use. The one on screen shows its layout instead of its number (a square: tiling; a triangle: its window floats); empty ones are dimmed. Click one to go there; click the one on screen to turn its tiling direction; the mouse wheel moves along them.

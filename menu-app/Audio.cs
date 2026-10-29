@@ -1,4 +1,5 @@
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.Marshalling;
 
 namespace SystemMenu;
 
@@ -14,7 +15,7 @@ public sealed record AudioDevice(string Id, string Name, bool Input, bool Defaul
 // "system" for system sounds. Output: the speaker it's sent to, or null for Windows' default.
 public sealed record AudioApp(string Key, string Name, string? Exe, bool Playing, int Volume, bool Muted, uint[] Pids, string? Output);
 
-public static class Audio
+public static partial class Audio
 {
     // How loud each device and app is right now (0..1), for the page's live meters: by device
     // id or app key. List() starts it afresh, Apps() adds the apps.
@@ -46,7 +47,7 @@ public static class Audio
         meters.Clear();
         try
         {
-            var devices = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            var devices = Enumerator();
             foreach (var flow in new[] { DataFlow.Render, DataFlow.Capture })
             {
                 string? defaultId = null;
@@ -64,9 +65,7 @@ public static class Audio
                         volume.GetMasterVolumeLevelScalar(out float level);
                         volume.GetMute(out bool muted);
                         found.Add(new AudioDevice(id, Name(device), flow == DataFlow.Capture, id == defaultId, (int)Math.Round(level * 100), muted));
-                        var meterIid = typeof(IAudioMeterInformation).GUID;
-                        device.Activate(ref meterIid, 1, IntPtr.Zero, out var meter);
-                        AddMeter(id, meter);
+                        AddMeter(id, Activate(device, MeterIid));
                     }
                     catch (Exception ex) { App.Log(ex); }
                 }
@@ -75,6 +74,23 @@ public static class Audio
         }
         catch (Exception ex) { App.Log(ex); }
         return list;
+    }
+
+    // Windows' default speaker, for the bar: one device, no meters (List() starts those afresh,
+    // which the Audio page's own meters would lose), every second.
+    public static AudioDevice? DefaultSpeaker()
+    {
+        try
+        {
+            var devices = Enumerator();
+            devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia, out var device);
+            device.GetId(out var id);
+            var volume = Volume(device);
+            volume.GetMasterVolumeLevelScalar(out float level);
+            volume.GetMute(out bool muted);
+            return new AudioDevice(id, Name(device), false, true, (int)Math.Round(level * 100), muted);
+        }
+        catch { return null; } // none plugged in
     }
 
     // The apps with sound open (playing now first), each once however many sessions it has.
@@ -141,7 +157,7 @@ public static class Audio
         var found = new List<(string, string?, bool, ISimpleAudioVolume, uint)>();
         try
         {
-            var devices = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            var devices = Enumerator();
             devices.EnumAudioEndpoints(DataFlow.Render, ActiveOnly, out var all);
             all.GetCount(out uint count);
             for (uint i = 0; i < count; i++)
@@ -149,9 +165,7 @@ public static class Audio
                 try
                 {
                     all.Item(i, out var device);
-                    var iid = typeof(IAudioSessionManager2).GUID;
-                    device.Activate(ref iid, 1, IntPtr.Zero, out var o);
-                    ((IAudioSessionManager2)o).GetSessionEnumerator(out var sessions);
+                    ((IAudioSessionManager2)Activate(device, SessionManagerIid)).GetSessionEnumerator(out var sessions);
                     sessions.GetCount(out int n);
                     for (int j = 0; j < n; j++)
                     {
@@ -255,10 +269,10 @@ public static class Audio
         {
             const string name = "Windows.Media.Internal.AudioPolicyConfig";
             WindowsCreateString(name, name.Length, out var className);
-            var iid = typeof(IAudioPolicyConfig).GUID;
+            var iid = PolicyConfigIid;
             RoGetActivationFactory(className, ref iid, out var factory);
             WindowsDeleteString(className);
-            policy = (IAudioPolicyConfig)Marshal.GetObjectForIUnknown(factory);
+            policy = (IAudioPolicyConfig)Wrap(factory);
             Marshal.Release(factory);
         }
         catch (Exception ex) { App.Log(ex); }
@@ -311,8 +325,8 @@ public static class Audio
 
     // Windows.Media.Internal.AudioPolicyConfig's factory (Windows 10 21H2 and later), as
     // EarTrumpet declares it: IInspectable's three, then what comes before the two used here.
-    [ComImport, Guid("ab3d4648-e242-459f-b02f-541c70306324"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioPolicyConfig
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("ab3d4648-e242-459f-b02f-541c70306324")]
+    internal partial interface IAudioPolicyConfig
     {
         void GetIids(); void GetRuntimeClassName(); void GetTrustLevel();
         void AddCtxVolumeChange(); void RemoveCtxVolumeChanged(); void AddRingerVibrateStateChanged(); void RemoveRingerVibrateStateChanged();
@@ -337,7 +351,7 @@ public static class Audio
     {
         try
         {
-            var policy = (IPolicyConfig)new PolicyConfigClient();
+            var policy = (IPolicyConfig)Create(PolicyConfigClientClsid, PolicyConfigInterfaceIid);
             foreach (var role in new[] { Role.Console, Role.Multimedia, Role.Communications }) policy.SetDefaultEndpoint(id, role);
         }
         catch (Exception ex) { App.Log(ex); }
@@ -347,7 +361,7 @@ public static class Audio
     {
         try
         {
-            var devices = (IMMDeviceEnumerator)new MMDeviceEnumerator();
+            var devices = Enumerator();
             devices.GetDevice(id, out var device);
             act(Volume(device));
         }
@@ -356,9 +370,7 @@ public static class Audio
 
     static IAudioEndpointVolume Volume(IMMDevice device)
     {
-        var iid = typeof(IAudioEndpointVolume).GUID;
-        device.Activate(ref iid, 1 /* in-process */, IntPtr.Zero, out var o);
-        return (IAudioEndpointVolume)o;
+        return (IAudioEndpointVolume)Activate(device, EndpointVolumeIid);
     }
 
     // "Speakers (Realtek(R) Audio)", as Sound settings shows it.
@@ -372,49 +384,81 @@ public static class Audio
     }
 
     // --- Core Audio (mmdeviceapi.h, endpointvolume.h) ---------------------------------------
-    const uint ActiveOnly = 1; // DEVICE_STATE_ACTIVE
-    enum DataFlow { Render, Capture }
-    enum Role { Console, Multimedia, Communications }
+    // Source-generated COM ([GeneratedComInterface] and these wrappers), not [ComImport]: the
+    // same code in the normal build and the native one (Native AOT has no built-in COM).
+    static readonly StrategyBasedComWrappers Com = new();
+    static readonly Guid MMDeviceEnumeratorClsid = new("BCDE0395-E52F-467C-8E3D-C4579291692E");
+    static readonly Guid EnumeratorIid = new("A95664D2-9614-4F35-A746-DE8DB63617E6");
+    static readonly Guid EndpointVolumeIid = new("5CDF2C82-841E-4546-9722-0CF74078229A");
+    static readonly Guid MeterIid = new("C02216F6-8C67-4B5B-9D00-D008E73E0064");
+    static readonly Guid SessionManagerIid = new("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F");
+    static readonly Guid PolicyConfigIid = new("ab3d4648-e242-459f-b02f-541c70306324");
+    static readonly Guid PolicyConfigInterfaceIid = new("f8679f50-850a-41cf-9c72-430f290290c8");
 
-    [StructLayout(LayoutKind.Sequential)] struct PropertyKey { public Guid Format; public int Id; }
-    [StructLayout(LayoutKind.Sequential)] struct PropVariant { public ushort Type; ushort r1, r2, r3; public IntPtr Pointer; IntPtr more; }
+    // A COM object for this pointer; the wrapper holds its own reference, so ours is let go.
+    static object Wrap(IntPtr unknown)
+    {
+        try { return Com.GetOrCreateObjectForComInstance(unknown, CreateObjectFlags.None); }
+        finally { Marshal.Release(unknown); }
+    }
+
+    static object Create(Guid clsid, Guid iid)
+    {
+        Marshal.ThrowExceptionForHR(CoCreateInstance(clsid, IntPtr.Zero, 1 /* in-process */, iid, out var unknown));
+        return Wrap(unknown);
+    }
+
+    static IMMDeviceEnumerator Enumerator() => (IMMDeviceEnumerator)Create(MMDeviceEnumeratorClsid, EnumeratorIid);
+
+    static object Activate(IMMDevice device, Guid iid)
+    {
+        device.Activate(ref iid, 1 /* in-process */, IntPtr.Zero, out var unknown);
+        return Wrap(unknown);
+    }
+
+    [DllImport("ole32.dll")] static extern int CoCreateInstance(in Guid clsid, IntPtr outer, uint context, in Guid iid, out IntPtr unknown);
+
+    const uint ActiveOnly = 1; // DEVICE_STATE_ACTIVE
+    internal enum DataFlow { Render, Capture }
+    internal enum Role { Console, Multimedia, Communications }
+
+    [StructLayout(LayoutKind.Sequential)] internal struct PropertyKey { public Guid Format; public int Id; }
+    [StructLayout(LayoutKind.Sequential)] internal struct PropVariant { public ushort Type; ushort r1, r2, r3; public IntPtr Pointer; IntPtr more; }
     [DllImport("ole32.dll")] static extern int PropVariantClear(ref PropVariant value);
 
-    [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")] class MMDeviceEnumerator { }
-
-    [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IMMDeviceEnumerator
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
+    internal partial interface IMMDeviceEnumerator
     {
         void EnumAudioEndpoints(DataFlow flow, uint states, out IMMDeviceCollection devices);
         void GetDefaultAudioEndpoint(DataFlow flow, Role role, out IMMDevice device);
         void GetDevice([MarshalAs(UnmanagedType.LPWStr)] string id, out IMMDevice device);
     }
 
-    [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IMMDeviceCollection
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
+    internal partial interface IMMDeviceCollection
     {
         void GetCount(out uint count);
         void Item(uint index, out IMMDevice device);
     }
 
-    [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IMMDevice
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("D666063F-1587-4E43-81F1-B948E807363F")]
+    internal partial interface IMMDevice
     {
-        void Activate(ref Guid iid, uint context, IntPtr parameters, [MarshalAs(UnmanagedType.IUnknown)] out object o);
+        void Activate(ref Guid iid, uint context, IntPtr parameters, out IntPtr o);
         void OpenPropertyStore(uint access, out IPropertyStore store);
         void GetId([MarshalAs(UnmanagedType.LPWStr)] out string id);
     }
 
-    [ComImport, Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IPropertyStore
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("886d8eeb-8cf2-4446-8d02-cdba1dbdcf99")]
+    internal partial interface IPropertyStore
     {
         void GetCount(out uint count);
         void GetAt(uint index, out PropertyKey key);
         void GetValue(ref PropertyKey key, out PropVariant value);
     }
 
-    [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioEndpointVolume
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("5CDF2C82-841E-4546-9722-0CF74078229A")]
+    internal partial interface IAudioEndpointVolume
     {
         void RegisterControlChangeNotify(IntPtr notify);
         void UnregisterControlChangeNotify(IntPtr notify);
@@ -431,26 +475,26 @@ public static class Audio
         void GetMute([MarshalAs(UnmanagedType.Bool)] out bool mute);
     }
 
-    [ComImport, Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioMeterInformation { void GetPeakValue(out float peak); }
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("C02216F6-8C67-4B5B-9D00-D008E73E0064")]
+    internal partial interface IAudioMeterInformation { void GetPeakValue(out float peak); }
 
-    [ComImport, Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioSessionManager2
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("77AA99A0-1BD6-484F-8BC7-2C654C9A9B6F")]
+    internal partial interface IAudioSessionManager2
     {
         void GetAudioSessionControl(IntPtr group, uint flags, out IntPtr control);
         void GetSimpleAudioVolume(IntPtr group, uint flags, out IntPtr volume);
         void GetSessionEnumerator(out IAudioSessionEnumerator sessions);
     }
 
-    [ComImport, Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioSessionEnumerator
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8")]
+    internal partial interface IAudioSessionEnumerator
     {
         void GetCount(out int count);
         void GetSession(int index, out IAudioSessionControl2 session);
     }
 
-    [ComImport, Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IAudioSessionControl2
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("bfb7ff88-7239-4fc9-8fa2-07c950be9c6d")]
+    internal partial interface IAudioSessionControl2
     {
         void GetState(out int state);
         void GetDisplayName([MarshalAs(UnmanagedType.LPWStr)] out string name);
@@ -467,8 +511,8 @@ public static class Audio
         [PreserveSig] int IsSystemSoundsSession(); // 0 (S_OK): it is
     }
 
-    [ComImport, Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface ISimpleAudioVolume
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("87CE5498-68D6-44E5-9215-6DA47EF883D8")]
+    internal partial interface ISimpleAudioVolume
     {
         void SetMasterVolume(float level, ref Guid context);
         void GetMasterVolume(out float level);
@@ -478,10 +522,10 @@ public static class Audio
 
     // Setting the default device has no public API; this is the one Sound settings itself uses
     // (undocumented, but unchanged since Windows 7, and what every audio switcher calls).
-    [ComImport, Guid("870af99c-171d-4f9e-af0d-e63df40c2bc9")] class PolicyConfigClient { }
+    static readonly Guid PolicyConfigClientClsid = new("870af99c-171d-4f9e-af0d-e63df40c2bc9");
 
-    [ComImport, Guid("f8679f50-850a-41cf-9c72-430f290290c8"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
-    interface IPolicyConfig
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("f8679f50-850a-41cf-9c72-430f290290c8")]
+    internal partial interface IPolicyConfig
     {
         void GetMixFormat(IntPtr a, IntPtr b);
         void GetDeviceFormat(IntPtr a, int b, IntPtr c);

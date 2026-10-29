@@ -38,7 +38,7 @@ workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal 
 launch terminal | A terminal, in the default terminal: [--dir <folder>] [--title <title>] [--wsl: in your Linux] [-- <command>] | builtin launch-terminal
 launch project | A project window (launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
 launch editor | A file or folder in the default editor | builtin launch-editor
-default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch|ubuntu, the Linux in WSL | builtin default
+default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch (or ubuntu), the Linux in WSL | builtin default
 
 restart zebar | Restart the bar and the dock | pwsh zebar/start.ps1
 restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+R) | pwsh themes/render.ps1 -Reload
@@ -84,6 +84,7 @@ start glazewm | Start GlazeWM once Windows' taskbar is up, again if it crashes a
 
 capture color | Colour picker: a loupe over the frozen screen; click copies the colour as #rrggbb | app --snip color
 capture qr | Read QR codes: drag over one (click a window, Enter for everything); the text is copied, not opened | app --snip qr
+bar | Which bar: native (drawn by the menu app, no web engine; work in progress, docs/native-bar.md), zebar (as before), or toggle; remembered | app --bar
 toggle stay-awake | Keep the PC and screen awake, or stop; lasts while the menu app runs (%LOCALAPPDATA%\launcher\stay-awake while on) | app --toggle stay-awake
 wifi | Wi-Fi: on, off, toggle, connect <network> (one Windows already saved), disconnect | app --qs wifi
 bluetooth | Bluetooth: on, off, toggle, connect <device>, disconnect <device> (one of the paired ones) | app --qs bluetooth

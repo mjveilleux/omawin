@@ -324,9 +324,14 @@ if ($dirty) { Warn 'git' "$($dirty.Count) uncommitted change(s)" } else { Pass '
 
 # --- running ------------------------------------------------------------------------------
 Section 'running now'
-foreach ($proc in 'glazewm', 'zebar') {
-    if (Get-Process $proc -ErrorAction SilentlyContinue) { Pass $proc } else { Fail $proc 'not running' }
+if (Get-Process glazewm -ErrorAction SilentlyContinue) { Pass 'glazewm' } else { Fail 'glazewm' 'not running' }
+# The bar: Zebar, or the menu app's own (omawin bar native, docs/native-bar.md), whose window is "omawin bar".
+$barFile = "$env:LOCALAPPDATA\launcher\bar"
+if (-not (Test-Path $barFile) -or (Get-Content $barFile -Raw).Trim() -ne 'zebar') { # native: the default
+    $bar = Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'omawin bar' }
+    if ($bar) { Pass 'bar' 'native (the menu app)' } else { Fail 'bar' 'native, but not up (omawin restart menu)' }
 }
+elseif (Get-Process zebar -ErrorAction SilentlyContinue) { Pass 'zebar' } else { Fail 'zebar' 'not running' }
 # The launcher, file finder and system menu are one native app (menu-app/), running hidden.
 if ($myMenu) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
 else { Warn 'launcher / menu (Win+Space, Win+Alt+Space)' 'not running; the first Win+Space starts it' }

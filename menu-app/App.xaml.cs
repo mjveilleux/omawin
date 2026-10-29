@@ -56,6 +56,7 @@ public static class Program
     }
     // What a `--render-about` run is drawing (App.OnLaunched reads it and exits when it's done).
     internal static (string Path, int Frame)? Render;
+    internal static bool BarPreview;
 
     [STAThread]
     static int Main(string[] args)
@@ -71,6 +72,9 @@ public static class Program
         // The render switch draws the About window into a PNG and exits. It is answered before the
         // hand-off below: the copy that is already running has no way to draw this one, and a
         // screenshot must not depend on one being up.
+        // --bar-preview: only the native bar, in a copy of its own beside the running menu app (to
+        // work on the bar without stopping the launcher). Its clicks are logged, not acted on.
+        if (args.Contains("--bar-preview")) { BarPreview = true; return Start(args, null); }
         int render = Array.IndexOf(args, "--render-about");
         if (render >= 0 && render + 1 < args.Length)
         {
@@ -80,6 +84,7 @@ public static class Program
         // The self test is read only and must run whatever else is running: it is done before the
         // single-copy check, so it is never handed to a running copy (which couldn't print).
         if (args.Contains("--qs-selftest")) return QuickSettingsSelfTest.Run();
+        if (args.Contains("--snip-selftest")) return QuickSettingsSelfTest.RunSnip();
 
         Trace("main");
         mutex = new Mutex(true, MutexName, out bool first);
@@ -161,14 +166,24 @@ public partial class App : Application
             _ = new AboutWindow(rendering: true).SaveAsync(render.Path, render.Frame);
             return;
         }
-        window = new MainWindow();
-        FileSearch.Start(); // the launcher's file indexes (fff), built in the background
-        Background.Start(); // clipboard history, installed apps, reports (Background.cs)
-        Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
-        StayAwake.Reset(); // a fresh start is never keeping the PC awake
-        new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
-        Program.Trace("ready");
-        if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
+        if (Program.BarPreview) { Bar.Preview(); return; }
+        Program.Trace("launched");
+        // The bar first (when it's the one picked, Bar/Bar.cs): at sign-in it's what you see. Its
+        // windows draw once this returns, so the rest comes after, queued behind that first frame.
+        Bar.Start(HandleRequest);
+        Program.Trace("bar");
+        Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
+        {
+            window = new MainWindow();
+            Program.Trace("window");
+            FileSearch.Start(); // the launcher's file indexes (fff), built in the background
+            Background.Start(); // clipboard history, installed apps, reports (Background.cs)
+            Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
+            StayAwake.Reset(); // a fresh start is never keeping the PC awake
+            new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
+            Program.Trace("ready");
+            if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
+        });
     }
 
     public static void Log(Exception ex)
@@ -192,6 +207,8 @@ public partial class App : Application
             try { Snip.Start(mode); } catch (Exception ex) { Log(ex); }
         }
         else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "stay-awake") StayAwake.Toggle();
+        else if (args.Length > 1 && args[0] == "--bar") Bar.Set(args[1]);
+        else if (args.Length > 1 && args[0] == "--say") Snip.Say(string.Join(' ', args[1..])); // the note, for other programs (the music player)
         else if (args.Length > 1 && args[0] == "--qs")
         {
             // One Quick settings toggle, off the UI thread (the radios, WLAN and WMI calls block),

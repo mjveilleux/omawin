@@ -8,6 +8,14 @@ Write-Step 'GlazeWM + Zebar'
 Write-Note "ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml"
 Add-InstallItem 'Settings' 'glazewm-config' 'GlazeWM config' 'have'
 Set-Junction "$HOME\.glzr\zebar" "$Repo\zebar"
+# Zebar's client library, built here so the bar never fetches it at sign-in (zebar/build-client.ps1).
+# PowerShell 7's, as every script of omawin's outside install/ (the software step put it in).
+$pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
+$pwsh = if ($pwsh) { $pwsh.Source } else { "$env:ProgramFiles\PowerShell\7\pwsh.exe" }
+if (Test-Path $pwsh) {
+    $client = & $pwsh -NoLogo -NoProfile -File "$Repo\zebar\build-client.ps1" 2>&1 | Select-Object -Last 1
+    Write-Note "$client  Zebar's client (zebar/tokyo-islands/lib)"
+} else { Write-Note "    Zebar's client: no PowerShell 7 yet (the bar loads it from esm.sh)" }
 # Start GlazeWM at sign-in (it starts Zebar itself, see glazewm/config.yaml), straight away.
 Invoke-InstallItem 'Desktop' 'GlazeWM at sign-in' { & "$Repo\install\login-start.ps1" }
 # Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1),
