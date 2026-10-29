@@ -44,7 +44,8 @@ public abstract class BarWidget
         "audio" => new AudioWidget(),
         "monitor" => new MonitorWidget(),
         "power" => new PowerWidget(),
-        _ => null, // media, tray, agents: Zebar's for now (docs/native-bar.md)
+        "tray" => new TrayWidget(),
+        _ => null, // media, agents: Zebar's for now (docs/native-bar.md)
     };
 
     public static readonly FontFamily Mono = new("JetBrainsMono Nerd Font, JetBrainsMono NF, Cascadia Mono, Consolas");
@@ -269,6 +270,96 @@ sealed class UpdateWidget : BarWidget
         cell.Tip = $"{data.Updates} omawin update{(data.Updates == 1 ? "" : "s")} waiting: click to update";
     }
     public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+}
+
+// The tray: a drawer of the apps' icons (Tray.cs) that opens while the mouse is on it, after the
+// arrow that points the way it opens. Click an icon: the app's own click; right click: its menu.
+sealed class TrayWidget : BarWidget
+{
+    readonly StackPanel root = new() { Orientation = Orientation.Horizontal };
+    readonly StackPanel drawer = new() { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed };
+    readonly Cell chevron = new("Tray");
+    readonly Dictionary<string, (Cell Cell, Image Image, int Stamp)> cells = [];
+    string key = "";
+    readonly Microsoft.UI.Dispatching.DispatcherQueueTimer closing;
+    public override FrameworkElement Element => root;
+
+    public TrayWidget()
+    {
+        chevron.Icon.FontSize = 11;
+        chevron.Icon.Opacity = 0.7;
+        chevron.SetIcon(Glyph(0xF0141));
+        root.Children.Add(drawer);
+        root.Children.Add(chevron);
+        root.Background = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
+        closing = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().CreateTimer();
+        closing.Interval = TimeSpan.FromMilliseconds(600);
+        closing.IsRepeating = false;
+        closing.Tick += (_, _) => Open(false);
+        root.PointerEntered += (_, _) => { closing.Stop(); Open(true); };
+        root.PointerExited += (_, _) => closing.Start();
+        Tray.Changed += () => SystemMenu.Bar.Refresh();
+        Tray.Start();
+    }
+
+    void Open(bool open)
+    {
+        if (open == (drawer.Visibility == Visibility.Visible)) return;
+        drawer.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+        if (!open) return;
+        drawer.Opacity = 0;
+        var fade = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = 1, Duration = TimeSpan.FromMilliseconds(200) };
+        var board = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(fade, drawer);
+        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(fade, "Opacity");
+        board.Children.Add(fade);
+        board.Begin();
+    }
+
+    public override void Update(BarData data)
+    {
+        var icons = Tray.Icons;
+        var k = string.Join(",", icons.Select(i => $"{i.Key}:{i.Stamp}:{i.Tip}"));
+        if (k == key) return;
+        key = k;
+        drawer.Children.Clear();
+        foreach (var icon in icons)
+        {
+            if (!cells.TryGetValue(icon.Key, out var c))
+            {
+                var image = new Image { Width = 15, Height = 15 };
+                var cell = new Cell { MinWidth = 24 };
+                cell.Children.Add(image);
+                cell.Paint(Theme);
+                c = (cell, image, -1);
+            }
+            var current = icon;
+            c.Cell.Click = () => ClickAt(current, false);
+            c.Cell.RightClick = () => ClickAt(current, true);
+            c.Cell.Tip = icon.Tip;
+            if (c.Stamp != icon.Stamp && icon.Pixels != null)
+            {
+                var bitmap = new Microsoft.UI.Xaml.Media.Imaging.WriteableBitmap(32, 32);
+                using (var stream = System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.AsStream(bitmap.PixelBuffer)) stream.Write(icon.Pixels, 0, icon.Pixels.Length);
+                c.Image.Source = bitmap;
+                c.Stamp = icon.Stamp;
+            }
+            cells[icon.Key] = c;
+            drawer.Children.Add(c.Cell);
+        }
+    }
+
+    // Where the mouse is, on the screen: what the app's menu opens at.
+    static void ClickAt(Tray.Icon icon, bool right)
+    {
+        GetCursorPos(out var at);
+        Tray.Click(icon, right, at.X, at.Y);
+    }
+
+    [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)] struct Point { public int X, Y; }
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool GetCursorPos(out Point point);
+
+    public override void Paint(Theme theme) { base.Paint(theme); chevron.Paint(theme); foreach (var c in cells.Values) c.Cell.Paint(theme); }
 }
 
 // The Bluetooth glyph; click: Quick settings (its radio and devices).

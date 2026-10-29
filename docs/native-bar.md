@@ -11,7 +11,10 @@ Until it matches Zebar, both exist: Zebar stays the default and the native bar i
    - left: the screenshot overlay (`Snip.cs`, WinForms), onto plain Win32; `Aot/SnipStub.cs` stands in until then
    - the build needs Visual Studio's C++ tools (link.exe) and `vswhere.exe` on the path; PCs without them get the release's build
 1. **The bar's window and simple widgets**: one borderless, never-activated window per monitor, 26 px, `bar.json`'s layout, the theme's colors, Nerd Font icons. `omawin.exe`'s strip covers the start. Data straight from Windows and GlazeWM: workspaces and monitor (GlazeWM's IPC), clock, audio (`Audio.cs`), network, battery, Bluetooth, the update arrow, indicators, the menu button.
-2. **The tray and media**: other apps' tray icons (taken the way Zebar does: a window that receives what apps tell the taskbar), and Windows' media controls.
+   Done (`omawin bar native`; `SystemMenu --bar-preview` shows it alone, beside the running menu app, and logs what it sees): every widget above, the fade-in, the theme followed live, a bar per monitor (made again when monitors change). Each window is a frameless popup: WinUI puts its frame styles back on show and move, so `WM_NCCALCSIZE` is answered with 0.
+2. **The tray and media**: other apps' tray icons, and Windows' media controls.
+   - done: the tray (`Bar/Tray.cs`), as Zebar's systray-util does it: a never-shown window of the taskbar's class, `Shell_TrayWnd`, kept in front of Explorer's, so `Shell_NotifyIcon` tells it about every icon; it hands every message on to Explorer's own taskbar (only Explorer's, so it can't loop with Zebar's copy). Its Win32 calls must be the Unicode ones (`CharSet.Unicode`): the ANSI default registered the class as "S". Clicks are sent as the taskbar sends them; not yet tried by hand.
+   - left: media
 3. **Switch over**: the native bar the default; Zebar, our Zebar fork and `zebar/build-client.ps1` go, with a migration; `omawin check`, `omawin profile ram`'s budgets, docs and manual follow.
 
 Left for later: the agents panel and the music player drop-downs (Zebar's for now).

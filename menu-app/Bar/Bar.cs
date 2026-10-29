@@ -51,6 +51,9 @@ public static class Bar
         request = args => App.Log(new Exception("bar preview: " + string.Join(' ', args)));
         ui = DispatcherQueue.GetForCurrentThread();
         try { Show(); } catch (Exception ex) { App.Log(ex); }
+        // What it sees, in the log, 5 s on: to check it without moving the mouse.
+        Task.Delay(5000).ContinueWith(_ => App.Log(new Exception($"bar preview: {Wm.Last?.Monitors.Count ?? 0} monitor(s) from GlazeWM; tray: " +
+            string.Join(" | ", Tray.Icons.Select(i => $"{i.Tip} (v{i.Version})")))));
     }
 
     public static void Request(string[] args) => ui?.TryEnqueue(() => request(args));
@@ -173,6 +176,23 @@ public static class Bar
                 Thread.Sleep(1000 - DateTime.Now.Millisecond); // on the second, so the minute turns on time
             }
         }) { IsBackground = true, Name = "bar" }.Start();
+        // Every 3 s: the monitors. One plugged in or out, or moved: the bars are made again for them.
+        new Thread(() =>
+        {
+            while (true)
+            {
+                Thread.Sleep(3000);
+                ui?.TryEnqueue(() =>
+                {
+                    if (windows.Count == 0) return;
+                    var now = Screens();
+                    var had = windows.Select(w => w.Screen).ToList();
+                    if (now.Count == had.Count && now.All(had.Contains)) return;
+                    Hide();
+                    try { Show(); } catch (Exception ex) { App.Log(ex); }
+                });
+            }
+        }) { IsBackground = true, Name = "bar monitors" }.Start();
         // Every 10 s: the network (Wi-Fi's signal moves slowly).
         new Thread(() =>
         {
