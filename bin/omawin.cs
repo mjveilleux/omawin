@@ -735,6 +735,19 @@ static class Omawin
     // rendered, or the bar's server doesn't come up, the script does it all as before.
     static int StartZebar()
     {
+        // The native bar picked (omawin bar native): the menu app draws it, so no Zebar; the strip
+        // covers the wait for its window (menu-app/Bar/BarWindow.cs, "omawin bar").
+        var picked = Path.Combine(StateDir, "bar");
+        if (File.Exists(picked) && File.ReadAllText(picked).Trim() == "native")
+        {
+            var cover = Strip.Show(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"));
+            var waited = Stopwatch.StartNew();
+            while (FindWindow(null, "omawin bar") == IntPtr.Zero && waited.ElapsedMilliseconds < 30000) Thread.Sleep(50);
+            Trace("bar-native-up");
+            Thread.Sleep(300); // its first paint
+            cover.Close();
+            return 0;
+        }
         var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"glzr.io\Zebar\zebar.exe");
         var script = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, @"zebar\start.ps1"));
         int port;

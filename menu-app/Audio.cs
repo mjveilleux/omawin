@@ -76,6 +76,23 @@ public static partial class Audio
         return list;
     }
 
+    // Windows' default speaker, for the bar: one device, no meters (List() starts those afresh,
+    // which the Audio page's own meters would lose), every second.
+    public static AudioDevice? DefaultSpeaker()
+    {
+        try
+        {
+            var devices = Enumerator();
+            devices.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia, out var device);
+            device.GetId(out var id);
+            var volume = Volume(device);
+            volume.GetMasterVolumeLevelScalar(out float level);
+            volume.GetMute(out bool muted);
+            return new AudioDevice(id, Name(device), false, true, (int)Math.Round(level * 100), muted);
+        }
+        catch { return null; } // none plugged in
+    }
+
     // The apps with sound open (playing now first), each once however many sessions it has.
     public static List<AudioApp> Apps()
     {
