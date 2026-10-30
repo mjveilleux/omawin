@@ -588,7 +588,7 @@ Shared building blocks that several features need (who holds a file, display lay
 | 8.24 Classic right-click menu | catalog entry | one value |
 | 8.25 Files opened by type | core (forwarders to the shell) | the shell's viewer |
 
-Count: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 catalog-only (plus the catalog parts of 8.12, 8.18 and 8.19). Items 8.26-8.43 (below) are almost all catalog entries, a few with an admin helper verb (8.32, 8.34) or a core page (8.35, 8.36); the Health additions (8.41) go in 8.15's plugin.
+8K (idle memory) cuts across homes: mostly measurement, omawin's own parts, and catalog entries. Count for 8.1-8.25: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 catalog-only (plus the catalog parts of 8.12, 8.18 and 8.19). Items 8.26-8.43 (below) are almost all catalog entries, a few with an admin helper verb (8.32, 8.34) or a core page (8.35, 8.36); the Health additions (8.41) go in 8.15's plugin.
 
 **How first-party plugins are written:**
 
@@ -702,6 +702,33 @@ A web survey of 2026 coverage (Tom's Hardware, TechRadar, PCWorld, Windows Centr
 - **8.51 Diagnostic data at the minimum** (S, catalog). Windows' diagnostic data at *Required* (the minimum Home and Pro allow), optional diagnostics and tailored experiences off (partly done), feedback prompts off, activity history off; Windows Update and Defender untouched.
 
 Sources: [Tom's Hardware: Microsoft working to fix Windows 11's most annoying flaws](https://tomshardware.com/software/windows/microsoft-is-reportedly-working-to-fix-windows-11s-most-annoying-flaws-wants-to-rebuild-trust-in-the-os) · [TechRadar: 5 big problems with Windows 11 to fix in 2026](https://techradar.com/computing/windows/5-big-problems-with-windows-11-that-i-really-hope-microsoft-fixes-in-2026) · [TechRadar: File Explorer sluggish](https://www.techradar.com/computing/windows/finding-windows-11-sluggish-when-youre-working-with-files-and-folders-youre-not-alone-and-its-high-time-for-microsoft-to-sort-out-file-explorer) · [Windows Latest: Microsoft admits right-click menus are worse than Windows 10's](https://windowslatest.com/2026/08/19/microsoft-admits-it-made-windows-11-worse-than-windows-10-for-right-click-menus-promises-to-fix-sluggish-and-cluttered-ux) · [Windows Central: faster context menus, navigation, transfers and search promised](https://windowscentral.com/microsoft/windows-11/microsoft-promises-to-speed-up-context-menus-folder-navigation-file-transfers-and-search-on-windows-11) · [PCWorld: the decluttered right-click menu's flaw](https://www.pcworld.com/article/2964382/windows-11s-decluttered-right-click-menu-draws-criticism-for-one-big-flaw.html) · [Pureinfotech: 2026 will focus on fixing Windows 11's biggest problems](https://pureinfotech.com/microsoft-fix-windows-11-2026/) · [Pureinfotech: 25H2 known issues](https://pureinfotech.com/windows-11-25h2-known-issues/) · [Microsoft Tech Community: why is everyone hating on Windows 11](https://techcommunity.microsoft.com/t5/windows-11/why-is-everyone-hating-on-windows-11/m-p/4517831) · [Yahoo Tech: 1 billion users, and they're furious](https://tech.yahoo.com/computing/articles/windows-11-1-billion-users-154000182.html) · [tbreak: the 2026 update and the taskbar](https://tbreak.com/windows-11-2026-update-taskbar-copilot/)
+
+### 8K. Idle memory: from 6-7 GB to under 4
+
+**The problem:** on the maintainer's PC, Windows reports **6-7 GB in use with nothing going on** (2026-10-30). The mission's budget is ~600 MB for the whole omawin desktop (mission.md, principle 3); a clean Windows 11 sits around 2.5-3.5 GB in use. So the target: **under 4 GB in use at idle**, with omawin's own part under 600 MB, and every megabyte accounted for.
+
+**Measure first, on the PC (🖥).** `omawin profile ram -Save` (exists; the `profile-ram` skill drives it) already lists omawin's parts against budgets. Extend it to the whole machine, grouped by what you'd recognise:
+- **omawin's parts** (as now): GlazeWM, the bar (Zebar until 1.6), the menu app, noctty and its spare PowerShell, herdr and the agents in it (OpenCode's budget is 800 MB), dictation (Handy, 300 MB with its speech model loaded), the music player.
+- **The WSL virtual machine** (`vmmem` / `VmmemWSL`): Linux's memory as Windows sees it, which grows with Linux's file cache and gives back slowly.
+- **Browsers and web views**: Edge and Chrome, and every app that's secretly a web page (new Outlook, Teams, Widgets, Phone Link, Zebar), grouped by their host app (the script already attributes WebView2 children).
+- **Windows' services**: Defender (keep), Search and its indexer, Widgets, Copilot, Phone Link, OEM services, OneDrive.
+- **The kernel**: drivers' memory (non-paged pool; a driver leak shows here) and the compressed memory store.
+- **And what isn't really used:** the standby cache (Windows keeps recently used files in RAM and gives it back instantly; it's free memory, not waste), so the report says *in use* and *cached* separately and nobody chases the wrong number.
+Saved runs (`-Save`) give before / after for every change below.
+
+**Then cut, biggest first (each measured):**
+1. **The bar out of Edge's web engine** (1.6): Zebar and its web views, ~220-350 MB → the native bar inside the menu app (already running), ~0 extra.
+2. **Agents only while used** (M): OpenCode and other agents in herdr's sessions stay resident (up to ~800 MB each). Project tabs start the agent when the tab is first focused, and herdr stops an agent idle for a set time (its session and history kept, so reopening resumes); `omawin profile ram` shows each agent session.
+3. **Dictation's model loaded on demand** (S): Handy keeps its speech model in memory (~300 MB); load it on the dictation key, unload after a few idle minutes (Handy's own setting if it has one; else start and stop Handy around use).
+4. **The WSL VM sized for idle** (S, 3.3 and 3.5): `autoMemoryReclaim=gradual` (gives Linux's cache back over time, rather than only on drop), a memory cap in `.wslconfig` (half the RAM by default is a lot for an idle VM; e.g. 4-8 GB on a 32 GB PC), and the keep-warm of 3.5 **measured against its cost**: if a warm, idle Arch costs more than ~500 MB, Linux starts on first use instead, and the first terminal waits once (the trade written down, the default chosen by the numbers).
+5. **Windows' background apps** (8.28, 8.31): Widgets, Phone Link, Edge's startup boost and background running, Teams' and OneDrive's start at sign-in (asked), the Search indexer once the finder and whole-disk search replace it.
+6. **noctty's spare shell** (S): the pre-started PowerShell (~60-80 MB) only while the PC is on AC power, or released after an idle hour; measured against Win+Enter's time.
+7. **The menu app itself** (S): AOT build everywhere (1.3: 114 MB vs 173 MB), the clipboard history's images kept on disk with thumbnails in memory, icon caches bounded.
+8. **Drivers that leak** (8.41): when the non-paged pool is large, the Health page names the driver (pool tags, `poolmon`'s method) and the update that fixes it.
+
+**Budgets made real:** `bin/profile-ram.ps1`'s budgets tightened to the 600 MB desktop (GlazeWM 80, the shell 200 with the bar inside, noctty 150, herdr 100 without agents), agents and dictation counted separately as *on demand*, and `omawin check` warning when an idle desktop is over budget.
+
+**Done when:** a saved idle profile on the maintainer's PC shows under 4 GB in use (cached reported apart), omawin's parts under 600 MB, and each step's saving written here.
 
 ### What not to do
 

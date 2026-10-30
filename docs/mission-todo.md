@@ -100,3 +100,22 @@ Decided 2026-10-15: no Zebar fork. The bar and dock move into the menu app (the 
 - [ ] Fork basecamp/omarchy (mjveilleux/omarchy) to track it; a note per Omarchy release of what's worth bringing over
 - [ ] Credit and license notices for everything borrowed (themes, backgrounds, ideas)
 - [ ] Keep this file's parity list current: each Omarchy feature is have, Windows-native instead (Windows Hello, Action Center, volume flyout), to do, or decided against (ISO install, hardware fixes, Windows VM)
+
+## 9. Fixing Windows (explore, measure, improve)
+
+Windows 11's common complaints (the 2026 survey in [roadmap.md](roadmap.md), 8J) and the idle memory goal (8K), as things to explore: for each, reproduce or measure it on this PC, then fix it the measured, reversible way. The roadmap item for each is in brackets.
+
+- [ ] Idle memory: 6-7 GB in use at idle today; measure where it goes (`omawin profile ram`, whole machine), then get under 4 GB with omawin under 600 MB (8K)
+- [ ] Updates that break things: link a crash or failed shutdown to the update before it, undo it, pause (8.44, 8.18, 8.42)
+- [ ] AI pushed everywhere: every AI feature as one switch, off in the recommended set (8.45)
+- [ ] Slow File Explorer: time a big folder's open; folder type discovery, Home's cloud files, separate process (8.46)
+- [ ] Slow right-click menu: time each shell extension, block the slow ones (8.47, 8.24)
+- [ ] Start search slow and full of Bing: web results off (8.48); the launcher replaces it
+- [ ] Higher idle CPU than Windows 10: measure idle CPU and wake-ups by process, alongside memory (8.28, 8.31)
+- [ ] Bluetooth headphones dropping to call quality, audio clicks: keep headsets in stereo, enhancements off (8.49)
+- [ ] Random restarts and unfinished shutdowns: explain them from the event logs, fast startup off (8.15, 8.30)
+- [ ] Preinstalled apps: remove for this account, reinstallable (8.50)
+- [ ] Telemetry: diagnostic data at the minimum (8.51)
+- [ ] Taskbar and Start: replaced already (native bar, launcher); check nothing of the old taskbar shows through (auto-hide, Win key)
+- [ ] Microsoft account at setup: document the local-account route in the manual's install page
+
