@@ -362,7 +362,11 @@ The music drop-down (Zebar's today, `zebar/tokyo-islands/music.js`), the agents 
 
 From Raycast and PowerToys' Command Palette: a script dropped in `~/omawin-account/scripts/` (PowerShell, bash for Linux, anything with a header comment for its name and icon) shows up in the launcher, no manifest needed. The smallest possible plugin.
 
-### 4.9 A gallery (later)
+### 4.9 Omarchy plugins unchanged (M to L)
+
+The least-change route for Omarchy's catalog ([plugins.md](plugins.md), "Running Omarchy plugins unchanged"): stand-ins in Arch for the Omarchy and Hyprland commands plugins call (`omarchy-notification-send`, `omarchy-shell`, `hyprctl`, `xdg-open`) and Omarchy's theme folder kept current; then a host for their QML, first in Arch through WSLg (a prototype), then natively on Windows with Qt 6 if it earns it; and `omawin plugin scan` to say which plugins run as is.
+
+### 4.10 A gallery (later)
 
 A launcher page listing plugins from a curated `plugins.txt` in the repo (name, description, git URL), installable with Enter.
 

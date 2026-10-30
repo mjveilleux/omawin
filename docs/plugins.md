@@ -252,6 +252,55 @@ The same honesty as Omarchy's docs: **a plugin is code you run with your own rig
 
 Files: `menu-app/Plugins/` (`PluginRegistry.cs`, `PluginProcess.cs`, `PanelHost.cs`, `Bind.cs`), `menu-app/Bar/CommandWidget.cs`, `menu-app/MenuModel.cs` (layered menu and fragments), `bin/plugin.ps1` and `bin/commands.txt`, `plugins/` (built-ins and `index.txt`), `docs/plugins.md` (this file, turned into the reference), `manual/` (a page for users).
 
+## Running Omarchy plugins unchanged (the compatibility layer)
+
+The protocol and XAML panels above are the native way, and each port is real work. Most Omarchy plugins could instead run **with no code changes**, because of what they actually use. The imports of four community plugins (Omadoro, Omastonk, Calendar for Omarchy, Okomart; 2026-10-30):
+
+| Import | Used by | Runs on Windows? |
+|---|---|---|
+| `QtQuick` (+ `Controls`, `Layouts`, `Shapes`, `Effects`, `Window`) | all four | yes: standard Qt, cross-platform |
+| `qs.Commons`, `qs.Ui` (Omarchy's own colours, styles and controls) | all four | yes: Omarchy's MIT QML, shipped with it |
+| `Quickshell` (windows, singletons, `env`) | three | needs a host that provides it |
+| `Quickshell.Io` (`Process`, `FileView`) | all four | needs a host; the commands they run are Linux (`sh`, `mkdir -p`, `hey`, `python3`) |
+| `Quickshell.Hyprland` / `Quickshell.Wayland`, `hyprctl`, `wl-paste` | two | needs a stand-in that answers from GlazeWM and Windows |
+
+None of them use Quickshell's system services (PipeWire, network, screen capture), which would be the hard part. So the least-change route is a **host that runs the plugins' own QML**, plus **stand-ins for the few Omarchy and Hyprland commands they call**.
+
+### Layer 1: Omarchy's commands, in Arch (S; helps every kind of plugin)
+
+Plugins call Omarchy's commands and desktop tools by name. In omawin's Arch (phase 3 of the roadmap), small scripts with those names forward to Windows through `omawin.exe` (WSL interop):
+
+| Name in Arch | Does on omawin |
+|---|---|
+| `omarchy-notification-send` | a Windows toast (`omawin shell notify`) |
+| `omarchy-shell shell summon|toggle|call …` | `omawin shell …` |
+| `xdg-open <url>` | Windows opens it (https and files only) |
+| `hyprctl` (the common reads: `-j monitors`, `-j activewindow`, `-j workspaces`, `getoption` for colours; `keyword bind` / `dispatch` for a few) | answered from GlazeWM's IPC and the omawin theme; a bind becomes a proposed key (never bound silently) |
+| `wl-copy` / `wl-paste` | work already through WSLg; or Windows' clipboard via `clip.exe` / PowerShell |
+| `~/.config/omarchy/current/theme/` | written by omawin's theme switch in Omarchy's own format (the palette format omawin already uses), so plugins read the current theme where they expect it |
+
+With just this, Omarchy's **command bar modules** (scripts that print Waybar JSON) run unchanged under `side: linux`, and so do the shell commands inside QML plugins.
+
+### Layer 2: a host for their QML
+
+Two ways to run the QML itself; both run plugins unchanged.
+
+**A. In Arch, through WSLg (the quick prototype, days).** Quickshell itself is in Omarchy's repositories. A small `omawin-qs` shell (a `shell.qml` that provides Omarchy's plugin host: `qs.Commons`, `qs.Ui`, the plugin registry's injected objects, and its IPC) runs in Arch and shows plugin **panels and overlays** as windows on the Windows desktop through WSLg; GlazeWM floats and places them under the bar.
+- Real Linux underneath: `Process`, `FileView` and paths like `$XDG_STATE_HOME` work as on Omarchy; Omadoro and Omastonk need nothing else.
+- Limits: WSLg windows aren't layer-shell surfaces (Quickshell's `PanelWindow` has to fall back to a plain window), transparency and rounded corners are limited, a little latency, WSLg's memory; what the VM sees (battery, media) isn't Windows'; bar widgets can't sit inside omawin's native bar. `Quickshell.Hyprland` needs Hyprland's socket: a stand-in socket answering from GlazeWM is possible but more work.
+- Good for: summoned panels and overlays (a calendar, a store, a dashboard), and proving the approach.
+
+**B. On Windows, natively (the real thing, weeks).** Qt 6 runs on Windows; Quickshell doesn't. `omawin-qs.exe` is a Qt 6 program providing the subset of Quickshell's API plugins use, implemented for Windows: `Quickshell` (frameless, always-on-top, positioned windows, hidden from GlazeWM's tiling; `env`), `Quickshell.Io` (`Process` and `FileView`, with Linux commands and paths sent to Arch: `Process` runs `wsl.exe -d <distro> -- …` for anything that isn't a Windows program, and `$XDG_*` paths map into Arch's home), `Quickshell.Hyprland` (workspaces, monitors, the active window and `dispatch`, answered by GlazeWM's IPC), plus Omarchy's `qs.Commons` and `qs.Ui` as they are, reading omawin's palette.
+- Proper Windows windows: real transparency, placement, no WSLg; bar widgets drawn in small windows over slots the native bar reserves for them.
+- Cost: a Qt runtime (~50 MB on disk, ~80-120 MB in memory while a QML plugin is on; nothing when none is), and keeping the API subset in step with Quickshell and Omarchy.
+- This is an exception to "WinUI for everything you see" (mission.md), and only for plugins you add: omawin's own surfaces stay native.
+
+**Recommended:** layer 1 first (small, and useful for every plugin), then host A to prove plugins run unchanged, then host B if enough plugins are worth it. The native protocol (above) stays the way to write a plugin that feels fully part of omawin.
+
+### Knowing which plugins will run: `omawin plugin scan`
+
+Rather than guess, scan. `omawin plugin scan <git-url>` reads a plugin's QML imports and the commands it runs and says: **runs as is** (only Qt Quick, Omarchy's Commons and Ui, Quickshell's core and Io), **runs with stand-ins** (Hyprland, `hyprctl`, Wayland clipboard), or **needs a port** (Quickshell's system services, screen capture, other compositor features). Run over the whole marketplace's catalog once it's reachable, that says which stand-ins matter most, by how many plugins each one unlocks. Of the four plugins above: two run as is, two with stand-ins.
+
 ## Worked example: porting Omadoro
 
 [Omadoro](https://github.com/brianblakely/omadoro) (MIT, by Brian Blakely; listed in the [Okomart](https://github.com/brianblakely/omarchy-plugins) catalog) is a typical community Omarchy plugin: a Pomodoro timer with a bar widget, a panel, settings and notifications. What it's made of (v0.0.5):
