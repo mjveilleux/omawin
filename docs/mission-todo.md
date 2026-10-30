@@ -1,6 +1,6 @@
 # Mission to-do
 
-The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item.
+The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item. The order we take it in, by phase: [roadmap.md](roadmap.md).
 
 Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (Omarchy v4.0.4, `basecamp/omarchy` branch `quattro`). What similar Windows projects learned, mapped to these tracks: [inspiration.md](inspiration.md).
 
