@@ -95,7 +95,7 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scrip
                 if ($line) { [Console]::Out.Write($UI.C.Clear) }
                 # 0x8A15002B / 0x8A150061: winget found it installed after all (its export can miss one);
                 # 0x8A150109: installed, Windows wants a restart.
-                if ($r.P.ExitCode -in 0, -1978335189, -1978335135, -1978334967) { Set-BoardPackage $id 'done'; Write-Done $id $seconds }
+                if ($r.P.ExitCode -in 0, -1978335189, -1978335135, -1978334967) { Set-BoardPackage $id 'done'; Write-Done $id $seconds; Set-PackageSource $id 'winget' $id }
                 else {
                     if ($output.Trim()) { Write-Log ($output.Trim() -replace "`r", '') }
                     Set-BoardPackage $id 'wait'
@@ -138,6 +138,7 @@ function Save-Download([string]$Url, [string]$OutFile) {
 function Register-WingetSource {
     # When the PC has no copy to register (Windows Server, a trimmed image), Microsoft's own signed
     # package list is downloaded and added for this account instead.
+    Use-Appx
     if (Get-AppxPackage -Name Microsoft.Winget.Source -ErrorAction SilentlyContinue) { return }
     try {
         Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.Winget.Source_8wekyb3d8bbwe -ErrorAction Stop
@@ -223,8 +224,8 @@ function Set-ToolItem($Tool, [string]$State) {
 # (tar.exe, in Windows since 10 1803), then one PATH write. A tool already here at the same
 # version is left alone; one you installed yourself some other way (its command is on the PATH,
 # or winget has it) is used as it is.
-function Install-ToolBundle($Installed) {
-    $tools = @(Read-ToolBundle)
+function Install-ToolBundle($Installed, [string[]]$Only) {
+    $tools = @(Read-ToolBundle | Where-Object { -not $Only -or $Only -contains $_.Name })
     $script:BundleHave = @()
     if (-not $tools) { return }
     Write-Step 'tools (the bundle)'
@@ -235,7 +236,10 @@ function Install-ToolBundle($Installed) {
         $mine = (Test-Path -LiteralPath $stamp) -and ((Get-Content -LiteralPath $stamp -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
         if ($mine) { $script:BundleHave += $t; Set-ToolItem $t 'have'; continue }
         if (-not (Test-Path -LiteralPath $stamp) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
-            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'; continue
+            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'
+            if ($Installed -and $Installed.ContainsKey($t.Provides)) { Set-PackageSource $t.Provides 'winget' $t.Provides }
+            elseif (-not (Get-PackageSources)[$t.Provides]) { Set-PackageSource $t.Provides 'found' $t.Provides }
+            continue
         }
         $todo += $t
         Set-ToolItem $t 'run'
@@ -286,13 +290,14 @@ function Install-ToolBundle($Installed) {
             }
         } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
     }
+    foreach ($t in $script:BundleHave) { Set-PackageSource $t.Name 'bundle' $t.Name $t.Version $t.Dir }
     $bins = @($script:BundleHave | Where-Object { $_.Bin -ne '-' } | ForEach-Object { if ($_.Bin -eq '.') { $_.Dir } else { Join-Path $_.Dir $_.Bin } })
     if ($bins) {
         $added = Add-UserPaths $bins
         if ($added) { Write-Note "$added tool folder(s) on the PATH" }
         Update-SessionPath
     }
-    Write-Note "$(@($script:BundleHave).Count) of $($tools.Count) tools from the bundle"
+    Write-Note "$(@($script:BundleHave).Count) of $($tools.Count) tool(s) from the bundle"
 }
 
 function Install-WingetPackages([string[]]$Ids) {
@@ -311,7 +316,11 @@ function Install-WingetPackages([string[]]$Ids) {
     $todo = New-Object Collections.Generic.List[string]
     foreach ($id in $Ids) {
         if ($bundled -contains $id) { continue }
-        if (Test-PackageInstalled $id $installed) { Set-BoardPackage $id 'have'; Write-Ok $id }
+        if (Test-PackageInstalled $id $installed) {
+            Set-BoardPackage $id 'have'; Write-Ok $id
+            # winget's own list has it: updates go through winget. Otherwise it's yours from elsewhere.
+            if ($installed -and $installed.ContainsKey($id)) { Set-PackageSource $id 'winget' $id } elseif (-not (Get-PackageSources)[$id]) { Set-PackageSource $id 'found' $id }
+        }
         else { Set-BoardPackage $id 'wait'; $todo.Add($id) }
     }
 
@@ -330,7 +339,7 @@ function Install-WingetPackages([string[]]$Ids) {
             $seen[$id] = $state
             switch ($state) {
                 'run' { Set-BoardPackage $id 'run' -Admin }
-                'done' { Set-BoardPackage $id 'done' -Admin; Write-Log "    done  $id (admin step)" }
+                'done' { Set-BoardPackage $id 'done' -Admin; Write-Log "    done  $id (admin step)"; Set-PackageSource $id 'winget' $id }
             }
         }
         Set-BoardPackageNote $(if ($admin) { "$(@($admin | Where-Object { (Get-AdminState $_) -in 'wait', 'run' }).Count) left in the admin step" })
@@ -391,7 +400,7 @@ function Install-Extras([string[]]$Names) {
         if (Get-Command $name -ErrorAction SilentlyContinue) { Write-Note "ok  $name"; Add-InstallItem 'Tools' "tool:$name" $name 'have'; continue }
         Write-Note "installing $name"
         Add-InstallItem 'Tools' "tool:$name" $name 'run'
-        try { & $ExtraInstalls[$name] | ForEach-Object { if ("$_".Trim()) { Write-Note "$_" } }; Add-InstallItem 'Tools' "tool:$name" $name 'done' }
+        try { & $ExtraInstalls[$name] | ForEach-Object { if ("$_".Trim()) { Write-Note "$_" } }; Add-InstallItem 'Tools' "tool:$name" $name 'done'; Set-PackageSource $name 'script' $name }
         catch { Write-Warn "$name failed: $_"; Add-InstallItem 'Tools' "tool:$name" $name 'fail' }
         Update-SessionPath
     }

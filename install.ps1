@@ -35,6 +35,19 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# PowerShell 7 only (bootstrap.ps1 puts it in first, from the release's tools bundle). Started
+# from Windows PowerShell 5.1, this goes again in 7, with the same arguments.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $pwsh = @((Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | ForEach-Object Source),
+        "$env:LOCALAPPDATA\omawin\tools\pwsh\pwsh.exe") | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $pwsh) { throw 'install.ps1 runs in PowerShell 7. Run the one-line install (bootstrap.ps1), which puts it in first.' }
+    $again = @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+    foreach ($p in $PSBoundParameters.GetEnumerator()) {
+        if ($p.Value -is [switch]) { if ($p.Value) { $again += "-$($p.Key)" } } else { $again += "-$($p.Key)", "$($p.Value)" }
+    }
+    & $pwsh @again
+    exit $LASTEXITCODE
+}
 # Never as administrator (see bootstrap.ps1): it would set up whichever account the admin
 # password belongs to, not the one signed in. The admin step asks for admin itself.
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
