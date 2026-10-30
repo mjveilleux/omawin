@@ -90,6 +90,16 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 |---|---|---|
 | 36 | **Compiled C# first** for every tool, script and helper (.NET 9, AOT where shipped, built in CI); **Rust** where C# isn't right; **Bun** for JavaScript / TypeScript; PowerShell only for the bootstrap entry and the profile; bash only inside Linux; **no Python**. Existing scripts port when next changed; anything on a key or elevated first. Overrides the plan files' PowerShell / Python sketches (listed in README.md) | roadmap 2.11, AGENTS.md, README.md |
 
+## Answered by reading the web (2026-10-30, once the network allowed it)
+
+| # | Answer | Where |
+|---|---|---|
+| 37 | omarchy.org/themes is static HTML: 218 themes, each a repo link, a name and a 1200×675 screenshot hosted by omarchy.org, which becomes the thumbnail | roadmap 1.10 |
+| 38 | The plugin marketplace is one file, `plugins.omarchy.org/catalog.json` (6,153 plugins, with reviewed commits); omawin's gallery reads it | plugins.md, roadmap 4.10 |
+| 39 | Developer Tools' top 30, scanned: 4 run as is, 11 with stand-ins, 9 with extra host modules, 5 "see Linux"; none use Quickshell's system services. The host adds `Quickshell.Wayland` and `Quickshell.Widgets`; the stand-ins add `omarchy-launch-*`, `notify-send`, `wl-copy` / `wl-paste` | plugins.md, roadmap 4.9 |
+| 40 | fff v0.11 has a content search call (`fff_live_grep_ex`), so the finder's Contents mode uses fff, with ripgrep only as a fallback | 06-dx-finder-sandbox.md, roadmap 6.3 |
+| 41 | A user's five favourite plugins map to: the calendar example, backups (9.19), workspace indicators with apps (9.20), monitor profiles (8.7), a tray overflow (9.21) | plugins.md, roadmap phase 9 |
+
 ## Open questions
 
 | Question | Default until decided | Where |
@@ -98,8 +108,6 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | One Search: Apps as a grid or a list when filtered with nothing typed? | a list | one-search.md |
 | One Search: fixed window size or growing with results? | fixed | one-search.md |
 | One Search: any kind missing from the eight tags? (processes and ports folded into Commands / Windows) | the eight | one-search.md |
-| The structure of omarchy.org/themes' list (for the community index) | read the page in CI; to check from a session that can reach it | roadmap 1.10 |
-| The Developer Tools plugins on plugins.omarchy.org, each scanned for porting | to do from a session that can reach it | plugins.md |
 | Linux: put the user in the `docker` group, though Omarchy deliberately doesn't? | yes, in WSL (root needs no password there, so the group guards nothing); reason written next to the code | 04-linux.md |
 | Linux: Windows' own `ssh-agent` service needs admin to turn on | an opt-in line in the one admin step; 1Password's agent needs none | 04-linux.md |
 | Linux: three Omarchy packages not identified (`disktree-bin`, `gliff`, `cliamp`) | in the skip list, marked check | 04-linux.md |

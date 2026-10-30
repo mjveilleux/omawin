@@ -228,7 +228,61 @@ Omarchy's plugins are listed at [plugins.omarchy.org](https://plugins.omarchy.or
 
 **How omawin uses it.** It's where to look for what's worth porting first, and its categories and manifest are the ones omawin's own gallery follows, so a plugin that serves both desktops shows up in both. omawin's `plugins/index.txt` adds a column saying whether a plugin runs on omawin: as is (its command scripts, run in Linux), ported (it has an `omawin/` folder), or Omarchy only (it needs Hyprland).
 
-**The Developer Tools category, plugin by plugin:** *to fill in.* This session couldn't reach plugins.omarchy.org (blocked by its network settings). Once it's allowed, each plugin gets a row here: name, id, what it does, its kinds, what it runs, and what porting it would take (as in the worked examples below).
+**The catalog's data** (read 2026-10-30): the whole marketplace is one file, **`https://plugins.omarchy.org/catalog.json`** (~15 MB; `generatedAt`, `plugins[]`), which the site's script loads. Each plugin has `id`, `name`, `author`, `repo`, `description`, `category`, `tags`, `kind` (Bar widget, Panel, Overlay, Service, Plugin), `stars`, `license`, `version`, `installCommand`, preview images (`previewImage`, `previewThumbnail`, with sizes), and verification fields (`verificationStatus`, `listingValidatedCommit`, `upstreamValidatedCommit`, …): the reviewed commit omawin installs. **6,153 plugins**: Widgets 1,667, Productivity 1,213, System 996, Hardware 611, Desktop 551, **Developer Tools 470**, Appearance 458, Other 126, and a few small categories. omawin's gallery (roadmap 4.10) reads this file rather than keeping its own list, adding one thing per plugin: whether it runs on omawin (`omawin plugin scan`).
+
+**Developer Tools, scanned** (2026-10-30): 470 plugins (400 bar widgets, 27 overlays, 26 services, 16 panels; 323 verified). The 30 with the most stars were cloned and scanned (QML imports, commands called; one clone failed):
+
+| ★ | Plugin | Kind | Needs beyond the core | Calls | Verdict |
+|---|---|---|---|---|---|
+| 65 | [GitHub](https://github.com/robzolkos/omarchy-github) | Bar widget | — | `omarchy-github-fetch`, `omarchy-launch-webapp`, `xdg-open` | runs with stand-ins |
+| 58 | [Herdr](https://github.com/jankeesvw/omarchy-herdr) | Bar widget | `Quickshell.Wayland` | `omarchy-herdr-pin` | runs with the host's extra modules |
+| 46 | [Port Watch](https://github.com/ZerubbabelT/portwatch) | Bar widget | `Quickshell.Hyprland` | — | runs, but sees Linux: its ports are Linux's |
+| 14 | [MCP Server](https://github.com/bruce-forte/omarchy-mcp-server) | Bar widget | — | `curl`, `wl-copy` | runs with stand-ins |
+| 14 | [Shepr](https://github.com/nixfred/shepr) | Bar widget | — | `herdr`, `python3`, `systemctl`, `xdg-open` | runs with stand-ins |
+| 13 | [Owlook](https://github.com/rpaweb/owlook) | Bar widget | — | `omarchy-launch-editor` | runs with stand-ins |
+| 13 | [Hommies](https://github.com/ayandexyz/hommies-plugin) | Bar widget | `Quickshell.Wayland` | — | runs with the host's extra modules |
+| 13 | [GitHub Traffic](https://github.com/HANCORE-linux/GitHub-Traffic-Board) | Bar widget | — | `omarchy-notification-send`, `xdg-open` | runs with stand-ins |
+| 12 | [Herdr](https://github.com/fabean/omarchy-herdr) | Bar widget | — | — | runs as is |
+| 12 | [OMCP](https://github.com/btsouth/omarchy-omcp) | Bar widget | — | `omarchy-launch-terminal`, `wl-copy` | runs with stand-ins |
+| 11 | [Vernier](https://github.com/jondkinney/vernier) | Bar widget | — | `omarchy-launch-floating-terminal-with-presentation` | runs with stand-ins |
+| 10 | [lerd Glance](https://github.com/lerd-env/lerd-omarchy-glance) | Bar widget | — | — | runs, but sees Linux: lerd is a Linux PHP environment |
+| 10 | [Agent Activity](https://github.com/angusforbes/omarchy-agent-activity-visualization) | Bar widget | `Quickshell.Wayland` | `python3` | runs with the host's extra modules |
+| 9 | [GitHub Build Monitor](https://github.com/jankeesvw/omarchy-github-build-monitor) | Bar widget | `Quickshell.Widgets` | `xdg-open` | runs with the host's extra modules |
+| 9 | [proctop](https://github.com/yeet-src/omarchy-proctop) | Bar widget | — | `xdg-open` | runs, but sees Linux: its CPU and memory are the WSL VM's |
+| 8 | [OpenCode Go Usage](https://github.com/M4Marvin/omarchy-plugin-opencode-go) | Bar widget | — | — | runs as is |
+| 7 | [omaportless](https://github.com/dingyi/omaportless) | Bar widget | — | `wl-copy`, `xdg-open` | runs with stand-ins |
+| 7 | [NetNeighbors](https://github.com/i12bp8/omarchy-netneighbours) | Bar widget | — | — | runs, but sees Linux: its network is the VM's (mirrored networking: close) |
+| 7 | [Herdr HUD](https://github.com/finna/omarchy-herdr-hud) | Panel | `Quickshell.Wayland` | — | runs with the host's extra modules |
+| 7 | [Nebius GPU](https://github.com/antongisli/omarchy-nebius) | Bar widget | — | `omarchy-launch-tui`, `python3` | runs with stand-ins |
+| 6 | [Resume AI Session](https://github.com/anagrius/omarchy-resume) | Overlay | `Quickshell.Wayland` | `herdr` | runs with the host's extra modules |
+| 6 | [Git](https://github.com/ariadev/omarchy-dev-git) | Bar widget | — | — | runs as is |
+| 6 | [Agent Skills Manager](https://github.com/oliwier-xiao/agent-skills-manager) | Bar widget | — | `xdg-open` | runs with stand-ins |
+| 5 | [Cloudflare](https://github.com/meirdick/omarchy-cloudflare) | Bar widget | — | `curl`, `omarchy-launch-browser`, `omarchy-launch-floating-terminal-with-presentation`, `omarchy-notification-send`, `wl-copy` | runs with stand-ins |
+| 5 | [Plugin Control](https://github.com/omarchy-QOL/plugin-control) | Bar widget | `Quickshell.Hyprland`, `Quickshell.Wayland` | `hyprctl`, `omarchy-notification-send` | runs with the host's extra modules |
+| 5 | [Omarchy Control Docker](https://github.com/devgtv/omarchy-docker) | Bar widget | — | `docker` | runs as is |
+| 5 | [AI Panel](https://github.com/atif-1402/ai-panel) | Panel | `Qt5Compat.GraphicalEffects`, `Quickshell.Hyprland`, `Quickshell.Wayland`, `Quickshell.Widgets` | `hyprctl`, `notify-send` | runs with the host's extra modules |
+| 5 | [Quick Chat](https://github.com/goktugvatandas/omarchy-quick-chat) | Service | `Quickshell.Hyprland` | `omarchy-shell`, `wl-copy`, `xdg-open` | runs with the host's extra modules |
+| 5 | [OpenVPN](https://github.com/dstankovd/omarchy-openvpn) | Bar widget | — | `nmcli` | runs, but sees Linux: NetworkManager has no Windows side |
+| 5 | [PasteImage](https://github.com/matheusrrocha/omarchy-pasteimage) | Service | not scanned (clone failed) | | |
+
+**What the scan says** (29 scanned):
+- **4 run as is**, **11 run with the command stand-ins**, **9 need extra host modules**, **5 run but see Linux**. **None use Quickshell's system services** (`Quickshell.Services.*`: audio, network, battery, notifications), the hard part; every one can run unchanged once the host and stand-ins exist.
+- **The QML host needs two more modules than planned:** `Quickshell.Wayland` (7 plugins: layer-shell settings such as the layer, exclusive zone and keyboard focus, which on Windows become a topmost, non-activating window's properties) and `Quickshell.Widgets` (2: `IconImage`, `ClippingRectangle`; simple to provide). One uses `Qt5Compat.GraphicalEffects` (Qt 6 ships it as a compatibility module).
+- **The stand-ins need the `omarchy-launch-*` family**: `omarchy-launch-terminal`, `-browser`, `-editor`, `-webapp`, `-tui`, `-floating-terminal-with-presentation` (→ `omawin launch terminal|editor`, the default browser, web apps 5.3), plus `notify-send` (→ a toast) and `wl-copy` / `wl-paste` (→ the Windows clipboard); `hyprctl` and `xdg-open` as planned.
+- **"Runs, but sees Linux"** is a new category: plugins that read system state (CPU and memory, listening ports, the network, VPNs through NetworkManager) work inside Arch but describe the WSL virtual machine, not Windows. The scan marks them and the gallery says so; where omawin has Windows' answer (Localhost for ports, the bar's CPU, Quick settings' network), a stand-in can later feed the plugin Windows' data.
+- Many plugins ship helpers in Python or bash, which run inside Arch, where they belong (`side: linux`); omawin's no-Python rule is about omawin's own code, not a plugin's.
+
+**A user's five favourites** ([sudomarchy.com, 2026](https://sudomarchy.com/posts/my-5-favorite-omarchy-plugins-of-2026)), and where each lands on omawin:
+
+| Plugin | What it does | On omawin |
+|---|---|---|
+| [OmaCal](https://github.com/crmne/omacal) | Omarchy's calendar with HEY (and Google, from a pull request) laid over it | the calendar worked example below: the Linux side plus a calendar provider |
+| [Time Machine](https://github.com/jankeesvw/omarchy-time-machine) | restic backups of your home folder to the cloud, with visual confirmation and easy restore | worth bringing natively: restic runs on Windows; backups of the Windows home and the Arch home (roadmap 9.19) |
+| [Spaces](https://github.com/tornikegomareli/omarchy-spaces) | workspace indicators that show what's open on each workspace | the native bar's workspaces widget, from GlazeWM's IPC (roadmap 9.20) |
+| hyprmoncfg (Carmine Paolino) | monitor placement, and workspaces tied to monitors, applied when you plug in | monitor profiles (8.7) plus GlazeWM's `bind_to_monitor` |
+| [Tray](https://github.com/TyRichards/omarchy-tray) | drag plugin widgets into the tray's overflow to tidy the bar | the native bar's tray (exists) gains an overflow plugins can be dragged into (roadmap 9.21) |
+
+Its author's principles match One Search's guardrails and this design: not everything needs to be a plugin (a script or a key may be enough); a useful plugin deserves its own key; a good plugin does 90% and you fork it for the rest.
 
 ## Running Omarchy's plugins
 

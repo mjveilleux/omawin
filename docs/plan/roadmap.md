@@ -207,7 +207,21 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 
 **Done when:** opening Style › Theme › Community shows every listed community theme's picture and colours in the first frame, selecting one previews it across the desktop, and Enter installs it with no link to copy.
 
-**Explore first:** how [omarchy.org/themes](https://omarchy.org/themes/) presents its list (static HTML, or a data file the page loads; which fields: name, author, repo, preview picture) so CI reads it reliably, and the share of community themes that ship `preview.png` vs only backgrounds. (Not reachable from the cloud session that wrote this; to check from a session with omarchy.org allowed.)
+**Read 2026-10-30:** [omarchy.org/themes](https://omarchy.org/themes/) is static HTML (built with Astro), 218 themes, one list item each: a link to the theme's GitHub repo (its owner is the author), its name, and **a 1200×675 screenshot omarchy.org already hosts** (`https://omarchy.org/assets/themes/<slug>.webp`), which makes the thumbnail directly. Light or dark isn't on the page, so it comes from the repo's `light.mode`. The reader for the CI tool (C#):
+
+```csharp
+// Reads omarchy.org/themes' list: one entry per <li><a href=repo><img src=/assets/themes/slug.webp alt="Name theme screenshot">.
+static readonly Regex Card = new(
+    @"<li><a href=""(?<repo>https://github\.com/[^""]+)""[^>]*><img src=""(?<img>/assets/themes/[^""]+\.webp)"" alt=""(?<name>[^""]+?) theme screenshot""",
+    RegexOptions.Compiled);
+
+public static IEnumerable<(string Name, string Repo, Uri Screenshot)> Themes(string html) =>
+    Card.Matches(html).Select(m => (
+        WebUtility.HtmlDecode(m.Groups["name"].Value),
+        m.Groups["repo"].Value,
+        new Uri(new Uri("https://omarchy.org"), m.Groups["img"].Value)));
+```
+
 
 ---
 
@@ -641,6 +655,8 @@ From Raycast and PowerToys' Command Palette: a script dropped in `~/omawin-accou
 
 **Why:** Omarchy's marketplace has thousands of plugins. Porting each one by hand (4.1-4.8) means rewriting its UI; running them as they are gives omawin the whole catalog at once. It's possible because **Windows runs QML**: QML is part of Qt, which is cross-platform. What doesn't run on Windows is Quickshell, the Linux program that hosts Omarchy's QML and gives it Linux-only modules (`Quickshell` for edge-pinned windows, `Quickshell.Io` for processes and files, `Quickshell.Hyprland`, system services). A plugin is ordinary QML plus a few of those modules, so omawin provides the same module names on Windows and the plugin's QML loads unchanged. Four community plugins checked (2026-10-30) import only Qt Quick, Omarchy's `qs.Commons` / `qs.Ui`, `Quickshell` and `Quickshell.Io`, and two of them `Quickshell.Hyprland` ([plugins.md](plugins.md), "Running Omarchy plugins unchanged").
 
+**Scanned 2026-10-30** (the 30 most-starred Developer Tools plugins, [plugins.md](plugins.md)): 4 run as is, 11 with the command stand-ins, 9 with extra host modules, 5 run but describe Linux rather than Windows; none use Quickshell's system services. So the host also provides `Quickshell.Wayland` (layer settings → a topmost, non-activating window) and `Quickshell.Widgets`, and the stand-ins cover the `omarchy-launch-*` family, `notify-send` and `wl-copy` / `wl-paste`. The gallery (4.10) reads Omarchy's own `catalog.json` and adds each plugin's scan verdict.
+
 **Build, in order:**
 1. **Stand-ins in Arch** (S): scripts named like Omarchy's commands, forwarding to Windows through `omawin.exe`: `omarchy-notification-send` (a toast), `omarchy-shell` (`omawin shell`), `xdg-open` (https and files only), `hyprctl` (the common reads answered from GlazeWM's IPC and the theme; binds become proposed keys, never bound silently). omawin's theme switch also writes `~/.config/omarchy/current/theme/` in Arch, in Omarchy's format. Omarchy's command bar modules then run unchanged (`side: linux`). Files: `wsl/omarchy-shims/`, `wsl/setup.sh`, `themes/set-theme.ps1`.
 2. **`omawin plugin scan <git-url>`** (S): reads a plugin's QML imports and the commands it runs; says *runs as is*, *runs with stand-ins*, or *needs a port*. Run over the marketplace's catalog to rank which modules and stand-ins unlock the most plugins. Files: `bin/plugin-scan.ps1` (or Bun), `bin/commands.txt`.
@@ -961,6 +977,11 @@ A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 co
 - **9.17 The bar's missing widgets** (weather, calendar popup, keyboard layout, indicators, agent usage) — as plugins where they fit (phase 4).
 - **9.18 Emoji** in the launcher, falling back to Windows' Win+. picker.
 
+**From a user's favourite plugins** ([plugins.md](plugins.md)):
+- **9.19 Backups like Time Machine**: restic (it runs on Windows) backing up your Windows home and your Arch home to the cloud on a schedule, with the bar showing the last backup and a launcher page to browse and restore files (M).
+- **9.20 Workspaces that show what's on them**: the native bar's workspace indicators show each workspace's apps (their icons), from GlazeWM's IPC, as Omarchy's Spaces plugin does (S).
+- **9.21 A tray overflow for plugin widgets**: drag a plugin's widget into the tray's overflow to keep the bar tidy, as Omarchy's Tray plugin does (S).
+
 ## Things to explore
 
 Open questions to measure or try before building, collected from every phase. Each says what would decide it. Answers go back into the item; this list shrinks.
@@ -977,12 +998,10 @@ Open questions to measure or try before building, collected from every phase. Ea
 | **The per-user GlazeWM without `uiAccess`**: what it can't do until the signed install lands | whether the background admin step must come sooner | 2.0 |
 | **Windows' settings index format** (`AllSystemSettings_*.xml`) on the current build | settings search's source, or the curated fallback | 1B.1 |
 | **`XamlReader.Load` under Native AOT**, with omawin's binding | XAML panels, or the declarative fallback | 4.3 |
-| **Quickshell's licence** and which of its modules plugins use (a scan of the marketplace) | how much of the QML host to build, and what can be reused | 4.9 |
-| **fff's C API**: is there a content search call in v0.11 | content search through fff, or ripgrep | 6.3 |
+| **Quickshell's licence** (which modules plugins use is answered for Developer Tools' top 30: core, Io, Wayland, Hyprland, Widgets; [plugins.md](plugins.md)) | how much of the QML host to build, and what can be reused | 4.9 |
 | **herdr and OSC 11**: does it pass a pane's background through | the Linux / PowerShell tint without a herdr change | 3B |
 | **`hey` and `gws` on Windows** (for the calendar plugin) | whether that plugin can ever run outside Linux | plugins.md |
 | **Window animations on this PC's GPU**, a week of daily use | shipping 1.5 | 1.5 |
-| **omarchy.org/themes' list**: its structure (HTML or a data file, which fields), and how many themes ship `preview.png` | how CI reads the community index | 1.10 |
 
 ## Always: following Omarchy
 
