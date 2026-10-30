@@ -17,7 +17,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 
 | Date | Decision |
 |---|---|
-| 2026-10-15 | One always-running native shell (the menu app) draws everything; no Zebar fork; Explorer stays ([shell-apps.md](shell-apps.md)) |
+| 2026-10-15 | One always-running native shell (the menu app) draws everything (the bar included); Explorer stays ([shell-apps.md](shell-apps.md)) |
 | 2026-10-30 | Plugins keep **Omarchy's `manifest.json`**; panels are **loose XAML** loaded by the shell; widgets and services are **commands that print JSON lines** |
 | 2026-10-30 | omawin's **command-line tools come through mise**, pinned in the repo; desktop apps stay on winget |
 | 2026-10-30 | **winget, Scoop and Chocolatey all stay** as your choice on the Packages page; omawin's own installs still avoid Chocolatey |
@@ -26,6 +26,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 | 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
+| 2026-10-30 | **Uninstall anything you choose** (Install › Remove for everything, `omawin remove <part>`, `omawin uninstall`); omawin uninstalls what it no longer needs in a migration, e.g. the old web bar (2.10) |
 | 2026-10-30 | **No admin by default**: install, update and everyday use never ask for admin; a feature that truly needs it is opt-in, asks once for everything at the moment you choose it, says exactly what it will do, and never asks during an update (2.9) |
 | 2026-10-30 | **Win+Space for everything; Win+Alt+Space retired** with One Search (one release as an alias, then removed by a migration) |
 | 2026-10-30 | **One Search**: one bar for everything, results tagged and filterable, a bento home for the empty state, a list for results ([one-search.md](one-search.md)); proposed, open questions with the maintainer |
@@ -60,7 +61,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 
 | Release | Contents | Feels like |
 |---|---|---|
-| **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
+| **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, the native bar only | everything answers instantly and moves smoothly |
 | **"one search"** | Phase 1C: one bar for everything, tagged results and filters, the bento home, the futuristic minimal look ([one-search.md](one-search.md), [mockup](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z)) | you type one thing and find anything |
 | **"settings"** | Phase 1B: every Windows setting in the system menu, switches inline, `omawin setting`, your settings applied on a new PC | you never open Settings again |
 | **"fast"** | Phase 2, 2.9 (no admin) and 7.1: the omawin bundle, CI install timing, desktop first, the welcome page, background steps, the Sandbox install test | a fresh PC is an omawin desktop in under a minute |
@@ -146,9 +147,9 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 **Risks:** GPU drivers; Graphics Capture's yellow border on older Windows builds (a fix commit exists); fullscreen apps and games (animations skipped for fullscreen, as now); a DPI change mid-animation. Workspace switches stay instant, as Omarchy keeps them.
 
-### 1.6 Finish the native bar (M, 🖥)
+### 1.6 The native bar only (M, 🖥)
 
-[native-bar.md](native-bar.md) step 2's media widget, then step 3: Zebar removed with a migration (`migrations/<date>-zebar-out.ps1`: stop it, uninstall the package, remove our Zebar fork's files and `ZEBAR_ASSET_PORT`). `bar.json` stays where the native bar reads it until 4.5 moves it. The music and agents drop-downs move to the shell (the first plugins, 4.6). Saves ~220 MB and the 2 s sign-in paint; removes `glzr-io.zebar` and the Zebar client build from install.
+The bar is the menu app's own ([native-bar.md](native-bar.md)); what's left: its media widget, and the music and agents drop-downs moved into the shell (they become the first plugins, 4.6). Then the old web bar is **uninstalled**: a migration stops it, removes what omawin set up for it, and uninstalls the program omawin installed for it (per user: at once; if an older install put it machine-wide, the uninstall waits in the pending admin list for you to say when, 2.9, never a prompt during the update). Saves ~220-350 MB and the 2 s sign-in paint.
 
 ### 1.7 Typing never waits (S, 🖥)
 
@@ -396,7 +397,6 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 |---|---|---|
 | **The GlazeWM fork's install** (`install/glazewm-fork.ps1`) | GlazeWM asks for `uiAccess` (to manage windows of programs running as admin); Windows grants that only to a program signed by a certificate the PC trusts, in Program Files. Today a certificate is made on the PC and the fork copied into Program Files | **A per-user GlazeWM by default**: the fork built twice in CI, a normal build (no `uiAccess`) that runs from the bundle in `%LOCALAPPDATA%` with no admin at all, and the `uiAccess` build. The only loss: windows of programs you started *as admin* aren't tiled or moved. **Opt-in** "Manage admin windows too": one prompt puts the CI-signed `uiAccess` build in Program Files (no certificate made on the PC once CI signing exists, [release-signing.md](release-signing.md)); its later updates are offered, never forced |
 | **Whole-PC packages** (`$WholePC` in `packages.ps1`: PowerShell, Git, Node, Neovim, …) | installed machine-wide, for every account | **Per user by default** (`--scope user`, or the bundle's portable copies); machine-wide only if you choose it (a shared PC) through `omawin pkg install --machine` |
-| **Zebar** | machine-wide installer | gone with the native bar (1.6) |
 | **The .NET desktop runtime** | machine-wide installer | not needed: the menu app is AOT, the music player published self-contained (2.7) |
 | **The local code-signing certificate** | the PC's certificate store | gone: signing happens in CI |
 | **WSL** (Arch by default) | Windows' *Virtual Machine Platform* feature must be on, which only admin can turn on, plus a restart | checked first: on many PCs it's already on, and then WSL and Arch install **with no prompt** (the WSL app and distros are per user). If it's off, this is **the** one prompt, at the moment you pick Linux on the welcome page, never in the first minute |
@@ -413,6 +413,18 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 **Checked in CI:** the install job (2.1) and the update job run **as a standard (non-admin) user** created on the runner, and fail if anything tries to elevate (no `RunAs` process, no UAC). The Sandbox test (7.1) does the same.
 
 **Done when:** a fresh install and an update, Enter through every question, raise **no** admin prompt; picking Linux on a PC without Virtual Machine Platform raises exactly one; turning on any shielded setting raises at most one per batch.
+
+### 2.10 Uninstall anything you choose (M)
+
+**Why:** omawin is omakase, not a cage. Anything it installed, and anything else on the PC, can be removed when you choose, from the same place you'd install it.
+
+- **Install › Remove** (exists for winget packages) lists everything installed by any manager (`omawin pkg list`, 2B): winget, Scoop, Chocolatey, mise, the bundle's tools, Arch's packages, and Windows' own extra apps (8.50); Enter removes, Ctrl+Space picks several. `omawin pkg remove <name>` does the same from a terminal.
+- **omawin's own parts, one at a time:** `omawin remove <part>` for the optional pieces (the music player, dictation, the agents, WSL's Arch, a preset, a plugin, a theme): stops it, removes it, removes its settings and its sign-in entries, says what's left (your files: never touched).
+- **All of omawin:** `omawin uninstall` does what [install.md](install.md)'s *Undoing it* lists by hand: stops the desktop, removes the sign-in tasks, puts back each config it replaced (the `.backup-<timestamp>` copies), removes its PATH entries and environment variables, the taskbar back to normal, and asks whether to also remove the programs it installed (each listed, all ticked by default) and the Linux it made. Your files, your account folder and anything you installed yourself stay unless you tick them.
+- **What omawin no longer needs**, it uninstalls itself in a migration, said in the update's summary (the old web bar, 1.6); never something you installed yourself.
+- **No admin unless the program needs it** (2.9): per-user installs uninstall without a prompt; a machine-wide one waits in the pending admin list, and several go in one prompt.
+
+**Done when:** every installed thing shows in Remove with its source; `omawin uninstall` on a test PC (Windows Sandbox, 7.1) leaves Windows as it was before omawin, apart from what you chose to keep.
 
 ## Phase 2B: `omawin pkg`, one package command over winget, Scoop and Chocolatey
 
@@ -595,7 +607,7 @@ A plugin's `menu.txt` fragment (same row format, `MenuModel.cs:107-142`) goes af
 
 ### 4.6 Our own pieces become plugins (M)
 
-The music drop-down (Zebar's today, `zebar/tokyo-islands/music.js`), the agents panel, dictation and reports move to the format first: that proves it and keeps the core small. `omawin-music watch` already prints lines; it becomes the widget's command.
+The music drop-down (a web page today, `zebar/tokyo-islands/music.js`), the agents panel, dictation and reports move to the format first: that proves it and keeps the core small. `omawin-music watch` already prints lines; it becomes the widget's command.
 
 ### 4.7 IPC for plugins and scripts (S)
 
@@ -879,16 +891,16 @@ Sources: [Tom's Hardware: Microsoft working to fix Windows 11's most annoying fl
 **The problem:** on the maintainer's PC, Windows reports **6-7 GB in use with nothing going on** (2026-10-30). The mission's budget is ~600 MB for the whole omawin desktop (mission.md, principle 3); a clean Windows 11 sits around 2.5-3.5 GB in use. So the target: **under 4 GB in use at idle**, with omawin's own part under 600 MB, and every megabyte accounted for.
 
 **Measure first, on the PC (🖥).** `omawin profile ram -Save` (exists; the `profile-ram` skill drives it) already lists omawin's parts against budgets. Extend it to the whole machine, grouped by what you'd recognise:
-- **omawin's parts** (as now): GlazeWM, the bar (Zebar until 1.6), the menu app, noctty and its spare PowerShell, herdr and the agents in it (OpenCode's budget is 800 MB), dictation (Handy, 300 MB with its speech model loaded), the music player.
+- **omawin's parts** (as now): GlazeWM, the menu app (with the bar inside), noctty and its spare PowerShell, herdr and the agents in it (OpenCode's budget is 800 MB), dictation (Handy, 300 MB with its speech model loaded), the music player.
 - **The WSL virtual machine** (`vmmem` / `VmmemWSL`): Linux's memory as Windows sees it, which grows with Linux's file cache and gives back slowly.
-- **Browsers and web views**: Edge and Chrome, and every app that's secretly a web page (new Outlook, Teams, Widgets, Phone Link, Zebar), grouped by their host app (the script already attributes WebView2 children).
+- **Browsers and web views**: Edge and Chrome, and every app that's secretly a web page (new Outlook, Teams, Widgets, Phone Link), grouped by their host app (the script already attributes WebView2 children).
 - **Windows' services**: Defender (keep), Search and its indexer, Widgets, Copilot, Phone Link, OEM services, OneDrive.
 - **The kernel**: drivers' memory (non-paged pool; a driver leak shows here) and the compressed memory store.
 - **And what isn't really used:** the standby cache (Windows keeps recently used files in RAM and gives it back instantly; it's free memory, not waste), so the report says *in use* and *cached* separately and nobody chases the wrong number.
 Saved runs (`-Save`) give before / after for every change below.
 
 **Then cut, biggest first (each measured):**
-1. **The bar out of Edge's web engine** (1.6): Zebar and its web views, ~220-350 MB → the native bar inside the menu app (already running), ~0 extra.
+1. **The old web bar uninstalled** (1.6): ~220-350 MB → the native bar inside the menu app (already running), ~0 extra.
 2. **Agents only while used** (M): OpenCode and other agents in herdr's sessions stay resident (up to ~800 MB each). Project tabs start the agent when the tab is first focused, and herdr stops an agent idle for a set time (its session and history kept, so reopening resumes); `omawin profile ram` shows each agent session.
 3. **Dictation's model loaded on demand** (S): Handy keeps its speech model in memory (~300 MB); load it on the dictation key, unload after a few idle minutes (Handy's own setting if it has one; else start and stop Handy around use).
 4. **The WSL VM sized for idle** (S, 3.3 and 3.5): `autoMemoryReclaim=gradual` (gives Linux's cache back over time, rather than only on drop), a memory cap in `.wslconfig` (half the RAM by default is a lot for an idle VM; e.g. 4-8 GB on a 32 GB PC), and the keep-warm of 3.5 **measured against its cost**: if a warm, idle Arch costs more than ~500 MB, Linux starts on first use instead, and the first terminal waits once (the trade written down, the default chosen by the numbers).

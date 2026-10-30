@@ -46,6 +46,8 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | 18 | omawin's command-line tools come through **mise** (or the bundle on first install) | roadmap 2.3 |
 | 19 | **winget, Scoop and Chocolatey all stay**; you can manage any tool individually with them after install; your package manager's copy wins on the PATH | install-speed.md I, roadmap 2B |
 | 20 | **`omawin pkg`**: one package command over winget, Scoop, Chocolatey, mise, the bundle and pacman in Arch; omawin picks and remembers the manager; you can choose or move any package | roadmap 2B |
+| 21a | **Uninstall anything you choose**: Install › Remove lists everything from every manager, `omawin remove <part>` for omawin's optional pieces, `omawin uninstall` for all of it; omawin uninstalls what it no longer needs in a migration (said in the update's summary), never a program you installed yourself quietly. AGENTS.md's rule changed to match | roadmap 2.10, AGENTS.md |
+| 21b | **Zebar is out of the roadmap**: the bar is the menu app's; Zebar is uninstalled by a migration (per user at once; machine-wide queued for the one admin OK) | roadmap 1.6, 01-snappy.md |
 | 21 | **No admin by default**: install, update and use never ask; an opt-in feature that truly needs it asks once for everything it needs, says what will change first, never during an update; no standing elevated service. Now a rule in AGENTS.md | roadmap 2.9, AGENTS.md |
 
 ## Linux

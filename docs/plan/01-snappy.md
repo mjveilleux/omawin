@@ -1528,7 +1528,6 @@ Prerequisite: the native bar covers everything Zebar's does. Two pieces are left
 | `bin/profile-ram.ps1` | Zebar's budget row goes |
 | `docs/native-bar.md`, `docs/architecture.md`, `docs/install.md`, `docs/themes.md`, `manual/` | Zebar removed; native-bar.md step 3 done |
 | `themes/render.ps1` | the `theme.css` block goes |
-| `open-questions/zebar-uninstall.md` | new (below) |
 
 **`menu-app/Bar/Media.cs`** (Windows' media controls: `Windows.Media.Control`, a WinRT API projected by CsWinRT, so AOT-safe)
 
@@ -1617,9 +1616,10 @@ sealed class MediaWidget : BarWidget
 # For this account: stops its Zebar, removes what omawin set up for it (the ~/.glzr/zebar junction
 # into the repo, the link only; the bar pick file; ZEBAR_ASSET_PORT; the Zebar-only helpers omawin
 # built into ~/.local/bin) and lets winget update Zebar again (omawin had pinned it for its fork).
-# Zebar itself, and our fork's zebar.exe in Program Files, stay installed: removing a program
-# installed for the whole PC needs admin, which a migration never asks for (AGENTS.md); see
-# open-questions/zebar-uninstall.md.
+# Then Zebar itself is uninstalled (the maintainer's call, 2026-10-30: uninstalling what omawin
+# no longer needs is fine). A per-user install goes at once; a machine-wide one (older installs put
+# it there, with our fork's zebar.exe) needs admin, which an update never asks for (AGENTS.md), so it
+# is added to the pending admin list for the user to approve when they choose.
 $session = (Get-Process -Id $PID).SessionId
 Get-Process zebar -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session |
     Stop-Process -Force -ErrorAction SilentlyContinue
@@ -1652,10 +1652,24 @@ foreach ($name in 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch') {
 if (Get-Command winget -ErrorAction SilentlyContinue) {
     $pins = winget pin list --id glzr-io.zebar --exact 2>$null | Out-String
     if ($pins -match 'glzr-io\.zebar') { winget pin remove --id glzr-io.zebar --exact 2>$null | Out-Null }
+    $machineWide = Test-Path "$env:ProgramFiles\glzr.io\Zebar"
+    if (-not $machineWide) {
+        # Per user: no admin needed.
+        winget uninstall --id glzr-io.zebar --exact --silent --accept-source-agreements 2>$null | Out-Null
+        Write-Host '  uninstalled Zebar (the bar is the menu app now)'
+    } else {
+        # Machine-wide: queued, never prompted here. The admin batch's verbs gain `zebar-remove`
+        # (winget uninstall --scope machine, then glazewm-fork's Zebar files and certificate entries).
+        $pending = Join-Path $env:LOCALAPPDATA 'launcher\admin-pending.txt'
+        if (-not (Select-String -Path $pending -Pattern '^zebar-remove' -Quiet -ErrorAction SilentlyContinue)) {
+            Add-Content $pending 'zebar-remove | Uninstall Zebar (no longer used; installed for every account)'
+        }
+        Write-Host '  Zebar: uninstall waiting for your OK (admin, once) on the welcome page'
+    }
 }
 ```
 
-**`open-questions/zebar-uninstall.md`**: the roadmap says "uninstall the package", but a machine-wide uninstall needs admin, and AGENTS.md forbids uninstalling the user's programs and prompting during an update. Options: (a) leave Zebar installed (default); (b) a row in Install › Remove, "Zebar (no longer used)", running `winget uninstall glzr-io.zebar` and the fork's `-Restore` through the one opt-in admin step; (c) uninstall only when `%ProgramData%\omawin\zebar-fork.txt` shows omawin installed it. Default: (a) now, (b) offered.
+**Zebar's uninstall** (decided 2026-10-30): uninstalled by this migration when it's per user; when machine-wide, queued as `zebar-remove` in the pending admin list (the no-admin rule's one prompt, at the user's moment).
 
 **Ports** (`bin/ports.ps1`, and the same logic in `bin/omawin.cs` `SetPorts` and `check.ps1`):
 
@@ -2672,5 +2686,5 @@ theme preview | Show a community theme across the desktop without installing it;
 ## After Phase 1
 
 - Tick each item in [mission-todo.md](../mission-todo.md) with its commit; write measured numbers (1.1's baseline, 1.7's typing, 1.2's key → frame) into the roadmap.
-- Open questions this file creates: `open-questions/emit-or-exec.md` (1.2), `open-questions/zebar-uninstall.md` (1.6).
+- Open questions this file creates: `open-questions/emit-or-exec.md` (1.2).
 - Manual pages to update as items land: the keys page (nothing rebinds, but Win+Space now works while GlazeWM is paused), Style › Theme (Community chip), `toggle animations`.
