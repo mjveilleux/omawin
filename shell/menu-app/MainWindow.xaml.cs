@@ -82,6 +82,10 @@ public sealed partial class MainWindow : Window
     [DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
     [StructLayout(LayoutKind.Sequential)] struct POINT { public int X, Y; }
 
+    // The monitor's scale (150% is 1.5) where this window is: icons are fetched for the pixels
+    // they're drawn at (AppIcons).
+    double IconScaleNow => Content?.XamlRoot?.RasterizationScale ?? 1;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -791,7 +795,7 @@ public sealed partial class MainWindow : Window
             catch (Exception ex) { App.Log(ex); }
         }
         else if (!hit.IsDir)
-            AppIcons.Get("big:" + hit.Path, image =>
+            AppIcons.GetPreview(hit.Path, image =>
             {
                 if (token != previewToken) return;
                 PreviewArt.Child = new Image { Source = image, Stretch = Stretch.Uniform, MaxHeight = 140, Margin = new Thickness(6) };
@@ -1041,12 +1045,12 @@ public sealed partial class MainWindow : Window
         v.Icon.Visibility = Visibility.Collapsed;
         v.IconKey = iconKey;
         if (iconKey == null) return;
-        AppIcons.Get(iconKey, image =>
+        AppIcons.Get(iconKey, v.Tile.Width - 2, IconScaleNow, (image, units) =>
         {
             if (v.IconKey != iconKey) return;
             v.Tile.Background = new SolidColorBrush(Colors.Transparent);
             v.Icon.Source = image;
-            v.Icon.Width = v.Icon.Height = v.Tile.Width - 2;
+            v.Icon.Width = v.Icon.Height = units;   // one icon pixel on one screen pixel
             v.Icon.Visibility = Visibility.Visible;
             v.Glyph.Visibility = Visibility.Collapsed;
         });

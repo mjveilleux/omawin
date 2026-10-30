@@ -19,7 +19,8 @@ public static unsafe class Tray
         public Guid? Guid;
         public string Tip = "";
         public bool Hidden;
-        public byte[]? Pixels; // 32x32 BGRA, premultiplied
+        public byte[]? Pixels; // Size x Size BGRA, premultiplied
+        public int Size;       // the icon's own size, up to 32: a 16-pixel icon isn't stretched
         public int Stamp; // changes when the picture does
         public string Key => Guid?.ToString() ?? $"{Hwnd}:{Id}";
     }
@@ -142,33 +143,55 @@ public static unsafe class Tray
                     uint state = *(uint*)(nid + 280), mask = *(uint*)(nid + 284);
                     if ((mask & 1) != 0) icon.Hidden = (state & 1) != 0;
                 }
-                if ((flags & 0x2) != 0) { icon.Pixels = Picture((IntPtr)(*(int*)(nid + 20))); icon.Stamp++; }
+                if ((flags & 0x2) != 0) { (icon.Pixels, icon.Size) = Picture((IntPtr)(*(int*)(nid + 20))); icon.Stamp++; }
                 changed = true;
             }
         }
         if (changed) Changed?.Invoke();
     }
 
-    // The icon drawn into a 32x32 BGRA picture, premultiplied (what WriteableBitmap takes). Old
-    // icons with no alpha of their own get it from their mask (DrawIconEx leaves it at 0).
-    static byte[]? Picture(IntPtr hicon)
+    // The icon drawn at its own size (up to 32) into a BGRA picture, premultiplied (what
+    // WriteableBitmap takes): an app's 16-pixel icon stays 16, never stretched (the bar shrinks a
+    // bigger one well, roadmap 1.8). Old icons with no alpha of their own get it from their mask
+    // (DrawIconEx leaves it at 0).
+    static (byte[]?, int) Picture(IntPtr hicon)
     {
-        if (hicon == IntPtr.Zero) return null;
-        var info = new BITMAPINFOHEADER { biSize = (uint)sizeof(BITMAPINFOHEADER), biWidth = Size, biHeight = -Size, biPlanes = 1, biBitCount = 32 };
+        if (hicon == IntPtr.Zero) return (null, 0);
+        int size = Math.Min(Size, NativeSize(hicon) ?? Size);
+        var info = new BITMAPINFOHEADER { biSize = (uint)sizeof(BITMAPINFOHEADER), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
         var dc = CreateCompatibleDC(IntPtr.Zero);
         var bitmap = CreateDIBSection(dc, ref info, 0, out var bits, IntPtr.Zero, 0);
         var old = SelectObject(dc, bitmap);
         try
         {
-            if (!DrawIconEx(dc, 0, 0, hicon, Size, Size, 0, IntPtr.Zero, 0x3)) return null; // DI_NORMAL
-            var pixels = new byte[Size * Size * 4];
+            if (!DrawIconEx(dc, 0, 0, hicon, size, size, 0, IntPtr.Zero, 0x3)) return (null, 0); // DI_NORMAL
+            var pixels = new byte[size * size * 4];
             Marshal.Copy(bits, pixels, 0, pixels.Length);
             bool anyAlpha = false;
             for (int i = 3; i < pixels.Length; i += 4) if (pixels[i] != 0) { anyAlpha = true; break; }
             if (!anyAlpha) for (int i = 0; i < pixels.Length; i += 4) if ((pixels[i] | pixels[i + 1] | pixels[i + 2]) != 0) pixels[i + 3] = 255;
-            return pixels;
+            return (pixels, size);
         }
         finally { SelectObject(dc, old); DeleteObject(bitmap); DeleteDC(dc); }
+    }
+
+    // An icon's own width in pixels (its colour bitmap's, or half its mask's height for a
+    // monochrome one); null when Windows can't say.
+    static int? NativeSize(IntPtr hicon)
+    {
+        if (!GetIconInfo(hicon, out var ii)) return null;
+        try
+        {
+            var bm = new BITMAP();
+            if (ii.hbmColor != IntPtr.Zero && GetObject(ii.hbmColor, sizeof(BITMAP), ref bm) != 0) return bm.bmWidth;
+            if (ii.hbmMask != IntPtr.Zero && GetObject(ii.hbmMask, sizeof(BITMAP), ref bm) != 0) return bm.bmWidth;
+            return null;
+        }
+        finally
+        {
+            if (ii.hbmColor != IntPtr.Zero) DeleteObject(ii.hbmColor);
+            if (ii.hbmMask != IntPtr.Zero) DeleteObject(ii.hbmMask);
+        }
     }
 
     // A click on the icon at screen point (x, y), as the taskbar sends it: version 4 icons get
@@ -222,6 +245,10 @@ public static unsafe class Tray
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern uint RegisterWindowMessage(string name);
     [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int pid);
     [DllImport("user32.dll")] static extern bool DrawIconEx(IntPtr dc, int x, int y, IntPtr icon, int w, int h, uint step, IntPtr brush, uint flags);
+    [StructLayout(LayoutKind.Sequential)] struct ICONINFO { public int fIcon, xHotspot, yHotspot; public IntPtr hbmMask, hbmColor; }
+    [StructLayout(LayoutKind.Sequential)] struct BITMAP { public int bmType, bmWidth, bmHeight, bmWidthBytes; public ushort bmPlanes, bmBitsPixel; public IntPtr bmBits; }
+    [DllImport("user32.dll")] static extern bool GetIconInfo(IntPtr icon, out ICONINFO info);
+    [DllImport("gdi32.dll")] static extern int GetObject(IntPtr obj, int size, ref BITMAP bitmap);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(IntPtr name);
     [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
     [DllImport("gdi32.dll")] static extern IntPtr CreateDIBSection(IntPtr dc, ref BITMAPINFOHEADER info, uint usage, out IntPtr bits, IntPtr section, uint offset);

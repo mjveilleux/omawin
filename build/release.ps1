@@ -78,6 +78,17 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "nvim-parsers`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no prebuilt Neovim parsers ($parsers): left out of this release" }
+    # The theme picker's pictures (release.yml's thumbs job): merged into the folder the menu app
+    # keeps them in, not waited for (later).
+    $thumbs = Join-Path $InDir 'thumbs\omawin-tool-theme-thumbs.zip'
+    if ((Test-Path $thumbs) -and (Test-Path $list)) {
+        Add-File $thumbs 'omawin-tool-theme-thumbs.zip'
+        $version = (Get-Content (Join-Path $InDir 'thumbs\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $thumbs -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('theme-thumbs', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-theme-thumbs.zip', $sha, '-', '', 'launcher\thumbnails', 'merge later') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "theme-thumbs`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no theme pictures ($thumbs): left out of this release" }
 }
 
 if (-not $NoManifest) {

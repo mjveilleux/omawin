@@ -339,9 +339,15 @@ sealed class TrayWidget : BarWidget
             c.Cell.Tip = icon.Tip;
             if (c.Stamp != icon.Stamp && icon.Pixels != null)
             {
-                var bitmap = new Microsoft.UI.Xaml.Media.Imaging.WriteableBitmap(32, 32);
-                using (var stream = System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.AsStream(bitmap.PixelBuffer)) stream.Write(icon.Pixels, 0, icon.Pixels.Length);
+                // The bar's real pixels for a 15-unit icon (22 at 150%): a bigger icon shrunk to
+                // them, a smaller one drawn at its own size, one pixel on one pixel (roadmap 1.8).
+                double scale = c.Image.XamlRoot?.RasterizationScale ?? drawer.XamlRoot?.RasterizationScale ?? 1;
+                var (pixels, w, h) = IconScale.Fit(icon.Pixels, icon.Size, icon.Size, IconScale.Pixels(15, scale));
+                var bitmap = new Microsoft.UI.Xaml.Media.Imaging.WriteableBitmap(w, h);
+                using (var stream = System.Runtime.InteropServices.WindowsRuntime.WindowsRuntimeBufferExtensions.AsStream(bitmap.PixelBuffer)) stream.Write(pixels, 0, pixels.Length);
                 c.Image.Source = bitmap;
+                c.Image.Width = w / scale;
+                c.Image.Height = h / scale;
                 c.Stamp = icon.Stamp;
             }
             cells[icon.Key] = c;

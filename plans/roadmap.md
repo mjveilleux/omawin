@@ -181,6 +181,8 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 
 **Done when:** no icon is drawn larger than the image it came from, at any scale; the tiles and tray look as crisp as Windows' own Start menu and taskbar at 150% and 200%.
 
+**Built 2026-10-31 (steps 1-3 and 5; not yet seen on screen, 🖥):** `AppIcons.Get(id, units, scale, …)` asks Windows for the next standard size at or above the drawn pixels, with `SIIGBF_BIGGERSIZEOK` (and `SIIGBF_ICONONLY` for apps), shrinks a bigger result to the exact pixels by area averaging (`IconScale.cs`, pure, with tests in `test/menu-app.Tests/Look/IconScaleTests.cs`), and calls back with the size to draw it at, so the launcher's rows and tiles show it 1:1; the cache is per size. Tray icons are drawn at their own size (up to 32, from `GetIconInfo`), never stretched, then shrunk to the bar's pixels the same way. Left: Store apps' own logos (4), the finder's thumbnails (6), and `--icon-selftest`.
+
 ### 1.9 Theme pictures ready before you look (S-M, 🖥)
 
 **Why:** the theme picker's tiles fill in slowly the first time it opens. From the code (`shell/menu-app/ThemeThumbs.cs`): a theme's thumbnail is made **the first time the picker shows that theme**; to make it, the menu app **downloads that theme's full-size first background** (from the theme's URL, often several MB), two at a time, then scales it to 320 pixels wide and saves a PNG in `%LOCALAPPDATA%\launcher\thumbnails`. So the first open of the picker downloads ~24 full wallpapers just to show small pictures. The full backgrounds themselves are fetched only when you switch to a theme (`themes/set-theme.ps1:132`), so a first switch waits on a download too.
@@ -193,6 +195,8 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 5. **The background picker too** (mission-todo track 5, "a grid of the theme's pictures"): thumbnails for every background of every theme, made by CI the same way, so that grid is instant.
 
 **Done when:** on a fresh install, opening the theme picker shows every theme's picture in the first frame, and switching to any theme for the first time doesn't wait on a download.
+
+**Built 2026-10-31 (step 1):** `src/thumbs` (C#, SkiaSharp) makes every theme's first background 320 pixels wide in CI (23 themes, ~1.9 MB, a cubic filter), named as `ThemeThumbs.cs` names them; release.yml's `thumbs` job publishes them as the bundle entry `theme-thumbs`, unpacked into `%LOCALAPPDATA%\launcher\thumbnails` at install, so the picker's first open finds them all and downloads nothing. Left: preloading (2), the colour placeholder (3), backgrounds in the background (4), the background picker's grid (5).
 
 ### 1.10 Community themes in the picker (M, 🖥)
 

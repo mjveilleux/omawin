@@ -111,6 +111,30 @@ jobs:
           path: out/tools
           if-no-files-found: error
 
+  # The theme picker's pictures (roadmap 1.9): each theme's first background, 320 pixels wide, made
+  # here (src/thumbs) and published as one more tools bundle entry (build/release.ps1), unpacked
+  # into %LOCALAPPDATA%\launcher\thumbnails, so the picker's first open has them all at once.
+  thumbs:
+    needs: meta
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: The pictures (src/thumbs)
+        run: |
+          dotnet run --project src/thumbs -c Release -- out/pictures
+          mkdir -p out/thumbs
+          (cd out/pictures && zip -q -9 ../thumbs/omawin-tool-theme-thumbs.zip *.png)
+          git log -1 --format=%h -- themes > out/thumbs/version.txt
+          ls -la out/thumbs
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: thumbs
+          path: out/thumbs
+          if-no-files-found: error
+
   # Neovim's treesitter parsers, prebuilt: the ones LazyVim installs, from the nvim-treesitter commit
   # config/nvim/lazy-lock.json pins, so a PC needs no C compiler (it used to take zig: 98 MB, 19,500 files).
   # Built here with the runner's Visual Studio compiler, zipped from Neovim's data folder (site:
@@ -219,7 +243,7 @@ jobs:
   # Names the files the way the installer looks for them, hashes them into SHA256SUMS.txt (what
   # bin/release.ps1 checks a download against), and publishes.
   release:
-    needs: [meta, helpers, menu, music, tools, parsers]
+    needs: [meta, helpers, menu, music, tools, parsers, thumbs]
     if: needs.meta.outputs.publish == 'true'
     runs-on: windows-latest
     permissions:

@@ -306,11 +306,12 @@ public sealed partial class MainWindow
         inIcon.Children.Add(image);
         v.IconTile = new Border { Width = size, Height = size, CornerRadius = new CornerRadius(size * 0.28), Background = Brush(s.Color, 0x29), Child = inIcon };
         if (s.AppId != null)
-            AppIcons.Get(s.AppId, img =>
+            AppIcons.Get(s.AppId, size - 4, IconScaleNow, (img, units) =>
             {
                 v.HasImage = true;
                 v.IconTile.Background = new SolidColorBrush(Colors.Transparent);
                 image.Source = img;
+                image.Width = image.Height = units;   // one icon pixel on one screen pixel
                 image.Visibility = Visibility.Visible;
                 v.Glyph.Visibility = Visibility.Collapsed;
             });
