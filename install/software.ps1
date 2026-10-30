@@ -117,12 +117,25 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scrip
     $failed
 }
 
+# winget's package list (the "winget" source) is an app package of its own, registered for an
+# account at its first desktop sign-in. An account that hasn't had one yet (made moments ago,
+# or signed in some other way) gets "0x8a15000f: Data required by the source is missing" for
+# every package. Registering it is per-user and needs no admin.
+function Register-WingetSource {
+    if (Get-AppxPackage -Name Microsoft.Winget.Source -ErrorAction SilentlyContinue) { return }
+    try {
+        Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.Winget.Source_8wekyb3d8bbwe -ErrorAction Stop
+        Write-Note "registered winget's package list for this account"
+    } catch { Write-Warn "winget's package list isn't set up for this account ($($_.Exception.Message)); sign out and in, then run install.ps1 again" }
+}
+
 function Install-WingetPackages([string[]]$Ids) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Warn 'winget not found. Install "App Installer" from the Microsoft Store, then re-run.'
         return
     }
     $winget = (Get-Command winget).Source
+    Register-WingetSource
     $installed = Get-WingetInstalled
 
     $todo = New-Object Collections.Generic.List[string]
@@ -276,9 +289,10 @@ function Install-NerdFont {
     Invoke-WebRequest "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$NerdFont.zip" -OutFile $zip -UseBasicParsing
     Expand-Archive $zip -DestinationPath $tmp -Force
 
-    # Per-user install: no admin needed.
+    # Per-user install: no admin needed. A new account has no per-user font key until it's made.
     $fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
     New-Item -ItemType Directory -Force -Path $fontDir | Out-Null
+    if (-not (Test-Path $fontKey)) { New-Item -Path $fontKey -Force | Out-Null }
     Add-Type -AssemblyName System.Drawing
     foreach ($ttf in Get-ChildItem $tmp -Filter '*.ttf') {
         $dest = Join-Path $fontDir $ttf.Name
