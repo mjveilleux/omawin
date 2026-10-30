@@ -216,6 +216,18 @@ All of them take `--yes` for scripts and agents, as Omarchy's do.
 2. GitHub's topic `omawin-plugin` for everything else, searchable from the same page.
 3. Any git URL.
 
+## Omarchy's official marketplace
+
+Omarchy's plugins are listed at [plugins.omarchy.org](https://plugins.omarchy.org/#catalog), with a category filter (Developer Tools among them: [the Developer Tools list](https://plugins.omarchy.org/?category=Developer+Tools#catalog)). What's known about it (2026-10-30):
+
+- **Publishing** ([publish.html](https://plugins.omarchy.org/publish.html)): a public GitHub repo with a valid `manifest.json` at its root. Building one: [develop.html](https://plugins.omarchy.org/develop.html), which says what Omarchy's own docs say: plugins run unsandboxed, with your user's rights.
+- **Verified** means the marketplace checked one commit; `omarchy plugin add` installs whatever is newest. omawin's index records the reviewed commit and installs that one (see Installing, updating, sharing).
+- It's large: thousands of community plugins by October 2026.
+
+**How omawin uses it.** It's where to look for what's worth porting first, and its categories and manifest are the ones omawin's own gallery follows, so a plugin that serves both desktops shows up in both. omawin's `plugins/index.txt` adds a column saying whether a plugin runs on omawin: as is (its command scripts, run in Linux), ported (it has an `omawin/` folder), or Omarchy only (it needs Hyprland).
+
+**The Developer Tools category, plugin by plugin:** *to fill in.* This session couldn't reach plugins.omarchy.org (blocked by its network settings). Once it's allowed, each plugin gets a row here: name, id, what it does, its kinds, what it runs, and what porting it would take (as in the worked examples below).
+
 ## Running Omarchy's plugins
 
 - **Bar modules of `type: "command"`** (a script printing Waybar JSON): run as is, in Linux (`side: linux`), since they're usually bash. An Omarchy user's custom modules carry straight over.
