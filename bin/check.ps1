@@ -172,7 +172,7 @@ else { Pass "this account's settings" "none (optional: omawin account new)" }
 Section 'startup and helpers'
 # herdr reads its config from the repo (install/shell.ps1), and the config is valid.
 $herdrConfig = [Environment]::GetEnvironmentVariable('HERDR_CONFIG_PATH', 'User')
-if ($herdrConfig -ne "$Repo\config\herdr\config.toml") { Fail 'herdr config' "HERDR_CONFIG_PATH is '$herdrConfig', not this repo's herdr\config.toml (run install.ps1 -Step shell)" }
+if ($herdrConfig -ne "$Repo\config\herdr\config.toml") { Fail 'herdr config' "HERDR_CONFIG_PATH is '$herdrConfig', not this repo's config\herdr\config.toml (run install.ps1 -Step shell)" }
 elseif (Get-Command herdr -ErrorAction SilentlyContinue) {
     $env:HERDR_CONFIG_PATH = $herdrConfig
     $herdrCheck = (herdr config check 2>&1 | Out-String).Trim()
@@ -182,11 +182,18 @@ elseif (Get-Command herdr -ErrorAction SilentlyContinue) {
 # GlazeWM at sign-in: a scheduled task, started right away (install/login-start.ps1).
 $task = Get-ScheduledTask -TaskName "omawin GlazeWM ($([Environment]::UserName))" -ErrorAction SilentlyContinue
 if ($task -and $task.State -ne 'Disabled') { Pass 'GlazeWM at sign-in' "scheduled task omawin GlazeWM ($([Environment]::UserName))" } else { Fail 'GlazeWM at sign-in' 'no task (run install\login-start.ps1)' }
-# GlazeWM itself: our fork signed on this PC starts before Explorer; the official one waits for it.
-$gsig = Get-AuthenticodeSignature "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe" -ErrorAction SilentlyContinue
-if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
-elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
-else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
+# GlazeWM itself: our fork, for this account from the tools bundle (the default: no admin), or
+# signed on this PC for the whole PC (opt-in), which starts before Explorer; the official one
+# waits for Explorer.
+$wholePc = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
+$mine = "$env:LOCALAPPDATA\omawin\tools\glazewm\glazewm.exe"
+if (Test-Path $wholePc) {
+    $gsig = Get-AuthenticodeSignature $wholePc -ErrorAction SilentlyContinue
+    if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
+    elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
+    else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
+} elseif (Test-Path $mine) { Pass 'GlazeWM build' "our fork, for this account ($mine); the signed whole-PC copy, which starts before Explorer, is opt-in" }
+else { Fail 'GlazeWM build' 'not installed (install.ps1 -Step software)' }
 # This account's port (bin/ports.ps1): its own once omawin's GlazeWM is in Program Files, which
 # omawin.exe decides at every sign-in. A saved one that doesn't match what's installed now means
 # another account changed Program Files since this one signed in.
