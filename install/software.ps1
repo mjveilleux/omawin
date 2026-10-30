@@ -231,11 +231,12 @@ function Install-ToolBundle($Installed, [string[]]$Only) {
     Write-Step 'tools (the bundle)'
     $todo = @()
     foreach ($t in $tools) {
-        $stamp = Join-Path $t.Dir '.omawin-version'
+        # Its own name: PowerShell's variable names ignore case, and the run's timestamp is in use.
+        $versionFile = Join-Path $t.Dir '.omawin-version'
         $label = if ($t.Provides) { Get-PackageName $t.Provides } else { $t.Name }
-        $mine = (Test-Path -LiteralPath $stamp) -and ((Get-Content -LiteralPath $stamp -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
+        $mine = (Test-Path -LiteralPath $versionFile) -and ((Get-Content -LiteralPath $versionFile -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
         if ($mine) { $script:BundleHave += $t; Set-ToolItem $t 'have'; continue }
-        if (-not (Test-Path -LiteralPath $stamp) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
+        if (-not (Test-Path -LiteralPath $versionFile) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
             Write-Ok "$label (yours)"; Set-ToolItem $t 'have'
             if ($Installed -and $Installed.ContainsKey($t.Provides)) { Set-PackageSource $t.Provides 'winget' $t.Provides }
             elseif (-not (Get-PackageSources)[$t.Provides]) { Set-PackageSource $t.Provides 'found' $t.Provides }

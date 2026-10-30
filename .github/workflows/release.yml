@@ -38,9 +38,10 @@ on:
         type: boolean
         default: false
 
-# One run per ref: a re-tagged or re-run release doesn't race itself.
+# One run per ref for a real release (a re-tagged or re-run one doesn't race itself); a build for
+# the install-timing job (workflow_call) or by hand is its own, so those never queue behind each other.
 concurrency:
-  group: release-${{ github.ref }}
+  group: ${{ startsWith(github.ref, 'refs/tags/') && format('release-{0}', github.ref) || format('release-build-{0}', github.run_id) }}
   cancel-in-progress: false
 
 permissions:
