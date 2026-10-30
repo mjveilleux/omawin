@@ -44,7 +44,7 @@
     <!-- fff's C library (file search), fetched by build.ps1. -->
     <None Include="lib\fff_c.dll" CopyToOutputDirectory="PreserveNewest" Link="fff_c.dll" Condition="Exists('lib\fff_c.dll')" />
     <!-- Omarchy's icon font (its logo is the native bar's menu button), the same file Zebar's bar uses. -->
-    <Content Include="..\zebar\tokyo-islands\omarchy.ttf" CopyToOutputDirectory="PreserveNewest" Link="omarchy.ttf" />
+    <Content Include="..\bar\omarchy.ttf" CopyToOutputDirectory="PreserveNewest" Link="omarchy.ttf" />
   </ItemGroup>
   <!-- build.ps1 -Aot: one native program (Native AOT), so it's up seconds sooner at sign-in (the
        bar lives here, docs/native-bar.md). The same code as the normal build. -->

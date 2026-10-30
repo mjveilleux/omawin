@@ -147,11 +147,18 @@ jobs:
           $lua = @"
           vim.opt.rtp:prepend('$ts')
           local langs = vim.json.decode(table.concat(vim.fn.readfile('C:/nv/langs.json'), ''))
-          require('nvim-treesitter').install(langs, { summary = true }):wait(900000)
+          require('nvim-treesitter').install(langs, { summary = true, max_jobs = 1 }):wait(1800000)
           io.stdout:write(('%d parsers asked, %d installed\n'):format(#langs, #require('nvim-treesitter').get_installed()))
           "@
           Set-Content C:\nv\build.lua $lua
-          nvim --clean --headless -l C:\nv\build.lua
+          # Windows' virus scan holds each freshly unpacked grammar for a moment, so nvim-treesitter's
+          # rename out of %TEMP% can fail with EPERM. One at a time, and more passes for the ones that lost; the
+          # installed ones are skipped.
+          foreach ($pass in 1..5) {
+              Remove-Item "$env:TEMP\nvim" -Recurse -Force -ErrorAction SilentlyContinue
+              nvim --clean --headless -l C:\nv\build.lua
+              Start-Sleep 2
+          }
           $site = "$env:LOCALAPPDATA\nvim-data\site"
           if (-not (Get-ChildItem "$site\parser" -ErrorAction SilentlyContinue)) { throw "no parsers were built in $site\parser" }
           Get-ChildItem "$site\parser" | Format-Table Name, Length
