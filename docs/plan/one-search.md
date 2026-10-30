@@ -47,6 +47,8 @@
 
 ## Building it
 
+> **Corrections from [02-settings-and-one-search.md](02-settings-and-one-search.md) §11, which take precedence over the examples below:** the launcher's scorer is `Fuzzy.Match` (it returns −∞ for no match, not 0); `History.Boost` is an instance method, so it's passed into the merger; history keyed by result id needs a migration; `SettingKind` here is `RowKind` (the catalog has its own enum); `Settings.UndoLast()` is `WinSettings.UndoLast()`.
+
 Mostly a re-organisation of the menu app: `MainWindow.xaml.cs`'s modes (launcher, system menu, finder, pages) become filters over one result model. The pieces, with example code (C# 12, AOT-safe: no reflection; names are suggestions).
 
 ### 1. The result model

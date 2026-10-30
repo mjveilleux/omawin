@@ -94,4 +94,14 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | One Search: any kind missing from the eight tags? (processes and ports folded into Commands / Windows) | the eight | one-search.md |
 | The structure of omarchy.org/themes' list (for the community index) | read the page in CI; to check from a session that can reach it | roadmap 1.10 |
 | The Developer Tools plugins on plugins.omarchy.org, each scanned for porting | to do from a session that can reach it | plugins.md |
+| Linux: put the user in the `docker` group, though Omarchy deliberately doesn't? | yes, in WSL (root needs no password there, so the group guards nothing); reason written next to the code | 04-linux.md |
+| Linux: Windows' own `ssh-agent` service needs admin to turn on | an opt-in line in the one admin step; 1Password's agent needs none | 04-linux.md |
+| Linux: three Omarchy packages not identified (`disktree-bin`, `gliff`, `cliamp`) | in the skip list, marked check | 04-linux.md |
+| Linux as the default shell skips noctty's fast `inherit` hand-off (~70 ms on Win+Enter from a noctty window) | accept, measure | 04-linux.md |
+| `emit` fallback when the menu app isn't listening (`emit --or-exec`)? | not built; `omawin check` warns | 01-snappy.md |
+| Theme thumbnails made by a Python (Pillow) script in CI, where AGENTS.md prefers Bun for scripting runtimes | Python, CI only (decodes WebP reliably on runners); revisit if a Bun image library does the same | 01-snappy.md |
+| Marking several finder rows: Ctrl+Space (Space types a space) | Ctrl+Space | 06-dx-finder-sandbox.md |
+| A Hyper key made from injected keys can't trigger GlazeWM bindings (GlazeWM ignores simulated keys) | needs fork support before it's offered | 07-fixing-windows.md |
+| Plugin processes could inherit GlazeWM's `uiAccess` through the menu app | strip it from the child's token (check) | 05-plugins.md |
+| Admin verb names differ between plans 03 and 05 (`hosts-write` vs `hosts write`) | plan 03's hyphenated form | 07-fixing-windows.md |
 | Everything in the roadmap's *Things to explore* table (idle memory, the bundle's size, `tar.exe`, Defender's first scan, `XamlReader` under AOT, Quickshell's licence, fff's content API, herdr and OSC 11, the per-user GlazeWM's limits, …) | measure before building | roadmap |
