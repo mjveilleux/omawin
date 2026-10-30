@@ -2,18 +2,25 @@
 
 ## A new machine
 
+The one-liner, from Windows PowerShell:
+
 ```powershell
-# 1. From Windows PowerShell:
-winget install --id Git.Git -e
-# 2. New shell so git is on PATH, then:
+irm https://raw.githubusercontent.com/mjveilleux/omawin/main/bootstrap.ps1 | iex
+```
+
+It downloads git (Git for Windows' portable build) and PowerShell 7 from the release's tools bundle at once, checks them against the release's hashes, puts them in for your account (`%LOCALAPPDATA%\omawin\tools`, on your user PATH), clones omawin, sets up your layers (optional), and runs `install.ps1` in PowerShell 7. No winget and no admin; winget is the fallback only for a release without a bundle.
+
+By hand, with git already installed:
+
+```powershell
 git clone https://github.com/mjveilleux/omawin.git $HOME\omawin
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 & $HOME\omawin\install.ps1
 ```
 
-Or run the one-liner, `irm https://raw.githubusercontent.com/mjveilleux/omawin/main/bootstrap.ps1 | iex`, which does those steps itself and asks for your layers (optional). Keep it at `~/omawin`, because a few paths point there: the Terminal profile "rename", Neovim's live theme, and `omawin.exe`'s default.
+Keep it at `~/omawin`, because a few paths point there: the Terminal profile "rename", Neovim's live theme, and `omawin.exe`'s default.
 
-`omawin.exe`, the bar's helpers, the menu app and the music player come from the newest release, downloaded and checked against the hashes published with it, so no .NET SDK and no compile ([releases.md](releases.md)). If there is no release for the PC (ARM64 today, a fork, offline), they're built here instead. `OMAWIN_PREBUILT=0` always builds.
+`omawin.exe`, `voice-meter.exe`, the menu app (one native program: no .NET runtime needed) and the music player come from the newest release, downloaded and checked against the hashes published with it, so no .NET SDK and no compile ([releases.md](releases.md)). If there is no release for the PC (ARM64 today, a fork, offline), they're built here instead. `OMAWIN_PREBUILT=0` always builds.
 
 Your own settings live outside omawin, in the PC's shared folder and this account's folder ([work.md](work.md)); `bootstrap.ps1` sets both up. Installing by hand with this account's folder in a private repo? Clone it to `~/omawin-account` first, so install uses it.
 
@@ -23,7 +30,7 @@ Your own settings live outside omawin, in the PC's shared folder and this accoun
 
 It asks everything up front, then needs nobody:
 1. **The questions**: which presets and which Linux for WSL, Arch (the default), Ubuntu or none (first install only), and your git name and email (only if git has none).
-2. **One admin prompt**, when anything needs admin (`install/admin.ps1`). It says what for, Windows asks once, and `install/admin-batch.ps1` does it all in the background, hidden, while the steps carry on: the whole-PC packages (`$WholePC` in `install/packages.ps1`, `winget --scope machine`), omawin's GlazeWM and Zebar, and WSL itself when the `wsl` preset is picked and the PC hasn't got it (`wsl --install --no-distribution`). In a standard account that prompt takes an admin's password and the batch runs as that admin, so it only does what's the same for every account; everything per-account stays in the steps. It's the only prompt: after it, approved or not, nothing asks for admin again (install.ps1 sets `OMAWIN_NO_ADMIN` for the steps, the scripts they run and the migrations). Declined, or no admin password at hand, is the non-admin path: the whole-PC packages install for this account where they have such an installer (`winget --scope user`), and what only admin can do is left out and said in the summary (the forks: the official GlazeWM and Zebar stay; WSL). Run the install again, or `-Step desktop`, to get them with one prompt. Like any admin prompt for a script, it runs this account's `~/omawin` as admin: on a PC shared with an account you don't trust, run the install there without an admin password, or from an account you do.
+2. **One admin prompt**, when anything needs admin (`install/admin.ps1`). It says what for, Windows asks once, and `install/admin-batch.ps1` does it all in the background, hidden, while the steps carry on: the whole-PC packages (`$WholePC` in `install/packages.ps1`, `winget --scope machine`), omawin's GlazeWM for the whole PC, and WSL itself when the `wsl` preset is picked and the PC hasn't got it (`wsl --install --no-distribution`). In a standard account that prompt takes an admin's password and the batch runs as that admin, so it only does what's the same for every account; everything per-account stays in the steps. It's the only prompt: after it, approved or not, nothing asks for admin again (install.ps1 sets `OMAWIN_NO_ADMIN` for the steps, the scripts they run and the migrations). Declined, or no admin password at hand, is the non-admin path: the whole-PC packages install for this account where they have such an installer (`winget --scope user`), and what only admin can do is left out and said in the summary (the fork for the whole PC: the per-user GlazeWM starts a little later instead; WSL). Run the install again, or `-Step desktop`, to get them with one prompt. Like any admin prompt for a script, it runs this account's `~/omawin` as admin: on a PC shared with an account you don't trust, run the install there without an admin password, or from an account you do.
 3. **The steps**, below.
 4. **The migrations**.
 
@@ -38,7 +45,7 @@ The steps are listed in `install/steps.txt`, one line each (`name | what it does
 | `no-ads` | first, before anything is installed or started: `bin/no-ads.ps1 -UserOnly` (Windows' suggestions off; Copilot off the taskbar and out of the background; the Lenovo / McAfee / Adobe / Visual Studio modules only where that software is found). The admin part is `omawin no-ads` |
 | `software` | the core winget packages and the chosen presets' (`install/packages.ps1`, see Presets below), four at once, with the whole-PC ones installing in the admin step alongside; other installers (herdr; Claude Code, opencode, harlequin, the Fabric CLI when their preset is picked); JetBrainsMono Nerd Font, per-user; then Neovim's and Neovide's config and the one-line `.Rprofile` for RStudio themes. No Chocolatey. `-LinkOnly` skips the installs and keeps the config. |
 | `shell` | PowerShell profile, Windows Terminal, noctty's config stub, starship, git (includes, and your name and email: asked once if git has none, written to your own `~/.gitconfig`), Git Bash |
-| `desktop` | GlazeWM + Zebar, GlazeWM at sign-in (a scheduled task, `install/login-start.ps1`, so it doesn't wait for Windows' delayed start-up list); our GlazeWM fork ([mjveilleux/glazewm](https://github.com/mjveilleux/glazewm), `install/glazewm-fork.ps1`: it can start before Explorer, so the desktop is up the moment you sign in; signed with a certificate made on that PC, in the PC's own store where only admins can use its key, and trusted there only) and our Zebar fork (`install/zebar-fork.ps1`: each account's bar on its own ports), both put in by the admin step; declined or failed, the official ones stay and GlazeWM waits for Explorer; Handy (dictation) on PATH, configured |
+| `desktop` | GlazeWM (the tools bundle's per-user copy of our fork), GlazeWM at sign-in (a scheduled task, `install/login-start.ps1`, so it doesn't wait for Windows' delayed start-up list); our GlazeWM fork ([mjveilleux/glazewm](https://github.com/mjveilleux/glazewm), `install/glazewm-fork.ps1`: it can start before Explorer, so the desktop is up the moment you sign in; signed with a certificate made on that PC, in the PC's own store where only admins can use its key, and trusted there only), put in for the whole PC by the admin step when you choose it; without it, the per-user copy starts a few seconds later; Handy (dictation) on PATH, configured |
 | `helpers` | `omawin.exe` and the bar's helpers into `~/.local/bin` (on PATH), noctty (the terminal, our fork's latest release, into `%LOCALAPPDATA%\Programs\noctty`; `bin/noctty.ps1`), the menu app and the music player (`bin/install-binaries.ps1`: the release's prebuilt file for this PC, checked against its published hash, or a build here when there is none — [releases.md](releases.md)) |
 | `look` | the default theme (Starship, on its first background) if none is set, so a new install shows at once that it took; no Recycle Bin icon, and no desktop icons (`bin/desktop-icons.ps1 -Default`: hidden, unless you chose to show them); the lock-screen rotation task; the taskbar set to auto-hide |
 | `other` | `~/.wslconfig` (the account folder's when it has one); Claude Code's rules, skills, settings and plugins from the shared folder and this account's (`omawin claude sync`) |
@@ -58,7 +65,7 @@ By hand, once:
 - **Handy**: nothing; the desktop step downloads its speech model (Parakeet V3) when none is picked. Another one: open Handy from the tray.
 - **WSL**: nothing, when you picked a Linux at the start: WSL itself comes with the admin prompt, and the Linux is set up for your account (the `wsl` preset, below). Just installed, WSL works after a restart: the Linux then finishes setting up by itself at your next sign-in.
 - **Your account folder** (if you didn't clone it before installing): `~/omawin-account` ([work.md](work.md)), then `.\install.ps1 -LinkOnly`.
-- Sign out and back in, or start GlazeWM: it starts Zebar and the menu app.
+- Sign out and back in, or start GlazeWM: it starts the bar and the menu app.
 
 Not covered (set up by hand): SQL Server tools / ODBC drivers, Docker Desktop, Visual Studio, opencode config, harlequin connection profiles.
 
@@ -66,12 +73,12 @@ Not covered (set up by hand): SQL Server tools / ODBC drivers, Docker Desktop, V
 
 There's no `omawin uninstall` yet (it's on [the to-do list](mission-todo.md)). By hand, in this order:
 
-1. **The official GlazeWM and Zebar back** (if the forks went in): `~\omawin\install\glazewm-fork.ps1 -Restore` and `~\omawin\install\zebar-fork.ps1 -Restore` (an admin prompt each). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Personal*, *Trusted Root Certification Authorities* and *Trusted Publishers*; and `C:\ProgramData\omawin\glazewm-fork.txt` and `zebar-fork.txt`.
+1. **The official GlazeWM back** (if the fork went in for the whole PC): `~\omawin\install\glazewm-fork.ps1 -Restore` (an admin prompt). Then remove the certificate it made: run `certlm.msc` as admin and delete `omawin code signing (<your PC's name>)` from *Personal*, *Trusted Root Certification Authorities* and *Trusted Publishers*; and `C:\ProgramData\omawin\glazewm-fork.txt` and `zebar-fork.txt`.
 2. **The sign-in and unlock tasks**: `Unregister-ScheduledTask "omawin GlazeWM ($env:USERNAME)","omawin lock screen ($env:USERNAME)" -Confirm:$false`.
 3. **The taskbar**: Settings › Personalization › Taskbar › Taskbar behaviors › untick *Automatically hide the taskbar*. The Recycle Bin icon: Settings › Personalization › Themes › Desktop icon settings. The desktop's icons: `omawin toggle desktop-icons show` (or right-click the desktop › View › Show desktop icons).
 4. **Your files back**: each config omawin replaced is next to its link as `<path>.backup-<timestamp>` (the PowerShell profile folder, `~/.gitconfig`, Windows Terminal's settings, Neovim's config, `~/.bashrc`, `~/.wslconfig`). Delete the link or stub, rename the backup back.
-5. **The environment**: remove `~\.local\bin` from your user PATH, and the user variables `STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`, `GLAZEWM_IPC_PORT` and `ZEBAR_ASSET_PORT` (Settings › System › About › Advanced system settings › Environment Variables).
-6. **What it installed**: `winget uninstall <id>` for the packages you don't want (the list is in `install/packages.ps1`); `%LOCALAPPDATA%\launcher` (omawin's data), `%LOCALAPPDATA%\system-menu` (the menu app), `%LOCALAPPDATA%\Programs\noctty`.
+5. **The environment**: remove `~\.local\bin` from your user PATH, and the user variables `STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`, `GLAZEWM_IPC_PORT` (Settings › System › About › Advanced system settings › Environment Variables).
+6. **What it installed**: the tools bundle's programs are in `%LOCALAPPDATA%\omawin\tools` (one folder each; remove it and its folder from your user PATH), `winget uninstall <id>` for the presets' packages you don't want (the list is in `install/packages.ps1`); `%LOCALAPPDATA%\launcher` (omawin's data), `%LOCALAPPDATA%\system-menu` (the menu app), `%LOCALAPPDATA%\Programs\noctty`.
 7. **No ads** stays off: those are Windows' own settings, each turned back on where Windows shows it (Settings › Privacy, Personalization › Start, Notifications), and the programs `omawin no-ads` uninstalled can be reinstalled from their makers.
 8. Delete `~/omawin`. Your own settings ([work.md](work.md)) are yours to keep or delete: `~/omawin-account`, and `C:\ProgramData\omawin\shared` once no account on the PC uses omawin (back it up first if you want it again: `omawin shared backup`).
 
@@ -89,7 +96,6 @@ Configs are **live**: the apps read omawin's configs straight from this repo, so
 | `config/herdr/config.toml` | read in place: `HERDR_CONFIG_PATH` points herdr at it (`%APPDATA%\herdr` keeps only its sessions and logs) | env var |
 | `config/glazewm/config.yaml` | `~/.glzr/glazewm/config.yaml`, rendered with the theme's colors plus your account folder's keybindings and window rules (`themes/render.ps1`; GlazeWM starts at sign-in from the scheduled task "omawin GlazeWM") | rendered |
 | `themes/templates/windows-terminal.json` | Windows Terminal's fragment folder: the color scheme `omawin` | rendered |
-| `zebar/` | `~/.glzr/zebar` (custom pack `tokyo-islands`) | junction |
 | `config/fastfetch/` | `~/.config/fastfetch` | junction |
 | `config/starship/starship.toml` | the `STARSHIP_CONFIG` user env var points here | env var |
 | `config/git/gitconfig`, `config/git/ignore` | `~/.gitconfig` `[include]`s it (then the account folder's `git/gitconfig`, if any); `core.excludesFile` | git config |
@@ -100,7 +106,7 @@ Configs are **live**: the apps read omawin's configs straight from this repo, so
 | Handy settings | `%APPDATA%\com.pais.handy\settings_store.json` | written by install |
 | `default/launcher/`, `themes/`, `bin/` | read in place by the menu app, `omawin.exe` and the scripts | (none) |
 
-Anything already at a live location is moved to `<path>.backup-<timestamp>` first, never deleted. What Zebar writes into its linked folder (WebView caches, `errors.log`, `theme.css`) is gitignored; Zebar is on its way out (mission-todo, track 4). PCs set up before 2026-10-15 had Terminal's LocalState and `Documents\PowerShell` linked into the repo: the migration `2026-10-15-writable-files-out` turns them into folders of their own with the settings you had (copies in `%LOCALAPPDATA%\omawin-backup\<date>\`).
+Anything already at a live location is moved to `<path>.backup-<timestamp>` first, never deleted. PCs set up before 2026-10-15 had Terminal's LocalState and `Documents\PowerShell` linked into the repo: the migration `2026-10-15-writable-files-out` turns them into folders of their own with the settings you had (copies in `%LOCALAPPDATA%\omawin-backup\<date>\`).
 
 ## Presets
 
@@ -143,7 +149,7 @@ Every migration must be safe on a brand-new PC (nothing to clean up) and safe to
 - the menu app
 - that every script parses, and that the JSON configs and `menu.txt` are valid
 - that the migrations have run
-- that GlazeWM, Zebar and the menu app are running
+- that GlazeWM and the menu app (with the bar) are running
 
 `-Quiet` prints only problems; it exits 1 on any failure.
 

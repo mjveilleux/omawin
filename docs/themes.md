@@ -39,7 +39,7 @@ The catalog is a web page (omarchy.org/themes), not a list a program can read, s
 1. **The menu app** repaints at once, before the script runs: it reads `%LOCALAPPDATA%\launcher\theme`.
 2. The pick goes in `%LOCALAPPDATA%\launcher\theme` and `nvim-theme`. **Neovim / Neovide**: `config/nvim/lua/live_theme.lua` watches `nvim-theme` and switches colorscheme in every open instance; every theme's colorscheme plugin is installed.
 3. **Dark or light mode**, for apps and the system.
-4. **GlazeWM, noctty, Windows Terminal, Zebar**: `themes/render.ps1` writes their copies of the palette (below). Then, without waiting: GlazeWM reloads its config, and the running noctty is told to reload its own (`noctty +perform-action reload_config`), so open windows recolor and new windows and tabs start in the new theme. Windows Terminal watches only `settings.json`, not its fragments, so render.ps1 bumps that file's time (not its contents) and open windows reload. The bar and dock swap the new `theme.css` in (`zebar/tokyo-islands/theme.js`), told by `theme-watch.exe` (Windows' file change notifications, so nothing runs in between); Zebar isn't restarted (that took ~3 s, with the bar gone meanwhile). Polling the file every 250 ms instead cost ~4% of a core.
+4. **GlazeWM, noctty, Windows Terminal, the bar**: `themes/render.ps1` writes their copies of the palette (below). Then, without waiting: GlazeWM reloads its config, and the running noctty is told to reload its own (`noctty +perform-action reload_config`), so open windows recolor and new windows and tabs start in the new theme. Windows Terminal watches only `settings.json`, not its fragments, so render.ps1 bumps that file's time (not its contents) and open windows reload. The bar (the menu app) watches `%LOCALAPPDATA%\launcher\theme` (Windows' file change notifications, so nothing runs in between) and repaints in the new palette; the sign-in strip's colour is `bar-background.txt`, written by render.ps1.
 5. **Wallpaper**: Omarchy's backgrounds for the theme, downloaded once into `%LOCALAPPDATA%\launcher\backgrounds`.
 6. **Lock screen**: the same picture (`themes/set-lockscreen.ps1`, in the background). The task "dotfiles lock screen" moves on to the theme's next background at each unlock.
 7. **RStudio**: an editor theme made from the palette in `%APPDATA%\RStudio\themes`, picked in `rstudio-prefs.json`. An open RStudio switches within 2 s through `config/r/rprofile.R`, which needs the `rstudioapi` and `later` packages.
@@ -61,7 +61,7 @@ Like Omarchy, a theme is one palette and a switch only writes state outside the 
 | `config/glazewm/config.yaml` | `~/.glzr/glazewm/config.yaml` | GlazeWM |
 | `themes/templates/windows-terminal.json` | `%LOCALAPPDATA%\Microsoft\Windows Terminal\Fragments\omawin\theme.json` (the scheme `omawin`) | Windows Terminal (`settings.json` uses `"colorScheme": "omawin"`) |
 | `themes/templates/noctty.ghostty` | `%LOCALAPPDATA%\launcher\theme.ghostty` | noctty (its config stub includes it) |
-| (in `render.ps1`, from `themes/<name>.json`) | `zebar/tokyo-islands/theme.css` (gitignored: Zebar only serves its pack's folder) | the bar and dock (`styles.css` has no colors of its own) |
+| (in `render.ps1`, from `themes/<name>.json`) | `%LOCALAPPDATA%\launcher\bar-background.txt` | the strip `omawin start bar` paints at sign-in, before the bar is up |
 
 After editing `config/glazewm/config.yaml`, press Alt+Shift+R (`omawin restart glazewm`): it renders, then reloads. A config never holds a theme's color itself.
 

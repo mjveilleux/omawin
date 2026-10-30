@@ -29,7 +29,7 @@ Research behind it (2026-10-15): the ManagedShell, RetroBar, Seelen UI, YASB and
 | Surface | Windows today | Verdict | How | omawin |
 |---|---|---|---|---|
 | **Taskbar** | Explorer | **replace first** | the dock: see below | Zebar dock |
-| Top bar | none (Windows has one bar) | ours | native bar in the shell (mission-todo track 4) | Zebar bar |
+| Top bar | none (Windows has one bar) | ours | native bar in the shell (done 2026-10-31) | Zebar bar (removed) |
 | Start, Search | Win, Win+S | replace | Win tap and Win+S open the launcher; the real Start stays one row away | launcher, Win+Space |
 | Quick settings | Win+A (sound only; the switches are `launcher quick`) | replace | Wi-Fi, Bluetooth, volume, brightness, battery, power profile, do not disturb, night light, airplane as one panel; night light and Focus have no public API, so those two deep-link | Quick settings page (`launcher quick`, the system menu): Wi-Fi, Bluetooth, a brightness tile per monitor, power mode, night light, do not disturb, battery, and the sound under them |
 | Calendar flyout | the clock | replace | month grid and agenda from the bar's clock; events from Microsoft Graph, ICS / webcal URLs, Google Calendar or CalDAV. Not the Windows Appointments API: new Outlook doesn't fill it | none |
@@ -74,7 +74,7 @@ The plan for replacing the taskbar, from the research (ManagedShell's `ExplorerH
 - [x] The watchdog that restores the taskbar if the shell dies (in the spike: restored within ~50 ms of a kill); `dock --restore` by hand
 - [ ] Move the dock into the shell (the menu app), styled to match it; `omawin dock off` gives the taskbar back
 - [ ] Win32 layer ported from ManagedShell (Apache-2.0, NOTICE file): window tracking, shell hook, AppUserModelID grouping, icons
-- [ ] Dock UI at parity with `zebar/tokyo-islands/dock.html`: launcher buttons, open windows by workspace, focused highlighted, click to focus, hover title; themed from the palette
+- [ ] Dock UI at parity with Zebar's old dock: launcher buttons, open windows by workspace, focused highlighted, click to focus, hover title; themed from the palette
 - [ ] Progress bars, attention flashing, overlay badges, fullscreen detection (auto-hide the dock for fullscreen apps)
 - [ ] Pinned apps (in the account folder), right-click menu (close, pin, new window)
 - [ ] Window previews on hover (`DwmRegisterThumbnail`)

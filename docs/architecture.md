@@ -15,7 +15,7 @@ key ──> GlazeWM (config/glazewm/config.yaml)
                      run <program>   → a program
 ```
 
-The same names work from a terminal (`omawin capture text`, `omawin theme set gruvbox`), from the system menu (`default/launcher/menu.txt` rows with an `omawin <command>` action) and from the dock (`zebar/tokyo-islands/dock.html`).
+The same names work from a terminal (`omawin capture text`, `omawin theme set gruvbox`), from the system menu (`default/launcher/menu.txt` rows with an `omawin <command>` action) and from the bar.
 
 ## omawin.exe
 
@@ -78,25 +78,19 @@ Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--sni
 
 About 0.2 s from the key to the overlay; Windows' Snipping Tool cold-starts each time.
 
-## The bar (`zebar/`)
+## The bar (`shell/menu-app/Bar/`, `default/bar/`)
 
-Zebar 3 widgets are web pages in WebView2, from the custom pack `zebar/tokyo-islands`. The bar is Omarchy 4's, rebuilt: `bar.html` is a shell that reads `bar.json` (which widgets sit where: left, centerBegin, center, centerEnd, right, as Omarchy's `shell.json`) and loads each from `widgets/<name>.js`; each widget makes its element and updates it from Zebar's providers (GlazeWM, date, network, battery, audio, tray). There is no dock. A widget that needs more than Zebar gives runs a script through Zebar's shell permission (`zpack.json` allows exactly those commands): `bin/agent-usage.ps1 -Json` for the agents panel every 15 minutes, `bin/update-available.ps1` for the update arrow every 6 hours. Clicks that start something go through GlazeWM (`shell-exec omawin.exe ...`). A drop-down (the agents panel, the music player) grows the bar's window while it's open; resizes run one at a time.
+The bar is drawn by the menu app itself, natively, with no web engine ([native-bar.md](native-bar.md)): Omarchy 4's bar, rebuilt. `default/bar/bar.json` says which widgets sit where (left, centerBegin, center, centerEnd, right, as Omarchy's `shell.json`); each widget is a class in `Bar/Widgets.cs` with the same name and behaviour as Omarchy's, fed by GlazeWM's IPC (`Bar/GlazeWm.cs`), the tray (`Bar/Tray.cs`), the clock, network, battery and audio. Its logo is Omarchy's icon font (`default/bar/omarchy.ttf`). There is no dock. Clicks that start something go through `omawin.exe`.
 
-At sign-in, `omawin start zebar` (bin/omawin.cs) first paints a plain strip in the theme's background (`--bg-solid`), the bar's size, across every monitor, in ~50 ms; Zebar's window opens above it and the strip goes once its server answers. The bar's page loads Zebar's client from disk (`zebar/tokyo-islands/lib/zebar.js`, built by `zebar/build-client.ps1` with Bun at install; GPL-3.0, so never committed; esm.sh only where it was never built), loads its widgets at once, and fades each in when the first data comes. It starts Zebar straight away: there's nothing to stop, and PowerShell's start under the load of a sign-in cost the bar ~30 s. It hands over to `zebar/start.ps1` when anything is left from an old bar (a Zebar, its webviews holding their profile's lockfile, or its port taken) or the widget server doesn't answer in 20 s (at sign-in it has taken over 6 s).
+At sign-in, `omawin start bar` (`bin/omawin.cs`) first paints a plain strip in the theme's background (`%LOCALAPPDATA%\launcher\bar-background.txt`, written by `themes/render.ps1`), the bar's size, across every monitor, in ~50 ms; the menu app's bar draws over it within a few seconds.
 
-`zebar/start.ps1` (`omawin restart zebar`) stops this account's Zebar and its webviews, waits for them to go, starts it with `--disable-gpu` for the webviews (the same look, about 100 MB less), and starts it again if its widget server didn't come up (the old one's connections can hold the port for a moment, and the bar then shows blank).
+One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone.
 
-Small native helpers in `zebar/tokyo-islands/*.cs`, built into `~/.local/bin` by install:
-
-| Helper | What it does |
-|---|---|
-| `voice-meter.exe` | the dictation indicator: "is dictation listening" from Windows' microphone privacy log, the level from the default mic's meter; it never opens the mic itself |
-| `theme-watch.exe` | says when `theme.css` changed (a theme switch), so the bar recolors without a restart (`theme.js`) |
-| `cpu-cores.exe`, `win-keys.exe`, `app-icons.exe` | the old bar's CPU card and dock; nothing uses them now |
+Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), which runs once the QML host does (roadmap 4.9.4).
 
 ## The music player (`src/music/`)
 
-`omawin-music.exe` (.NET 9, no window, one file in `~/.local/bin`, built by `src\music\build.ps1`) plays music, podcasts and radio; the bar is its only face (`zebar/tokyo-islands/music.js`, `music.css`). One exe, three roles:
+`omawin-music.exe` (.NET 9, no window, one file in `~/.local/bin`, built by `src\music\build.ps1`) plays music, podcasts and radio; its face is the bar's music plugin (`shell/plugins/omawin.music/`). One exe, three roles:
 
 - `--serve`: **the player** (`Player.cs`). Started by the first command that needs it, out of its starter's job so it outlives it; quits after 20 idle minutes. It plays through **mpv** (`Mpv.cs`), which it starts hidden (`--idle --no-video --no-config`) and drives over mpv's JSON pipe `\\.\pipe\omawin-mpv`:
   - The whole playlist goes to mpv as links (`loadfile … append`). mpv's ytdl hook runs our yt-dlp (with Bun) for a YouTube track only when it's about to play, so a playlist of hundreds starts at once and an expired stream is simply looked up again; a podcast episode is its audio file. mpv decodes with its own ffmpeg and plays to whatever speaker Windows is using.
@@ -108,13 +102,11 @@ Small native helpers in `zebar/tokyo-islands/*.cs`, built into `~/.local/bin` by
   - **Your station** (`Station.cs`, `station [songs|jams]`): an endless queue, never saved. Seeds are your 4- and 5-star tracks (else your playlists' tracks); a seed's YouTube radio (`watch?v=<id>&list=RD<id>`, the first 60 through yt-dlp, ~5 s) and your own playlists give candidates; 1-star tracks, artists you average 1.5 or less on, recent tracks and the other length (songs under 10 minutes, jams longer) are dropped; the rest are ranked by your stars for them and their artist, with chance in it. The player tops mpv's queue up a few tracks ahead.
   - Why mpv: Windows' own `MediaPlayer`, used until October 2026, stopped playing YouTube's streams (it opened them, then failed every track with `0xC00D0035`). Omarchy's music plugins all play with mpv and yt-dlp the same way.
   - mpv comes with the `music` preset (`shinchiro.mpv`); `Mpv.Exe()` also finds it in `%LOCALAPPDATA%\Programs\mpv` or winget's folders when it isn't on the PATH. `src\music\build.ps1` stops the player's mpv along with the player.
-- `watch`: **the bar's feed**, like `voice-meter`: `S {state}` lines from the player, `P [collections]` whenever `~/Music/omawin` changes, and `L <level>` (the speakers' peak meter) ~25 a second while playing, for the waves. It never starts the player, and quits when the Zebar that started it does. The bar tells it over stdin whether its panel is open (`panel 1|0`) and whether its monitor has focus (`focus 1|0`); it keeps both as named events (`Local\omawin-music-<pid>-panel|focus|open|close`).
-- `open` (Win+M): **no player needed**. It reads every watch's flags: if any panel is open, it signals `close` to those; otherwise `open` to the focused monitor's bar. The watch passes it on as `O open` / `O close`. (Zebar 3.3's `proc.write()` is broken, so `music.js` calls Tauri's `shell_write` directly.)
+- `watch`: **the bar's feed**, like `voice-meter`: `S {state}` lines from the player, `P [collections]` whenever `~/Music/omawin` changes, and `L <level>` (the speakers' peak meter) ~25 a second while playing, for the waves. It never starts the player, and quits when the bar that started it does. The bar tells it over stdin whether its panel is open (`panel 1|0`) and whether its monitor has focus (`focus 1|0`); it keeps both as named events (`Local\omawin-music-<pid>-panel|focus|open|close`).
+- `open` (Win+M): **no player needed**. It reads every watch's flags: if any panel is open, it signals `close` to those; otherwise `open` to the focused monitor's bar. The watch passes it on as `O open` / `O close`.
 - anything else: **a command**, sent to the player over the pipe `\\.\pipe\omawin-music` (a JSON array of words per line; one JSON line back), or done on the library files directly (`add`, `list`, `tracks`, `refresh`, `rename`, `remove`).
 
 The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `podcasts/<slug>.json` for podcasts, `radio/<slug>.json` for stations (title, source link, tracks; `Library.cs`). A station is one live stream (`Library.AddRadio`): adding one reads the stream's headers only — its content type (a web page is refused) and its `icy-name`, which names it (`NTS Radio`, `NTS Radio 2` when the address is a second channel) — and the player hands that address to mpv as it is, so `live` in the state tells the bar to show `LIVE` instead of a progress bar, and seeking does nothing. Readers: `YouTube.cs` (yt-dlp, with Bun) and `Feed.cs` (RSS, and Apple Podcasts links through Apple's lookup). Slugs are unique across every folder, so commands only need the slug.
-
-Zebar only lets the bar run `omawin-music` with the arguments `zpack.json` allows (`argsRegex`); a new command needs a line there and a Zebar restart. The pack's own files aren't cached (`caching.rules`), so an edit shows on the next reload.
 
 ## Scripts that remain
 

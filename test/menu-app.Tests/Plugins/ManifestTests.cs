@@ -170,4 +170,22 @@ public sealed class ManifestTests : IDisposable
     [InlineData("", false)]
     public void InsideKeepsPathsInThePluginsFolder(string relative, bool inside) =>
         Assert.Equal(inside, ManifestCheck.Inside(dir, relative));
+
+    // The plugins omawin ships (shell/plugins/<id>/) parse and pass the check, each in a folder
+    // named after its id, with its entry points there.
+    [Fact]
+    public void ShippedPluginsPassTheCheck()
+    {
+        var plugins = Path.Combine(Settings.CatalogTests.RepoRoot(), "shell", "plugins");
+        var dirs = Directory.GetDirectories(plugins);
+        Assert.NotEmpty(dirs);
+        foreach (var d in dirs)
+        {
+            var m = Read(File.ReadAllText(Path.Combine(d, "manifest.json")));
+            var (errors, warnings) = ManifestCheck.Check(m, d, Ctx with { FirstParty = true });
+            Assert.Empty(errors);
+            Assert.DoesNotContain(warnings, w => w.Contains("isn't named after"));
+            foreach (var file in m.EntryPoints?.Values.ToList() ?? []) Assert.True(File.Exists(Path.Combine(d, file)), $"{m.Id}: {file} is missing");
+        }
+    }
 }

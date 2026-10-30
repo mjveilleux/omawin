@@ -20,27 +20,28 @@ Run it from **Windows PowerShell**, then sign out and back in. It takes about a 
 - **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, network, battery. The Windows taskbar hides.
 - **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 (installed first, and what omawin runs on) and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
 - **Neovim** with [LazyVim](https://lazyvim.org), themed, its treesitter parsers prebuilt (no C compiler needed).
-- **Opt-in presets**: language toolchains, data tools, AI agents, local dictation (`Win+H`). The music and podcast player (`Win+M`) is being rebuilt as a bar plugin.
+- **Opt-in presets**: language toolchains, data tools, AI agents, local dictation (`Win+H`).
+- **Plugins in Omarchy's format** (`shell/plugins/`): the first is the music, podcast and radio player (`Win+M`), a Quickshell plugin that runs once omawin's QML host lands.
 - **`omawin`**, a command for everything: `omawin help` lists them; the keys, menus and bar all call it.
 
 ## Requirements
 
 - Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher on the PC.
-- winget (App Installer; every current Windows 11 has it). The core needs it only for git and the .NET runtime; presets use it.
+- Nothing else to install first. The core doesn't use winget; the presets you pick do (every current Windows 11 has it).
 - An internet connection and about 1 GB of disk.
 - A standard account is fine; run the install from a normal (not "as administrator") PowerShell. **Nothing asks for admin by default**: everything installs for your account. Admin is opt-in (the signed GlazeWM fork, WSL, `omawin no-ads`' policy part), gathered into one prompt that says first what will change.
 
 ## Install
 
 The one-liner above:
-1. downloads PowerShell 7 while it installs git and clones omawin to `~/omawin` (it must live there);
+1. downloads git and PowerShell 7 from the release at once, puts git in, and clones omawin to `~/omawin` (it must live there);
 2. sets up your own settings: the PC's **shared folder** (found if your main account made it, else empty or from your private backup) and this account's folder (from a private repo, or fresh; see [Make it yours](#make-it-yours));
 3. runs `install.ps1` in PowerShell 7, which asks which presets you want, and your name and email for git.
 
 By hand instead:
 
 ```powershell
-winget install --id Git.Git -e        # then open a new Windows PowerShell
+# with git already installed (any way you like), in a new Windows PowerShell:
 git clone https://github.com/mjveilleux/omawin.git $HOME\omawin
 Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 & $HOME\omawin\install.ps1
@@ -59,7 +60,7 @@ Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never dele
 - **Several accounts at once**: with the GlazeWM fork, each Windows account gets its own GlazeWM port (`GLAZEWM_IPC_PORT` in your user environment), so several can be signed in at once, each with its own desktop.
 - **No ads** (for you, no admin): Windows' suggestions, tips, promoted apps, the advertising ID, search highlights and the Copilot button off; the PC maker's notifications off (Lenovo, McAfee, Adobe, when present). `omawin no-ads` does the admin part: Windows' consumer-features policy, uninstalling Lenovo Now and McAfee's extras. [manual/11-no-ads.md](manual/11-no-ads.md) lists everything.
 - **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font (its four faces) installed for you.
-- **Programs**: the core tools unpacked into `%LOCALAPPDATA%\omawin\tools` from the release's tools bundle ([`install/tools.txt`](install/tools.txt): PowerShell 7, Windows Terminal, Neovim, GlazeWM, noctty, Bun, ripgrep and the rest), git and the .NET runtime from winget, the presets you pick from winget ([`install/packages.ps1`](install/packages.ps1)), and a few installers from their own sites (herdr; Claude Code and opencode with the AI preset). Where each came from is recorded, so `omawin pkg update` updates it the same way.
+- **Programs**: the core tools unpacked into `%LOCALAPPDATA%\omawin\tools` from the release's tools bundle ([`install/tools.txt`](install/tools.txt): PowerShell 7, git and Git Bash, Windows Terminal, Neovim, GlazeWM, noctty, Bun, ripgrep and the rest), the presets you pick from winget ([`install/packages.ps1`](install/packages.ps1)), and a few installers from their own sites (herdr; Claude Code and opencode with the AI preset). Where each came from is recorded, so `omawin pkg update` updates it the same way.
 
 There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) lists the steps by hand.
 
@@ -104,20 +105,19 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 
 ## What's where
 
+The layout follows Omarchy's ([plans/repo-layout.md](plans/repo-layout.md)):
+
 | Path | What |
 |---|---|
-| `bin/` | the `omawin` command (`omawin.cs`, `commands.txt`), update, migrate, profilers |
-| `shell/menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
-| `default/launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
-| `config/glazewm/` · `default/bar/` | window manager config and keys · the bar's layout |
-| `themes/` | Omarchy's themes, their palettes (`colors/`) and `render.ps1` |
-| `install.ps1` · `install/` · `install/packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
-| `bootstrap.ps1` · `bin/check.ps1` · `bin/no-ads.ps1` | the one-liner · health check · ads off |
-| `config/noctty/` · `config/herdr/` | the terminal's config · the multiplexer's |
-| `bundle/` · `build/` · `src/cli/` | the tools bundle's list · release and bundle builders · the C# command router |
-| `src/music/` · `src/agent/` | the music player (becoming a bar plugin) · omawin's agent (`Ctrl+Win+H`) |
-| `config/nvim/` `config/neovide/` `config/powershell/` `config/windows-terminal/` `config/starship/` `config/git/` `config/bash/` `config/r/` `wsl/` `config/claude/` | app configs, live-linked |
-| `open-questions/` | decisions waiting for an answer |
+| `bootstrap.ps1` · `install.ps1` | the one-liner · the install |
+| `bin/` | the `omawin` command (`omawin.cs`, `commands.txt`) and what it runs: `check.ps1`, `no-ads.ps1`, `update.ps1`, the profilers |
+| `config/` | the apps' configs, live-linked: `glazewm/` (keys, rules, a theme template), `nvim/`, `noctty/`, `powershell/`, `windows-terminal/`, `starship/`, `git/`, `bash/`, `herdr/`, `fastfetch/`, `neovide/`, `claude/`, `r/` |
+| `default/` | omawin's own data: `launcher/` (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`, `settings.txt`), `bar/` (the bar's layout) |
+| `shell/` | the desktop: `menu-app/` (bar, launcher, file finder, system menu, screenshots, clipboard history) and `plugins/` (Omarchy's format: `omawin.music/`) |
+| `src/` | the other compiled parts: `cli/` (the C# command router), `music/` (the music player), `agent/` (omawin's agent, `Ctrl+Win+H`), `bundle/` (the tools bundle builder) |
+| `install/` · `migrations/` | the install's steps, `packages.ps1` (core and presets), `tools.txt` (the tools bundle) · one-time changes for existing installs |
+| `themes/` · `wsl/` · `build/` · `test/` | Omarchy's themes and their palettes · Linux in WSL · CI's release scripts · unit tests |
+| `docs/` · `manual/` · `plans/` · `open-questions/` | how it's built · how to use it · where it's going · decisions waiting for an answer |
 
 ## Credits
 

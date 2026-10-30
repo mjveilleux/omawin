@@ -1,8 +1,8 @@
-# The native bar (work in progress)
+# The native bar
 
-The bar moves out of Zebar, whose widgets are web pages in Edge's WebView2 (~2 s to draw, ~220 MB), into the menu app (`shell/menu-app/`), the one always-running native process that already holds the launcher, the system menu and screenshots. Omarchy 4 did the same on Linux: one Quickshell process for its bar, launcher and notifications, no web engine. The code lives in `shell/menu-app/Bar/`, since it's that process; the menu app compiles to one native program (Native AOT) so it is up seconds sooner at sign-in.
+The bar moved out of Zebar, whose widgets were web pages in Edge's WebView2 (~2 s to draw, ~220 MB), into the menu app (`shell/menu-app/`), the one always-running native process that already holds the launcher, the system menu and screenshots. Omarchy 4 did the same on Linux: one Quickshell process for its bar, launcher and notifications, no web engine. The code lives in `shell/menu-app/Bar/`, since it's that process; the menu app compiles to one native program (Native AOT) so it is up seconds sooner at sign-in.
 
-Until it matches Zebar, both exist: `omawin bar native|zebar` picks one (`%LOCALAPPDATA%\launcher\bar`), and `omawin check` checks the one picked.
+Zebar was removed on 2026-10-31 (`migrations/2026-10-31-zebar-out.ps1`): the native bar is the only one. Its layout is `default/bar/bar.json`.
 
 ## Steps
 
@@ -15,6 +15,6 @@ Until it matches Zebar, both exist: `omawin bar native|zebar` picks one (`%LOCAL
 2. **The tray and media**: other apps' tray icons, and Windows' media controls.
    - done: the tray (`Bar/Tray.cs`), as Zebar's systray-util does it: a never-shown window of the taskbar's class, `Shell_TrayWnd`, kept in front of Explorer's, so `Shell_NotifyIcon` tells it about every icon; it hands every message on to Explorer's own taskbar (only Explorer's, so it can't loop with Zebar's copy). Its Win32 calls must be the Unicode ones (`CharSet.Unicode`): the ANSI default registered the class as "S". Clicks are sent as the taskbar sends them; not yet tried by hand.
    - left: media
-3. **Switch over**: the native bar the default; Zebar, our Zebar fork and `zebar/build-client.ps1` go, with a migration; `omawin check`, `omawin profile ram`'s budgets, docs and manual follow.
+3. **Switch over** (done 2026-10-31): the native bar the default and the only one; Zebar, our Zebar fork and `zebar/` gone, with a migration; `omawin check`, `omawin profile ram`'s budgets, docs and manual followed.
 
-Left for later: the agents panel and the music player drop-downs (Zebar's for now).
+Left for later: the agents panel, and media in the bar. The music player is a plugin now (`shell/plugins/omawin.music/`, QML), which shows once the QML host is built (roadmap 4.9.4).

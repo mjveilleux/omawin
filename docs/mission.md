@@ -17,7 +17,7 @@ What Omarchy does with Hyprland, Waybar and its shell, we do with:
 | Omarchy (Linux) | omawin (Windows) | Ours? |
 |---|---|---|
 | Hyprland | GlazeWM | our fork, mjveilleux/glazewm |
-| Quickshell: bar, launcher, menu, panels, OSD (Waybar and Walker until v4) | **the shell**: one always-running native WinUI 3 / C# process (today's menu app) with the launcher, system menu, pages, screenshot tool, and soon the bar and dock (Zebar today, being replaced) | ours |
+| Quickshell: bar, launcher, menu, panels, OSD (Waybar and Walker until v4) | **the shell**: one always-running native WinUI 3 / C# process (today's menu app) with the launcher, system menu, pages, screenshot tool, the bar, and soon the dock | ours |
 | Alacritty / Ghostty | noctty | our fork, mjveilleux/noctty |
 | Neovim + LazyVim | Neovim + LazyVim | same |
 | pacman, AUR | winget (and Bun for JavaScript) | |
@@ -28,7 +28,7 @@ Omarchy 4 (August 2026) folded its bar, launcher, notifications, OSD, panels and
 
 Windows ships defaults made for everyone; omawin replaces the ones that slow a developer down, and leaves the ones Windows does well.
 
-- **Replace:** the taskbar (Zebar bar and dock; the taskbar auto-hides), Start and Search (the launcher on Win+Space), window snapping (GlazeWM tiling, workspaces), the Settings maze (the system menu on Win+Alt+Space, one row per thing you change), Snipping Tool (Win+Shift+S, with text from the screen), the clipboard panel (Win+Shift+V), ads and suggestions (no-ads), the default terminal and editor.
+- **Replace:** the taskbar (the native bar; the taskbar auto-hides), Start and Search (the launcher on Win+Space), window snapping (GlazeWM tiling, workspaces), the Settings maze (the system menu on Win+Alt+Space, one row per thing you change), Snipping Tool (Win+Shift+S, with text from the screen), the clipboard panel (Win+Shift+V), ads and suggestions (no-ads), the default terminal and editor.
 - **Keep:** the lock screen and Windows Hello (themed), notifications and Action Center, the volume and brightness flyouts, drivers and Windows Update, Explorer for files you browse.
 - **Rule:** never break Windows. Everything omawin changes can be undone, and nothing is removed that a Windows update needs.
 
@@ -37,7 +37,7 @@ Windows ships defaults made for everyone; omawin replaces the ones that slow a d
 1. **One line to install, one command to update.** `irm … | iex` on a fresh PC, under Windows PowerShell 5.1, no admin prompt: everything installs for your account; the few things that truly need admin are opt-in, asked once for all of them when you choose them, and never during an update. `omawin update` is safe to run any day: it never fails because you customized something.
 2. **Fast.** Anything on a key answers instantly, so it runs in the always-running menu app or a native exe, never a fresh PowerShell. Terminal changes are measured (`omawin profile terminal`), not felt.
 3. **Lightweight.** The whole desktop (WM, bar, dock, menu app, helpers) stays under ~600 MB RAM and ~1% CPU idle; every new feature says what it costs. The install is a lean core, with the rest opt-in.
-4. **As native to Windows as possible.** WinUI 3 and C# (the Windows App SDK) for everything you see, Win32 and WinRT APIs for system features, Rust where it's already the right tool (the GlazeWM fork). No web views in the desktop itself: Zebar goes once the native bar replaces it. Like Omarchy 4's Hyprland + Quickshell split: GlazeWM is the engine with no UI; the shell is the one process that draws everything.
+4. **As native to Windows as possible.** WinUI 3 and C# (the Windows App SDK) for everything you see, Win32 and WinRT APIs for system features, Rust where it's already the right tool (the GlazeWM fork). No web views in the desktop itself: Zebar went on 2026-10-31, when the native bar replaced it. Like Omarchy 4's Hyprland + Quickshell split: GlazeWM is the engine with no UI; the shell is the one process that draws everything.
 5. **Omakase, but yours.** Strong defaults, chosen for you; your changes live in your own folder and survive every update.
 6. **Every action is an `omawin` command.** Keys, menu rows, dock and bar all call the same commands, and `omawin help` lists them.
 7. **One theme, everywhere.** A theme is one palette; switching never edits a tracked file.
@@ -45,7 +45,7 @@ Windows ships defaults made for everyone; omawin replaces the ones that slow a d
 
 ## Where we are (2026-10-15)
 
-Working daily on one PC: GlazeWM (fork) tiling, Zebar bar and dock, the native launcher, system menu, file finder, clipboard, audio page, screenshots with OCR, 24 themes across every app, noctty and herdr, LazyVim, dictation, music in the bar, no-ads, updates with migrations, `omawin check`.
+Working daily on one PC: GlazeWM (fork) tiling, the native bar, the native launcher, system menu, file finder, clipboard, audio page, screenshots with OCR, 24 themes across every app, noctty and herdr, LazyVim, dictation, the music player (a bar plugin next), no-ads, updates with migrations, `omawin check`.
 
 Not yet a product: configs are linked straight into the git checkout so any edit blocks `git pull`, everything is built on the user's PC (the .NET SDK is a 1 GB dependency), there's no ARM64, and it's never been installed on a clean PC. [mission-todo.md](mission-todo.md) is the way there.
 

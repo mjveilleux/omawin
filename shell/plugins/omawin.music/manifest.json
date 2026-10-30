@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "omawin.music",
+  "name": "Music",
+  "version": "1.0.0",
+  "author": "omawin",
+  "license": "MIT",
+  "description": "Music, podcasts and radio in the bar: what's playing, the controls, your ratings and your playlists, from omawin's music player (omawin-music).",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Music",
+    "description": "What's playing, with a panel of controls, ratings and playlists (Win+M)",
+    "category": "Media",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": { "showTitle": true, "titleWidth": 180 },
+    "schema": [
+      { "key": "showTitle", "type": "boolean", "label": "Show what's playing in the bar", "defaultValue": true },
+      { "key": "titleWidth", "type": "integer", "label": "Title width (pixels)", "min": 60, "max": 480, "step": 10, "defaultValue": 180 }
+    ]
+  }
+}

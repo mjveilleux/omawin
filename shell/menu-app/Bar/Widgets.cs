@@ -21,7 +21,7 @@ public sealed record BarData(
     public sealed record Battery(int Percent, bool Charging);
 }
 
-// One of bar.json's widgets (zebar/tokyo-islands/widgets/<name>.js, the same names, behaviour and
+// One of bar.json's widgets (Omarchy's bar widgets, as Zebar's bar had them: the same names, behaviour and
 // glyphs): its element in the bar, filled in by Update.
 public abstract class BarWidget
 {
@@ -45,7 +45,7 @@ public abstract class BarWidget
         "monitor" => new MonitorWidget(),
         "power" => new PowerWidget(),
         "tray" => new TrayWidget(),
-        _ => null, // media, agents: Zebar's for now (docs/native-bar.md)
+        _ => null, // media, agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
     };
 
     public static readonly FontFamily Mono = new("JetBrainsMono Nerd Font, JetBrainsMono NF, Cascadia Mono, Consolas");
@@ -119,7 +119,7 @@ public sealed partial class Cell : Grid
     }
 }
 
-// --- the widgets, each after its zebar/tokyo-islands/widgets/<name>.js --------------------------
+// --- the widgets, each after Omarchy's of the same name -------------------------------------------
 
 // Omarchy's logo (omarchy.ttf, U+E900). Click: the system menu; right click: a terminal.
 sealed class MenuWidget : BarWidget

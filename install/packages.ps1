@@ -52,7 +52,7 @@ $Presets = [ordered]@{
     'docker'         = @{ Summary = 'lazydocker (Docker Desktop: Install > Development)'; Winget = @('JesseDuffield.Lazydocker'); Tools = @('lazydocker') }
     'cli-extras'     = @{ Summary = 'make, cloc, wget'; Winget = @('ezwinports.make', 'AlDanial.Cloc', 'JernejSimoncic.Wget'); Tools = @('make', 'cloc', 'wget') }
     'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
-    'music'          = @{ Summary = "yt-dlp, mpv and the .NET runtime, for the music player (src/music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv', 'Microsoft.DotNet.DesktopRuntime.9'); Tools = @('yt-dlp', 'mpv') }
+    'music'          = @{ Summary = "the Music plugin's programs: yt-dlp, mpv, the .NET runtime (shell/plugins/omawin.music)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv', 'Microsoft.DotNet.DesktopRuntime.9'); Tools = @('yt-dlp', 'mpv') }
     'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
     'wsl'            = @{ Summary = "Linux in WSL, Arch (Omarchy's packages) or Ubuntu, with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('linux') }
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
