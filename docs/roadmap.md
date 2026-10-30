@@ -224,6 +224,8 @@ The "never open Settings" list: 30 everyday changes (dark mode, file extensions,
 
 ### 2.0 How Omarchy is fast, and the same on Windows
 
+**The full sub-plan is [install-speed.md](install-speed.md)**: workstreams (measure, the two-stage bundle, download and unpack, one-pass configs, the desktop at once, the welcome page, the background queue, fast delta updates, package managers staying in charge, offline installs), milestones from under a minute to under 15 seconds, and what to explore. This section is the summary.
+
 Omarchy's install is fast because almost nothing is fetched or decided on the machine (from its code, `docs/file-layout.md`):
 - **Everything comes on the image.** The ISO carries an **offline mirror** of every package in its list (the ISO builder reads `install/omarchy-base.packages` to build it), so installing is copying, not downloading; prebuilt images go further and are set up before they reach the machine.
 - **Configs are packages.** Omarchy's defaults ship as two Arch packages (`omarchy`, `omarchy-settings`) and reach a new account from `/etc/skel`: no per-file setup.
@@ -288,6 +290,8 @@ What install does today: `install.ps1` asks the questions, starts the one admin 
 **Risks:** Explorer's taskbar auto-hide (the `look` step) should move earlier too; the console resizing under the install screen (it redraws on resize already).
 
 ### 2.3 Command-line tools through mise (M)
+
+*Updated by [install-speed.md](install-speed.md):* the first install takes the command-line tools from the bundle's stage 2 (fastest); mise stays for languages and for anyone who picks it as a tool's source; winget, Scoop and Chocolatey can take over any tool at any time (`omawin tools source`, `omawin tools handover`), and their copy wins on the PATH.
 
 **Why:** winget spends seconds per package before downloading; these are single exes.
 
@@ -785,7 +789,9 @@ Open questions to measure or try before building, collected from every phase. Ea
 | **Windows 11's common complaints**, each reproduced and timed on this PC (slow Explorer, slow right-click, Bing in search, Bluetooth call quality, broken updates, AI everywhere) | which fixes ship in the recommended set | 8J, mission-todo track 9 |
 | **Idle CPU and wake-ups** by process, next to memory | 8.28's list | 8G, 8K |
 | **A warm WSL's cost** vs the first terminal's wait | whether Linux is kept warm by default | 3.5, 8K |
-| **The bundle's real size and time** (MinGit, Neovim with plugins, the menu app AOT) on 20, 100 and 500 Mbit/s | the one-minute promise, and what's left out | 2.0 |
+| **The bundle's real size and time** (MinGit, Neovim with plugins, the menu app AOT) on 20, 100 and 500 Mbit/s | the one-minute promise, and what's left out | 2.0, [install-speed.md](install-speed.md) |
+| **Today's install, timed per step and per package** (the baseline) | where to cut first | [install-speed.md](install-speed.md) M0 |
+| **Windows' `tar.exe` formats and speed; Defender's first-run scan of new files** | the bundle's format, and whether signing is needed before M2 | [install-speed.md](install-speed.md) |
 | **The per-user GlazeWM without `uiAccess`**: what it can't do until the signed install lands | whether the background admin step must come sooner | 2.0 |
 | **Windows' settings index format** (`AllSystemSettings_*.xml`) on the current build | settings search's source, or the curated fallback | 1B.1 |
 | **`XamlReader.Load` under Native AOT**, with omawin's binding | XAML panels, or the declarative fallback | 4.3 |
