@@ -467,7 +467,8 @@ function Install-NerdFont {
     $zip = Join-Path $tmp "$NerdFont.zip"
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
     Save-Download "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$NerdFont.zip" $zip
-    Expand-Archive $zip -DestinationPath $tmp -Force
+    & "$env:WINDIR\System32\tar.exe" -xf $zip -C $tmp
+    if ($LASTEXITCODE -ne 0) { Expand-Archive $zip -DestinationPath $tmp -Force }
 
     # Per-user install: no admin needed. A new account has no per-user font key until it's made.
     $fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"

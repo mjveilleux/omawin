@@ -62,6 +62,15 @@ if (-not $BaseUrl -and $env:OMAWIN_RELEASE_URL) { $BaseUrl = $env:OMAWIN_RELEASE
 if ($env:OMAWIN_PREBUILT -eq '0') { $NoDownload = $true }
 if ($env:OMAWIN_PREBUILT -eq '1') { $NoBuild = $true }
 # The .NET SDK, for a build here: only now, when one is needed (the core has just the runtime).
+# A zip unpacked with Windows' tar.exe (in Windows since 10 1803): Expand-Archive is many
+# times slower on a folder of many files (the menu app's 38 MB). It's the fallback.
+function Expand-Zip([string]$Zip, [string]$Dest) {
+    New-Item -ItemType Directory -Force $Dest | Out-Null
+    $tar = "$env:WINDIR\System32\tar.exe"
+    if (Test-Path $tar) { & $tar -xf $Zip -C $Dest; if ($LASTEXITCODE -eq 0) { return } }
+    Expand-Archive -Path $Zip -DestinationPath $Dest -Force
+}
+
 function Install-DotNetSdk {
     if (Test-DotNetSdk) { return $true }
     Write-Note 'installing the .NET 9 SDK to build here (about 1 GB, once)'
@@ -225,7 +234,7 @@ try {
                 # unpacking straight over the folder stopped at such a file, halfway, with
                 # omawin.exe already moved aside and no new one written.
                 $unpacked = Join-Path $work 'helpers'
-                Expand-Archive -Path $zip -DestinationPath $unpacked -Force
+                Expand-Zip $zip $unpacked
                 $kept = @()
                 foreach ($file in Get-ChildItem $unpacked -File) {
                     $dest = Join-Path $BinDir $file.Name
@@ -265,7 +274,7 @@ try {
             $zip = Get-PieceRelease "SystemMenu-*-win-$Arch.zip" @('menu-app') (-not $NoBuild -and (Test-DotNetSdk))
             if ($zip) {
                 if (-not $NoStart) { & "$Repo\menu-app\stop-menu.ps1" -Dir $MenuDir }
-                Expand-Archive -Path $zip -DestinationPath $MenuDir -Force
+                Expand-Zip $zip $MenuDir
                 # Unpacked, not built: nothing started it (menu-app\build.ps1 does that itself).
                 # This account's: another account signed in has its own, and counting it left this
                 # one stopped (stop-menu.ps1 stops only this account's).
