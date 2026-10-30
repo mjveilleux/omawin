@@ -88,6 +88,14 @@ $WingetCommands = @{
     'Git.Git' = 'git'; 'Microsoft.PowerShell' = 'pwsh'; 'GitHub.cli' = 'gh'; 'OpenJS.NodeJS.LTS' = 'node'; 'Neovim.Neovim' = 'nvim'
 }
 
+# A package with no command on the PATH counts as installed when its file is there (a new install
+# doesn't read winget's whole list: install/software.ps1, Get-WingetInstalled).
+$WingetFiles = @{
+    'glzr-io.zebar'                     = "$env:ProgramFiles\glzr.io\Zebar\zebar.exe"
+    'glzr-io.glazewm'                   = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
+    'Microsoft.DotNet.DesktopRuntime.9' = "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App\9.*"
+}
+
 # Tools with their own installers (run after the winget ones, so uv exists). herdr is the core's
 # (the launcher's project windows use it); the rest belong to presets.
 $ExtraInstalls = [ordered]@{

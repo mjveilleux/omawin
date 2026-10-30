@@ -12,6 +12,10 @@ function Get-WingetInstalled([switch]$Fresh) {
     if ($script:WingetInstalledDone -and -not $Fresh) { return $script:WingetInstalled }
     $script:WingetInstalledDone = $true
     $script:WingetInstalled = $null
+    # winget's whole list takes 10-20 s on a new account. A PC omawin has never been on (no
+    # migrations.txt) goes by commands and files instead (Test-PackageInstalled); a reinstall or an
+    # update reads it, so nothing of yours is installed twice.
+    if (-not $Fresh -and -not (Test-Path "$env:LOCALAPPDATA\launcher\migrations.txt")) { $script:WingetListSkipped = $true; return $null }
     $winget = Get-Command winget -ErrorAction SilentlyContinue
     if (-not $winget) { return $null }
     $export = Join-Path $env:TEMP "omawin-winget-$PID.json"
@@ -32,7 +36,12 @@ function Get-WingetInstalled([switch]$Fresh) {
 function Test-PackageInstalled([string]$Id, $Installed) {
     $command = $WingetCommands[$Id]
     if ($command -and (Get-Command $command -ErrorAction SilentlyContinue)) { return $true }
+    $file = $WingetFiles[$Id]
+    if ($file -and (Test-Path $file)) { return $true }
     if ($Installed) { return $Installed.ContainsKey($Id) }
+    # A new install didn't read winget's list (Get-WingetInstalled): what neither its command nor
+    # its file shows isn't here, and winget says so in a second if it is.
+    if ($script:WingetListSkipped) { return $false }
     & { $ErrorActionPreference = 'Continue'; winget list --id $Id --exact --accept-source-agreements *> $null }
     $LASTEXITCODE -eq 0
 }
@@ -199,7 +208,7 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and $f[7] -eq 'later') }
         })
     $script:ToolBundle
 }
@@ -261,11 +270,15 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
         }
     }
     @($plan) | ConvertTo-Json -AsArray | Set-Content (Join-Path $work 'plan.json') -Encoding utf8
+    # Not under $work: a tool marked later may still be unpacking when this install has finished.
+    $done = Join-Path $env:TEMP "omawin-tools-done-$Stamp"
+    New-Item -ItemType Directory -Force $done | Out-Null
     $p = Start-Process (Join-Path $PSHOME 'pwsh.exe') -WindowStyle Hidden -PassThru -ArgumentList '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
-        '-File', "`"$Repo\install\unpack-tools.ps1`"", '-Plan', "`"$work\plan.json`"", '-Result', "`"$work\result.json`""
+        '-File', "`"$Repo\install\unpack-tools.ps1`"", '-Plan', "`"$work\plan.json`"", '-Done', "`"$done`""
     $null = $p.Handle  # read now, so its ExitCode is there later
     $script:BundleStart.Process = $p
     $script:BundleStart.Work = $work
+    $script:BundleStart.DoneDir = $done
     foreach ($t in $todo) { Set-ToolItem $t 'run' }
 }
 
@@ -282,15 +295,22 @@ function Complete-ToolBundle {
     if (-not $b.Tools) { return }
     Write-Step 'tools (the bundle)'
     if ($b.Process) {
-        $b.Process.WaitForExit()
-        $results = @(Get-Content (Join-Path $b.Work 'result.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json)
+        # Each tool says when it's done (a file in DoneDir). The ones marked later aren't waited for:
+        # they finish in the background, already on the PATH.
+        $wait = @($b.Todo | Where-Object { -not $_.Later })
+        while ($wait | Where-Object { -not (Test-Path (Join-Path $b.DoneDir "$($_.Name).json")) }) {
+            if ($b.Process.HasExited) { break }
+            Start-Sleep -Milliseconds 100
+        }
         foreach ($t in $b.Todo) {
-            $r = $results | Where-Object Name -eq $t.Name | Select-Object -First 1
+            $file = Join-Path $b.DoneDir "$($t.Name).json"
+            $r = if (Test-Path $file) { Get-Content $file -Raw | ConvertFrom-Json }
             if ($r -and $r.Ok) { $script:BundleHave += $t; Set-ToolItem $t 'done'; Write-Log "    unpacked $($t.Name) in $($r.Seconds) s" }
+            elseif (-not $r -and $t.Later -and -not $b.Process.HasExited) { $script:BundleHave += $t; Set-ToolItem $t 'done'; Write-Note "$($t.Name) finishes unpacking in the background" }
             else { Write-Warn "$($t.Name): $(if ($r) { $r.Error } else { 'the unpacking stopped (exit ' + $b.Process.ExitCode + ')' })"; Set-ToolItem $t 'fail' }
         }
-        Write-Log ("    the bundle's unpacking ran {0:0.0} s, alongside the install" -f $b.Clock.Elapsed.TotalSeconds)
-        Remove-Item $b.Work -Recurse -Force -ErrorAction SilentlyContinue
+        Write-Log ("    waited for the bundle until {0:0.0} s after it started" -f $b.Clock.Elapsed.TotalSeconds)
+        if ($b.Process.HasExited) { Remove-Item $b.DoneDir -Recurse -Force -ErrorAction SilentlyContinue }
     }
     foreach ($t in $script:BundleHave) { Set-PackageSource $t.Name 'bundle' $t.Name $t.Version $t.Dir }
     $bins = @($script:BundleHave | Where-Object { $_.Bin -ne '-' } | ForEach-Object { if ($_.Bin -eq '.') { $_.Dir } else { Join-Path $_.Dir $_.Bin } })

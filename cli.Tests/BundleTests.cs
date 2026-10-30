@@ -20,6 +20,8 @@ public class BundleTests
         Assert.Equal("jq.exe", jq.Rename);
         Assert.Matches(jq.Asset, "jq-windows-amd64.exe");
         Assert.Equal(@"Programs\noctty", tools.Single(t => t.Name == "noctty").Home);
+        Assert.True(tools.Single(t => t.Name == "zig").Later);
+        Assert.False(tools.Single(t => t.Name == "nvim").Later);
     }
 
     [Fact]
@@ -48,5 +50,5 @@ public class BundleTests
 
     [Fact]
     public void ManifestLinesAreTabSeparatedWithEmptyOptionals() =>
-        Assert.Equal("fd\tv10.2.0\tomawin-tool-fd.zip\tabc\t.\tsharkdp.fd\t", new Built("fd", "v10.2.0", Tools.FileName("fd"), "abc", ".", "sharkdp.fd", null).Line);
+        Assert.Equal("fd\tv10.2.0\tomawin-tool-fd.zip\tabc\t.\tsharkdp.fd\t\t", new Built("fd", "v10.2.0", Tools.FileName("fd"), "abc", ".", "sharkdp.fd", null).Line);
 }

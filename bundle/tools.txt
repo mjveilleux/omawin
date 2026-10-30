@@ -4,7 +4,7 @@
 # them side by side into %LOCALAPPDATA%\omawin\tools\<name>: no winget, no installers, no admin.
 # Omarchy does the same with its ISO's offline package cache.
 #
-#   <name> | <source> | <asset> | <bin> | <winget id it stands in for> | <home>
+#   <name> | <source> | <asset> | <bin> | <winget id it stands in for> | <home> | <later>
 #
 #   source  github:<owner>/<repo> (its latest release), node-lts, zig-stable
 #   asset   a regex for the release file's name; "=> <name>" renames a single-file asset (an
@@ -13,6 +13,8 @@
 #   winget  the core package it replaces (packages.ps1): that one isn't installed through winget
 #   home    where it goes instead of tools\<name>, under %LOCALAPPDATA% (a tool other scripts
 #           already look for in its own place)
+#   later   "later": the install doesn't wait for it; it finishes unpacking in the background
+#           (a big one nothing needs at once: zig, for Neovim's first parser build)
 
 pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
 wt          | github:microsoft/terminal         | ^Microsoft\.WindowsTerminal_[0-9.]+_x64\.zip$      | .   | Microsoft.WindowsTerminal
@@ -31,7 +33,7 @@ bun         | github:oven-sh/bun                | ^bun-windows-x64\.zip$        
 nvim        | github:neovim/neovim              | ^nvim-win64\.zip$                                  | bin | Neovim.Neovim
 neovide     | github:neovide/neovide            | ^neovide\.exe\.zip$                                | .   | Neovide.Neovide
 tree-sitter | github:tree-sitter/tree-sitter    | ^tree-sitter-windows-x64\.gz$ => tree-sitter.exe   | .   | tree-sitter.tree-sitter-cli
-zig         | zig-stable                        | x86_64-windows                                     | .   | zig.zig
+zig         | zig-stable                        | x86_64-windows                                     | .   | zig.zig |                             | later
 node        | node-lts                          | win-x64                                            | .   | OpenJS.NodeJS.LTS
 uv          | github:astral-sh/uv               | ^uv-x86_64-pc-windows-msvc\.zip$                   | .   | astral-sh.uv
 glazewm     | github:mjveilleux/glazewm         | ^glazewm-.+-windows-x64\.zip$                      | cli | glzr-io.glazewm

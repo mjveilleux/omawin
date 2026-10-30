@@ -44,7 +44,7 @@ try
         ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
         await using var z = File.OpenRead(zip);
         var sha = Convert.ToHexStringLower(await SHA256.HashDataAsync(z, ct));
-        built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home);
+        built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later);
         Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}");
     });
 }
