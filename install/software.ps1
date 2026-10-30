@@ -220,16 +220,18 @@ function Set-ToolItem($Tool, [string]$State) {
     if ($Tool.Provides) { Set-BoardPackage $Tool.Provides $State } else { Add-InstallItem 'Tools' "tool:$($Tool.Name)" $Tool.Name $State }
 }
 
-# Puts the bundle's tools in: all downloads at once (curl --parallel), then every unzip at once
-# (tar.exe, in Windows since 10 1803), then one PATH write. A tool already here at the same
-# version is left alone; one you installed yourself some other way (its command is on the PATH,
-# or winget has it) is used as it is.
-function Install-ToolBundle($Installed, [string[]]$Only) {
+# Puts the bundle's tools in, in two halves so the rest of the install goes on meanwhile:
+# Start-ToolBundle (as early as the install can) decides what's needed and hands the downloads
+# and unzips to a PowerShell of its own (install/unpack-tools.ps1: all at once, curl --parallel
+# and tar.exe); Complete-ToolBundle (before anything needs the tools) waits for it, then writes
+# the PATH once and records where each came from. A tool already here at the same version is
+# left alone; one you installed yourself some other way (its command on the PATH, or in winget's
+# list) is used as it is.
+function Start-ToolBundle($Installed, [string[]]$Only) {
+    if ($script:BundleStart) { return }
     $tools = @(Read-ToolBundle | Where-Object { -not $Only -or $Only -contains $_.Name })
     $script:BundleHave = @()
     $script:BundleTheirs = @()   # winget ids already here some other way: winget leaves them alone too
-    if (-not $tools) { return }
-    Write-Step 'tools (the bundle)'
     $todo = @()
     foreach ($t in $tools) {
         # Its own name: PowerShell's variable names ignore case, and the run's timestamp is in use.
@@ -238,59 +240,57 @@ function Install-ToolBundle($Installed, [string[]]$Only) {
         $mine = (Test-Path -LiteralPath $versionFile) -and ((Get-Content -LiteralPath $versionFile -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
         if ($mine) { $script:BundleHave += $t; Set-ToolItem $t 'have'; continue }
         if (-not (Test-Path -LiteralPath $versionFile) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
-            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'; $script:BundleTheirs += $t.Provides
+            Write-Log "    $label (yours)"; Set-ToolItem $t 'have'; $script:BundleTheirs += $t.Provides
             if ($Installed -and $Installed.ContainsKey($t.Provides)) { Set-PackageSource $t.Provides 'winget' $t.Provides }
             elseif (-not (Get-PackageSources)[$t.Provides]) { Set-PackageSource $t.Provides 'found' $t.Provides }
             continue
         }
         $todo += $t
-        Set-ToolItem $t 'run'
+        Set-ToolItem $t 'wait'
     }
-    if ($todo) {
-        $work = Join-Path $env:TEMP "omawin-tools-$Stamp"
-        New-Item -ItemType Directory -Force $work | Out-Null
-        try {
-            # The zips: straight from a folder, or downloaded all at once.
-            $remote = @($todo | Where-Object { $_.Base -match '^[a-z]+://' })
-            foreach ($t in $todo) { $t | Add-Member -Force NoteProperty Zip $(if ($t.Base -match '^[a-z]+://') { Join-Path $work $t.File } else { Join-Path $t.Base $t.File }) }
-            if ($remote) {
-                $config = Join-Path $work 'curl.txt'
-                # Forward slashes: a backslash in a curl config's quotes is an escape.
-                $lines = foreach ($t in $remote) { "url = `"$($t.Base)/$($t.File)`""; "output = `"$($t.Zip -replace '\\', '/')`"" }
-                [IO.File]::WriteAllLines($config, [string[]]$lines)
-                $curl = Join-Path $env:WINDIR 'System32\curl.exe'
-                & { $ErrorActionPreference = 'Continue'; & $curl -fsSL --retry 3 --parallel --parallel-max 8 -K $config 2>$null }
-            }
-            # Checked, then unpacked: every tar at once, each into a fresh folder.
-            $jobs = @()
-            foreach ($t in $todo) {
-                if (-not (Test-Path -LiteralPath $t.Zip) -or (Get-FileHash -LiteralPath $t.Zip -Algorithm SHA256).Hash.ToLower() -ne $t.Sha) {
-                    Write-Warn "$($t.Name): the download doesn't match the release's list; left out"
-                    Set-ToolItem $t 'fail'; continue
-                }
-                if (Test-Path -LiteralPath $t.Dir) {
-                    # An older copy of ours: moved out of the way (a running one keeps its files).
-                    $old = "$($t.Dir).old-$Stamp"
-                    try { Rename-Item -LiteralPath $t.Dir -NewName (Split-Path $old -Leaf) -ErrorAction Stop }
-                    catch { Write-Warn "$($t.Name) is in use: close it and run install.ps1 again"; continue }
-                }
-                New-Item -ItemType Directory -Force $t.Dir | Out-Null
-                $p = Start-Process "$env:WINDIR\System32\tar.exe" -ArgumentList "-xf `"$($t.Zip)`" -C `"$($t.Dir)`"" -NoNewWindow -PassThru
-                $null = $p.Handle  # read now, or Windows PowerShell has no ExitCode later
-                $jobs += [pscustomobject]@{ Tool = $t; Process = $p }
-            }
-            $dirs = @()
-            foreach ($j in $jobs) {
-                $j.Process.WaitForExit()
-                $t = $j.Tool
-                if ($j.Process.ExitCode -ne 0) { Write-Warn "$($t.Name): unpacking failed ($($j.Process.ExitCode))"; Set-ToolItem $t 'fail'; continue }
-                Set-Content -LiteralPath (Join-Path $t.Dir '.omawin-version') "$($t.Version) $($t.Sha)"
-                Get-ChildItem (Split-Path $t.Dir) -Filter "$(Split-Path $t.Dir -Leaf).old-*" -Directory -ErrorAction SilentlyContinue |
-                    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
-                $script:BundleHave += $t
-                Set-ToolItem $t 'done'
-            }
-        } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+    $script:BundleStart = @{ Tools = $tools; Todo = $todo; Process = $null; Work = $null; Clock = [Diagnostics.Stopwatch]::StartNew() }
+    if (-not $todo) { return }
+    $work = Join-Path $env:TEMP "omawin-tools-$Stamp"
+    New-Item -ItemType Directory -Force $work | Out-Null
+    $plan = foreach ($t in $todo) {
+        $remote = $t.Base -match '^[a-z]+://'
+        [pscustomobject]@{
+            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir
+            Url = $(if ($remote) { "$($t.Base)/$($t.File)" } else { $null })
+            Zip = $(if ($remote) { Join-Path $work $t.File } else { Join-Path $t.Base $t.File })
+        }
+    }
+    @($plan) | ConvertTo-Json -AsArray | Set-Content (Join-Path $work 'plan.json') -Encoding utf8
+    $p = Start-Process (Join-Path $PSHOME 'pwsh.exe') -WindowStyle Hidden -PassThru -ArgumentList '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass',
+        '-File', "`"$Repo\install\unpack-tools.ps1`"", '-Plan', "`"$work\plan.json`"", '-Result', "`"$work\result.json`""
+    $null = $p.Handle  # read now, so its ExitCode is there later
+    $script:BundleStart.Process = $p
+    $script:BundleStart.Work = $work
+    foreach ($t in $todo) { Set-ToolItem $t 'run' }
+}
+
+# The winget ids the bundle takes care of: the tools it's putting in, and the ones already here.
+function Get-BundleCovered {
+    if (-not $script:BundleStart) { return @() }
+    @(@($script:BundleStart.Tools | Where-Object { $_.Provides -and ($script:BundleTheirs -notcontains $_.Provides) } | ForEach-Object Provides) + @($script:BundleTheirs))
+}
+
+function Complete-ToolBundle {
+    $b = $script:BundleStart
+    if (-not $b -or $b.Done) { return }
+    $b.Done = $true
+    if (-not $b.Tools) { return }
+    Write-Step 'tools (the bundle)'
+    if ($b.Process) {
+        $b.Process.WaitForExit()
+        $results = @(Get-Content (Join-Path $b.Work 'result.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json)
+        foreach ($t in $b.Todo) {
+            $r = $results | Where-Object Name -eq $t.Name | Select-Object -First 1
+            if ($r -and $r.Ok) { $script:BundleHave += $t; Set-ToolItem $t 'done'; Write-Log "    unpacked $($t.Name) in $($r.Seconds) s" }
+            else { Write-Warn "$($t.Name): $(if ($r) { $r.Error } else { 'the unpacking stopped (exit ' + $b.Process.ExitCode + ')' })"; Set-ToolItem $t 'fail' }
+        }
+        Write-Log ("    the bundle's unpacking ran {0:0.0} s, alongside the install" -f $b.Clock.Elapsed.TotalSeconds)
+        Remove-Item $b.Work -Recurse -Force -ErrorAction SilentlyContinue
     }
     foreach ($t in $script:BundleHave) { Set-PackageSource $t.Name 'bundle' $t.Name $t.Version $t.Dir }
     $bins = @($script:BundleHave | Where-Object { $_.Bin -ne '-' } | ForEach-Object { if ($_.Bin -eq '.') { $_.Dir } else { Join-Path $_.Dir $_.Bin } })
@@ -299,8 +299,11 @@ function Install-ToolBundle($Installed, [string[]]$Only) {
         if ($added) { Write-Note "$added tool folder(s) on the PATH" }
         Update-SessionPath
     }
-    Write-Note "$(@($script:BundleHave).Count) of $($tools.Count) tool(s) from the bundle"
+    Write-Note "$(@($script:BundleHave).Count) of $(@($b.Tools).Count) tool(s) from the bundle, $(@($script:BundleTheirs).Count) yours already"
 }
+
+# Both halves at once (omawin pkg update).
+function Install-ToolBundle($Installed, [string[]]$Only) { Start-ToolBundle $Installed $Only; Complete-ToolBundle }
 
 function Install-WingetPackages([string[]]$Ids) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
@@ -309,8 +312,7 @@ function Install-WingetPackages([string[]]$Ids) {
     }
     $winget = (Get-Command winget).Source
     $installed = Get-WingetInstalled
-    Install-ToolBundle $installed
-    $bundled = @(@($script:BundleHave | Where-Object Provides | ForEach-Object Provides) + @($script:BundleTheirs))
+    $bundled = @(Get-BundleCovered)
     # Everything left came from the bundle: winget isn't asked anything.
     if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     Register-WingetSource
@@ -523,6 +525,7 @@ function Install-NerdFont {
 if (-not $SoftwareFunctionsOnly) {
     if (-not $LinkOnly) {
         Start-EarlyExtras @($CoreExtras)
+        Start-ToolBundle (Get-WingetInstalled)   # a no-op when install.ps1 already started it
         Write-Step 'winget packages'
         Initialize-Presets
         $chosen = @(Get-ChosenPresets)
@@ -531,6 +534,8 @@ if (-not $SoftwareFunctionsOnly) {
         $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
         Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
         Install-NerdFont
+        # Last in this step: the desktop step needs GlazeWM from the bundle.
+        Complete-ToolBundle
     } else {
         # An update installs nothing, but a tool a package moved off the PATH still goes back on.
         Add-ToolPaths @(Get-WantedTools)

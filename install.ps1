@@ -145,6 +145,10 @@ try {
     Write-Note 'what needs admin ...'
     # What the release's tools bundle carries goes in per-user without admin (install/software.ps1).
     $bundled = @(if (-not $LinkOnly) { Get-BundleProvides })
+    # Its unpacking starts now, in the background, and runs alongside everything up to the end of
+    # the software step (install/unpack-tools.ps1). "Yours" is judged by the PATH here; winget's
+    # list isn't read yet.
+    if (-not $LinkOnly) { Start-ToolBundle $null }
     $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages | Where-Object { $bundled -notcontains $_ } }) -NoPackages:$LinkOnly
     if ($plan.Packages.Count -or $plan.Forks.Count -or $plan.Wsl) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
