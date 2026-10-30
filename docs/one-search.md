@@ -112,10 +112,19 @@ public static class QueryParser
     };
 
     // "set" + Tab locks the Settings filter: the first tag whose name starts with what's typed.
-    public static Tag? TagFromTyped(string typed) =>
-        Enum.GetValues<Tag>().Take(8)
-            .FirstOrDefault(t => t.ToString().StartsWith(typed, StringComparison.OrdinalIgnoreCase)) is var t
-            && typed.Length > 0 && t.ToString().StartsWith(typed, StringComparison.OrdinalIgnoreCase) ? t : null;
+    static readonly (Tag Tag, string Name)[] Filters =
+    [
+        (Tag.App, "Apps"), (Tag.Setting, "Settings"), (Tag.Command, "Commands"), (Tag.File, "Files"),
+        (Tag.Window, "Windows"), (Tag.Project, "Projects"), (Tag.Clipboard, "Clipboard"), (Tag.Theme, "Themes"),
+    ];
+
+    public static Tag? TagFromTyped(string typed)
+    {
+        if (typed.Length == 0) return null;
+        foreach (var (tag, name) in Filters)
+            if (name.StartsWith(typed, StringComparison.OrdinalIgnoreCase)) return tag;
+        return null;
+    }
 }
 ```
 
