@@ -335,9 +335,14 @@ elseif (Get-Process zebar -ErrorAction SilentlyContinue) { Pass 'zebar' } else {
 # The launcher, file finder and system menu are one native app (menu-app/), running hidden.
 if ($myMenu) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
 else { Warn 'launcher / menu (Win+Space, Win+Alt+Space)' 'not running; the first Win+Space starts it' }
-if (Get-Command glazewm -ErrorAction SilentlyContinue) {
-    $state = glazewm query monitors 2>$null | ConvertFrom-Json -ErrorAction SilentlyContinue
-    if ($state.success) { Pass 'GlazeWM answers' "$(@($state.data.monitors).Count) monitor(s)" } else { Fail 'GlazeWM answers' 'glazewm query failed' }
+# Only when it's running: with no GlazeWM to answer, `glazewm query` waits for one forever. And
+# with a time limit, so a GlazeWM that's stuck shows here instead of stopping the check.
+if ((Get-Command glazewm -ErrorAction SilentlyContinue) -and (Get-Process glazewm -ErrorAction SilentlyContinue)) {
+    $query = Start-Job { glazewm query monitors 2>$null }
+    $state = if (Wait-Job $query -Timeout 5) { Receive-Job $query | ConvertFrom-Json -ErrorAction SilentlyContinue }
+    Remove-Job $query -Force
+    if ($state.success) { Pass 'GlazeWM answers' "$(@($state.data.monitors).Count) monitor(s)" }
+    else { Fail 'GlazeWM answers' 'no answer to glazewm query in 5 s' }
 }
 
 Write-Host ''
