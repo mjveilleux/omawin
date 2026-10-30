@@ -7,7 +7,7 @@
 # the version stamp (-Release <tag>) and the release ZIP.
 #
 #   push a v* tag        builds both architectures and publishes the release
-#   run by hand          builds and keeps the files as artifacts (no release)
+#   run by hand          builds and keeps the files as artifacts; with publish, also makes the tag and the release
 #
 # Arm64: GitHub's arm64 Windows runners are free for public repositories only
 # (runs-on: windows-11-arm), so those two jobs wait for the repo variable ARM64_RUNNERS=true.
@@ -219,7 +219,10 @@ jobs:
           # A version with a suffix (v0.3.0-rc.1) is a pre-release: GitHub's "latest", which installs
           # and updates take, stays on the last full one.
           $pre = @(if ($tag -match '-') { '--prerelease' })
-          gh release create $tag --repo '${{ github.repository }}' --verify-tag `
+          # A pushed tag is checked to exist; a run started by hand (publish: true) makes the tag at
+          # the commit it built.
+          $where = if ('${{ github.ref_type }}' -eq 'tag') { @('--verify-tag') } else { @('--target', '${{ github.sha }}') }
+          gh release create $tag --repo '${{ github.repository }}' @where `
             --generate-notes --title $tag @pre @files
 
   # The release just published, installed the way a new PC does: the one-line bootstrap, as a new
