@@ -99,6 +99,8 @@ Omakase: the defaults are good. Every question moves to a **welcome page** in th
 
 ### I. Package managers stay in charge when you want them
 
+*Now part of `omawin pkg` ([roadmap.md](roadmap.md), phase 2B): `omawin tools source` and `omawin tools handover` below become `omawin pkg move` and `omawin pkg prefer`, and the bundle is one of `omawin pkg`'s backends.*
+
 The bundle's copies are a fast start, never a lock-in. Anything can still be installed, updated or replaced through **winget, Scoop or Chocolatey** (or mise), individually, at any time.
 
 - **Your package manager's copy wins.** omawin's bundled tools sit at the **end** of the user PATH (`%LOCALAPPDATA%\omawin\current\tools`). A tool you install with winget (its links folder), Scoop (its shims) or Chocolatey (on the system PATH, which Windows puts first anyway) is found before omawin's, with no configuration. mise's shims, when you use mise for a tool, likewise come before the bundle.

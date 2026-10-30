@@ -25,6 +25,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Linux follows **all of Omarchy's package sources and decisions**: Omarchy's repositories (stable channel), Omarchy's package choices for the terminal, **no AUR** |
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
+| 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
 | 2026-10-30 | **Never open Settings again**: every Windows setting is searchable in the system menu (Win+Alt+Space), and the common ones switch on and off right there |
 | 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
 
@@ -324,6 +325,43 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 `Microsoft.DotNet.DesktopRuntime.9` is one of the slowest items. The AOT menu app is self-contained; if it no longer needs the runtime, only the music player does: publish the player self-contained (or AOT) too, and the runtime leaves the core.
 
 ---
+
+## Phase 2B: `omawin pkg`, one package command over winget, Scoop and Chocolatey
+
+**Why:** Windows has three package managers, each with a different catalogue, different ids, different scopes and different update commands, and you have to remember which one installed what. Omarchy wraps pacman and the AUR in its own commands (`omarchy-pkg-add`, `omarchy-pkg-drop`, `omarchy-update`); omawin should do the same for Windows: **one command, and omawin picks and remembers the manager.** omawin is already partway there: the launcher's Packages page searches all three (`omawin pkg find`), `omawin pkg install` / `remove` are winget-only today (`bin/pkg-install.ps1`, `bin/pkg-remove.ps1`), and `%LOCALAPPDATA%\launcher\installed.txt` records what's installed.
+
+**What it is:** a thin layer, not a new package manager. It never resolves dependencies, builds packages or keeps its own repository: it chooses a backend, runs it, and records the choice. Backends: **winget**, **Scoop**, **Chocolatey**, **mise** (languages and dev tools), the **omawin bundle** (2.0: the fast first-install copies), and **pacman in Arch** for Linux packages (`--linux`).
+
+**Commands** (rows in `bin/commands.txt`, the same in the Packages page and the system menu):
+
+| Command | Does |
+|---|---|
+| `omawin pkg install <name> [--from winget\|scoop\|choco\|mise] [--linux]` | finds the package in every backend's catalogue, picks one (below), installs it, records where it came from |
+| `omawin pkg remove <name>` | removes it through the backend that installed it |
+| `omawin pkg update [name]` | updates one package, or everything, each through its own backend (`winget upgrade`, `scoop update`, `choco upgrade`, `mise upgrade`, a new bundle, `pacman -Syu` in Arch), admin ones in one prompt |
+| `omawin pkg list` | everything installed, by any backend (including things you installed without omawin), with version, backend and whether an update is waiting |
+| `omawin pkg info <name>` | which backends have it, at what versions, which copy runs now (PATH order) |
+| `omawin pkg move <name> --to <backend>` | moves a package to another backend: installs there, removes or sets aside the old copy (the bundle's copy is set aside, never deleted) |
+| `omawin pkg prefer <backend> [backend…]` | your order of preference |
+
+**How it picks a backend**, in order: your explicit `--from`; a per-package pin you set before (`omawin pkg move` records one); omawin's own default for that package (a small table in the repo, e.g. languages through mise, GUI apps through winget, the bundled CLI tools from the bundle); your preference order (`omawin pkg prefer`, default winget, then Scoop, then Chocolatey); the first backend that has it. Machine-wide or per-user follows the backend's default unless `--machine` / `--user` is given; anything needing admin waits for one batched prompt.
+
+**What it records:** `%LOCALAPPDATA%\launcher\packages.tsv`: name, backend, backend id, scope, version, installed by omawin or found. `omawin pkg list` refreshes it from each backend's own list (`winget export`, `scoop export`, `choco list`, `mise ls`), so packages installed outside omawin show up too, and nothing drifts.
+
+**One name for one thing:** the same tool has different ids per backend (`BurntSushi.ripgrep.MSVC` in winget, `ripgrep` in Scoop and Chocolatey). A name map in the repo (`packages/names.tsv`: omawin name → winget id, Scoop name, Chocolatey id, mise tool, Arch package) covers the common developer tools; anything else is found by search across backends, and you choose when it's ambiguous.
+
+**How it fits the rest:**
+- **The fast install** ([install-speed.md](install-speed.md)) uses the bundle backend for the first minute; `omawin pkg` is how you take over any of those tools with winget, Scoop or Chocolatey later (it replaces that plan's `omawin tools source` / `handover`, which become `omawin pkg move` and `omawin pkg prefer`). Your package manager's copy always wins on the PATH.
+- **Presets** (`packages.ps1`) become lists of omawin names, installed through `omawin pkg`, so each preset works with whichever backend you prefer.
+- **Update › All apps** (5.9) is `omawin pkg update`.
+- **The Packages page** shows, per result, which backends have it and which you prefer, and marks what's installed and from where.
+- **Linux**: `omawin pkg install <name> --linux` runs pacman in Arch (Omarchy's repositories, no AUR; 3.2) or apt in Ubuntu, so one command covers both sides.
+
+**Prior art:** UniGetUI (formerly WingetUI) already puts one interface over winget, Scoop, Chocolatey, pip, npm and others; read its handling of ids, scopes and update detection before building (licence to check before borrowing any code). omawin's difference is a keyboard-first command and launcher page in the shell, with omawin's own defaults and the bundle as a backend.
+
+**Risks:** each backend's quirks leak (winget's ids and its `--scope`, Scoop's shims, Chocolatey's admin and machine-wide installs, version strings that don't compare); the layer reports each backend's own error as is rather than hiding it, and `--from` always lets you go direct. It doesn't make installs faster by itself (each backend is as fast as it is); speed comes from the bundle and from running backends in parallel.
+
+**Done when:** `omawin pkg install`, `remove`, `update`, `list`, `info`, `move` and `prefer` work across all three managers and mise; `omawin pkg list` matches what each manager reports; presets install through it; CI exercises winget and Scoop on a Windows runner (Chocolatey too, with admin).
 
 ## Phase 3: Linux in WSL, first class (Arch by default, Omarchy's way)
 
