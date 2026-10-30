@@ -104,9 +104,9 @@ What's yours in every Windows account on this PC (omawin's docs/work.md). Every 
 this folder live; only the account that made it (its owner) may change it,
 since what's here runs in every account.
 
-- ``claude/CLAUDE.md``, ``claude/skills/``, ``claude/settings.json``: Claude Code's rules, skills and
+- ``config/claude/CLAUDE.md``, ``config/claude/skills/``, ``config/claude/settings.json``: Claude Code's rules, skills and
   settings (omawin claude sync)
-- ``launcher/items.txt``, ``sites.txt``, ``keys.txt``: launcher items, Localhost sites, Shortcuts lines
+- ``default/launcher/items.txt``, ``sites.txt``, ``keys.txt``: launcher items, Localhost sites, Shortcuts lines
 
 Never here: passwords, tokens, client documents, or anything one employer or client shouldn't
 see in another's account. Those go in that account's ~/omawin-account.

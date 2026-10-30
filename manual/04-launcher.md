@@ -3,7 +3,7 @@
 ## Launcher (Win+Space)
 
 Like Omarchy's Super+Space. It opens on tiles:
-- a big tile for the first item in `launcher/items.txt` (`icon | name | command`), the terminal
+- a big tile for the first item in `default/launcher/items.txt` (`icon | name | command`), the terminal
 - Projects and Clipboard, showing your recent projects and what you last copied
 - your next four items, with a server count on Localhost
 - a Menu bar
@@ -40,10 +40,10 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 `omawin pkg install` is the same for winget in a terminal, with fzf.
 
 - **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in your Linux in WSL (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
-  - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`launcher/project-tabs.txt`).
+  - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`default/launcher/project-tabs.txt`).
   - The session keeps running when the window closes, agents and all; opening the project again reattaches to it.
   - Linux repos open inside WSL, marked with your distro's logo (Arch or Ubuntu). WSL is only asked when it's already running (a cold start takes ~8 s); otherwise the last list is reused.
-- **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. Under them are your favorite sites from `launcher/sites.txt`.
+- **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. Under them are your favorite sites from `default/launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.
 - **Clipboard** (or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
@@ -60,7 +60,7 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 - **Reports** (only when your account folder, `~/omawin-account`, has a reports script: [docs/work.md](../docs/work.md)): reports from your own folders and shares, newest first. A share you can't reach right now (VPN off) keeps its last list.
   - Picking one runs your script's import; a share that's offline asks to connect the VPN first.
   - The list refreshes in the background every 2 hours, or now with `omawin reports index`.
-- **Shortcuts**: the searchable key list (`launcher/keys.txt`).
+- **Shortcuts**: the searchable key list (`default/launcher/keys.txt`).
 - **About** (`omawin about`, or **System menu › About**): fastfetch-style facts, one a row: omawin's version (its git tag or commit, and date), Windows edition and build, uptime, CPU, GPU, memory, disk, theme, GlazeWM / noctty versions, the menu app's own memory, stay awake. **Enter** copies a row.
 - **VPN items** (`@vpn <name>`, in your account folder's `launcher/items.txt`, say): connect that Windows VPN connection. Windows' own connect box opens already dialing and connects in a couple of seconds with the saved sign-in. When it's connected, the item offers Disconnect and the bar shows **VPN** and its name.
 - **Your own items and sites**: `launcher/items.txt` and `launcher/sites.txt` in the PC's shared folder (`C:\ProgramData\omawin\shared`, every account) and in this account's folder (`~/omawin-account`) add theirs after omawin's: an email profile, a work app, a VPN. ([docs/work.md](../docs/work.md) says which goes where.)
@@ -74,4 +74,4 @@ Also the launcher's **Files** item. A wider window:
 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 
-It searches Desktop and Documents (both your home folder's and, when OneDrive backs them up, OneDrive's: chips "OneDrive Desktop", "OneDrive Documents"), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder. It watches them, honors `.gitignore` (so a repo's ignored files, like a Power BI project's `.pbix` copies, don't show; its `.pbip` does) and ranks files you open higher. Folders, then files, whose own name matches come first. Folders named in `launcher/finder-skip.txt` (node_modules, duckdb, …) are skipped. Search is by [fff](https://github.com/dmtrKovalenko/fff).
+It searches Desktop and Documents (both your home folder's and, when OneDrive backs them up, OneDrive's: chips "OneDrive Desktop", "OneDrive Documents"), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder. It watches them, honors `.gitignore` (so a repo's ignored files, like a Power BI project's `.pbix` copies, don't show; its `.pbip` does) and ranks files you open higher. Folders, then files, whose own name matches come first. Folders named in `default/launcher/finder-skip.txt` (node_modules, duckdb, …) are skipped. Search is by [fff](https://github.com/dmtrKovalenko/fff).

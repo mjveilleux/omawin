@@ -12,6 +12,6 @@ It needs a speech model: the install downloads Parakeet V3 (English, about 460 M
 
 The session starts at login, without a window, with OpenCode's server running in its first tab (**opencode**), so a request starts in a second. `omawin agent open` shows it on workspace 9 any time; the window also comes up there by itself with a request.
 
-It makes quick changes to omawin itself (configs, keys, menu rows, small fixes), runs omawin's commands and the music player, opens issues, and starts a branch with its own session for bigger work. It runs on your agent default (`omawin default agent claude|opencode`, as in Neovim) with a cheap model, Claude's Haiku or OpenCode's DeepSeek Flash; `agent/config.json` holds the models. See [docs/agent.md](../docs/agent.md).
+It makes quick changes to omawin itself (configs, keys, menu rows, small fixes), runs omawin's commands and the music player, opens issues, and starts a branch with its own session for bigger work. It runs on your agent default (`omawin default agent claude|opencode`, as in Neovim) with a cheap model, Claude's Haiku or OpenCode's DeepSeek Flash; `src/agent/config.json` holds the models. See [docs/agent.md](../docs/agent.md).
 
 `omawin agent ask <request>`, typed in a terminal, does a request in the background instead and answers in one line.

@@ -32,7 +32,7 @@ if (-not $Set) { [pscustomobject]@{ GLAZEWM_IPC_PORT = $ports.GLAZEWM_IPC_PORT }
 # account shares (another account may have put the fork in, or put the official one back): the
 # fork installer keeps the official CLI it replaced as glazewm.official.exe, and what runs is
 # signed as ours. omawin.exe decides the same way at every sign-in (bin/omawin.cs, SetPorts); so
-# does check.ps1. The tools bundle's per-user GlazeWM isn't the fork: the official port.
+# does bin/check.ps1. The tools bundle's per-user GlazeWM isn't the fork: the official port.
 $glzr = Join-Path $env:ProgramFiles 'glzr.io'
 $sig = Get-AuthenticodeSignature "$glzr\GlazeWM\glazewm.exe" -ErrorAction SilentlyContinue
 $ready = $sig -and $sig.SignerCertificate -and $sig.SignerCertificate.Subject -like 'CN=omawin code signing*' -and

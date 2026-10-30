@@ -56,7 +56,7 @@ if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::
 }
 $Repo = $PSScriptRoot
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-. "$Repo\packages.ps1"
+. "$Repo\install\packages.ps1"
 . "$Repo\install\lib.ps1"
 $UI.Mode = if ($LinkOnly) { 'link' } else { 'full' }
 $Steps = @(Get-InstallSteps)

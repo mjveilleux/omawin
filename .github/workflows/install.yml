@@ -1,4 +1,4 @@
-# The install, timed (roadmap 2.1, docs/plan/03-install-update-packages.md §8.1): a fresh Windows
+# The install, timed (roadmap 2.1, plans/03-install-update-packages.md §8.1): a fresh Windows
 # runner installs this branch the way a person does, with bootstrap.ps1, as a standard user (the
 # install refuses to run as admin, and 2.9 says it needs none), then runs omawin check.
 #
@@ -21,7 +21,7 @@ on:
     - cron: '43 3 * * 1'   # Mondays, for the trend
   push:
     branches: [main, 'claude/**']
-    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'packages.ps1', 'check.ps1', 'bin/migrate.ps1', 'bin/install-binaries.ps1', 'bin/release.ps1', 'bin/noctty.ps1', 'migrations/**', 'bundle/**', 'build/**', '.github/workflows/install.yml', '.github/workflows/release.yml']
+    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'bin/check.ps1', 'bin/migrate.ps1', 'bin/install-binaries.ps1', 'bin/release.ps1', 'bin/noctty.ps1', 'migrations/**', 'src/bundle/**', 'build/**', '.github/workflows/install.yml', '.github/workflows/release.yml']
 
 permissions:
   contents: read

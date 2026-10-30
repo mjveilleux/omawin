@@ -142,7 +142,7 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 }
 
 # PowerShell 7 runs everything after this script (install.ps1 needs it). Taken from the release's
-# tools bundle (bundle/tools.txt): per-user, no admin, checked against the release's SHA256SUMS.
+# tools bundle (install/tools.txt): per-user, no admin, checked against the release's SHA256SUMS.
 # Its download starts now and runs while git gets the repo.
 Write-Step 'PowerShell 7'
 $Pwsh = $null

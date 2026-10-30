@@ -1,6 +1,6 @@
 # The native bar (work in progress)
 
-The bar moves out of Zebar, whose widgets are web pages in Edge's WebView2 (~2 s to draw, ~220 MB), into the menu app (`menu-app/`), the one always-running native process that already holds the launcher, the system menu and screenshots. Omarchy 4 did the same on Linux: one Quickshell process for its bar, launcher and notifications, no web engine. The code lives in `menu-app/Bar/`, since it's that process; the menu app compiles to one native program (Native AOT) so it is up seconds sooner at sign-in.
+The bar moves out of Zebar, whose widgets are web pages in Edge's WebView2 (~2 s to draw, ~220 MB), into the menu app (`shell/menu-app/`), the one always-running native process that already holds the launcher, the system menu and screenshots. Omarchy 4 did the same on Linux: one Quickshell process for its bar, launcher and notifications, no web engine. The code lives in `shell/menu-app/Bar/`, since it's that process; the menu app compiles to one native program (Native AOT) so it is up seconds sooner at sign-in.
 
 Until it matches Zebar, both exist: `omawin bar native|zebar` picks one (`%LOCALAPPDATA%\launcher\bar`), and `omawin check` checks the one picked.
 

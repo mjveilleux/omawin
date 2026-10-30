@@ -73,7 +73,7 @@ try {
     $lines = @{
         'no-ads'  = @('ok  Windows suggestions and promos off', '+Windows|ads and suggestions off|done', 'ok  Copilot off the taskbar', '+Windows|Copilot off the taskbar|done')
         'shell'   = @('>PowerShell profile', 'wrote Documents\PowerShell\profile.ps1', '+Settings|profile.ps1|done', '+Settings|Microsoft.PowerShell_profile.ps1|done', '>Windows Terminal', 'seeded its settings', '+Settings|Windows Terminal|done', '>noctty', '+Settings|config.ghostty|done', '>starship', 'ok  STARSHIP_CONFIG', '+Settings|starship prompt|done', '+Settings|fastfetch|done', '+Settings|herdr config|done', '>git', '+Settings|git config|done', '!no git email for this account yet: omawin account new sets it', '>Git Bash', '+Settings|.bashrc|done', '+Settings|.bash_profile|done')
-        'desktop' = @('>GlazeWM', 'ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml', '+Settings|GlazeWM config|done', '+Desktop|GlazeWM at sign-in|done', "GlazeWM fork v3.10.1-omawin.8 (signed on this PC)", "+Desktop|omawin's GlazeWM|done", "port for this account: GlazeWM 24002", "+Desktop|this account's port|done", '>Handy (dictation on Win+H)', 'configured Handy', '+Desktop|dictation (Win+H)|done')
+        'desktop' = @('>GlazeWM', 'ok  ~/.glzr/glazewm/config.yaml rendered from config/glazewm/config.yaml', '+Settings|GlazeWM config|done', '+Desktop|GlazeWM at sign-in|done', "GlazeWM fork v3.10.1-omawin.8 (signed on this PC)", "+Desktop|omawin's GlazeWM|done", "port for this account: GlazeWM 24002", "+Desktop|this account's port|done", '>Handy (dictation on Win+H)', 'configured Handy', '+Desktop|dictation (Win+H)|done')
         'helpers' = @('>omawin and the helpers', 'omawin.exe and the bar helpers from release v0.1.5', '+Tools|omawin.exe|done', '>noctty', '+Tools|noctty|done', '>Win+Alt+Space system menu', 'from release v0.1.5', '+Tools|system menu|done', '>Music player (the bar)', 'from release v0.1.5', '+Tools|music player|done')
         'look'    = @('>Windows look', 'theme: starship', '+Desktop|theme|done', 'ok  lock screen rotates on unlock', '+Desktop|lock screen|done', 'taskbar set to auto-hide', '+Desktop|taskbar hides|done')
         'other'   = @('>WSL', 'wrote ~/.wslconfig', '+Settings|.wslconfig|done', '>Claude Code', 'ok  rules: 2 folder(s) imported', 'ok  settings merged', '+Settings|Claude Code|done')
@@ -109,7 +109,7 @@ try {
             }
             Set-BoardPackageNote $null
             Write-OkCount
-            Invoke-DemoLines @('>other tools', '+Tools|herdr|done', '>JetBrainsMono Nerd Font', '+Tools|JetBrainsMono Nerd Font|done', 'installed (restart Windows Terminal to pick it up)', '>Neovim and Neovide', 'linked ~/AppData/Local/nvim -> ~/omawin/nvim', '+Settings|nvim|done', '+Settings|neovide|done', '+Settings|.Rprofile|done')
+            Invoke-DemoLines @('>other tools', '+Tools|herdr|done', '>JetBrainsMono Nerd Font', '+Tools|JetBrainsMono Nerd Font|done', 'installed (restart Windows Terminal to pick it up)', '>Neovim and Neovide', 'linked ~/AppData/Local/nvim -> ~/omawin/config/nvim', '+Settings|nvim|done', '+Settings|neovide|done', '+Settings|.Rprofile|done')
         } else {
             Invoke-DemoLines $lines[$s.Name]
             if ($Fail -and $s.Name -eq 'desktop') {

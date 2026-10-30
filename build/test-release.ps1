@@ -54,8 +54,8 @@ try {
         New-Item -ItemType Directory -Force "$Built\helpers" | Out-Null
         & "$Repo\build\helpers.ps1" -OutDir "$Built\helpers" -Release $Tag
         foreach ($a in $Arch) {
-            & "$Repo\menu-app\build.ps1" -OutDir "$Built\menu-$a" -BuildOnly -Release $Tag -Arch $a
-            & "$Repo\music\build.ps1" -OutDir "$Built\music-$a" -BuildOnly -Release $Tag -Arch $a
+            & "$Repo\shell\menu-app\build.ps1" -OutDir "$Built\menu-$a" -BuildOnly -Release $Tag -Arch $a
+            & "$Repo\src\music\build.ps1" -OutDir "$Built\music-$a" -BuildOnly -Release $Tag -Arch $a
         }
     } elseif (-not (Test-Path "$Built\helpers\omawin.exe")) { throw "-SkipBuild: nothing built yet in $Built (run without it once)" }
 

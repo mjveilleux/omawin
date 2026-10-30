@@ -3,7 +3,7 @@
 # them; docs/releases.md is the reader's version of this file).
 #
 # The build is not a second recipe: every job runs the same script this PC runs (build/helpers.ps1,
-# menu-app\build.ps1, music\build.ps1), so a release is the local build. The only thing CI adds is
+# shell\menu-app\build.ps1, src\music\build.ps1), so a release is the local build. The only thing CI adds is
 # the version stamp (-Release <tag>) and the release ZIP.
 #
 #   push a v* tag        builds both architectures and publishes the release
@@ -90,7 +90,7 @@ jobs:
           path: out/helpers
           if-no-files-found: error
 
-  # The tools bundle (bundle/tools.txt, roadmap 2.0): each core tool's portable build from its own
+  # The tools bundle (install/tools.txt, roadmap 2.0): each core tool's portable build from its own
   # release, one zip per tool, so a new PC unpacks them instead of running winget 20 times.
   # Linux: it only downloads and zips.
   tools:
@@ -101,10 +101,10 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
-      - name: Build the bundle (build/bundle)
+      - name: Build the bundle (src/bundle)
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: dotnet run --project build/bundle -c Release -- out/tools
+        run: dotnet run --project src/bundle -c Release -- out/tools
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: tools
@@ -112,7 +112,7 @@ jobs:
           if-no-files-found: error
 
   # Neovim's treesitter parsers, prebuilt: the ones LazyVim installs, from the nvim-treesitter commit
-  # nvim/lazy-lock.json pins, so a PC needs no C compiler (it used to take zig: 98 MB, 19,500 files).
+  # config/nvim/lazy-lock.json pins, so a PC needs no C compiler (it used to take zig: 98 MB, 19,500 files).
   # Built here with the runner's Visual Studio compiler, zipped from Neovim's data folder (site:
   # parser, parser-info, queries) and published as one more tools bundle entry (build/release.ps1).
   parsers:
@@ -135,8 +135,8 @@ jobs:
       - name: The parsers LazyVim installs, built
         shell: pwsh
         run: |
-          # This repo's config as the runner's Neovim config, plugins at nvim/lazy-lock.json's commits.
-          Copy-Item -Recurse nvim "$env:LOCALAPPDATA\nvim"
+          # This repo's config as the runner's Neovim config, plugins at config/nvim/lazy-lock.json's commits.
+          Copy-Item -Recurse config\nvim "$env:LOCALAPPDATA\nvim"
           nvim --headless "+Lazy! restore" +qa
           # The list from LazyVim; the build in a clean Neovim with only the pinned nvim-treesitter, so
           # LazyVim's own auto-install can't race it for the same files (EPERM on rename).
@@ -162,7 +162,7 @@ jobs:
           $site = "$env:LOCALAPPDATA\nvim-data\site"
           if (-not (Get-ChildItem "$site\parser" -ErrorAction SilentlyContinue)) { throw "no parsers were built in $site\parser" }
           Get-ChildItem "$site\parser" | Format-Table Name, Length
-          $commit = (Get-Content nvim\lazy-lock.json -Raw | ConvertFrom-Json).'nvim-treesitter'.commit
+          $commit = (Get-Content config\nvim\lazy-lock.json -Raw | ConvertFrom-Json).'nvim-treesitter'.commit
           New-Item -ItemType Directory -Force out\parsers | Out-Null
           Compress-Archive -Path "$site\*" -DestinationPath out\parsers\omawin-tool-nvim-parsers.zip -CompressionLevel Optimal
           Set-Content out\parsers\version.txt $commit.Substring(0, 12)
@@ -188,7 +188,7 @@ jobs:
           dotnet-version: '9.0.x'
       - name: Build (the same script this PC runs)
         shell: pwsh
-        run: .\menu-app\build.ps1 -OutDir out\menu-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: menu-${{ matrix.arch }}
@@ -209,7 +209,7 @@ jobs:
           dotnet-version: '9.0.x'
       - name: Build (the same script this PC runs)
         shell: pwsh
-        run: .\music\build.ps1 -OutDir out\music-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+        run: .\src\music\build.ps1 -OutDir out\music-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: music-${{ matrix.arch }}

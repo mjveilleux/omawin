@@ -48,7 +48,7 @@ function Test-Interactive {
         -not ([Environment]::GetCommandLineArgs() -match '^-NonI')
 }
 
-# The presets this PC picked (packages.ps1 has them), one name per line.
+# The presets this PC picked (install/packages.ps1 has them), one name per line.
 $PresetsFile = "$env:LOCALAPPDATA\launcher\presets.txt"
 function Get-Presets {
     @(Get-Content $PresetsFile -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } |

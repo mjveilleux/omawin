@@ -1,4 +1,4 @@
 * text=auto
 *.ps1 text eol=crlf
-bash/* text eol=lf
+config/bash/* text eol=lf
 *.sh text eol=lf

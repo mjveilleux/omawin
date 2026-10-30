@@ -13,7 +13,7 @@
       <name>.json                   palette, wallpapers and mode: what the menu, set-theme.ps1,
                                     render.ps1 and the launcher read
       colors/<name>.toml            the full palette in Omarchy's names (render.ps1's placeholders)
-      nvim/<name>.lua               the Neovim colorscheme spec
+      config/nvim/<name>.lua               the Neovim colorscheme spec
       btop/<name>.theme             the btop theme
       vscode/<name>.color-theme.json  a VS Code theme made from the palette
       vscode/<name>.json            the theme's own VS Code extension, when it names one
@@ -198,7 +198,7 @@ $toml = @("# $title, from Omarchy's colors.toml (themes/convert-theme.ps1: missi
 foreach ($key in $order) { $toml += if ($key) { "$key = `"$($c[$key])`"" } else { '' } }
 Write-Utf8File (Join-Path $Out "colors\$Name.toml") (($toml -join "`n") + "`n")
 
-# nvim/<name>.lua: the theme's own colorscheme spec, or Omarchy's aether.nvim template.
+# config/nvim/<name>.lua: the theme's own colorscheme spec, or Omarchy's aether.nvim template.
 $nvimOut = Join-Path $Out "nvim\$Name.lua"
 $nvimOwn = Join-Path $Source 'neovim.lua'
 if (-not $Untrusted -and (Test-Path $nvimOwn)) {

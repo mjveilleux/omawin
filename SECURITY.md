@@ -10,7 +10,7 @@ You'll get an answer as soon as possible. A fix ships in a release, and the repo
 
 ## What omawin trusts
 
-How each thing omawin downloads or runs is checked (the bootstrap, the release, packages, themes, plugins, your own folders) is in [docs/plan/09-for-everyone.md](docs/plan/09-for-everyone.md#1-security-model). In short:
+How each thing omawin downloads or runs is checked (the bootstrap, the release, packages, themes, plugins, your own folders) is in [plans/09-for-everyone.md](plans/09-for-everyone.md#1-security-model). In short:
 
 - Install, update and everyday use never ask for admin; nothing elevated runs in the background.
 - Releases are signed, and downloads are checked against the release's SHA-256 sums.

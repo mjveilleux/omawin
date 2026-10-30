@@ -1,4 +1,4 @@
-// voice-meter: tells the bar (the menu app's, menu-app/Bar/Bar.cs) when dictation (Handy on Win+H,
+// voice-meter: tells the bar (the menu app's, shell/menu-app/Bar/Bar.cs) when dictation (Handy on Win+H,
 // or Windows voice typing) is listening, and how loud the microphone is, so the bar can animate
 // along with your voice. It quits when whoever reads it is gone: its next line fails to write.
 //
@@ -8,7 +8,7 @@
 //   0         not listening                     (on change, then every 2 s)
 //
 // Listening = Handy, the voice typing app (package MicrosoftWindows.Client.CBS) or omawin-listen
-// (agent/omawin-listen.cs) is using the mic, per Windows' privacy log in the registry (LastUsedTimeStop is 0 while in use). The level
+// (src/agent/omawin-listen.cs) is using the mic, per Windows' privacy log in the registry (LastUsedTimeStop is 0 while in use). The level
 // comes from the default microphone's peak meter, the same meter Windows' sound settings
 // show; this never opens the microphone itself.
 //

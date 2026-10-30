@@ -1,0 +1,42 @@
+# The tools bundle (roadmap 2.0, plans/install-speed.md): every core tool that has a portable
+# Windows build, fetched from its upstream release by CI (build/bundle), repacked as one zip per
+# tool and published with omawin's release. The install downloads them all at once and unpacks
+# them side by side into %LOCALAPPDATA%\omawin\tools\<name>: no winget, no installers, no admin.
+# Omarchy does the same with its ISO's offline package cache.
+#
+#   <name> | <source> | <asset> | <bin> | <winget id it stands in for> | <home> | <flags>
+#
+#   source  github:<owner>/<repo> (its latest release), node-lts, zig-stable
+#   asset   a regex for the release file's name; "=> <name>" renames a single-file asset (an
+#           .exe, or a .gz holding one)
+#   bin     the folder inside the tool that goes on the PATH ("." for its top, "-" for none)
+#   winget  the core package it replaces (install/packages.ps1): that one isn't installed through winget
+#   home    where it goes instead of tools\<name>, under %LOCALAPPDATA% (a tool other scripts
+#           already look for in its own place)
+#   flags   later: the install doesn't wait for it, it finishes unpacking in the background (a
+#           big one nothing needs at once); keep:<pattern>[,<pattern>...]: only the files whose
+#           name matches one (the font: the four faces a terminal and an editor use, of the one
+#           family omawin names, "JetBrainsMono NF", not all 96: ~10 MB of 135)
+
+pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
+wt          | github:microsoft/terminal         | ^Microsoft\.WindowsTerminal_[0-9.]+_x64\.zip$      | .   | Microsoft.WindowsTerminal
+gh          | github:cli/cli                    | ^gh_[0-9.]+_windows_amd64\.zip$                    | bin | GitHub.cli
+starship    | github:starship/starship          | ^starship-x86_64-pc-windows-msvc\.zip$             | .   | Starship.Starship
+zoxide      | github:ajeetdsouza/zoxide         | ^zoxide-[0-9.]+-x86_64-pc-windows-msvc\.zip$       | .   | ajeetdsouza.zoxide
+fzf         | github:junegunn/fzf               | ^fzf-[0-9.]+-windows_amd64\.zip$                   | .   | junegunn.fzf
+fd          | github:sharkdp/fd                 | ^fd-v[0-9.]+-x86_64-pc-windows-msvc\.zip$          | .   | sharkdp.fd
+ripgrep     | github:BurntSushi/ripgrep         | ^ripgrep-[0-9.]+-x86_64-pc-windows-msvc\.zip$      | .   | BurntSushi.ripgrep.MSVC
+eza         | github:eza-community/eza          | ^eza\.exe_x86_64-pc-windows-gnu\.zip$              | .   | eza-community.eza
+bat         | github:sharkdp/bat                | ^bat-v[0-9.]+-x86_64-pc-windows-msvc\.zip$         | .   | sharkdp.bat
+jq          | github:jqlang/jq                  | ^jq-windows-amd64\.exe$ => jq.exe                  | .   | jqlang.jq
+lazygit     | github:jesseduffield/lazygit      | ^lazygit_[0-9.]+_[Ww]indows_x86_64\.zip$           | .   | JesseDuffield.lazygit
+fastfetch   | github:fastfetch-cli/fastfetch    | ^fastfetch-windows-amd64\.zip$                     | .   | Fastfetch-cli.Fastfetch
+bun         | github:oven-sh/bun                | ^bun-windows-x64\.zip$                             | .   | Oven-sh.Bun
+nvim        | github:neovim/neovim              | ^nvim-win64\.zip$                                  | bin | Neovim.Neovim
+neovide     | github:neovide/neovide            | ^neovide\.exe\.zip$                                | .   | Neovide.Neovide
+tree-sitter | github:tree-sitter/tree-sitter    | ^tree-sitter-windows-x64\.gz$ => tree-sitter.exe   | .   | tree-sitter.tree-sitter-cli
+node        | node-lts                          | win-x64                                            | .   | OpenJS.NodeJS.LTS
+uv          | github:astral-sh/uv               | ^uv-x86_64-pc-windows-msvc\.zip$                   | .   | astral-sh.uv
+glazewm     | github:mjveilleux/glazewm         | ^glazewm-.+-windows-x64\.zip$                      | cli | glzr-io.glazewm
+noctty      | github:mjveilleux/noctty          | ^noctty-.+-windows-x64-portable\.zip$              | -   |                             | Programs\noctty
+font        | github:ryanoasis/nerd-fonts       | ^JetBrainsMono\.zip$                               | -   |                             | omawin\fonts\JetBrainsMono | keep:JetBrainsMonoNerdFont-Regular.ttf,JetBrainsMonoNerdFont-Bold.ttf,JetBrainsMonoNerdFont-Italic.ttf,JetBrainsMonoNerdFont-BoldItalic.ttf

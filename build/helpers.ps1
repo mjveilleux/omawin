@@ -36,8 +36,8 @@ if (-not $csc) { throw 'the C# compiler (csc.exe) is not on this PC; it ships wi
 $helpers = @(
     @{ Name = 'omawin'; Source = "$Repo\bin\omawin.cs"; Target = 'exe' }
     @{ Name = 'voice-meter'; Source = "$Repo\bin\voice-meter.cs"; Target = 'exe' }
-    # omawin-listen: Ctrl+Win+H, records what you say for omawin's agent (agent/).
-    @{ Name = 'omawin-listen'; Source = "$Repo\agent\omawin-listen.cs"; Target = 'winexe' }
+    # omawin-listen: Ctrl+Win+H, records what you say for omawin's agent (src/agent/).
+    @{ Name = 'omawin-listen'; Source = "$Repo\src\agent\omawin-listen.cs"; Target = 'winexe' }
 )
 
 # The release stamp. Two things: a generated file with the assembly attributes every helper carries

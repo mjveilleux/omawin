@@ -59,7 +59,7 @@ Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never dele
 - **Several accounts at once**: with the GlazeWM fork, each Windows account gets its own GlazeWM port (`GLAZEWM_IPC_PORT` in your user environment), so several can be signed in at once, each with its own desktop.
 - **No ads** (for you, no admin): Windows' suggestions, tips, promoted apps, the advertising ID, search highlights and the Copilot button off; the PC maker's notifications off (Lenovo, McAfee, Adobe, when present). `omawin no-ads` does the admin part: Windows' consumer-features policy, uninstalling Lenovo Now and McAfee's extras. [manual/11-no-ads.md](manual/11-no-ads.md) lists everything.
 - **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font (its four faces) installed for you.
-- **Programs**: the core tools unpacked into `%LOCALAPPDATA%\omawin\tools` from the release's tools bundle ([`bundle/tools.txt`](bundle/tools.txt): PowerShell 7, Windows Terminal, Neovim, GlazeWM, noctty, Bun, ripgrep and the rest), git and the .NET runtime from winget, the presets you pick from winget ([`packages.ps1`](packages.ps1)), and a few installers from their own sites (herdr; Claude Code and opencode with the AI preset). Where each came from is recorded, so `omawin pkg update` updates it the same way.
+- **Programs**: the core tools unpacked into `%LOCALAPPDATA%\omawin\tools` from the release's tools bundle ([`install/tools.txt`](install/tools.txt): PowerShell 7, Windows Terminal, Neovim, GlazeWM, noctty, Bun, ripgrep and the rest), git and the .NET runtime from winget, the presets you pick from winget ([`install/packages.ps1`](install/packages.ps1)), and a few installers from their own sites (herdr; Claude Code and opencode with the AI preset). Where each came from is recorded, so `omawin pkg update` updates it the same way.
 
 There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) lists the steps by hand.
 
@@ -107,16 +107,16 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 | Path | What |
 |---|---|
 | `bin/` | the `omawin` command (`omawin.cs`, `commands.txt`), update, migrate, profilers |
-| `menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
-| `launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
-| `glazewm/` · `bar/` | window manager config and keys · the bar's layout |
+| `shell/menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
+| `default/launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
+| `config/glazewm/` · `default/bar/` | window manager config and keys · the bar's layout |
 | `themes/` | Omarchy's themes, their palettes (`colors/`) and `render.ps1` |
-| `install.ps1` · `install/` · `packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
-| `bootstrap.ps1` · `check.ps1` · `no-ads.ps1` | the one-liner · health check · ads off |
-| `noctty/` · `herdr/` | the terminal's config · the multiplexer's |
-| `bundle/` · `build/` · `cli/` | the tools bundle's list · release and bundle builders · the C# command router |
-| `music/` · `agent/` | the music player (becoming a bar plugin) · omawin's agent (`Ctrl+Win+H`) |
-| `nvim/` `neovide/` `powershell/` `windows-terminal/` `starship/` `git/` `bash/` `r/` `wsl/` `claude/` | app configs, live-linked |
+| `install.ps1` · `install/` · `install/packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
+| `bootstrap.ps1` · `bin/check.ps1` · `bin/no-ads.ps1` | the one-liner · health check · ads off |
+| `config/noctty/` · `config/herdr/` | the terminal's config · the multiplexer's |
+| `bundle/` · `build/` · `src/cli/` | the tools bundle's list · release and bundle builders · the C# command router |
+| `src/music/` · `src/agent/` | the music player (becoming a bar plugin) · omawin's agent (`Ctrl+Win+H`) |
+| `config/nvim/` `config/neovide/` `config/powershell/` `config/windows-terminal/` `config/starship/` `config/git/` `config/bash/` `config/r/` `wsl/` `config/claude/` | app configs, live-linked |
 | `open-questions/` | decisions waiting for an answer |
 
 ## Credits

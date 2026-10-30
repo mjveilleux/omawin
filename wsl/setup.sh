@@ -89,7 +89,7 @@ arch_root() {
   pacman -Sy --needed --noconfirm archlinux-keyring omarchy-keyring > /dev/null 2> >(quiet_skips)
   pacman -Su --noconfirm > /dev/null
   # base-devel: treesitter compiles its parsers; nodejs/npm and python-pip: mason's npm and pip
-  # tools (prettier, sqlfluff); the rest is the shell's (bash/bashrc: starship, zoxide, fzf, eza,
+  # tools (prettier, sqlfluff); the rest is the shell's (config/bash/bashrc: starship, zoxide, fzf, eza,
   # bat), LazyVim's, and what Windows' core has too (lazygit, gh, fastfetch, btop). herdr is
   # Omarchy's.
   pacman -S --needed --noconfirm base-devel sudo which less man-db openssh curl wget git unzip zip \
@@ -185,12 +185,14 @@ user_part() {
   cd ~
   mkdir -p ~/.config ~/.local/bin
 
-  # omawin's Neovim config, the same files as Windows' (nvim/lua/omawin.lua finds Windows'
+  # omawin's Neovim config, the same files as Windows' (config/nvim/lua/omawin.lua finds Windows'
   # folders from here). Plugins and state stay Linux's own, in ~/.local/share/nvim.
-  if [ "$(readlink ~/.config/nvim 2>/dev/null)" != "$repo/nvim" ]; then
-    say "~/.config/nvim -> $repo/nvim"
-    [ -e ~/.config/nvim ] && mv ~/.config/nvim ~/.config/nvim.backup-"$(date +%Y%m%d-%H%M%S)"
-    ln -s "$repo/nvim" ~/.config/nvim
+  if [ "$(readlink ~/.config/nvim 2>/dev/null)" != "$repo/config/nvim" ]; then
+    say "~/.config/nvim -> $repo/config/nvim"
+    # An old link of ours (before the repo's configs moved to config/) is replaced; a folder of yours is moved aside.
+    if [ -L ~/.config/nvim ]; then rm ~/.config/nvim
+    elif [ -e ~/.config/nvim ]; then mv ~/.config/nvim ~/.config/nvim.backup-"$(date +%Y%m%d-%H%M%S)"; fi
+    ln -s "$repo/config/nvim" ~/.config/nvim
   fi
 
   # Login shells too (herdr's tabs are `bash -lc`): the configs and ~/.local/bin. bash reads
@@ -200,9 +202,9 @@ user_part() {
   put_block "$login" "export OMAWIN=\"$repo\"
 export STARSHIP_CONFIG=\"\$OMAWIN/starship/starship.toml\" HERDR_CONFIG_PATH=\"\$OMAWIN/herdr/config.toml\"
 case \":\$PATH:\" in *\":\$HOME/.local/bin:\"*) ;; *) PATH=\"\$HOME/.local/bin:\$PATH\" ;; esac"
-  # Interactive shells: the same prompt, keys and colors as Windows (bash/bashrc). The repo is
+  # Interactive shells: the same prompt, keys and colors as Windows (config/bash/bashrc). The repo is
   # named here too: ~/.profile loads ~/.bashrc before its own block has run.
-  put_block ~/.bashrc "export OMAWIN=\"$repo\" STARSHIP_CONFIG=\"$repo/starship/starship.toml\"
+  put_block ~/.bashrc "export OMAWIN=\"$repo\" STARSHIP_CONFIG=\"$repo/config/starship/starship.toml\"
 [ -f \"\$OMAWIN/bash/bashrc\" ] && . \"\$OMAWIN/bash/bashrc\""
 
   # git: Windows' sign-in (Git Credential Manager), so a push works without signing in again;

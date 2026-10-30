@@ -19,8 +19,8 @@ jobs:
         with:
           global-json-file: global.json
       - name: Menu app
-        run: dotnet test menu-app.Tests --logger "console;verbosity=normal"
+        run: dotnet test test/menu-app.Tests --logger "console;verbosity=normal"
       - name: omawin command
-        run: dotnet test cli.Tests --logger "console;verbosity=normal"
+        run: dotnet test test/cli.Tests --logger "console;verbosity=normal"
       - name: omawin command builds with Native AOT
-        run: dotnet publish cli -c Release -r linux-x64 -o out/cli && out/cli/omawin --version
+        run: dotnet publish src/cli -c Release -r linux-x64 -o out/cli && out/cli/omawin --version

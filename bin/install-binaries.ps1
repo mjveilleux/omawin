@@ -15,8 +15,8 @@
          checkout ahead of the release builds instead: the helpers always (csc.exe is in Windows),
          the menu app and the player when the .NET SDK is already here (else the release, and
          the checkout's changes come with the next one);
-      3. else built here from this checkout (build/helpers.ps1, menu-app\build.ps1,
-         music\build.ps1) - a dev checkout, offline, no release, no GitHub sign-in, no .NET SDK.
+      3. else built here from this checkout (build/helpers.ps1, shell\menu-app\build.ps1,
+         src\music\build.ps1) - a dev checkout, offline, no release, no GitHub sign-in, no .NET SDK.
 
     Step 2 is the point: a new PC gets omawin.exe, the helpers, the menu app and the music player
     without the .NET SDK (a 1 GB dependency) or a compile. The SDK is installed only
@@ -212,7 +212,7 @@ try {
         $helpers = @(
             @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
             @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
-            @{ Exe = 'omawin-listen'; Source = 'agent\omawin-listen.cs' }
+            @{ Exe = 'omawin-listen'; Source = 'src\agent\omawin-listen.cs' }
         )
         $paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
         $key = Get-SourceKey $paths
@@ -262,16 +262,16 @@ try {
 
     # --- the menu app (%LOCALAPPDATA%\system-menu; the WinUI app on Win+Space) -------------------
     if ($WantMenu) {
-        $key = Get-SourceKey @('menu-app')
-        if (Test-Installed 'menu' $key { Test-Current (Join-Path $MenuDir 'SystemMenu.exe') (Join-Path $Repo 'menu-app') }) { Write-Note 'ok  the system menu' }
+        $key = Get-SourceKey @('shell/menu-app')
+        if (Test-Installed 'menu' $key { Test-Current (Join-Path $MenuDir 'SystemMenu.exe') (Join-Path $Repo 'shell\menu-app') }) { Write-Note 'ok  the system menu' }
         else {
             # Built here only when the .NET SDK (1 GB) is already on the PC; else the release, and
             # this checkout's changes come with the next one.
-            $zip = Get-PieceRelease "SystemMenu-*-win-$Arch.zip" @('menu-app') (-not $NoBuild -and (Test-DotNetSdk))
+            $zip = Get-PieceRelease "SystemMenu-*-win-$Arch.zip" @('shell/menu-app') (-not $NoBuild -and (Test-DotNetSdk))
             if ($zip) {
-                if (-not $NoStart) { & "$Repo\menu-app\stop-menu.ps1" -Dir $MenuDir }
+                if (-not $NoStart) { & "$Repo\shell\menu-app\stop-menu.ps1" -Dir $MenuDir }
                 Expand-Zip $zip $MenuDir
-                # Unpacked, not built: nothing started it (menu-app\build.ps1 does that itself).
+                # Unpacked, not built: nothing started it (shell\menu-app\build.ps1 does that itself).
                 # This account's: another account signed in has its own, and counting it left this
                 # one stopped (stop-menu.ps1 stops only this account's).
                 if (-not $NoStart -and -not (Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId)) {
@@ -284,7 +284,7 @@ try {
             else {
                 if ($reason -and $reason -ne '-NoDownload') { Write-Note "building here: $reason" }
                 if (Install-DotNetSdk) {
-                    try { & "$Repo\menu-app\build.ps1" -OutDir $MenuDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'menu' $key }
+                    try { & "$Repo\shell\menu-app\build.ps1" -OutDir $MenuDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'menu' $key }
                     catch { Write-Warn "system menu build failed: $_" }
                 } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }
@@ -293,11 +293,11 @@ try {
 
     # --- omawin-music (one exe in ~/.local/bin) -------------------------------------------------
     if ($WantMusic) {
-        $key = Get-SourceKey @('music')
-        if (Test-Installed 'music' $key { Test-Current (Join-Path $BinDir 'omawin-music.exe') (Join-Path $Repo 'music') }) { Write-Note 'ok  omawin-music.exe' }
+        $key = Get-SourceKey @('src/music')
+        if (Test-Installed 'music' $key { Test-Current (Join-Path $BinDir 'omawin-music.exe') (Join-Path $Repo 'src\music') }) { Write-Note 'ok  omawin-music.exe' }
         else {
             # As the menu: built here only with the .NET SDK already on the PC.
-            $fromRelease = Get-PieceRelease "omawin-music-*-win-$Arch.exe" @('music') (-not $NoBuild -and (Test-DotNetSdk))
+            $fromRelease = Get-PieceRelease "omawin-music-*-win-$Arch.exe" @('src/music') (-not $NoBuild -and (Test-DotNetSdk))
             if ($fromRelease) {
                 $dest = Join-Path $BinDir 'omawin-music.exe'
                 if (-not $NoStart) {
@@ -316,7 +316,7 @@ try {
             else {
                 if ($reason -and $reason -ne '-NoDownload') { Write-Note "building here: $reason" }
                 if (Install-DotNetSdk) {
-                    try { & "$Repo\music\build.ps1" -OutDir $BinDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'music' $key }
+                    try { & "$Repo\src\music\build.ps1" -OutDir $BinDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'music' $key }
                     catch { Write-Warn "music player build failed: $_" }
                 } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }

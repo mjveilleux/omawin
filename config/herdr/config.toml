@@ -1,0 +1,20 @@
+# herdr: the multiplexer. Project windows are herdr sessions (omawin launch project, with tabs from
+# default/launcher/project-tabs.txt). herdr reads this file through HERDR_CONFIG_PATH, which the install
+# sets (install/desktop.ps1); `herdr --default-config` lists every setting, with its default.
+
+# No first-run notification setup screen.
+onboarding = false
+
+[ui.sound]
+# No sounds when agents finish or need attention in background workspaces: the sidebar shows it.
+enabled = false
+
+[theme]
+# The terminal's own 16 colors, which noctty takes from the omawin theme: herdr follows a theme
+# switch with no colors of its own.
+name = "terminal"
+
+[keys]
+# Ctrl+Space, the leader in tmux too; then 1..9 picks a tab, c makes one, n / p
+# next / previous (manual/10-terminal-and-neovim.md). The rest are herdr's defaults.
+prefix = "ctrl+space"

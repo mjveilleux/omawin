@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    omawin's presets: opt-in groups of tools on top of the core (packages.ps1).
+    omawin's presets: opt-in groups of tools on top of the core (install/packages.ps1).
 
 .DESCRIPTION
     The presets this PC picked are kept in %LOCALAPPDATA%\launcher\presets.txt; install.ps1
@@ -20,13 +20,13 @@ param(
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-. "$Repo\packages.ps1"
+. "$Repo\install\packages.ps1"
 . "$Repo\install\lib.ps1"
 
 $chosen = @(Get-Presets)
 function Save-Presets([string[]]$Names) {
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
-    Set-Content $PresetsFile (@('# omawin presets on this PC (packages.ps1); omawin preset add|remove <name>') + $Names) -Encoding utf8
+    Set-Content $PresetsFile (@('# omawin presets on this PC (install/packages.ps1); omawin preset add|remove <name>') + $Names) -Encoding utf8
 }
 
 if ($Verb -eq 'list') {

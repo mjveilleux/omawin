@@ -1,0 +1,274 @@
+# The system menu (launcher -> Menu, or Win+Alt+Space), after Omarchy's menu: install and
+# remove software, edit configs, update, power. The menu app (shell/menu-app/) draws it and does
+# most rows itself; task, winget and choco rows (and Remove) it hands to menu.ps1 -Run <id>.
+#
+#   <id> | <icon> | <label> | <action>
+#
+# Dotted ids make the tree: install.development.rust sits under Install > Development. A row
+# without an action is a submenu. Rows show in this file's order. Actions:
+#   winget <id>      install that winget package; rows already installed show a ✓ and can't
+#                    be picked. Remove lists the installed ones by itself (no remove.* rows needed).
+#   choco <id>       the same through Chocolatey (asks for admin)
+#   task <command>   PowerShell, run in a small terminal window you can watch
+#   edit <path>      open a file or folder in Neovim (~ is your home folder)
+#   run <command>    start a program, a URL or a settings page, like items.txt
+#   omawin <command> one of omawin's commands (bin/commands.txt), hidden
+#   @<page>          one of the launcher's pages (@keys, @clipboard, @localhost, ...)
+#   themes           the theme picker (themes/*.json and installed themes, applied by
+#                    themes/set-theme.ps1)
+# A ! in front of the action asks before doing it.
+
+learn | 󰧑 | Learn
+learn.keys | 󰌌 | Shortcuts | @keys
+learn.commands | 󰆍 | omawin commands | task omawin help
+learn.readme | 󰈙 | This setup (README) | edit ~\omawin\README.md
+learn.glazewm | 󰕰 | GlazeWM | run https://github.com/glzr-io/glazewm#readme
+learn.neovim |  | LazyVim keys | run https://www.lazyvim.org/keymaps
+learn.powershell | 󰨊 | PowerShell | run https://learn.microsoft.com/powershell/scripting/learn/ps101/00-introduction
+learn.herdr | 󰚩 | herdr | run https://herdr.dev
+
+trigger | 󱓞 | Trigger
+trigger.screenshot | 󰹑 | Screenshot | omawin capture screenshot
+trigger.text | 󰴑 | Text from the screen (OCR) | omawin capture text
+trigger.clipboard | 󰅌 | Clipboard history | @clipboard
+trigger.localhost | 󰒋 | Localhost | @localhost
+trigger.nightlight | 󰖔 | Night light | run ms-settings:nightlight
+trigger.speedtest | 󰓅 | Speed test | run https://fast.com
+
+quick | 󰒓 | Quick settings
+quick.page | 󰕾 | All of it | @quick
+quick.wifi | 󰖩 | Wi-Fi on / off | omawin wifi toggle
+quick.bluetooth | 󰂯 | Bluetooth on / off | omawin bluetooth toggle
+quick.brighten | 󰃠 | Brighter | omawin brightness up
+quick.dim | 󰃠 | Dimmer | omawin brightness down
+quick.power | 󰓅 | Power mode: next | omawin power cycle
+quick.nightlight | 󰖔 | Night light | omawin toggle night-light
+quick.dnd | 󰂛 | Do not disturb | omawin toggle dnd
+
+style | 󰏘 | Style
+style.theme | 󰸌 | Theme | themes
+style.background | 󰸉 | Next background | omawin theme next-background
+style.themes-browse | 󰖟 | More themes (omarchy.org) | omawin theme browse
+style.themes-install | 󰏗 | Install a theme (git link) | task omawin.exe theme install
+style.themes-update | 󰚰 | Update installed themes | task omawin.exe theme update
+style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme remove
+style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\default\launcher\menu.ps1" -SetWallpaper
+style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
+style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\config\glazewm\config.yaml
+style.terminal | 󰆍 | Terminal | edit ~\omawin\config\noctty\config.ghostty
+style.prompt | 󰘦 | Prompt (starship) | edit ~\omawin\config\starship\starship.toml
+
+setup | 󰒓 | Setup
+setup.launcher | 󰀻 | Launcher items | edit ~\omawin\default\launcher\items.txt
+setup.menu | 󰍜 | This menu | edit ~\omawin\default\launcher\menu.txt
+setup.keys | 󰌌 | Keybindings (GlazeWM) | edit ~\omawin\config\glazewm\config.yaml
+setup.packages | 󰏓 | Packages for new PCs | edit ~\omawin\install\packages.ps1
+setup.neovim |  | Neovim | edit ~\omawin\config\nvim
+setup.profile | 󰨊 | PowerShell profile | edit ~\omawin\config\powershell\Microsoft.PowerShell_profile.ps1
+setup.monitors | 󰍹 | Monitors | run ms-settings:display
+setup.network | 󰖩 | Wi-Fi | run ms-settings:network-wifi
+setup.vpn | 󰖂 | VPN | run ms-settings:network-vpn
+setup.bluetooth | 󰂯 | Bluetooth | run ms-settings:bluetooth
+setup.sound | 󰕾 | Sound | run ms-settings:sound
+setup.defaults | 󰄬 | Default apps | run ms-settings:defaultapps
+setup.startup | 󰐥 | Startup apps | run ms-settings:startupapps
+setup.default | 󰄬 | Defaults (terminal, editor, agent)
+setup.default.terminal | 󰆍 | Terminal
+setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty
+setup.default.terminal.wt | 󰆍 | Windows Terminal | omawin default terminal wt
+setup.default.editor | 󰏫 | Editor
+setup.default.editor.nvim |  | Neovim (in the terminal) | omawin default editor nvim
+setup.default.editor.neovide |  | Neovide | omawin default editor neovide
+setup.default.editor.code | 󰨞 | VS Code | omawin default editor code
+setup.default.agent | 󰚩 | AI agent (in Neovim)
+setup.default.agent.opencode | 󰚩 | OpenCode | omawin default agent opencode
+setup.default.agent.claude | 󰚩 | Claude Code | omawin default agent claude
+setup.check | 󰄬 | Health check | task omawin check
+setup.noads | 󰀧 | No ads (Windows; Lenovo / McAfee / Adobe upsells when found) | task omawin no-ads
+
+install | 󰉉 | Install
+install.package | 󰏓 | Package | @packages
+install.preset | 󰏓 | Presets (groups of tools)
+install.preset.list | 󰆍 | Which are picked | task omawin preset list
+install.preset.python | 󰌠 | Python | task omawin preset add python
+install.preset.node | 󰎙 | Node: pnpm | task omawin preset add node
+install.preset.go | 󰟓 | Go | task omawin preset add go
+install.preset.elixir | 󰖌 | Elixir + Erlang | task omawin preset add elixir
+install.preset.r | 󰟔 | R + RStudio | task omawin preset add r
+install.preset.c | 󱐋 | C: gcc + make (WinLibs) | task omawin preset add c
+install.preset.data | 󰆼 | Data: DuckDB, harlequin, sqlcmd | task omawin preset add data
+install.preset.typst | 󰏓 | Typst | task omawin preset add typst
+install.preset.docker | 󰡨 | Docker: lazydocker | task omawin preset add docker
+install.preset.cliextras | 󰏓 | CLI extras: make, cloc, wget | task omawin preset add cli-extras
+install.preset.aiagents | 󱚤 | AI agents: Claude Code, opencode | task omawin preset add ai-agents
+install.preset.music | 󰓇 | Music: yt-dlp and mpv for the bar player | task omawin preset add music
+install.preset.dictation | 󰕾 | Dictation: Handy | task omawin preset add dictation
+install.preset.powerbi | 󰄨 | Power BI + Fabric | task omawin preset add powerbi-fabric
+install.development | 󰵮 | Development
+install.development.rails | 󰫏 | Ruby on Rails | task omawin dev install ruby
+install.development.docker-dbs |  | Docker DB | task omawin dev install docker-db
+install.development.javascript |  | JavaScript
+install.development.javascript.node |  | Node.js | task omawin dev install node
+install.development.javascript.bun |  | Bun | task omawin dev install bun
+install.development.javascript.deno |  | Deno | task omawin dev install deno
+install.development.go |  | Go | task omawin dev install go
+install.development.php |  | PHP
+install.development.php.php |  | PHP | task omawin dev install php
+install.development.php.laravel |  | Laravel | task omawin dev install laravel
+install.development.php.symfony |  | Symfony | task omawin dev install symfony
+install.development.python |  | Python | task omawin dev install python
+install.development.elixir |  | Elixir
+install.development.elixir.elixir |  | Elixir | task omawin dev install elixir
+install.development.elixir.phoenix |  | Phoenix | task omawin dev install phoenix
+install.development.zig |  | Zig | task omawin dev install zig
+install.development.rust |  | Rust | task omawin dev install rust
+install.development.java |  | Java | task omawin dev install java
+install.development.dotnet |  | .NET | task omawin dev install dotnet
+install.development.ocaml |  | OCaml | task omawin dev install ocaml
+install.development.clojure |  | Clojure | task omawin dev install clojure
+install.development.scala |  | Scala | task omawin dev install scala
+install.azure | 󰠅 | Azure + Fabric
+install.azure.cli | 󰠅 | Azure CLI | winget Microsoft.AzureCLI
+install.azure.fabric | 󰆍 | Fabric CLI (fab) | task uv tool install --upgrade ms-fabric-cli
+install.azure.azd | 󰠅 | Azure Developer CLI (azd) | winget Microsoft.Azd
+install.azure.bicep | 󰠅 | Bicep | winget Microsoft.Bicep
+install.azure.functions | 󰠅 | Azure Functions Core Tools | winget Microsoft.Azure.FunctionsCoreTools
+install.azure.storageexplorer | 󰆼 | Azure Storage Explorer | winget Microsoft.Azure.StorageExplorer
+install.azure.azcopy | 󰅧 | AzCopy | winget Microsoft.Azure.AZCopy.10
+install.azure.cosmos | 󰆼 | Cosmos DB Emulator | winget Microsoft.Azure.CosmosEmulator
+install.azure.az | 󰨊 | Az PowerShell module | task Install-Module Az -Scope CurrentUser -Force -AllowClobber
+install.azure.powerbi | 󰨊 | Power BI PowerShell module | task Install-Module MicrosoftPowerBIMgmt -Scope CurrentUser -Force
+install.data | 󰆼 | Data + SQL
+install.data.powerbi | 󰄨 | Power BI Desktop | winget Microsoft.PowerBI
+install.data.reportbuilder | 󰈨 | Power BI Report Builder | winget Microsoft.PowerBIReportBuilder
+install.data.daxstudio | 󰡱 | DAX Studio | winget DaxStudio.DaxStudio
+install.data.ssms | 󰆼 | SQL Server Management Studio | winget Microsoft.SQLServerManagementStudio
+install.data.dbeaver | 󰆼 | DBeaver | winget DBeaver.DBeaver.Community
+install.data.sqlserver | 󰒋 | SQL Server 2022 Developer | winget Microsoft.SQLServer.2022.Developer
+install.data.sqlcmd | 󰆍 | sqlcmd (go) | winget Microsoft.Sqlcmd
+install.data.sqlpackage | 󰏓 | SqlPackage (dacpacs) | winget Microsoft.SqlPackage
+install.data.odbc | 󰒋 | ODBC Driver 18 for SQL Server | winget Microsoft.msodbcsql.18
+install.data.postgres | 󰆼 | PostgreSQL 17 | winget PostgreSQL.PostgreSQL.17
+install.data.pgadmin | 󰆼 | pgAdmin | winget PostgreSQL.pgAdmin
+install.data.mysql | 󰆼 | MySQL Workbench | winget Oracle.MySQLWorkbench
+install.data.sqlite | 󰆼 | SQLite | winget SQLite.SQLite
+install.office | 󰏆 | Office
+install.office.m365 | 󰏆 | Microsoft 365 (Word, Excel, PowerPoint, Outlook) | winget Microsoft.Office
+install.office.teams | 󰊻 | Teams | winget Microsoft.Teams
+install.office.onedrive | 󰏊 | OneDrive | winget Microsoft.OneDrive
+install.office.zoom | 󰕧 | Zoom | winget Zoom.Zoom
+install.office.acrobat | 󰈦 | Adobe Acrobat Reader | winget Adobe.Acrobat.Reader.64-bit
+install.office.notion | 󰠮 | Notion | winget Notion.Notion
+install.office.googledrive | 󰊶 | Google Drive | winget Google.GoogleDrive
+install.editor | 󰏫 | Editor
+install.editor.vscode | 󰨞 | VS Code | winget Microsoft.VisualStudioCode
+install.editor.cursor | 󰘦 | Cursor | winget Anysphere.Cursor
+install.editor.zed | 󰘦 | Zed | winget ZedIndustries.Zed
+install.editor.neovide |  | Neovide | winget Neovide.Neovide
+install.editor.sublime | 󰅳 | Sublime Text | winget SublimeHQ.SublimeText.4
+install.editor.helix | 󰘦 | Helix | winget Helix.Helix
+install.terminal | 󰆍 | Terminal
+install.terminal.noctty | 󰆍 | noctty (Ghostty for Windows) | task & "$HOME\omawin\bin\noctty.ps1"
+install.terminal.alacritty | 󰆍 | Alacritty | winget Alacritty.Alacritty
+install.ai | 󱚤 | AI
+install.ai.claudecode | 󰆍 | Claude Code | task irm https://claude.ai/install.ps1 | iex
+install.ai.codexcli | 󰆍 | Codex CLI | task irm https://chatgpt.com/codex/install.ps1 | iex
+install.ai.opencode | 󰆍 | OpenCode | winget SST.opencode
+install.ai.claude | 󰚩 | Claude Desktop | winget Anthropic.Claude
+install.ai.chatgpt | 󰚩 | ChatGPT + Codex app | winget 9PLM9XGG6VKS
+install.ai.opencodedesktop | 󰚩 | OpenCode Desktop | winget SST.OpenCodeDesktop
+install.ai.ollama | 󰳆 | Ollama | winget Ollama.Ollama
+install.ai.lmstudio | 󰧑 | LM Studio | winget ElementLabs.LMStudio
+install.browser | 󰖟 | Browser
+install.browser.chrome | 󰊯 | Chrome | winget Google.Chrome
+install.browser.firefox | 󰈹 | Firefox | winget Mozilla.Firefox
+install.browser.brave | 󰖟 | Brave | winget Brave.Brave
+install.browser.zen | 󰖟 | Zen | winget Zen-Team.Zen-Browser
+install.service | 󰒋 | Service
+install.service.1password | 󰢁 | 1Password | winget AgileBits.1Password
+install.service.bitwarden | 󰞀 | Bitwarden | winget Bitwarden.Bitwarden
+install.service.slack | 󰒱 | Slack | winget SlackTechnologies.Slack
+install.service.discord | 󰙯 | Discord | winget Discord.Discord
+install.service.spotify | 󰓇 | Spotify | winget Spotify.Spotify
+install.service.tailscale | 󰖂 | Tailscale | winget Tailscale.Tailscale
+install.service.dropbox | 󰇣 | Dropbox | winget Dropbox.Dropbox
+install.service.obsidian | 󰠮 | Obsidian | winget Obsidian.Obsidian
+install.service.signal | 󰍩 | Signal | winget OpenWhisperSystems.Signal
+install.service.telegram | 󰔁 | Telegram | winget Telegram.TelegramDesktop
+install.service.figma | 󰏘 | Figma | winget Figma.Figma
+install.tools | 󰖷 | Tools
+install.tools.docker | 󰡨 | Docker Desktop | winget Docker.DockerDesktop
+install.tools.duckdb | 󰆼 | DuckDB | winget DuckDB.cli
+install.tools.r | 󰟔 | R | winget RProject.R
+install.tools.rstudio | 󰟔 | RStudio | winget Posit.RStudio
+install.tools.terraform | 󱁢 | Terraform | winget Hashicorp.Terraform
+install.tools.kubectl | 󱃾 | kubectl | winget Kubernetes.kubectl
+install.tools.aws | 󰸏 | AWS CLI | winget Amazon.AWSCLI
+install.tools.gcloud | 󱇶 | Google Cloud CLI | winget Google.CloudSDK
+install.tools.github | 󰊤 | GitHub CLI | winget GitHub.cli
+install.tools.githubdesktop | 󰊤 | GitHub Desktop | winget GitHub.GitHubDesktop
+install.tools.visualstudio | 󰘐 | Visual Studio 2022 Community | winget Microsoft.VisualStudio.2022.Community
+install.tools.postman | 󰖟 | Postman | winget Postman.Postman
+install.tools.bruno | 󰖟 | Bruno (API client) | winget Bruno.Bruno
+install.tools.helm | 󰠳 | Helm | winget Helm.Helm
+install.tools.k9s | 󱃾 | k9s (Kubernetes) | winget Derailed.k9s
+install.tools.powertoys | 󰖷 | PowerToys | winget Microsoft.PowerToys
+install.tools.everything | 󰍉 | Everything (file search) | winget voidtools.Everything
+install.tools.btop | 󰨇 | btop (task manager) | winget aristocratos.btop4win
+install.tools.7zip | 󰗄 | 7-Zip | winget 7zip.7zip
+install.tools.sharex | 󰹑 | ShareX | winget ShareX.ShareX
+install.tools.obs | 󰑋 | OBS Studio | winget OBSProject.OBSStudio
+install.tools.vlc | 󰕼 | VLC | winget VideoLAN.VLC
+install.tools.notepadpp | 󰏫 | Notepad++ | winget Notepad++.Notepad++
+install.tools.greenshot | 󰄀 | Greenshot | winget Greenshot.Greenshot
+install.gaming | 󰊗 | Gaming
+install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
+
+remove | 󰭌 | Remove
+remove.package | 󰏓 | Package | task omawin pkg remove
+remove.development | 󰵮 | Development
+remove.development.rails | 󰫏 | Ruby on Rails | task omawin dev remove ruby
+remove.development.docker-dbs |  | Docker DB | task omawin dev remove docker-db
+remove.development.javascript |  | JavaScript
+remove.development.javascript.node |  | Node.js | task omawin dev remove node
+remove.development.javascript.bun |  | Bun | task omawin dev remove bun
+remove.development.javascript.deno |  | Deno | task omawin dev remove deno
+remove.development.go |  | Go | task omawin dev remove go
+remove.development.php |  | PHP
+remove.development.php.php |  | PHP | task omawin dev remove php
+remove.development.php.laravel |  | Laravel | task omawin dev remove laravel
+remove.development.php.symfony |  | Symfony | task omawin dev remove symfony
+remove.development.python |  | Python | task omawin dev remove python
+remove.development.elixir |  | Elixir
+remove.development.elixir.elixir |  | Elixir | task omawin dev remove elixir
+remove.development.elixir.phoenix |  | Phoenix | task omawin dev remove phoenix
+remove.development.zig |  | Zig | task omawin dev remove zig
+remove.development.rust |  | Rust | task omawin dev remove rust
+remove.development.java |  | Java | task omawin dev remove java
+remove.development.dotnet |  | .NET | task omawin dev remove dotnet
+remove.development.ocaml |  | OCaml | task omawin dev remove ocaml
+remove.development.clojure |  | Clojure | task omawin dev remove clojure
+remove.development.scala |  | Scala | task omawin dev remove scala
+
+update | 󰚰 | Update
+update.dotfiles | 󰊢 | This setup (pull + relink) | task omawin update
+update.everything | 󰏔 | All apps (winget upgrade) | task winget upgrade --all --accept-source-agreements --accept-package-agreements
+update.check | 󰏗 | What has updates | task winget upgrade --accept-source-agreements
+update.windows | 󰍲 | Windows Update | run ms-settings:windowsupdate
+update.restart | 󰜉 | Restart
+update.restart.glazewm | 󰕰 | GlazeWM config | omawin restart glazewm
+update.restart.explorer | 󰉋 | Explorer | task Stop-Process -Name explorer -Force
+
+system | 󰐥 | System
+system.lock | 󰌾 | Lock | run rundll32.exe user32.dll,LockWorkStation
+system.sleep | 󰒲 | Sleep | !run rundll32.exe powrprof.dll,SetSuspendState 0,1,0
+system.logout | 󰍃 | Sign out | !run shutdown.exe /l
+system.restart | 󰜉 | Restart | !run shutdown.exe /r /t 0
+system.shutdown | 󰐥 | Shut down | !run shutdown.exe /s /t 0
+
+trigger.color | 󰈊 | Colour picker | omawin capture color
+trigger.qr | 󰐲 | Read a QR code | omawin capture qr
+trigger.toggle | 󰔡 | Toggle
+trigger.toggle.stayawake | 󰅶 | Stay awake | omawin toggle stay-awake
+
+about | 󰋽 | About | omawin about

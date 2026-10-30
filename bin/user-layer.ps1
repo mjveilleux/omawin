@@ -1,6 +1,6 @@
 # Where your own settings are (docs/work.md): the two folders next to omawin that hold what's
 # yours and not omawin's. The one PowerShell definition of those paths: install (install/lib.ps1),
-# check.ps1, themes/render.ps1, update and the PowerShell profiles all ask this script. Runs under
+# bin/check.ps1, themes/render.ps1, update and the PowerShell profiles all ask this script. Runs under
 # Windows PowerShell 5.1 too. Prints the path; it needn't exist.
 #
 #   (no switch)  this Windows account's folder: who you are here (git identity, the employer's or

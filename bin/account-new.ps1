@@ -40,7 +40,7 @@ if (-not (Test-Path (Join-Path $layer 'git\gitconfig'))) {
     if (-not $Email) { $Email = Read-Host 'Your email for this account (work, client or personal)' }
 }
 Seed 'git\gitconfig' @"
-# Included by ~/.gitconfig after omawin's git/gitconfig: this account's identity.
+# Included by ~/.gitconfig after omawin's config/git/gitconfig: this account's identity.
 [user]
 	name = $Name
 	email = $Email
@@ -58,13 +58,13 @@ never to run git in, folders and files never to commit or send anywhere).
 - (none yet)
 "@
 Seed 'launcher\items.txt' @"
-# This account's launcher items, after omawin's (same format as omawin's launcher/items.txt).
+# This account's launcher items, after omawin's (same format as omawin's default/launcher/items.txt).
 "@
 Seed 'launcher\sites.txt' @"
-# This account's sites in launcher > Localhost, after omawin's (same format as launcher/sites.txt).
+# This account's sites in launcher > Localhost, after omawin's (same format as default/launcher/sites.txt).
 "@
 Seed 'launcher\keys.txt' @"
-# Lines added to the Shortcuts page (same format as omawin's launcher/keys.txt).
+# Lines added to the Shortcuts page (same format as omawin's default/launcher/keys.txt).
 "@
 Seed 'claude\skills-off.txt' @"
 # Shared skills (the PC's shared folder, claude/skills) this account goes without: one name a line.

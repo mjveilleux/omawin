@@ -1,6 +1,6 @@
 # Mission to-do
 
-The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item. The order we take it in, by phase: [roadmap.md](plan/roadmap.md).
+The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item. The order we take it in, by phase: [roadmap.md](../plans/roadmap.md).
 
 Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (Omarchy v4.0.4, `basecamp/omarchy` branch `quattro`). What similar Windows projects learned, mapped to these tracks: [inspiration.md](inspiration.md).
 
@@ -15,14 +15,14 @@ Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (O
 
 - [ ] Public repo with a LICENSE (MIT, like Omarchy; credit Omarchy for themes and ideas). Its history cleaned of personal and work details first.
 - [x] `bootstrap.ps1` without `gh auth login`: a plain https clone, layers optional (2026-10-17); a short URL is still to do
-- [x] No identity in the product: `git/gitconfig` asks for name and email at install (or leaves them to an untracked include); AGENTS.md and docs stop naming the owner, their work and the old private repo (2026-10-15: install asks once into `~/.gitconfig`, or the user layer's `git/gitconfig` is included)
+- [x] No identity in the product: `config/git/gitconfig` asks for name and email at install (or leaves them to an untracked include); AGENTS.md and docs stop naming the owner, their work and the old private repo (2026-10-15: install asks once into `~/.gitconfig`, or the user layer's `config/git/gitconfig` is included)
 - [ ] Product vs user config: the product checkout is never edited by the user; user overrides live in their own folder (e.g. `~/.config/omawin/`: items, sites, keys, menu rows, nvim `lua/plugins/user/`, `profile.ps1`, gitconfig include) and are merged at render time. Seed copies, not junctions into the repo
 - [x] Files apps write (nvim `lazy-lock.json`, Windows Terminal `settings.json`) live outside the checkout (2026-10-15: also `lazyvim.json` and pwsh's `Documents\PowerShell`; migration `writable-files-out`)
 - [ ] `omawin update` that can't fail on local changes: fetch and move to the latest release tag (channels: stable, edge), migrations as today, a System Restore point first. Done 2026-10-15: local changes are stashed and put back (kept in a named stash on a clash), local commits rebased or kept on a branch, never left mid-merge, `-DryRun`. **Next: release tags and channels — releases now exist to follow** (2026-10-16: `.github/workflows/release.yml` publishes them on a `v*` tag, install takes their binaries); the restore point
-- [x] Releases built in CI (GitHub Actions): `omawin.exe`, the menu app, `omawin-music`, so a new PC downloads binaries instead of installing the .NET SDK (2026-10-16: `.github/workflows/release.yml` on a `v*` tag or by hand — the same `build/helpers.ps1`, `menu-app\build.ps1`, `music\build.ps1` this PC runs, SDK pinned in `global.json`, actions by SHA; `build/release.ps1` packs `omawin-helpers-<tag>.zip`, `SystemMenu-<tag>-win-<arch>.zip`, `omawin-music-<tag>-win-<arch>.exe` and `SHA256SUMS.txt`; `bin/release.ps1` + `bin/install-binaries.ps1` download, verify and fall back to a build, `-NoDownload`/`-NoBuild` to force; `build/test-release.ps1` proves it against a fake release, [releases.md](releases.md))
+- [x] Releases built in CI (GitHub Actions): `omawin.exe`, the menu app, `omawin-music`, so a new PC downloads binaries instead of installing the .NET SDK (2026-10-16: `.github/workflows/release.yml` on a `v*` tag or by hand — the same `build/helpers.ps1`, `shell\menu-app\build.ps1`, `src\music\build.ps1` this PC runs, SDK pinned in `global.json`, actions by SHA; `build/release.ps1` packs `omawin-helpers-<tag>.zip`, `SystemMenu-<tag>-win-<arch>.zip`, `omawin-music-<tag>-win-<arch>.exe` and `SHA256SUMS.txt`; `bin/release.ps1` + `bin/install-binaries.ps1` download, verify and fall back to a build, `-NoDownload`/`-NoBuild` to force; `build/test-release.ps1` proves it against a fake release, [releases.md](releases.md))
 - [ ] Code signing in CI (e.g. Azure Trusted Signing) instead of a self-signed root made on every PC. **Designed 2026-10-16** ([release-signing.md](release-signing.md)): a `sign` step in the release job, off until `CODESIGN` is true, values as repo variables and secrets. Next: the Azure account, the certificate profile and identity validation (an account decision, not code)
 - [ ] No Chocolatey: move its packages to winget or presets; the default install needs no admin except where a piece truly does (one prompt, batched). Packages done 2026-10-15 (all winget or presets; `unzip` / `gzip` dropped: no winget package puts them on the PATH, Windows' `tar` and Git Bash cover them); the menu still understands `choco <id>` rows. Admin prompts batched 2026-10-17: one prompt at the start (`install/admin.ps1`) for the whole-PC packages and both forks; `omawin no-ads`'s admin part is still its own
-- [ ] ARM64: menu app, music, the GlazeWM and noctty forks, helpers. Done 2026-10-16: the menu app and the player build for `win-arm64` (`menu-app\build.ps1 -Arch arm64`, `music\build.ps1 -Arch arm64`, the arm64 fff pinned in `menu-app\fetch-fff.ps1`; both verified by PE machine and published as arm64 assets), and the helpers are architecture-neutral IL. Next: the workflow's ARM64 jobs (`vars.ARM64_RUNNERS`) wait on a public repo, since GitHub's `windows-11-arm` runners are free for public repositories only; the GlazeWM and noctty forks are their own repos
+- [ ] ARM64: menu app, music, the GlazeWM and noctty forks, helpers. Done 2026-10-16: the menu app and the player build for `win-arm64` (`shell\menu-app\build.ps1 -Arch arm64`, `src\music\build.ps1 -Arch arm64`, the arm64 fff pinned in `shell\menu-app\fetch-fff.ps1`; both verified by PE machine and published as arm64 assets), and the helpers are architecture-neutral IL. Next: the workflow's ARM64 jobs (`vars.ARM64_RUNNERS`) wait on a public repo, since GitHub's `windows-11-arm` runners are free for public repositories only; the GlazeWM and noctty forks are their own repos
 - [ ] Repo location not fixed to `~/omawin`
 - [ ] Clean-VM test: Windows 11 Home and Pro, no WSL, no OEM bloat; time and size measured; `omawin check` 0/0
 - [ ] README quickstart for strangers: what it is, a screenshot, the one line, how to undo
@@ -31,10 +31,10 @@ Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (O
 
 Personal things move to the owner's own user layer (today `~/omawin-work`, which becomes the general user-extension folder from track 1).
 
-- [x] Personal out of the product: `git/gitconfig` identity, Claude settings, launcher items and sites, tool paths in the profile, WSL memory (2026-10-15: all in the user layer, docs/work.md; WSL memory left at its default, half the RAM, the user layer can cap it)
+- [x] Personal out of the product: `config/git/gitconfig` identity, Claude settings, launcher items and sites, tool paths in the profile, WSL memory (2026-10-15: all in the user layer, docs/work.md; WSL memory left at its default, half the RAM, the user layer can cap it)
 - [x] The Reports page and the remaining `omawin-work` hard-coding (menu app `MenuModel.Work`, `omawin reports index` in `bin/commands.txt`, the profile hooks): one user-layer path, set in one place (2026-10-15: one definition per language, `OMAWIN_USER_LAYER` overrides; docs/work.md)
-- [x] `no-ads.ps1` split: Windows debloat by default; Lenovo, McAfee, Adobe as modules that run only when that software is found
-- [x] Presets instead of one big list: a lean core (WM, bar, launcher, terminal, editor, shell tools, Git) plus opt-in groups (data: DuckDB, harlequin, SQL; R; Elixir; Go; Zig; AI agents; music; dictation; Power BI / Fabric), picked in the menu's Install section or at first run (2026-10-15: `packages.ps1` `$Presets`, `omawin preset`, Install > Presets, asked on the first install; Zig stays in the core as nvim-treesitter's compiler)
+- [x] `bin/no-ads.ps1` split: Windows debloat by default; Lenovo, McAfee, Adobe as modules that run only when that software is found
+- [x] Presets instead of one big list: a lean core (WM, bar, launcher, terminal, editor, shell tools, Git) plus opt-in groups (data: DuckDB, harlequin, SQL; R; Elixir; Go; Zig; AI agents; music; dictation; Power BI / Fabric), picked in the menu's Install section or at first run (2026-10-15: `install/packages.ps1` `$Presets`, `omawin preset`, Install > Presets, asked on the first install; Zig stays in the core as nvim-treesitter's compiler)
 - [ ] Detect before offering: hide WSL items when there's no distro, Office items without Office, Chrome profiles without Chrome (needs the menu app: launcher items are static rows today; e.g. an item condition like `?wsl`)
 - [x] One Windows account per job or client, each with its own user layer repo; `omawin user new` starts one (2026-10-17: `bin/user-new.ps1`, docs/work.md "One Windows account each")
 - [ ] More than one account on a PC: packages machine-wide where winget allows (`--scope machine`), and `install.ps1` split into the machine's part (admin, once) and the account's (links, sign-in task, menu app, themes), so a second account's install skips what's done; `omawin check` clean in a second account
@@ -44,12 +44,12 @@ Personal things move to the owner's own user layer (today `~/omawin-work`, which
 ## 3. Window manager (GlazeWM fork, toward Hyprland)
 
 - [ ] Scratchpad / special workspace (Omarchy's Super+S): a hidden workspace and a toggle, in the fork or through IPC
-- [ ] Window animations: new windows fade in where they tile, the others slide (snapshots, Omarchy's easeOutQuint, quicker). Built 2026-10-28 on upstream's `animations-test` (fork branch `claude/smooth-window-animations`), on in `glazewm/config.yaml`; not yet tried on a PC or released. Workspace switches stay instant, as in Omarchy
+- [ ] Window animations: new windows fade in where they tile, the others slide (snapshots, Omarchy's easeOutQuint, quicker). Built 2026-10-28 on upstream's `animations-test` (fork branch `config/claude/smooth-window-animations`), on in `config/glazewm/config.yaml`; not yet tried on a PC or released. Workspace switches stay instant, as in Omarchy
 - [ ] Window groups / tabbed containers (Omarchy's Super+G)
 - [ ] Layout cycling, pop-out (float and center), restore sizes
 - [ ] Corner style and transparency toggles in the menu (GlazeWM already supports both)
 - [ ] Touchpad gestures for workspace switching
-- [ ] Shortcuts page generated from `glazewm/config.yaml` (Omarchy builds its cheat sheet from bind descriptions) instead of the hand-kept `launcher/keys.txt`
+- [ ] Shortcuts page generated from `config/glazewm/config.yaml` (Omarchy builds its cheat sheet from bind descriptions) instead of the hand-kept `default/launcher/keys.txt`
 - [ ] Upstream what's general to glzr-io/glazewm, so the fork stays small
 
 ## 4. Bar and dock: native, in the shell (replacing Zebar)
@@ -103,7 +103,7 @@ Decided 2026-10-15: no Zebar fork. The bar and dock move into the menu app (the 
 
 ## 9. Fixing Windows (explore, measure, improve)
 
-Windows 11's common complaints (the 2026 survey in [roadmap.md](plan/roadmap.md), 8J) and the idle memory goal (8K), as things to explore: for each, reproduce or measure it on this PC, then fix it the measured, reversible way. The roadmap item for each is in brackets.
+Windows 11's common complaints (the 2026 survey in [roadmap.md](../plans/roadmap.md), 8J) and the idle memory goal (8K), as things to explore: for each, reproduce or measure it on this PC, then fix it the measured, reversible way. The roadmap item for each is in brackets.
 
 - [ ] Idle memory: 6-7 GB in use at idle today; measure where it goes (`omawin profile ram`, whole machine), then get under 4 GB with omawin under 600 MB (8K)
 - [ ] Updates that break things: link a crash or failed shutdown to the update before it, undo it, pause (8.44, 8.18, 8.42)

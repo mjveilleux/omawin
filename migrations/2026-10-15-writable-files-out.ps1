@@ -90,8 +90,8 @@ if ($psTarget) {
         param($dir)
         # The same stubs install/shell.ps1 writes (it rewrites them when they change).
         foreach ($name in 'profile.ps1', 'Microsoft.PowerShell_profile.ps1') {
-            $profilePath = ("$Repo\powershell\$name") -replace "'", "''"
-            [IO.File]::WriteAllText((Join-Path $dir $name), "# Managed by omawin: loads $Repo\powershell\$name. Your own lines go in your user layer's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n")
+            $profilePath = ("$Repo\config\powershell\$name") -replace "'", "''"
+            [IO.File]::WriteAllText((Join-Path $dir $name), "# Managed by omawin: loads $Repo\config\powershell\$name. Your own lines go in your user layer's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n")
         }
         if (Test-Path (Join-Path $psTarget 'powershell.config.json')) { Copy-Item (Join-Path $psTarget 'powershell.config.json') $dir }
         if (Test-Path (Join-Path $psTarget 'Modules')) { Copy-Item (Join-Path $psTarget 'Modules') $dir -Recurse }
@@ -101,7 +101,7 @@ if ($psTarget) {
 # --- Neovim -------------------------------------------------------------------------------------
 $nvimData = Join-Path $env:LOCALAPPDATA 'nvim-data'
 foreach ($name in 'lazy-lock.json', 'lazyvim.json') {
-    $from = Join-Path $Repo "nvim\$name"
+    $from = Join-Path $Repo "config\nvim\$name"
     $to = Join-Path $nvimData $name
     if ((Test-Path $from) -and -not (Test-Path $to)) {
         New-Item -ItemType Directory -Force -Path $nvimData | Out-Null

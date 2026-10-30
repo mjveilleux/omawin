@@ -4,12 +4,12 @@
 Write-Step 'GlazeWM'
 # GlazeWM from the tools bundle: the sign-in task looks for its exe.
 if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools glazewm }
-# GlazeWM reads ~/.glzr/glazewm/config.yaml, filled in from glazewm/config.yaml (a template)
+# GlazeWM reads ~/.glzr/glazewm/config.yaml, filled in from config/glazewm/config.yaml (a template)
 # with the theme's colors; so is Windows Terminal's scheme (themes/render.ps1).
 & "$Repo\themes\render.ps1"
-Write-Note "ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml"
+Write-Note "ok  ~/.glzr/glazewm/config.yaml rendered from config/glazewm/config.yaml"
 Add-InstallItem 'Settings' 'glazewm-config' 'GlazeWM config' 'have'
-# Start GlazeWM at sign-in (it starts the bar and the menu app, glazewm/config.yaml), straight away.
+# Start GlazeWM at sign-in (it starts the bar and the menu app, config/glazewm/config.yaml), straight away.
 Invoke-InstallItem 'Desktop' 'GlazeWM at sign-in' { & "$Repo\install\login-start.ps1" }
 # Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1).
 # The admin step put it in (install/admin.ps1); declined there, it's left out (nothing asks after

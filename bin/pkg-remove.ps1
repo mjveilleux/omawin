@@ -20,7 +20,7 @@ if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) { throw 'fzf is missin
 Write-Host "  $e[90mwhat's installed ...$e[0m"
 $list = & "$PSScriptRoot\pkg-index.ps1"
 $installedFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
-& (Join-Path (Split-Path $PSScriptRoot) 'launcher\menu.ps1') -RefreshInstalled
+& (Join-Path (Split-Path $PSScriptRoot) 'default\launcher\menu.ps1') -RefreshInstalled
 $here = [Collections.Generic.HashSet[string]]::new()
 if (Test-Path $installedFile) { foreach ($l in Get-Content $installedFile) { if ($l.StartsWith('winget:')) { [void]$here.Add($l.Substring(7).Trim()) } } }
 

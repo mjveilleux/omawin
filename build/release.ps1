@@ -11,8 +11,8 @@
 #
 # The input layout is what the jobs produce:
 #   <InDir>\helpers\*.exe          build/helpers.ps1 -OutDir <InDir>\helpers
-#   <InDir>\menu-<arch>\           menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
-#   <InDir>\music-<arch>\omawin-music.exe   music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
+#   <InDir>\menu-<arch>\           shell/menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
+#   <InDir>\music-<arch>\omawin-music.exe   src/music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
 #
 #   .\build\release.ps1 -Tag v0.1.0 -InDir scratch\built -OutDir scratch\release
 #   .\build\release.ps1 -Tag v0.1.0 -InDir out -OutDir dist -Arch x64   (one architecture)

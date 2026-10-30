@@ -1,8 +1,8 @@
-# install.ps1 step: the core winget packages and the chosen presets' (packages.ps1), other
+# install.ps1 step: the core winget packages and the chosen presets' (install/packages.ps1), other
 # installers, the Nerd Font, then Neovim's and Neovide's config. -LinkOnly skips the installs and
 # keeps the config.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1), $Stamp and the package lists
-# (packages.ps1) are in scope. install.ps1 (to plan the admin step) and bin/preset.ps1 (to install
+# (install/packages.ps1) are in scope. install.ps1 (to plan the admin step) and bin/preset.ps1 (to install
 # one preset) dot-source it with $SoftwareFunctionsOnly set, for the functions alone.
 
 # The winget packages installed on this PC, from one `winget export` (every installed package it
@@ -163,7 +163,7 @@ function Register-WingetSource {
     finally { Remove-Item $msix -Force -ErrorAction SilentlyContinue }
 }
 
-# --- the tools bundle (roadmap 2.0, bundle/tools.txt) -------------------------------------------
+# --- the tools bundle (roadmap 2.0, install/tools.txt) -------------------------------------------
 # Omarchy installs from its ISO's offline package cache; omawin's release carries the core tools
 # the same way, built by CI from each tool's own release: a zip per tool, all fetched at once and
 # unpacked side by side into %LOCALAPPDATA%\omawin\tools. No winget, no installers, no admin.
@@ -428,7 +428,7 @@ function Install-WingetPackages([string[]]$Ids) {
     Add-ToolPaths @(Get-WantedTools | Where-Object { @(Read-ToolBundle | ForEach-Object Name) -notcontains $_ })
 }
 
-# The commands the core and the chosen presets are for (packages.ps1's Tools); bun is the core's.
+# The commands the core and the chosen presets are for (install/packages.ps1's Tools); bun is the core's.
 function Get-WantedTools {
     @('bun') + @(foreach ($name in Get-ChosenPresets) { $Presets[$name].Tools }) |
         Where-Object { $_ } | Select-Object -Unique
@@ -490,7 +490,7 @@ function Install-Extras([string[]]$Names) {
     }
 }
 
-# The presets this PC picked, minus names packages.ps1 no longer has (said once, not fatal).
+# The presets this PC picked, minus names install/packages.ps1 no longer has (said once, not fatal).
 function Get-ChosenPresets {
     foreach ($name in Get-Presets) {
         if ($Presets.Contains($name)) { $name } else { Write-Warn "preset '$name' (in $PresetsFile) doesn't exist any more; omawin preset remove $name" }
@@ -532,7 +532,7 @@ function Initialize-Presets {
         } elseif ($answer -ne 'none') { Write-Warn "no Linux '$answer': none for now (omawin preset add wsl later)" }
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
-    Set-Content $PresetsFile (@('# omawin presets on this PC (packages.ps1); omawin preset add|remove <name>') + $picked) -Encoding utf8
+    Set-Content $PresetsFile (@('# omawin presets on this PC (install/packages.ps1); omawin preset add|remove <name>') + $picked) -Encoding utf8
     Write-Note "presets: $(if ($picked) { $picked -join ', ' } else { 'none (omawin preset list)' })"
 }
 
@@ -549,7 +549,7 @@ function Install-NerdFont {
     $tmp = Join-Path $env:TEMP "nerdfont-$Stamp"
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     $zip = Join-Path $tmp "$NerdFont.zip"
-    # The tools bundle brought it (bundle/tools.txt, font): its files, no download.
+    # The tools bundle brought it (install/tools.txt, font): its files, no download.
     $fromBundle = Join-Path $env:LOCALAPPDATA "omawin\fonts\$NerdFont"
     if (Test-Path (Join-Path $fromBundle '.omawin-version')) { $tmp = $fromBundle }
     else {
@@ -600,15 +600,15 @@ if (-not $SoftwareFunctionsOnly) {
     }
 
     Write-Step 'Neovim and Neovide'
-    Set-Junction "$env:LOCALAPPDATA\nvim" "$Repo\nvim"
+    Set-Junction "$env:LOCALAPPDATA\nvim" "$Repo\config\nvim"
     # Neovide uses the same Neovim config; this is only its own settings (config.toml).
-    Set-Junction "$env:APPDATA\neovide" "$Repo\neovide"
+    Set-Junction "$env:APPDATA\neovide" "$Repo\config\neovide"
 
     Write-Step 'R / RStudio'
-    # A one-line ~/.Rprofile (R's ~ is Documents) sourcing r/rprofile.R: RStudio follows the
+    # A one-line ~/.Rprofile (R's ~ is Documents) sourcing config/r/rprofile.R: RStudio follows the
     # desktop theme. An .Rprofile of your own (more than that one line) is left alone.
     $rprofile = Join-Path ([Environment]::GetFolderPath('MyDocuments')) '.Rprofile'
-    $source = "source('$("$Repo\r\rprofile.R" -replace '\\', '/')')"
+    $source = "source('$("$Repo\config\r\rprofile.R" -replace '\\', '/')')"
     $current = if (Test-Path $rprofile) { (Get-Content $rprofile -Raw).Trim() }
     if ($current -eq $source) { Write-Note "ok  $rprofile" }
     elseif (-not $current -or $current -match '^source\(.*rprofile\.R.*\)$') { Set-Content $rprofile $source -Encoding utf8; Write-Note "wrote $rprofile" }
