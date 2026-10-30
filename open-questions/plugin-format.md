@@ -1,6 +1,6 @@
 # How should plugin panels be written?
 
-**Question:** omawin plugins ([docs/roadmap.md](../docs/roadmap.md), phase 3) keep Omarchy's `manifest.json`. Bar widgets are commands that print JSON lines. What should a plugin's *panel* (a drop-down, a page) be written in?
+**Question:** omawin plugins ([docs/roadmap.md](../docs/roadmap.md), phase 4) keep Omarchy's `manifest.json`. Bar widgets are commands that print JSON lines. What should a plugin's *panel* (a drop-down, a page) be written in?
 
 **Context:** the menu app is Native AOT, so it can't load a plugin's .NET DLL. Omarchy's plugins are QML, which doesn't run here.
 

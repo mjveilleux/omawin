@@ -6,7 +6,7 @@ Sources: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-she
 
 ## Where we are
 
-**Done and solid:** one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI so a new PC downloads binaries; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, calculator, packages page); 24 Omarchy themes, applied live; noctty and herdr; WSL with Omarchy's packages; Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
+**Done and solid:** one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI so a new PC downloads binaries; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, calculator, packages page); 24 Omarchy themes, applied live; noctty and herdr; WSL with Arch as the default Linux, on Omarchy's package repositories; dev environments through mise and Omarchy's Docker databases (Install › Development, [dev-envs.md](dev-envs.md)); Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
 
 **Built, not yet shipped:** window animations in the GlazeWM fork (`omawin` branch: new windows fade in, the others slide, on snapshots drawn with Windows Graphics Capture and DirectComposition, ease-out-quint 200 ms). Not tried on a PC, not in a release.
 
@@ -19,7 +19,8 @@ Sources: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-she
 | Windows open and move | pop in and slide (Hyprland) | instant (animations unreleased) |
 | Install | packages from pacman, 5 downloads at once | winget, 4 at once, ~150 s of packages before the desktop is up; the AOT build only where Visual Studio's C++ tools are |
 | Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | menu rows and launcher items in text files; no widgets, panels or plugins of your own |
-| Everyday dev setup | `install-dev-env` (mise), Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | WSL and presets; the rest by hand |
+| Everyday dev setup | `install-dev-env` (mise), Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev environments and Docker databases (Windows side); no web apps, a hand-kept key list |
+| Linux | it *is* Linux | Arch in WSL, opt-in at install; a Linux terminal or project when asked (`--wsl`), otherwise Windows first |
 | Files | Nautilus, with a preview (Sushi) and "here" keys | the Win+F finder (fff): search, preview, chips; no actions beyond open and show in folder, no browsing |
 
 ## Phase 1: snappy (now)
@@ -44,7 +45,24 @@ Goal: a clean Windows 11 PC goes from the one line to a working desktop in **und
 5. **A leaner core.** Neovide and Windows Terminal move to presets (noctty is the terminal; Terminal is the fallback a new PC already has on Windows 11).
 6. **One fetch for our own pieces.** The helpers, the menu app and the music player come from one release zip per architecture instead of three downloads.
 
-## Phase 3: plugins (Omarchy's shell, on Windows)
+## Phase 3: Arch in WSL, first class
+
+Arch is already the default Linux (Omarchy's stable package repositories, no AUR, `wsl/setup.sh`), but it's an opt-in preset and Windows comes first everywhere. First class means Arch is where your code lives and runs, and omawin treats it as its second home: installed by default, warm when you need it, reachable from every key, kept up to date and checked like the rest. Never at the cost of a distro you already had: that one stays yours ([AGENTS.md](../AGENTS.md)).
+
+1. **On by default.** The install's Linux question starts on Arch (as now), and the `wsl` preset is in the default set: pressing Enter through the questions gives you Arch. WSL's restart stays the one reboot, resumed at the next sign-in (it is today).
+2. **A good WSL VM out of the box** (`wsl/.wslconfig`, `/etc/wsl.conf`): systemd on, mirrored networking (localhost works both ways, VPNs behave) with DNS tunneling, sparse disk, memory handed back; each a setting your account folder can override.
+3. **Linux as your default side.** `omawin default side linux|windows`: with Linux, Win+Enter opens a terminal in Arch (in the folder of the window in front, when that's a Linux folder), new projects go in `~/src` inside Arch, and Install › Development installs into Arch. Windows stays the default until you pick.
+4. **No cold start when it counts.** Arch starts in the background at sign-in when Linux is your side (`omawin toggle linux-warm` otherwise), so the first Linux terminal opens as fast as a Windows one; measured with `omawin profile terminal --wsl`.
+5. **Omarchy's tooling in Arch.** Dev environments through mise and Omarchy's own lists, run inside Arch (`omawin install dev-env <lang> --linux`); Docker Engine in Arch (pacman, systemd) instead of Docker Desktop, so the Docker databases and lazydocker run there with no Windows-side licence or VM; Omarchy's bash defaults, as its Linux users have them.
+6. **Linux files in the finder and launcher.** Win+F searches your Arch home and repos (indexed inside Arch, where it's fast, not over the `\\wsl.localhost` share); Linux GUI apps (WSLg) appear in the launcher with their icons; Localhost already lists Linux servers.
+7. **Credentials that just work.** Git uses Windows' Git Credential Manager from Arch; the SSH agent and GPG reach Windows' (1Password or OpenSSH) through a relay, so one sign-in serves both sides.
+8. **The theme and tools match, live.** The prompt, Neovim, fastfetch, lazygit and btop in Arch follow the omawin theme on a switch, as Windows' do (they read the same repo through `/mnt/c` today; anything rendered gets its copy inside Arch too).
+9. **Kept and checked.** `omawin update` updates Arch (it does: `setup.sh update`) and runs Linux-side migrations (`migrations/linux/`, a marker file per user, Omarchy's way); `omawin check` checks the distro (running, systemd, the repos, the tools, the user); a bar indicator says Arch is running and what it uses, a click to stop it.
+10. **Safe to break.** `omawin linux backup` (`wsl --export`, a dated file) and `omawin linux reset` (a fresh Arch beside your backup, set up again); never touches a distro omawin didn't make.
+
+The clean-PC CI test (phase 2) can't run WSL (GitHub's runners have no nested virtualization), so Arch gets its own test: `setup.sh` in an Arch container in CI, and a run on a real PC per release.
+
+## Phase 4: plugins (Omarchy's shell, on Windows)
 
 Quickshell is Qt on Wayland and won't run on Windows, but its plugin model will: we keep **Omarchy's manifest format** and draw with our own shell. Like the themes, an Omarchy plugin's idea (and much of its manifest and data) carries over; its QML doesn't.
 
@@ -58,12 +76,12 @@ Quickshell is Qt on Wayland and won't run on Windows, but its plugin model will:
 4. **Our own pieces become plugins.** The music panel, the agents panel, dictation and reports move to the format first, which proves it and keeps the core small.
 5. **IPC for plugins and scripts.** `omawin shell <method>` over the menu app's existing signal: `toggle`, `reload`, `list-plugins`, `put-bar-widget`, like `omarchy-shell`.
 
-## Phase 4: Omarchy's developer experience
+## Phase 5: Omarchy's developer experience
 
 Borrowed as data where we can, the way the themes were.
 
-1. **Dev environments** through mise (`omawin install dev-env <lang>`): Omarchy's list (Ruby, Node, Bun, Go, PHP, Python, Elixir, Rust, Java, Zig, .NET, …), one menu row each.
-2. **Databases in Docker** from the menu: Omarchy's exact set (Postgres 18, MySQL 8.4, MariaDB 11.8, Redis 7, MongoDB, SQL Server 2022), bound to 127.0.0.1, `--restart unless-stopped`; a Docker TUI on a key.
+1. **Dev environments and Docker databases in Arch too** (they exist on the Windows side): see phase 3.
+2. **A Docker TUI on a key** (Omarchy's Super+Shift+D: lazydocker).
 3. **Web apps and TUIs** as launcher items with their own icon and window (`omawin install webapp <name> <url>`, Edge `--app=`), launch-or-focus.
 4. **The key cheat sheet built from `glazewm/config.yaml`**: each binding gets a description (as Omarchy's `o.bind`), the Shortcuts page reads them, and `launcher/keys.txt` goes.
 5. **Notifications and OSD in the shell**: our own toasts (reminders, timers, low battery, install finished) and a volume / brightness OSD drawn by the shell.
@@ -72,7 +90,7 @@ Borrowed as data where we can, the way the themes were.
 8. **Detect before offering**: menu rows with a condition (`?wsl`, `?docker`), answered in the background and cached, so the menu opens on the last answers, as Omarchy's guards do.
 9. **Update channels and undo**: `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what install.md lists by hand.
 
-## Phase 5: files (the finder, Win+F)
+## Phase 6: files (the finder, Win+F)
 
 The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. Make it the place you act on files from, so Explorer is rarely needed. Explorer itself stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)).
 
@@ -94,4 +112,5 @@ The finder on fff is already the file explorer you use: fuzzy search over your f
 - `omawin profile menu`: under 50 ms from key to pixels, on this PC and the clean runner.
 - CI install: desktop up in under 3 minutes, everything in under 10, `omawin check` 0 / 0.
 - Window animations at full frame rate in the fork's frame check, and no judder by eye.
+- A fresh install, Enter through every question: Arch ready, Win+Enter in Arch as fast as in Windows once Linux is your side.
 - One plugin of ours and one written from an Omarchy plugin's idea, installed with `omawin plugin add`.

@@ -4,7 +4,7 @@
 
 **Options:**
 1. **One bundle zip from our release workflow**: pinned versions, one download, checked against `SHA256SUMS.txt`, unpacked into `~/.local/bin`. Fastest and fully offline-cacheable; we redistribute the tools (all MIT / Apache / Unlicense; notices in the zip) and bump versions ourselves.
-2. **mise** (`jdx.mise`) with its GitHub-release backends: parallel, pinned in a `mise.toml`, the same tool Omarchy uses and that the dev-env work (phase 4) needs anyway. One winget package (mise itself) plus GitHub's rate limit for anonymous downloads.
+2. **mise** (`jdx.mise`) with its GitHub-release backends: parallel, pinned in a `mise.toml`, the same tool Omarchy uses and that Install › Development already installs ([docs/dev-envs.md](../docs/dev-envs.md)). One winget package (mise itself) plus GitHub's rate limit for anonymous downloads.
 3. **Stay on winget**, more at once. Simplest; still the slowest.
 
-**Default:** 2, since dev environments need mise anyway; fall back to 1 if GitHub's rate limit or mise's Windows support gets in the way on the clean-PC test.
+**Default:** 2, since Install › Development already uses mise; fall back to 1 if GitHub's rate limit or mise's Windows support gets in the way on the clean-PC test.
