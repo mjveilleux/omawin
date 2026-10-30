@@ -6,9 +6,10 @@
 # Two steps aren't files: "admin" (the one admin prompt, first, when anything needs it) and
 # "migrations" (last; bin/migrate.ps1).
 no-ads   | Windows' ads and suggestions off                                 | 2
-software | winget packages, your presets, the Nerd Font, Neovim's config    | 150
+software | winget packages, your presets, Neovim's config                   | 20
 shell    | PowerShell profile, terminals, prompt, git                       | 6
 desktop  | GlazeWM, Zebar, dictation                                        | 8
 helpers  | omawin.exe, the menu app, the music player                       | 25
 look     | the theme, the lock screen, the taskbar                          | 5
 other    | WSL settings, Claude Code                                        | 6
+tools    | the rest of the tools bundle, the Nerd Font                       | 5

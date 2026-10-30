@@ -208,7 +208,7 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and $f[7] -eq 'later') }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge') }
         })
     $script:ToolBundle
 }
@@ -264,7 +264,7 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
     $plan = foreach ($t in $todo) {
         $remote = $t.Base -match '^[a-z]+://'
         [pscustomobject]@{
-            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir
+            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge
             Url = $(if ($remote) { "$($t.Base)/$($t.File)" } else { $null })
             Zip = $(if ($remote) { Join-Path $work $t.File } else { Join-Path $t.Base $t.File })
         }
@@ -286,6 +286,24 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
 function Get-BundleCovered {
     if (-not $script:BundleStart) { return @() }
     @(@($script:BundleStart.Tools | Where-Object { $_.Provides -and ($script:BundleTheirs -notcontains $_.Provides) } | ForEach-Object Provides) + @($script:BundleTheirs))
+}
+
+# Waits for some of the bundle's tools only (a step that needs them before the rest has landed:
+# the desktop step's GlazeWM), and puts them on this session's PATH; the user's PATH is written
+# once, when the bundle is collected (Complete-ToolBundle, the tools step).
+function Wait-BundleTools([string[]]$Names) {
+    $b = $script:BundleStart
+    if (-not $b -or -not $b.Process -or $b.Done) { return }
+    $want = @($b.Todo | Where-Object { $Names -contains $_.Name })
+    if (-not $want) { return }
+    while ($want | Where-Object { -not (Test-Path (Join-Path $b.DoneDir "$($_.Name).json")) }) {
+        if ($b.Process.HasExited) { break }
+        Start-Sleep -Milliseconds 100
+    }
+    foreach ($t in $want) {
+        if ($t.Bin -ne '-') { $env:Path = "$(if ($t.Bin -eq '.') { $t.Dir } else { Join-Path $t.Dir $t.Bin });$env:Path" }
+    }
+    Write-Log ("    {0} from the bundle, {1:0.0} s after it started" -f ($Names -join ', '), $b.Clock.Elapsed.TotalSeconds)
 }
 
 function Complete-ToolBundle {
@@ -572,9 +590,10 @@ if (-not $SoftwareFunctionsOnly) {
         Write-Step 'other tools'
         $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
         Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
-        # Last in this step: the desktop step needs GlazeWM from the bundle, and the font comes in it.
-        Complete-ToolBundle
-        Install-NerdFont
+        # The bundle keeps unpacking through the next steps: the shell, desktop and helpers steps
+        # wait for the tools they need (Wait-BundleTools), the tools step collects the rest and
+        # puts in the font (install/tools.ps1). Run alone (-Step software), it's all collected here.
+        if ($Step) { Complete-ToolBundle; Install-NerdFont }
     } else {
         # An update installs nothing, but a tool a package moved off the PATH still goes back on.
         Add-ToolPaths @(Get-WantedTools)

@@ -30,7 +30,6 @@ $WingetPackages = @(
     'Neovim.Neovim'
     'Neovide.Neovide'
     'tree-sitter.tree-sitter-cli'   # nvim-treesitter builds parsers with it
-    'zig.zig'                       # C compiler for nvim-treesitter parsers
     'OpenJS.NodeJS.LTS'             # mason.nvim (Neovim) installs most LSPs with npm
     'astral-sh.uv'                  # Python tools (harlequin, the Fabric CLI) and mason.nvim's Python LSPs
 

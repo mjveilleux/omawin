@@ -23,6 +23,7 @@ if ($early) {
 else { Invoke-InstallItem 'Tools' 'omawin.exe' { & "$Repo\bin\install-binaries.ps1" -What helpers } }
 
 Write-Step 'noctty'
+if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools noctty }   # the tools bundle brings it
 # The default terminal, per-user (bin/noctty.ps1; `omawin update terminal` takes a newer one).
 Invoke-InstallItem 'Tools' 'noctty' { & "$Repo\bin\noctty.ps1" -IfMissing }
 

@@ -115,6 +115,7 @@ static void Unpack(Tool t, string download, string stage)
             var dest = Path.GetFullPath(Path.Combine(stage, rel));
             if (!dest.StartsWith(stage + Path.DirectorySeparatorChar)) throw new InvalidOperationException($"{t.Name}: {e.FullName} leaves the folder");
             if (rel.EndsWith('/')) { Directory.CreateDirectory(dest); continue; }
+            if (!Tools.Keeps(t, rel)) continue;
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             e.ExtractToFile(dest, overwrite: true);
         }

@@ -2,6 +2,8 @@
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
 Write-Step 'GlazeWM + Zebar'
+# GlazeWM (the sign-in task looks for its exe) and Bun (Zebar's client) from the tools bundle.
+if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools glazewm, bun }
 # GlazeWM reads ~/.glzr/glazewm/config.yaml, filled in from glazewm/config.yaml (a template)
 # with the theme's colors; so is Windows Terminal's scheme (themes/render.ps1).
 & "$Repo\themes\render.ps1"

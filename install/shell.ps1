@@ -26,6 +26,7 @@ $cache = "$HOME\.cache\pwsh"
 if (Test-Path $cache) { Remove-Item $cache -Recurse -Force; Write-Note 'cleared starship/zoxide init cache (rebuilt on next start)' }
 
 Write-Step 'Windows Terminal'
+if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools wt }   # the tools bundle's Terminal, if it brings one
 # Terminal writes its own settings.json (its settings UI), so it lives in Terminal's LocalState, not
 # in the repo: omawin's windows-terminal/settings.json seeds it once (Terminal's generated one is
 # backed up), and after that it's yours. The colors come from a fragment (themes/render.ps1).

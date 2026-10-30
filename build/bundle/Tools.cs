@@ -3,7 +3,7 @@ using System.Text.RegularExpressions;
 namespace Omawin.Bundle;
 
 // One row of bundle/tools.txt.
-public sealed record Tool(string Name, string Source, Regex Asset, string? Rename, string Bin, string? Provides, string? Home = null, bool Later = false);
+public sealed record Tool(string Name, string Source, Regex Asset, string? Rename, string Bin, string? Provides, string? Home = null, bool Later = false, string? Keep = null);
 
 // One row of the manifest the install reads (omawin-tools.txt), tab-separated so Windows
 // PowerShell splits it with one -split: name, version, file, sha256, bin, winget id, home, later.
@@ -31,9 +31,15 @@ public static class Tools
             if (p[3].Contains("..") || Path.IsPathRooted(p[3])) throw new FormatException($"bundle/tools.txt: bin '{p[3]}'");
             string? home = p.Length > 5 && p[5].Length > 0 ? p[5] : null;
             if (home != null && (home.Contains("..") || Path.IsPathRooted(home) || home.StartsWith('\\'))) throw new FormatException($"bundle/tools.txt: home '{home}'");
-            var later = p.Length > 6 && p[6] == "later";
-            if (p.Length > 6 && p[6].Length > 0 && !later) throw new FormatException($"bundle/tools.txt: '{p[6]}' (the 7th field is later, or nothing)");
-            tools.Add(new Tool(p[0], p[1], new Regex(asset), rename, p[3], p.Length > 4 && p[4].Length > 0 ? p[4] : null, home, later));
+            // The 7th field: flags. later (not waited for), keep:<pattern> (only those files of it).
+            bool later = false; string? keep = null;
+            foreach (var flag in (p.Length > 6 ? p[6] : "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (flag == "later") later = true;
+                else if (flag.StartsWith("keep:") && flag.Length > 5) keep = flag[5..];
+                else throw new FormatException($"bundle/tools.txt: flag '{flag}' (later, keep:<pattern>)");
+            }
+            tools.Add(new Tool(p[0], p[1], new Regex(asset), rename, p[3], p.Length > 4 && p[4].Length > 0 ? p[4] : null, home, later, keep));
         }
         if (tools.GroupBy(t => t.Name).FirstOrDefault(g => g.Count() > 1) is { } dup) throw new FormatException($"bundle/tools.txt: {dup.Key} twice");
         return tools;
@@ -46,6 +52,10 @@ public static class Tools
 
     // An archive whose entries all sit in one top folder ("nvim-win64/bin/nvim.exe") is unpacked
     // without it, so every tool's zip has the same shape: the tool's own files at the top.
+    // keep:<pattern>: a file kept when its name matches (* and ?), wherever it is in the archive.
+    public static bool Keeps(Tool t, string entry) =>
+        t.Keep == null || System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(t.Keep, Path.GetFileName(entry.Replace('\\', '/')), ignoreCase: true);
+
     public static string? CommonTop(IEnumerable<string> entries)
     {
         string? top = null;

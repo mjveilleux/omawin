@@ -52,4 +52,4 @@ LazyVim (Neovim 0.12) plus a personal layer in `nvim/lua/`:
 
 **In Linux (WSL)** it's the same Neovim and the same config: `omawin preset add wsl` sets up your Linux (Arch by default, or Ubuntu: `omawin default linux`) for your account and links its `~/.config/nvim` to omawin's (Windows' theme and agent default included). Its plugins are its own, installed the first time `nvim` runs there; the markdown preview opens in Windows' browser.
 
-Treesitter builds parsers with the tree-sitter CLI and zig. Don't run Neovim from an admin shell: its plugin folders would become admin-owned.
+Treesitter's parsers (the languages LazyVim highlights) come prebuilt with the install, so no C compiler is needed. A language beyond LazyVim's list (`:TSInstall <language>`) is built with the tree-sitter CLI and needs a C compiler: `omawin preset add c` (gcc). Don't run Neovim from an admin shell: its plugin folders would become admin-owned.

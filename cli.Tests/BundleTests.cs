@@ -20,8 +20,12 @@ public class BundleTests
         Assert.Equal("jq.exe", jq.Rename);
         Assert.Matches(jq.Asset, "jq-windows-amd64.exe");
         Assert.Equal(@"Programs\noctty", tools.Single(t => t.Name == "noctty").Home);
-        Assert.True(tools.Single(t => t.Name == "zig").Later);
         Assert.False(tools.Single(t => t.Name == "nvim").Later);
+        var font = tools.Single(t => t.Name == "font");
+        Assert.True(Tools.Keeps(font, "JetBrainsMonoNerdFont-Bold.ttf"));
+        Assert.False(Tools.Keeps(font, "JetBrainsMonoNerdFontMono-Bold.ttf"));   // the Mono and Propo families aren't used
+        Assert.False(Tools.Keeps(font, "README.md"));
+        Assert.True(Tools.Keeps(tools.Single(t => t.Name == "nvim"), "bin/nvim.exe"));   // no keep: everything
     }
 
     [Fact]
@@ -38,6 +42,7 @@ public class BundleTests
     [InlineData("A | github:o/r | ^x$ | . | X")]        // name shape
     [InlineData("a | github:o/r | ^x$")]                // too few fields
     [InlineData("a | github:o/r | ^x$ | . | X | ..\\up")] // home climbs out
+    [InlineData("a | github:o/r | ^x$ | . | X | | soon")]    // an unknown flag
     public void BadRowsAreRefused(string row) => Assert.Throws<FormatException>(() => Tools.Parse([row]));
 
     [Fact]

@@ -4,7 +4,7 @@
 # it's done with <Done>\<name>.json (Name, Ok, Error, Seconds), so the install can take each one
 # as it lands, and leave the ones marked later (zig) to finish after it.
 #
-#   -Plan    a JSON list: Name, Url (or none: Zip is already a file), Zip, Sha, Dir, Version
+#   -Plan    a JSON list: Name, Url (or none: Zip is already a file), Zip, Sha, Dir, Version, Merge
 #   -Done    the folder for the done files; this script removes its own work files when it ends
 param([Parameter(Mandatory)][string]$Plan, [Parameter(Mandatory)][string]$Done)
 $ErrorActionPreference = 'Stop'
@@ -30,7 +30,9 @@ try {
         try {
             if (-not (Test-Path -LiteralPath $t.Zip)) { throw 'not downloaded' }
             if ((Get-FileHash -LiteralPath $t.Zip -Algorithm SHA256).Hash.ToLower() -ne $t.Sha) { throw "doesn't match the release's list" }
-            if (Test-Path -LiteralPath $t.Dir) {
+            # merge: unpacked into a folder that has things of yours in it (Neovim's data folder):
+            # added to it, never moved aside.
+            if (-not $t.Merge -and (Test-Path -LiteralPath $t.Dir)) {
                 # An older copy of ours: moved out of the way (a running one keeps its files), removed after.
                 try { Rename-Item -LiteralPath $t.Dir -NewName "$(Split-Path $t.Dir -Leaf).old-$using:stamp" -ErrorAction Stop }
                 catch { throw 'in use: close it and run install.ps1 again' }
@@ -39,8 +41,10 @@ try {
             & $using:tar -xf $t.Zip -C $t.Dir
             if ($LASTEXITCODE) { throw "unpacking failed ($LASTEXITCODE)" }
             Set-Content -LiteralPath (Join-Path $t.Dir '.omawin-version') "$($t.Version) $($t.Sha)"
-            Get-ChildItem (Split-Path $t.Dir) -Filter "$(Split-Path $t.Dir -Leaf).old-*" -Directory -ErrorAction SilentlyContinue |
-                Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            if (-not $t.Merge) {
+                Get-ChildItem (Split-Path $t.Dir) -Filter "$(Split-Path $t.Dir -Leaf).old-*" -Directory -ErrorAction SilentlyContinue |
+                    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+            }
             $out.Ok = $true
         } catch { $out.Error = "$($_.Exception.Message)" }
         $out.Seconds = [math]::Round($clock.Elapsed.TotalSeconds, 1)
