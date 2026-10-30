@@ -588,7 +588,7 @@ Shared building blocks that several features need (who holds a file, display lay
 | 8.24 Classic right-click menu | catalog entry | one value |
 | 8.25 Files opened by type | core (forwarders to the shell) | the shell's viewer |
 
-Count: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 catalog-only (plus the catalog parts of 8.12, 8.18 and 8.19).
+Count: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 catalog-only (plus the catalog parts of 8.12, 8.18 and 8.19). Items 8.26-8.43 (below) are almost all catalog entries, a few with an admin helper verb (8.32, 8.34) or a core page (8.35, 8.36); the Health additions (8.41) go in 8.15's plugin.
 
 **How first-party plugins are written:**
 
@@ -643,6 +643,35 @@ Count: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 c
 - **8.23 The Copilot key opens the launcher** (S). The Copilot key sends Win+Shift+F23; the keyboard hook takes it for the launcher (or anything you choose), as [shell-apps.md](shell-apps.md) notes.
 - **8.24 The full right-click menu back** (S). Windows 11's shortened context menu hides most entries behind *Show more options*; the classic menu returns with one documented-in-practice registry key (a catalog switch, 1B; Explorer restarts).
 - **8.25 Files and folders opened by type go to omawin** (later). Images, `.md`, `.json`, `.log` opened in the shell's own viewer (tiny forwarder exes, [shell-apps.md](shell-apps.md) decision 6); defaults set by you once, since Windows forbids setting them by script (UCPD).
+
+### 8G. Faster and calmer by default
+
+omawin's install already turns off Windows' ads and suggestions, OEM upsells and Copilot's background process (`no-ads.ps1`). What's left is speed, distractions and conflicts with omawin itself. **The principle that sets this apart from the many "debloat" scripts: every tweak is measured, explained and reversible.** Each is a settings catalog entry (1B) marked *recommended*, with a sentence saying what it does and why; `omawin tune-up` shows what's applied, `omawin profile login` and `omawin profile ram` (exist) show the effect before and after, and anything that can't show a difference isn't shipped. No placebo tweaks (HPET, "network throttling", registry "speed-ups" from forum posts), and nothing that breaks Windows Update, Defender or the Store.
+
+- **8.26 Windows stops fighting the tiling manager** (S, catalog, on by default). Snap Layouts' flyout on the maximize button and dragging to edges (`EnableSnapAssistFlyout`, `WindowArrangementActive`), Aero Shake, and Windows' own Win+key shortcuts that clash with GlazeWM's (`DisabledHotkeys`, Explorer restart; [shell-apps.md](shell-apps.md)). GlazeWM tiles; Windows shouldn't also try.
+- **8.27 Snappier menus and switching** (S, catalog). Classic menus open after 400 ms by default (`MenuShowDelay` → 100); Alt+Tab shows Edge's tabs as windows (`MultiTaskingAltTabFilter` → windows only); minimize / maximize animations off where GlazeWM animates instead.
+- **8.28 Less running in the background** (M, catalog). Edge's startup boost and running after it's closed (Edge's per-user policies), Widgets and its board, the Game Bar's background recording (`GameDVR`), Phone Link, Teams' and OneDrive's start at sign-in (asked, never removed: they may hold your files), per-app background permission for Store apps you don't use, Delivery Optimization uploading updates to other PCs, automatic maintenance waking the PC at night on battery. Each shown with the memory or wake-ups it was costing.
+- **8.29 Accidents that don't happen** (S, catalog). Alt+Shift switching the keyboard layout mid-sentence, the Narrator shortcut (Win+Ctrl+Enter), Sticky Keys' and Filter Keys' prompts, the "let's finish setting up your device" screen after updates (partly done), Recall and other AI features that record the screen (their policies), Spotlight's "learn about this picture" icon.
+- **8.30 Sleep that doesn't drain the battery** (S, catalog). Modern Standby can drain a laptop overnight: hibernate after a chosen time asleep (`powercfg` standby-to-hibernate), wake timers off on battery, fast startup off (it keeps the kernel's uptime and driver state across "shut down", which confuses drivers and dual boot). 8.15 shows the drain before and after.
+- **8.31 Windows' file indexer off** once the launcher, the finder and whole-disk search (8.2) replace it: less CPU and disk activity, especially after big git checkouts.
+
+### 8H. Developer papercuts
+
+- **8.32 Dev Drive for code and caches** (M, admin once, 🖥). Microsoft's **Dev Drive** (ReFS, with Defender's performance mode, which scans asynchronously) speeds up builds and installs noticeably on Windows. omawin offers to create one (a VHD of a chosen size, or a spare partition; `Format-Volume -DevDrive`), puts `~/src` and the package caches on it (npm, pnpm, Bun, NuGet, pip, uv, cargo, Go, mise, through their environment variables), and measures a build before and after. Existing code is never moved without asking.
+- **8.33 Git as fast on Windows as on Linux** (S, the `shell` step). Git for Windows is slow on big repos without its Windows-specific settings: `core.fscache`, `core.preloadindex`, `core.untrackedCache`, and Git's built-in **file system monitor** (`core.fsmonitor`, a daemon that watches the working tree so `git status` doesn't walk it). In omawin's git includes; `git status` timed in a big repo to prove it.
+- **8.34 "Port already in use" that isn't** (S, admin). Hyper-V and WSL reserve random ranges of ports at boot (`netsh int ipv4 show excludedportrange protocol=tcp`), so a dev server on 3000 or 8080 fails for no visible reason. omawin moves Windows' dynamic port range out of the common dev ports and reserves them (`netsh int ipv4 set dynamicport` / `add excludedportrange`), through the admin helper; Localhost (exists) explains a blocked port when it sees one.
+- **8.35 A PATH doctor** (S). Windows' PATH collects duplicates, folders that no longer exist, a system PATH that silently beats the user's (the mise shims problem, [dev-envs.md](dev-envs.md)), and a 2,047-character limit for some programs. `omawin path` lists both PATHs, flags each problem, says which `node` / `python` / `git` wins and why, and fixes with undo.
+- **8.36 An environment variables editor in the menu** (M). Windows' dialog is from 1995. A launcher page: search variables (user and system), edit inline, PATH as a list you reorder, admin for system ones in one prompt, and `WM_SETTINGCHANGE` so new terminals see it at once.
+- **8.37 UTF-8 everywhere** (S, catalog, asked). Windows' system-wide UTF-8 option (`ACP` / `OEMCP` 65001, Settings' "Beta: Use Unicode UTF-8") ends a whole class of encoding bugs in scripts and old tools; it can break a few legacy programs, so it's offered with that said, not applied silently. PowerShell's own output encoding is set to UTF-8 in the profile regardless.
+- **8.38 Firewall prompts for every dev server** (S, asked). Each new runtime that listens pops "Allow on private networks?". omawin asks once which dev runtimes (node, bun, python, dotnet, go) may listen on **private networks only**, and adds those rules; public networks keep asking. Servers that only need `localhost` never need a rule.
+- **8.39 The SSH agent and OpenSSH, working** (S). Windows' `ssh-agent` service is disabled by default: set to start automatically, keys added once, and Git for Windows pointed at Windows' OpenSSH so one agent serves Git, the terminal and WSL (3.9).
+- **8.40 Long paths, symlinks and case-sensitive folders** (S, admin; partly in 1B). Long paths on; Developer Mode so symlinks work without admin; case sensitivity per folder (`fsutil file setCaseSensitiveInfo`) for repos shared with Linux tools.
+
+### 8I. Keep it healthy
+
+- **8.41 Disk and battery health** on the Health page (8.15): SMART reliability counters (`Get-StorageReliabilityCounter`: wear, temperature, read errors), battery wear (`powercfg /batteryreport`'s design vs full charge capacity), devices with driver problems (`Win32_PnPEntity` with an error code), each with what to do.
+- **8.42 A restore point before omawin changes Windows** (S). Before install, `omawin update` and any batch of admin settings (`Checkpoint-Computer`, with System Protection on for the system drive at a modest size); `omawin undo` lists them.
+- **8.43 Driver updates on your terms** (S, catalog, asked). Windows Update can replace a working vendor driver with an older or generic one; the documented policy to exclude drivers from quality updates, offered with that trade-off said.
 
 ### What not to do
 
