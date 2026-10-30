@@ -8,7 +8,7 @@
 irm https://raw.githubusercontent.com/mjveilleux/omawin/main/bootstrap.ps1 | iex
 ```
 
-Run it from **Windows PowerShell**, then sign out and back in. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
+Run it from **Windows PowerShell**, then sign out and back in. It takes about a minute: every core tool comes prebuilt in one release bundle, downloaded and unpacked in parallel, with no admin prompt. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
 
 ## What you get
 
@@ -17,25 +17,25 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 - **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
 - **File finder** (`Win+F`), **clipboard history** (`Win+Shift+V`), **audio** (`Win+A`).
-- **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, no dock, network, battery. The Windows taskbar hides.
-- **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
-- **Neovim** with [LazyVim](https://lazyvim.org), themed.
-- **Opt-in presets**: language toolchains, data tools, AI agents, a music and podcast player in the bar (`Win+M`), local dictation (`Win+H`).
+- **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, network, battery. The Windows taskbar hides.
+- **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 (installed first, and what omawin runs on) and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
+- **Neovim** with [LazyVim](https://lazyvim.org), themed, its treesitter parsers prebuilt (no C compiler needed).
+- **Opt-in presets**: language toolchains, data tools, AI agents, local dictation (`Win+H`). The music and podcast player (`Win+M`) is being rebuilt as a bar plugin.
 - **`omawin`**, a command for everything: `omawin help` lists them; the keys, menus and bar all call it.
 
 ## Requirements
 
-- Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher and music player on the PC.
-- winget (App Installer, from the Microsoft Store; every current Windows 11 has it).
-- An internet connection and a few GB of disk (the core installs about 25 packages).
-- A standard account is fine; run the install from a normal (not "as administrator") PowerShell. Expect one Windows admin prompt, at the start, for what every account shares (the programs that install for the whole PC, and the GlazeWM fork); `omawin no-ads` asks for another.
+- Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher on the PC.
+- winget (App Installer; every current Windows 11 has it). The core needs it only for git and the .NET runtime; presets use it.
+- An internet connection and about 1 GB of disk.
+- A standard account is fine; run the install from a normal (not "as administrator") PowerShell. **Nothing asks for admin by default**: everything installs for your account. Admin is opt-in (the signed GlazeWM fork, WSL, `omawin no-ads`' policy part), gathered into one prompt that says first what will change.
 
 ## Install
 
 The one-liner above:
-1. installs git and clones omawin to `~/omawin` (it must live there);
+1. downloads PowerShell 7 while it installs git and clones omawin to `~/omawin` (it must live there);
 2. sets up your own settings: the PC's **shared folder** (found if your main account made it, else empty or from your private backup) and this account's folder (from a private repo, or fresh; see [Make it yours](#make-it-yours));
-3. runs `install.ps1`, which asks which presets you want, and your name and email for git.
+3. runs `install.ps1` in PowerShell 7, which asks which presets you want, and your name and email for git.
 
 By hand instead:
 
@@ -55,11 +55,11 @@ Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never dele
 - **The taskbar auto-hides** (the bar and the launcher take its place; the bottom edge or the Win key still shows it), and the desktop's icons are hidden (Windows' own *Show desktop icons*: your files stay on the desktop, and `omawin toggle desktop-icons` brings them back).
 - **The theme** sets dark or light mode, the wallpaper and the lock screen (which changes on each unlock).
 - **At sign-in**: a scheduled task, `omawin GlazeWM (<you>)`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen (<you>)`, runs on unlock.
-- **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it's kept in the PC's own store, where only admins can use its private key (which can't be exported), and trusted through the machine's Root and Trusted Publishers stores. Its CLI and watcher are replaced too. Decline the admin prompt and the official GlazeWM stays.
+- **GlazeWM**: our fork, installed for your account from the tools bundle. Optionally (admin, your choice) a signed copy replaces `glazewm.exe` in Program Files so it can start before Explorer (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it's kept in the PC's own store, where only admins can use its private key (which can't be exported), and trusted through the machine's Root and Trusted Publishers stores. Its CLI and watcher are replaced too. Without it, the per-user copy starts a few seconds later.
 - **Several accounts at once**: with the GlazeWM fork, each Windows account gets its own GlazeWM port (`GLAZEWM_IPC_PORT` in your user environment), so several can be signed in at once, each with its own desktop.
 - **No ads** (for you, no admin): Windows' suggestions, tips, promoted apps, the advertising ID, search highlights and the Copilot button off; the PC maker's notifications off (Lenovo, McAfee, Adobe, when present). `omawin no-ads` does the admin part: Windows' consumer-features policy, uninstalling Lenovo Now and McAfee's extras. [manual/11-no-ads.md](manual/11-no-ads.md) lists everything.
-- **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font installed for you.
-- **Packages** from winget ([`packages.ps1`](packages.ps1): a lean core plus the presets you pick), and a few installers run from their own sites (herdr; Claude Code and opencode with the AI preset).
+- **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font (its four faces) installed for you.
+- **Programs**: the core tools unpacked into `%LOCALAPPDATA%\omawin\tools` from the release's tools bundle ([`bundle/tools.txt`](bundle/tools.txt): PowerShell 7, Windows Terminal, Neovim, GlazeWM, noctty, Bun, ripgrep and the rest), git and the .NET runtime from winget, the presets you pick from winget ([`packages.ps1`](packages.ps1)), and a few installers from their own sites (herdr; Claude Code and opencode with the AI preset). Where each came from is recorded, so `omawin pkg update` updates it the same way.
 
 There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) lists the steps by hand.
 
@@ -90,7 +90,8 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 
 ## Updating and health
 
-- `omawin update`: pulls omawin, relinks, takes the newest release's programs, runs migrations. Your own edits in `~/omawin` are stashed and put back.
+- `omawin update`: pulls omawin, relinks, takes the newest release's programs, runs migrations. Your own edits in `~/omawin` are stashed and put back. It never asks for admin.
+- `omawin pkg update`: updates each program from where it came (the bundle, winget, Scoop, Chocolatey, mise, npm or its own installer).
 - `omawin check`: is everything in place and running.
 - `omawin profile ram`: what's using memory and the processor, omawin's parts against their budgets.
 - Something wrong: [manual/12-troubleshooting.md](manual/12-troubleshooting.md).
@@ -109,17 +110,18 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 | `menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
 | `launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
 | `glazewm/` · `bar/` | window manager config and keys · the bar's layout |
-| `themes/` | Omarchy's themes and `set-theme.ps1` |
+| `themes/` | Omarchy's themes, their palettes (`colors/`) and `render.ps1` |
 | `install.ps1` · `install/` · `packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
 | `bootstrap.ps1` · `check.ps1` · `no-ads.ps1` | the one-liner · health check · ads off |
 | `noctty/` · `herdr/` | the terminal's config · the multiplexer's |
-| `music/` · `agent/` | the bar's music player · omawin's agent (`Ctrl+Win+H`) |
+| `bundle/` · `build/` · `cli/` | the tools bundle's list · release and bundle builders · the C# command router |
+| `music/` · `agent/` | the music player (becoming a bar plugin) · omawin's agent (`Ctrl+Win+H`) |
 | `nvim/` `neovide/` `powershell/` `windows-terminal/` `starship/` `git/` `bash/` `r/` `wsl/` `claude/` | app configs, live-linked |
 | `open-questions/` | decisions waiting for an answer |
 
 ## Credits
 
-omawin stands on [Omarchy](https://github.com/basecamp/omarchy) (its themes, and the ideas behind its menus, keys and updates), [GlazeWM](https://github.com/glzr-io/glazewm) (and Zebar, whose bar omawin's began as), [Ghostty](https://ghostty.org) by way of noctty, [LazyVim](https://lazyvim.org), [herdr](https://herdr.dev), [Handy](https://handy.computer), [fff](https://github.com/dmtrKovalenko/fff), [starship](https://starship.rs), [mpv](https://mpv.io) and [yt-dlp](https://github.com/yt-dlp/yt-dlp). Details in [NOTICE](NOTICE).
+omawin stands on [Omarchy](https://github.com/basecamp/omarchy) (its themes, and the ideas behind its menus, keys and updates), [GlazeWM](https://github.com/glzr-io/glazewm) (and Zebar, whose bar omawin's began as, before it was drawn natively), [Ghostty](https://ghostty.org) by way of noctty, [LazyVim](https://lazyvim.org), [herdr](https://herdr.dev), [Handy](https://handy.computer), [fff](https://github.com/dmtrKovalenko/fff), [starship](https://starship.rs), [mpv](https://mpv.io) and [yt-dlp](https://github.com/yt-dlp/yt-dlp). Details in [NOTICE](NOTICE).
 
 ## License
 

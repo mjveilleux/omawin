@@ -33,6 +33,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | **Win+Space for everything; Win+Alt+Space retired** with One Search (one release as an alias, then removed by a migration) |
 | 2026-10-30 | **One Search**: one bar for everything, results tagged and filterable, a bento home for the empty state, a list for results ([one-search.md](one-search.md)); proposed, open questions with the maintainer |
 | 2026-10-30 | **Never open Settings again**: every Windows setting is searchable from Win+Space (One Search's Settings filter), and the common ones switch on and off right there |
+| 2026-10-30 | **The music player is a Quickshell plugin** (QML in Omarchy's format), chosen in the plugin selector, not a preset; the first plugin the QML host runs (4.6) |
 | 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
 
 ## Where we are
@@ -666,7 +667,9 @@ A plugin's `menu.txt` fragment (same row format, `MenuModel.cs:107-142`) goes af
 
 ### 4.6 Our own pieces become plugins (M)
 
-The music drop-down (a web page today, `zebar/tokyo-islands/music.js`), the agents panel, dictation and reports move to the format first: that proves it and keeps the core small. `omawin-music watch` already prints lines; it becomes the widget's command.
+The music drop-down (Zebar's web page until 2026-10-31, gone with Zebar), the agents panel, dictation and reports move to the format first: that proves it and keeps the core small. `omawin-music watch` already prints lines; it becomes the widget's command.
+
+**Decided 2026-10-30: the music player is written as a Quickshell plugin** (QML, Omarchy's `manifest.json`), the first one, so the same plugin runs in Omarchy and in omawin's QML host (4.9, `omawin-qs.exe`). Its UI is QML; `omawin-music` (C#: mpv, yt-dlp, feeds, ratings) stays its service, spoken to over `Process` and JSON lines. It leaves the presets: it's picked in the plugin selector (Install › Plugins, `omawin plugin add music`), which brings yt-dlp and mpv with it. Order: the QML host's core modules (4.9.4) first, then the music plugin as its proof.
 
 ### 4.7 IPC for plugins and scripts (S)
 
