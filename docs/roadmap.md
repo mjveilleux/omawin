@@ -26,6 +26,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 | 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
+| 2026-10-30 | **One Search**: one bar for everything, results tagged and filterable, a bento home for the empty state, a list for results ([one-search.md](one-search.md)); proposed, open questions with the maintainer |
 | 2026-10-30 | **Never open Settings again**: every Windows setting is searchable in the system menu (Win+Alt+Space), and the common ones switch on and off right there |
 | 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
 
@@ -270,6 +271,10 @@ Neither is the right tool at run time, and the plan doesn't use them there: fff 
 The "never open Settings" list: 30 everyday changes (dark mode, file extensions, the microphone for apps, refresh rate, mouse acceleration, notifications, power mode, developer mode, …) each done from Win+Alt+Space in a few letters and one key, with undo; CI's round-trip passing; `omawin settings apply` setting up a fresh PC (in `omawin sandbox test`, 7.1).
 
 **Risks:** the settings index's format is undocumented (fallback: the curated page list); Windows changing a setting's registry value between builds (`minBuild`, CI on current Windows); settings that only apply after sign-out (said in the row); some settings have no supported way to change (night light, do not disturb): those stay links, honestly labelled.
+
+## Phase 1C: One Search (one bar, tagged results, a bento home)
+
+The launcher, the system menu, its pages and the file finder become **one window with one search bar**: every result tagged with what it is (app, setting, command, file, window, project, clipboard, theme), filters by tag in the bar (Tab, `/`, `>`, a filter's name + Tab), a bento home when nothing is typed, a ranked list with a preview when something is, Enter to act (settings switch in place, with undo), Ctrl+K for more. The keys stay: each opens the same window on a different filter. The design, its twelve guardrails, what happens to today's pieces and the open questions: **[one-search.md](one-search.md)**; clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z). Phase 1B's settings search becomes its Settings filter.
 
 ## Phase 2: fast install
 
