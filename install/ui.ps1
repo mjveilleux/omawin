@@ -298,6 +298,8 @@ function Exit-InstallStep($Failure) {
     $s.State = if ($Failure) { 'failed' } elseif ($s.Warnings) { 'warned' } else { 'done' }
     if ($Failure) { $s.Failure = "$Failure" }
     Write-Log ("[{0}] {1} in {2}{3}" -f $s.Name, $s.State, (Format-Duration $s.Seconds), $(if ($Failure) { ": $Failure" }))
+    # Where it happened, for the log (an error record carries the script lines that led to it).
+    if ($Failure -is [Management.Automation.ErrorRecord] -and $Failure.ScriptStackTrace) { Write-Log "    $($Failure.ScriptStackTrace -replace "`r?`n", "`n    ")" }
     if ($UI.Board) { Sync-BoardSteps; return }
     if (-not $UI.Fancy) { return }
     $c = $UI.C
