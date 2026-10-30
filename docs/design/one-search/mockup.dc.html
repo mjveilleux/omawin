@@ -1,0 +1,614 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>omawin One Search</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#101018}
+a{color:#7aa2f7}a:hover{color:#a9c1fb}
+.os-input::placeholder{color:#7f88b2}
+.os-input:focus{outline:none}
+.os-row:focus-visible,.os-chip:focus-visible,.os-tile:focus-visible,.os-btn:focus-visible{outline:2px solid #7aa2f7;outline-offset:2px}
+.os-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</helmet>
+<div style="width: 1120px; height: 720px; box-sizing: border-box; position: relative; background: #0c0c13; font-family: Inter, 'Segoe UI', system-ui, sans-serif; color: #c0caf5; overflow: hidden">
+
+  <div style="position: absolute; left: 0; top: 0; right: 0; height: 28px; background: transparent; border-bottom: 1px solid rgba(255,255,255,0.04); display: flex; align-items: center; gap: 14px; padding: 0 16px; box-sizing: border-box; font-size: 11px; letter-spacing: 0.08em; color: #8089b3; font-family: 'JetBrains Mono', monospace">
+    <span style="color: #7aa2f7">1</span><span>2</span><span>3</span>
+    <span style="flex-grow: 1"></span>
+    <span>Fri 30 Oct  14:32</span>
+  </div>
+
+  <div style="position: absolute; left: 120px; top: 64px; width: 880px; height: 600px; box-sizing: border-box; background: rgba(22,23,33,0.94); border: 1px solid rgba(122,162,247,0.16); border-radius: 20px; box-shadow: 0 40px 100px rgba(0,0,0,0.6), 0 0 80px rgba(122,162,247,0.07); display: flex; flex-direction: column; overflow: hidden">
+
+    <div style="display: flex; align-items: center; gap: 12px; padding: 20px 24px 14px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7aa2f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <sc-if value="{{scopeOn}}" hint-placeholder-val="{{ false }}">
+        <button class="os-btn" type="button" onClick="{{clearScope}}" aria-label="Remove filter" style="display: flex; align-items: center; gap: 6px; border: none; cursor: pointer; font: 500 11px 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; color: {{scopeColor}}; background: transparent; box-shadow: inset 0 0 0 1px {{scopeColor}}">{{scopeLabel}}<span aria-hidden="true">×</span></button>
+      </sc-if>
+      <label for="os-q" class="os-sr">Search apps, settings, files and commands</label>
+      <input id="os-q" class="os-input" autoFocus="{{ true }}" autoComplete="off" spellCheck="{{ false }}" value="{{q}}" onChange="{{onQuery}}" onKeyDown="{{onKey}}" placeholder="{{placeholder}}" style="flex-grow: 1; background: transparent; border: none; color: #e2e7ff; font: 300 24px Inter, sans-serif; letter-spacing: -0.01em; padding: 4px 0; min-width: 0; caret-color: #7aa2f7">
+      <span style="font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #8089b3">Tab · filter</span>
+    </div>
+
+    <div role="toolbar" aria-label="Filters" style="display: flex; gap: 2px; padding: 0 16px; border-bottom: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap">
+      <sc-for list="{{chips}}" as="c" hint-placeholder-count="9">
+        <button class="os-chip" type="button" onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.label}}<sc-if value="{{c.hasCount}}" hint-placeholder-val="{{ false }}"><span style="font: 500 10px 'JetBrains Mono', monospace; opacity: 0.75; transform: translateY(-4px)">{{c.count}}</span></sc-if></button>
+      </sc-for>
+    </div>
+
+    <div style="flex-grow: 1; display: flex; min-height: 0; position: relative">
+
+      <sc-if value="{{showHome}}" hint-placeholder-val="{{ true }}">
+        <div style="flex-grow: 1; padding: 20px 24px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-auto-rows: 96px; gap: 12px; overflow: hidden">
+          <button class="os-tile" type="button" onClick="{{openTerminal}}" style="grid-column: span 2; grid-row: span 2; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); border-radius: 18px; padding: 18px; text-align: left; color: #c0caf5; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#7aa2f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+            <span><span style="display: block; font: 300 28px Inter, sans-serif; letter-spacing: -0.02em; color: #e2e7ff">Terminal</span><span style="display: block; font: 12px 'JetBrains Mono', monospace; color: #9aa5ce; margin-top: 6px">arch · ~/src/omawin</span></span>
+          </button>
+          <button class="os-tile" type="button" onClick="{{goProjects}}" style="grid-column: span 2; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); border-radius: 18px; padding: 14px 16px; text-align: left; color: #c0caf5; cursor: pointer">
+            <span style="display: block; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #ff9e64">Projects</span>
+            <span style="display: block; font: 13px 'JetBrains Mono', monospace; color: #a9b1d6; margin-top: 8px; line-height: 1.6">omawin · glazewm · app</span>
+          </button>
+          <button class="os-tile" type="button" onClick="{{goClip}}" style="grid-column: span 2; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); border-radius: 18px; padding: 14px 16px; text-align: left; color: #c0caf5; cursor: pointer">
+            <span style="display: block; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #73daca">Clipboard</span>
+            <span style="display: block; font: 13px 'JetBrains Mono', monospace; color: #a9b1d6; margin-top: 8px">npm run dev</span>
+          </button>
+          <sc-for list="{{quick}}" as="t" hint-placeholder-count="4">
+            <button class="os-tile" type="button" onClick="{{t.pick}}" aria-pressed="{{t.on}}" style="{{t.style}}">
+              <span style="display: block; font: 400 14px Inter, sans-serif">{{t.name}}</span>
+              <span style="display: flex; align-items: center; gap: 6px; font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 12px"><span style="{{t.dot}}"></span>{{t.state}}</span>
+            </button>
+          </sc-for>
+          <button class="os-tile" type="button" onClick="{{goThemes}}" style="grid-column: span 2; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); border-radius: 18px; padding: 14px 16px; text-align: left; color: #c0caf5; cursor: pointer; display: flex; flex-direction: column; justify-content: space-between">
+            <span style="display: flex; justify-content: space-between; align-items: baseline"><span style="font: 500 10px 'JetBrains Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: #8089b3">Theme</span><span style="font: 300 15px Inter, sans-serif; color: #e2e7ff">Tokyo Night</span></span>
+            <span aria-hidden="true" style="display: block; height: 14px; border-radius: 999px; background: linear-gradient(90deg, #7aa2f7 0%, #7dcfff 20%, #9ece6a 40%, #e0af68 60%, #f7768e 80%, #bb9af7 100%); box-shadow: 0 0 24px rgba(122,162,247,0.25)"></span>
+          </button>
+          <sc-for list="{{frequent}}" as="f" hint-placeholder-count="2">
+            <button class="os-tile" type="button" onClick="{{f.pick}}" style="border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); border-radius: 18px; padding: 14px 16px; text-align: left; color: #c0caf5; cursor: pointer; display: flex; align-items: center; gap: 10px">
+              <span style="width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font: 500 14px Inter, sans-serif; color: {{f.color}}; box-shadow: inset 0 0 0 1px {{f.color}}">{{f.letter}}</span>
+              <span style="font: 400 14px Inter, sans-serif; color: #e2e7ff">{{f.name}}</span>
+            </button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{showList}}" hint-placeholder-val="{{ false }}">
+        <div role="listbox" aria-label="Results" style="flex: 1 1 0; min-width: 0; padding: 10px 12px; overflow: hidden; display: flex; flex-direction: column; gap: 2px">
+          <sc-for list="{{rows}}" as="r" hint-placeholder-count="8">
+            <button class="os-row" type="button" role="option" aria-selected="{{r.isSel}}" onClick="{{r.pick}}" style="{{r.style}}">
+              <span style="width: 30px; height: 30px; flex-shrink: 0; border-radius: 9px; display: flex; align-items: center; justify-content: center; color: {{r.color}}; background: transparent">
+                <sc-if value="{{r.icLetter}}" hint-placeholder-val="{{ false }}"><span style="font: 700 14px Inter, sans-serif">{{r.letter}}</span></sc-if>
+                <sc-if value="{{r.icSetting}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><rect x="2" y="7" width="20" height="10" rx="5"></rect><circle cx="16" cy="12" r="2.5"></circle></svg></sc-if>
+                <sc-if value="{{r.icCommand}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg></sc-if>
+                <sc-if value="{{r.icFile}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><polyline points="14 3 14 9 20 9"></polyline></svg></sc-if>
+                <sc-if value="{{r.icWindow}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line></svg></sc-if>
+                <sc-if value="{{r.icProject}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path></svg></sc-if>
+                <sc-if value="{{r.icClip}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="3" width="8" height="4" rx="1"></rect><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"></path></svg></sc-if>
+                <sc-if value="{{r.icTheme}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><circle cx="8.5" cy="10" r="1.2"></circle><circle cx="12" cy="7.5" r="1.2"></circle><circle cx="15.5" cy="10" r="1.2"></circle></svg></sc-if>
+                <sc-if value="{{r.icPackage}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5z"></path><path d="M3 8v8l9 5 9-5V8"></path></svg></sc-if>
+                <sc-if value="{{r.icWeb}}" hint-placeholder-val="{{ false }}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><line x1="3" y1="12" x2="21" y2="12"></line><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"></path></svg></sc-if>
+                <sc-if value="{{r.icCalc}}" hint-placeholder-val="{{ false }}"><span style="font: 700 16px 'JetBrains Mono', monospace">=</span></sc-if>
+                <sc-if value="{{r.icMore}}" hint-placeholder-val="{{ false }}"><span style="font: 700 14px Inter, sans-serif">…</span></sc-if>
+              </span>
+              <span style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px">
+                <span style="font: 400 14px Inter, sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis"><sc-for list="{{r.parts}}" as="p" hint-placeholder-count="1"><span style="{{p.style}}">{{p.t}}</span></sc-for></span>
+                <span style="font: 12px Inter, sans-serif; color: #9aa5ce; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">{{r.sub}}</span>
+              </span>
+              <sc-if value="{{r.hasPill}}" hint-placeholder-val="{{ false }}"><span style="{{r.pillStyle}}">{{r.pill}}</span></sc-if>
+              <span style="{{r.tagStyle}}">{{r.tagLabel}}</span>
+            </button>
+          </sc-for>
+          <sc-if value="{{noResults}}" hint-placeholder-val="{{ false }}">
+            <div style="padding: 40px 20px; text-align: center; color: #9aa5ce; font: 14px Inter, sans-serif">Nothing here. Backspace removes the filter.</div>
+          </sc-if>
+        </div>
+
+        <div style="width: 300px; flex-shrink: 0; border-left: 1px solid rgba(255,255,255,0.05); padding: 22px; box-sizing: border-box; display: flex; flex-direction: column; gap: 14px; background: transparent">
+          <sc-if value="{{hasSel}}" hint-placeholder-val="{{ true }}">
+            <div style="display: flex; align-items: center; gap: 12px">
+              <span style="width: 44px; height: 44px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font: 300 20px Inter, sans-serif; color: {{pv.color}}; box-shadow: inset 0 0 0 1px {{pv.color}}, 0 0 24px {{pv.glow}}">{{pv.letter}}</span>
+              <span style="min-width: 0"><span style="display: block; font: 400 17px Inter, sans-serif; color: #e2e7ff">{{pv.name}}</span><span style="display: block; font: 600 11px 'JetBrains Mono', monospace; color: {{pv.color}}; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.06em">{{pv.tag}}</span></span>
+            </div>
+            <p style="margin: 0; font: 13px/1.55 Inter, sans-serif; color: #a9b1d6">{{pv.desc}}</p>
+            <sc-if value="{{pv.isSwitch}}" hint-placeholder-val="{{ false }}">
+              <button class="os-btn" type="button" onClick="{{activate}}" aria-pressed="{{pv.on}}" style="{{pv.switchStyle}}"><span>{{pv.stateText}}</span><span style="font: 500 11px 'JetBrains Mono', monospace; opacity: 0.85">Enter</span></button>
+            </sc-if>
+            <sc-if value="{{pv.isChoice}}" hint-placeholder-val="{{ false }}">
+              <button class="os-btn" type="button" onClick="{{activate}}" style="display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.08); background: transparent; color: #e2e7ff; border-radius: 12px; padding: 12px 14px; font: 400 14px Inter, sans-serif; cursor: pointer"><span>{{pv.value}}</span><span style="font: 500 11px 'JetBrains Mono', monospace; color: #9aa5ce">Enter: next</span></button>
+            </sc-if>
+            <sc-if value="{{pv.isOpen}}" hint-placeholder-val="{{ false }}">
+              <button class="os-btn" type="button" onClick="{{activate}}" style="display: flex; justify-content: space-between; align-items: center; border: 1px solid #7aa2f7; background: rgba(122,162,247,0.1); color: #b4c8fb; border-radius: 12px; padding: 12px 14px; font: 500 14px Inter, sans-serif; cursor: pointer; box-shadow: 0 0 24px rgba(122,162,247,0.15)"><span>{{pv.verb}}</span><span style="font: 500 11px 'JetBrains Mono', monospace">Enter</span></button>
+            </sc-if>
+            <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px">
+              <sc-for list="{{pv.facts}}" as="fa" hint-placeholder-count="2">
+                <div style="display: flex; flex-direction: column; gap: 2px"><span style="font: 600 11px Inter, sans-serif; color: #7f88b2; text-transform: uppercase; letter-spacing: 0.05em">{{fa.k}}</span><span style="font: 13px 'JetBrains Mono', monospace; color: #c0caf5; word-break: break-all">{{fa.v}}</span></div>
+              </sc-for>
+            </div>
+            <sc-if value="{{pv.isTheme}}" hint-placeholder-val="{{ false }}"><span aria-hidden="true" style="{{pv.barStyle}}"></span></sc-if>
+            <span style="flex-grow: 1"></span>
+            <button class="os-btn" type="button" onClick="{{toggleActions}}" style="display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(255,255,255,0.06); background: transparent; color: #a9b1d6; border-radius: 12px; padding: 10px 14px; font: 400 13px Inter, sans-serif; cursor: pointer"><span>More actions</span><span style="font: 500 11px 'JetBrains Mono', monospace">Ctrl K</span></button>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{actionsOn}}" hint-placeholder-val="{{ false }}">
+        <div role="menu" aria-label="Actions" style="position: absolute; right: 316px; bottom: 12px; width: 280px; background: rgba(30,32,46,0.98); border: 1px solid rgba(122,162,247,0.18); border-radius: 14px; padding: 6px; box-shadow: 0 20px 50px rgba(0,0,0,0.5); display: flex; flex-direction: column; gap: 2px">
+          <sc-for list="{{actions}}" as="ac" hint-placeholder-count="4">
+            <button class="os-btn" type="button" role="menuitem" onClick="{{ac.pick}}" style="display: flex; justify-content: space-between; align-items: center; border: none; background: transparent; color: #c0caf5; border-radius: 8px; padding: 9px 10px; font: 500 13px Inter, sans-serif; cursor: pointer; text-align: left"><span>{{ac.label}}</span><span style="font: 11px 'JetBrains Mono', monospace; color: #9aa5ce">{{ac.key}}</span></button>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{toastOn}}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: rgba(30,32,46,0.98); color: #e2e7ff; border: 1px solid rgba(122,162,247,0.3); border-radius: 999px; padding: 9px 16px; font: 400 13px Inter, sans-serif; box-shadow: 0 0 30px rgba(122,162,247,0.15); white-space: nowrap">{{toast}}</div>
+      </sc-if>
+    </div>
+
+    <div style="display: flex; gap: 20px; padding: 10px 24px; border-top: 1px solid rgba(255,255,255,0.05); font: 10px 'JetBrains Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; color: #8089b3; flex-wrap: wrap">
+      <span><span style="color: #c0caf5">Enter</span> open or switch</span>
+      <span><span style="color: #c0caf5">Ctrl K</span> actions</span>
+      <span><span style="color: #c0caf5">Tab</span> filter</span>
+      <span><span style="color: #c0caf5">/</span> files</span>
+      <span><span style="color: #c0caf5">&gt;</span> commands</span>
+      <span><span style="color: #c0caf5">Ctrl Z</span> undo</span>
+      <span><span style="color: #c0caf5">Esc</span> back</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1120,"height":720}}'>
+var TAGS = [
+  { id: 'all', label: 'All', color: '#c0caf5' },
+  { id: 'app', label: 'Apps', color: '#7aa2f7' },
+  { id: 'setting', label: 'Settings', color: '#9ece6a' },
+  { id: 'command', label: 'Commands', color: '#e0af68' },
+  { id: 'file', label: 'Files', color: '#7dcfff' },
+  { id: 'window', label: 'Windows', color: '#bb9af7' },
+  { id: 'project', label: 'Projects', color: '#ff9e64' },
+  { id: 'clip', label: 'Clipboard', color: '#73daca' },
+  { id: 'theme', label: 'Themes', color: '#f7768e' }
+];
+var TAG = {};
+TAGS.forEach(function (t) { TAG[t.id] = t; });
+TAG.package = { id: 'package', label: 'Packages', color: '#9aa5ce' };
+TAG.web = { id: 'web', label: 'Web', color: '#9aa5ce' };
+TAG.calc = { id: 'calc', label: 'Calculator', color: '#e0af68' };
+TAG.more = { id: 'more', label: '', color: '#9aa5ce' };
+
+var ITEMS = [
+  { id: 'a-term', tag: 'app', name: 'Terminal', sub: 'noctty · opens your Linux (Arch)', kw: 'noctty shell console arch', freq: 10, path: '%LOCALAPPDATA%\\Programs\\noctty' },
+  { id: 'a-nvim', tag: 'app', name: 'Neovim', sub: 'Editor, in the terminal', kw: 'vim editor lazyvim', freq: 8, path: 'nvim.exe' },
+  { id: 'a-code', tag: 'app', name: 'Visual Studio Code', sub: 'Editor', kw: 'vscode code editor', freq: 5, path: 'Code.exe' },
+  { id: 'a-edge', tag: 'app', name: 'Microsoft Edge', sub: 'Browser', kw: 'browser web', freq: 6, path: 'msedge.exe' },
+  { id: 'a-firefox', tag: 'app', name: 'Firefox', sub: 'Browser', kw: 'browser web mozilla', freq: 7, path: 'firefox.exe' },
+  { id: 'a-slack', tag: 'app', name: 'Slack', sub: 'Chat', kw: 'chat work', freq: 6, path: 'slack.exe' },
+  { id: 'a-obsidian', tag: 'app', name: 'Obsidian', sub: 'Notes', kw: 'notes markdown', freq: 4, path: 'Obsidian.exe' },
+  { id: 'a-docker', tag: 'app', name: 'Docker Desktop', sub: 'Containers', kw: 'containers', freq: 2, path: 'Docker Desktop.exe' },
+  { id: 'a-taskmgr', tag: 'app', name: 'Task Manager', sub: 'Windows', kw: 'processes taskmgr', freq: 1, path: 'taskmgr.exe' },
+  { id: 'a-paint', tag: 'app', name: 'Paint', sub: 'Windows', kw: 'draw mspaint', freq: 0, path: 'mspaint.exe' },
+  { id: 'a-discord', tag: 'app', name: 'Discord', sub: 'Chat', kw: 'chat voice', freq: 3, path: 'Discord.exe' },
+
+  { id: 's-dark', tag: 'setting', name: 'Dark mode', sub: 'Personalization › Colors', kw: 'theme light colors appearance', freq: 4, kind: 'switch', sw: 'dark', where: 'Settings › Personalization › Colors', desc: 'Dark backgrounds for Windows and apps that follow it.' },
+  { id: 's-ext', tag: 'setting', name: 'File name extensions', sub: 'Explorer', kw: 'ext extension explorer show', freq: 3, kind: 'switch', sw: 'ext', where: 'File Explorer › View › Show', desc: 'Show .txt, .exe and the rest in Explorer.' },
+  { id: 's-hidden', tag: 'setting', name: 'Hidden files', sub: 'Explorer', kw: 'dotfiles explorer show hidden', freq: 2, kind: 'switch', sw: 'hidden', where: 'File Explorer › View › Show', desc: 'Show files and folders marked hidden.' },
+  { id: 's-mic', tag: 'setting', name: 'Microphone access for apps', sub: 'Privacy & security', kw: 'mic microphone privacy record', freq: 2, kind: 'switch', sw: 'mic', where: 'Settings › Privacy & security › Microphone', desc: 'Lets apps use the microphone. Desktop apps are listed below it in Windows.' },
+  { id: 's-cam', tag: 'setting', name: 'Camera access for apps', sub: 'Privacy & security', kw: 'webcam camera privacy', freq: 1, kind: 'switch', sw: 'cam', where: 'Settings › Privacy & security › Camera', desc: 'Lets apps use the camera.' },
+  { id: 's-refresh', tag: 'setting', name: 'Refresh rate', sub: 'Display · DELL U2723QE', kw: 'hz display monitor fps', freq: 2, kind: 'choice', ch: 'refresh', options: ['60 Hz', '120 Hz', '144 Hz'], where: 'Settings › System › Display › Advanced', desc: 'How often the monitor redraws.' },
+  { id: 's-res', tag: 'setting', name: 'Display resolution', sub: 'Display · DELL U2723QE', kw: 'display monitor screen size', freq: 1, kind: 'choice', ch: 'res', options: ['1920 × 1080', '2560 × 1440', '3840 × 2160'], where: 'Settings › System › Display', desc: 'The monitor’s resolution.' },
+  { id: 's-power', tag: 'setting', name: 'Power mode', sub: 'System › Power', kw: 'battery performance efficiency', freq: 2, kind: 'choice', ch: 'power', options: ['Best efficiency', 'Balanced', 'Best performance'], where: 'Settings › System › Power & battery', desc: 'Trades battery life for speed.' },
+  { id: 's-bt', tag: 'setting', name: 'Bluetooth', sub: 'Devices', kw: 'bt wireless headphones', freq: 3, kind: 'switch', sw: 'bt', where: 'Settings › Bluetooth & devices', desc: 'The Bluetooth radio.' },
+  { id: 's-wifi', tag: 'setting', name: 'Wi-Fi', sub: 'Network', kw: 'wifi wireless network internet', freq: 3, kind: 'switch', sw: 'wifi', where: 'Settings › Network & internet', desc: 'The Wi-Fi radio. Networks are on the Wi-Fi page.' },
+  { id: 's-air', tag: 'setting', name: 'Airplane mode', sub: 'Network', kw: 'flight radios offline', freq: 0, kind: 'switch', sw: 'air', where: 'Settings › Network & internet', desc: 'Every radio off.' },
+  { id: 's-dnd', tag: 'setting', name: 'Do not disturb', sub: 'Notifications', kw: 'focus notifications quiet', freq: 2, kind: 'link', where: 'Settings › System › Notifications', desc: 'Windows offers no way to switch this from outside, so this opens its page. Honest label: a link, not a switch.' },
+  { id: 's-accel', tag: 'setting', name: 'Mouse acceleration', sub: 'Mouse', kw: 'enhance pointer precision mouse', freq: 1, kind: 'switch', sw: 'accel', where: 'Mouse properties › Pointer options', desc: 'Enhance pointer precision: speeds the pointer up with fast moves.' },
+  { id: 's-dev', tag: 'setting', name: 'Developer mode', sub: 'For developers · admin', kw: 'symlinks sideload developer', freq: 1, kind: 'switch', sw: 'dev', admin: true, where: 'Settings › System › For developers', desc: 'Symlinks without admin, and installing apps from files. Asks for admin once.' },
+  { id: 's-env', tag: 'setting', name: 'Environment variables', sub: 'System', kw: 'path env variables', freq: 2, kind: 'page', where: 'omawin’s editor (replaces the 1995 dialog)', desc: 'Search, edit and reorder PATH inline; new terminals see it at once.' },
+  { id: 's-clip', tag: 'setting', name: 'Clipboard history', sub: 'System', kw: 'win v clipboard', freq: 0, kind: 'switch', sw: 'cliphist', where: 'Settings › System › Clipboard', desc: 'Windows’ own Win+V history. omawin’s clipboard works either way.' },
+
+  { id: 'c-snip', tag: 'command', name: 'Screenshot a region', sub: 'omawin capture', kw: 'screenshot snip capture', freq: 5, key: 'Win Shift S', cmd: 'omawin capture region' },
+  { id: 'c-ocr', tag: 'command', name: 'Copy text from the screen', sub: 'omawin capture text', kw: 'ocr text snip', freq: 3, key: 'Win Shift T', cmd: 'omawin capture text' },
+  { id: 'c-color', tag: 'command', name: 'Pick a colour', sub: 'omawin capture color', kw: 'color picker eyedropper hex', freq: 2, cmd: 'omawin capture color' },
+  { id: 'c-bg', tag: 'command', name: 'Next background', sub: 'omawin theme next-background', kw: 'wallpaper background', freq: 2, key: 'Win Ctrl Space', cmd: 'omawin theme next-background' },
+  { id: 'c-update', tag: 'command', name: 'Update omawin', sub: 'omawin update', kw: 'upgrade update', freq: 1, cmd: 'omawin update' },
+  { id: 'c-awake', tag: 'command', name: 'Stay awake', sub: 'omawin toggle stay-awake', kw: 'caffeine sleep awake', freq: 1, cmd: 'omawin toggle stay-awake' },
+  { id: 'c-lock', tag: 'command', name: 'Lock', sub: 'System', kw: 'lock screen', freq: 2, key: 'Win L', cmd: 'LockWorkStation' },
+  { id: 'c-restart', tag: 'command', name: 'Restart', sub: 'System · asks first', kw: 'reboot restart', freq: 1, cmd: 'shutdown /r' },
+  { id: 'c-check', tag: 'command', name: 'Health check', sub: 'omawin check', kw: 'doctor check health', freq: 1, cmd: 'omawin check' },
+  { id: 'c-pkg', tag: 'command', name: 'Install a package', sub: 'omawin pkg install', kw: 'winget scoop choco install', freq: 1, cmd: 'omawin pkg install' },
+
+  { id: 'f-roadmap', tag: 'file', name: 'roadmap.md', sub: '~/src/omawin/docs', kw: 'markdown plan', freq: 3, path: 'C:\\Users\\you\\src\\omawin\\docs\\roadmap.md' },
+  { id: 'f-invoice', tag: 'file', name: 'invoice-2026-10.pdf', sub: 'Downloads · 2 days ago', kw: 'pdf bill', freq: 0, path: 'C:\\Users\\you\\Downloads\\invoice-2026-10.pdf' },
+  { id: 'f-main', tag: 'file', name: 'main.ts', sub: '~/src/app/src · modified', kw: 'typescript', freq: 2, path: '/home/you/src/app/src/main.ts (Arch)' },
+  { id: 'f-tokens', tag: 'file', name: 'design-tokens.json', sub: '~/src/app', kw: 'json tokens colors', freq: 1, path: '/home/you/src/app/design-tokens.json (Arch)' },
+  { id: 'f-dark', tag: 'file', name: 'dark-mode-notes.md', sub: 'Documents', kw: 'notes', freq: 0, path: 'C:\\Users\\you\\Documents\\dark-mode-notes.md' },
+  { id: 'f-data', tag: 'file', name: 'sales-q3.csv', sub: 'Downloads', kw: 'csv data', freq: 0, path: 'C:\\Users\\you\\Downloads\\sales-q3.csv' },
+
+  { id: 'w-term', tag: 'window', name: 'Terminal — ~/src/omawin', sub: 'Workspace 1', kw: 'noctty open window', freq: 4 },
+  { id: 'w-edge', tag: 'window', name: 'Firefox — GitHub', sub: 'Workspace 2', kw: 'browser open window', freq: 3 },
+  { id: 'w-slack', tag: 'window', name: 'Slack — #general', sub: 'Workspace 3', kw: 'chat open window', freq: 2 },
+
+  { id: 'p-omawin', tag: 'project', name: 'omawin', sub: '~/src/omawin · Arch', kw: 'repo', freq: 6 },
+  { id: 'p-glaze', tag: 'project', name: 'glazewm', sub: '~/src/glazewm · Windows', kw: 'repo rust', freq: 3 },
+  { id: 'p-app', tag: 'project', name: 'app', sub: '~/src/app · Arch', kw: 'repo', freq: 4 },
+
+  { id: 'k-npm', tag: 'clip', name: 'npm run dev', sub: 'Copied 4 min ago', kw: 'command', freq: 2 },
+  { id: 'k-url', tag: 'clip', name: 'https://github.com/mjveilleux/omawin', sub: 'Copied 1 h ago', kw: 'link url', freq: 1 },
+  { id: 'k-hex', tag: 'clip', name: '#7aa2f7', sub: 'Copied yesterday', kw: 'color hex', freq: 1 },
+
+  { id: 't-tokyo', tag: 'theme', name: 'Tokyo Night', sub: 'Current · dark', kw: 'dark blue', freq: 2, swatch: ['#7aa2f7', '#7dcfff', '#9ece6a', '#e0af68', '#f7768e', '#bb9af7'] },
+  { id: 't-gruv', tag: 'theme', name: 'Gruvbox', sub: 'Dark', kw: 'dark retro warm', freq: 1, swatch: ['#d79921', '#cc241d', '#98971a', '#458588'] },
+  { id: 't-cat', tag: 'theme', name: 'Catppuccin Latte', sub: 'Light', kw: 'light pastel', freq: 0, swatch: ['#1e66f5', '#8839ef', '#40a02b', '#d20f39'] },
+  { id: 't-rose', tag: 'theme', name: 'Rosé Pine', sub: 'Dark', kw: 'dark pink', freq: 0, swatch: ['#ebbcba', '#c4a7e7', '#9ccfd8', '#eb6f92'] },
+  { id: 't-nord', tag: 'theme', name: 'Nord', sub: 'Dark', kw: 'dark arctic blue', freq: 0, swatch: ['#88c0d0', '#81a1c1', '#a3be8c', '#bf616a'] }
+];
+
+var CAPS = { app: 4, setting: 4, command: 3, file: 3, window: 2, project: 2, clip: 2, theme: 3 };
+
+function fuzzy(text, query) {
+  var t = text.toLowerCase(), q = query.toLowerCase();
+  if (!q) return { score: 1, hits: [] };
+  var at = t.indexOf(q);
+  if (at >= 0) {
+    var hits = [];
+    for (var k = 0; k < q.length; k++) hits.push(at + k);
+    var base = at === 0 ? 100 : (/[\s\-_.\/·]/.test(t.charAt(at - 1)) ? 85 : 60);
+    return { score: base - Math.min(t.length, 40) * 0.3, hits: hits };
+  }
+  var from = 0, list = [], bonus = 0;
+  for (var i = 0; i < q.length; i++) {
+    var ch = q.charAt(i);
+    if (ch === ' ') continue;
+    var f = t.indexOf(ch, from);
+    if (f < 0) return null;
+    if (f === 0 || /[\s\-_.\/·]/.test(t.charAt(f - 1))) bonus += 8;
+    list.push(f); from = f + 1;
+  }
+  if (!list.length) return null;
+  var spread = list[list.length - 1] - list[0];
+  if (spread > 18 && bonus < 8) return null;
+  return { score: 30 + bonus - spread * 0.6, hits: list };
+}
+
+function partsOf(name, hits) {
+  var set = {}; hits.forEach(function (h) { set[h] = true; });
+  var parts = [], cur = '', curHit = null;
+  for (var i = 0; i < name.length; i++) {
+    var h = !!set[i];
+    if (curHit === null || h === curHit) { cur += name.charAt(i); curHit = h; }
+    else { parts.push({ t: cur, hit: curHit }); cur = name.charAt(i); curHit = h; }
+  }
+  if (cur) parts.push({ t: cur, hit: curHit });
+  return parts.map(function (p) { return { t: p.t, style: p.hit ? 'color: #7aa2f7; font-weight: 700' : 'color: #c0caf5' }; });
+}
+
+function calcValue(q) {
+  if (!/^[\d\s+\-*\/().%]+$/.test(q) || !/\d\s*[+\-*\/%]\s*[\d(]/.test(q)) return null;
+  try {
+    var v = Function('"use strict"; return (' + q.replace(/%/g, '/100') + ')')();
+    if (typeof v !== 'number' || !isFinite(v)) return null;
+    return Math.round(v * 1e10) / 1e10;
+  } catch (e) { return null; }
+}
+
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      q: '', scope: 'all', sel: 0, actions: false, toast: '', last: null,
+      sw: { dark: true, ext: false, hidden: false, mic: true, cam: false, bt: true, wifi: true, air: false, accel: true, dev: false, cliphist: true },
+      ch: { refresh: '144 Hz', res: '2560 × 1440', power: 'Balanced' }
+    };
+  }
+
+  say(text) {
+    var self = this;
+    this.setState({ toast: text });
+    clearTimeout(this.toastTimer);
+    this.toastTimer = setTimeout(function () { self.setState({ toast: '' }); }, 2200);
+  }
+
+  compute() {
+    var s = this.state;
+    var raw = s.q;
+    var scope = s.scope;
+    var q = raw.trim();
+    var prefixScope = null;
+    if (raw.charAt(0) === '/') { prefixScope = 'file'; q = raw.slice(1).trim(); }
+    else if (raw.charAt(0) === '>') { prefixScope = 'command'; q = raw.slice(1).trim(); }
+    var eff = prefixScope || scope;
+
+    var scored = [];
+    ITEMS.forEach(function (it) {
+      if (eff !== 'all' && it.tag !== eff) return;
+      var m = fuzzy(it.name, q);
+      if (!m && q) {
+        var kw = (it.kw || '') + ' ' + (it.sub || '');
+        if (kw.toLowerCase().indexOf(q.toLowerCase()) >= 0) m = { score: 42, hits: [] };
+      }
+      if (!m) return;
+      var prior = 0;
+      if (q.length <= 2) prior = ({ app: 10, command: 8, setting: 5, window: 4, project: 4, file: -25, clip: -10, theme: -5 })[it.tag] || 0;
+      if (!q && eff === 'all') return;
+      scored.push({ it: it, m: m, score: m.score + prior + (it.freq || 0) * 1.6 });
+    });
+    scored.sort(function (a, b) { return b.score - a.score; });
+
+    var counts = {};
+    scored.forEach(function (x) { counts[x.it.tag] = (counts[x.it.tag] || 0) + 1; });
+
+    var list = [], more = [];
+    if (eff === 'all' && q) {
+      var used = {};
+      scored.forEach(function (x) {
+        used[x.it.tag] = (used[x.it.tag] || 0) + 1;
+        if (used[x.it.tag] <= (CAPS[x.it.tag] || 2)) list.push(x);
+      });
+      Object.keys(counts).forEach(function (tag) {
+        var extra = counts[tag] - (CAPS[tag] || 2);
+        if (extra > 0) more.push({ tag: tag, n: counts[tag] });
+      });
+    } else {
+      list = scored.slice(0, 40);
+    }
+
+    var calc = q ? calcValue(q) : null;
+    var entries = [];
+    if (calc !== null) entries.push({ kind: 'calc', name: '= ' + calc, sub: q + ' · Enter copies', tag: 'calc', value: calc });
+    list.forEach(function (x) { entries.push({ kind: 'item', it: x.it, hits: x.m.hits }); });
+    more.forEach(function (m) { entries.push({ kind: 'more', tag: m.tag, name: 'Show all ' + m.n + ' ' + TAG[m.tag].label, sub: 'Tab to ' + TAG[m.tag].label }); });
+    if (q && eff === 'all') {
+      entries.push({ kind: 'fallback', tag: 'package', name: 'Find “' + q + '” in winget, Scoop and Chocolatey', sub: 'omawin pkg find' });
+      entries.push({ kind: 'fallback', tag: 'web', name: 'Search the web for “' + q + '”', sub: 'Only when you pick it: never as you type' });
+    }
+    return { q: q, eff: eff, prefixScope: prefixScope, entries: entries, counts: counts };
+  }
+
+  activateEntry(e) {
+    var self = this;
+    if (!e) return;
+    if (e.kind === 'calc') { this.say('Copied ' + e.value); return; }
+    if (e.kind === 'more') { this.setState({ scope: e.tag, sel: 0 }); return; }
+    if (e.kind === 'fallback') { this.say(e.tag === 'web' ? 'Opening the browser' : 'Opening Packages with “' + this.compute().q + '”'); return; }
+    var it = e.it;
+    if (it.kind === 'switch') {
+      var sw = Object.assign({}, this.state.sw);
+      var was = sw[it.sw];
+      sw[it.sw] = !was;
+      this.setState({ sw: sw, last: { type: 'sw', key: it.sw, was: was, name: it.name } });
+      this.say(it.name + (was ? ' off' : ' on') + (it.admin ? ' · admin asked once' : '') + ' · Ctrl Z undoes');
+      return;
+    }
+    if (it.kind === 'choice') {
+      var ch = Object.assign({}, this.state.ch);
+      var prev = ch[it.ch];
+      var idx = it.options.indexOf(prev);
+      ch[it.ch] = it.options[(idx + 1) % it.options.length];
+      this.setState({ ch: ch, last: { type: 'ch', key: it.ch, was: prev, name: it.name } });
+      this.say(it.name + ': ' + ch[it.ch] + ' · Ctrl Z undoes');
+      return;
+    }
+    var verbs = { app: 'Opening ', file: 'Opening ', window: 'Switching to ', project: 'Opening project ', clip: 'Pasting ', theme: 'Theme: ', command: 'Running ' };
+    if (it.kind === 'link') { this.say('Opening Settings at ' + it.where); return; }
+    if (it.kind === 'page') { this.say('Opening the editor'); return; }
+    self.say((verbs[it.tag] || 'Opening ') + it.name);
+  }
+
+  undo() {
+    var l = this.state.last;
+    if (!l) { this.say('Nothing to undo'); return; }
+    if (l.type === 'sw') { var sw = Object.assign({}, this.state.sw); sw[l.key] = l.was; this.setState({ sw: sw, last: null }); }
+    else { var ch = Object.assign({}, this.state.ch); ch[l.key] = l.was; this.setState({ ch: ch, last: null }); }
+    this.say('Undone: ' + l.name);
+  }
+
+  renderVals() {
+    var self = this;
+    var s = this.state;
+    var r = this.compute();
+    var entries = r.entries;
+    var sel = Math.max(0, Math.min(s.sel, entries.length - 1));
+    var selEntry = entries[sel];
+
+    var chips = TAGS.map(function (t) {
+      var on = (r.eff === t.id);
+      var count = t.id === 'all' ? 0 : (r.counts[t.id] || 0);
+      var dim = r.q && t.id !== 'all' && !count;
+      var style = 'display: flex; align-items: flex-start; gap: 4px; border: none; background: transparent; padding: 10px 10px 11px; cursor: pointer; font: 500 11px \'JetBrains Mono\', monospace; letter-spacing: 0.1em; text-transform: uppercase; color: ' + (on ? t.color : (dim ? '#6b7399' : '#9aa5ce')) + '; box-shadow: inset 0 -2px 0 ' + (on ? t.color : 'transparent') + ';';
+      return { label: t.label, on: on, count: count, hasCount: !!(r.q && count), style: style, pick: function () { self.setState({ scope: t.id, sel: 0, actions: false }); } };
+    });
+
+    var rows = entries.map(function (e, i) {
+      var tagId = e.kind === 'item' ? e.it.tag : e.tag;
+      var tag = TAG[tagId] || TAG.more;
+      var isSel = i === sel;
+      var it = e.kind === 'item' ? e.it : null;
+      var name = it ? it.name : e.name;
+      var pill = '', pillStyle = '';
+      if (it && it.kind === 'switch') {
+        var on = !!s.sw[it.sw];
+        pill = on ? 'On' : 'Off';
+        pillStyle = 'font: 500 10px \'JetBrains Mono\', monospace; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; ' + (on ? 'color: #9ece6a; box-shadow: inset 0 0 0 1px rgba(158,206,106,0.6), 0 0 12px rgba(158,206,106,0.2)' : 'color: #9aa5ce; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12)');
+      } else if (it && it.kind === 'choice') {
+        pill = s.ch[it.ch];
+        pillStyle = 'font: 500 11px \'JetBrains Mono\', monospace; padding: 3px 8px; border-radius: 999px; color: #c0caf5; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.12)';
+      } else if (it && it.key) {
+        pill = it.key;
+        pillStyle = 'font: 500 10px \'JetBrains Mono\', monospace; letter-spacing: 0.06em; padding: 3px 7px; border-radius: 6px; color: #9aa5ce; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1)';
+      } else if (it && it.kind === 'link') {
+        pill = 'Opens Settings';
+        pillStyle = 'font: 500 11px Inter, sans-serif; color: #9aa5ce';
+      }
+      var isMore = e.kind === 'more';
+      return {
+        isSel: isSel,
+        style: 'display: flex; align-items: center; gap: 12px; width: 100%; box-sizing: border-box; border: none; text-align: left; cursor: pointer; padding: 8px 12px; border-radius: 12px; color: #c0caf5; background: ' + (isSel ? 'rgba(122,162,247,0.08)' : 'transparent') + '; box-shadow: ' + (isSel ? 'inset 0 0 0 1px rgba(122,162,247,0.22)' : 'none') + ';' + (isMore ? ' opacity: 0.85;' : ''),
+        color: (e.kind === 'more' || e.kind === 'fallback') ? '#9aa5ce' : tag.color,
+        tint: isSel ? '#1a1b26' : '#24283b',
+        letter: name.replace(/[^A-Za-z0-9]/g, '').charAt(0).toUpperCase(),
+        icLetter: tagId === 'app', icSetting: tagId === 'setting', icCommand: tagId === 'command', icFile: tagId === 'file',
+        icWindow: tagId === 'window', icProject: tagId === 'project', icClip: tagId === 'clip', icTheme: tagId === 'theme',
+        icPackage: tagId === 'package', icWeb: tagId === 'web', icCalc: tagId === 'calc', icMore: isMore,
+        parts: it ? partsOf(name, e.hits || []) : [{ t: name, style: 'color: #c0caf5' }],
+        sub: it ? it.sub : e.sub,
+        hasPill: !!pill, pill: pill, pillStyle: pillStyle,
+        tagLabel: isMore ? '' : tag.label,
+        tagStyle: 'font: 500 10px \'JetBrains Mono\', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: ' + tag.color + '; min-width: 78px; text-align: right; flex-shrink: 0; opacity: ' + (isSel ? '1' : '0.75'),
+        pick: function () {
+          if (self.state.sel === i) self.activateEntry(e);
+          else self.setState({ sel: i, actions: false });
+        }
+      };
+    });
+
+    var pv = { name: '', tag: '', color: '#7aa2f7', glow: 'rgba(122,162,247,0.2)', letter: '', desc: '', facts: [], isSwitch: false, isChoice: false, isOpen: false, isTheme: false, barStyle: '' };
+    if (selEntry) {
+      var it = selEntry.kind === 'item' ? selEntry.it : null;
+      var tagId = it ? it.tag : selEntry.tag;
+      var tag = TAG[tagId] || TAG.more;
+      pv.name = it ? it.name : selEntry.name;
+      pv.tag = tag.label || 'More';
+      pv.color = tag.color;
+      pv.glow = tag.color + '33';
+      pv.letter = pv.name.replace(/[^A-Za-z0-9=]/g, '').charAt(0).toUpperCase() || '·';
+      if (it && it.kind === 'switch') {
+        var on2 = !!s.sw[it.sw];
+        pv.isSwitch = true; pv.on = on2;
+        pv.stateText = on2 ? 'On · Enter turns it off' : 'Off · Enter turns it on';
+        pv.switchStyle = 'display: flex; justify-content: space-between; align-items: center; border-radius: 12px; padding: 12px 14px; font: 500 14px Inter, sans-serif; cursor: pointer; ' + (on2 ? 'border: 1px solid #9ece6a; background: rgba(158,206,106,0.1); color: #c3e88d; box-shadow: 0 0 24px rgba(158,206,106,0.18)' : 'border: 1px solid rgba(255,255,255,0.1); background: transparent; color: #c0caf5');
+        pv.desc = it.desc;
+        pv.facts = [{ k: 'In Windows', v: it.where }, { k: 'Command', v: 'omawin setting toggle ' + it.sw }].concat(it.admin ? [{ k: 'Needs', v: 'admin, asked once' }] : []);
+      } else if (it && it.kind === 'choice') {
+        pv.isChoice = true; pv.value = s.ch[it.ch];
+        pv.desc = it.desc;
+        pv.facts = [{ k: 'Options', v: it.options.join(' · ') }, { k: 'In Windows', v: it.where }];
+      } else if (it && (it.kind === 'link' || it.kind === 'page')) {
+        pv.isOpen = true; pv.verb = it.kind === 'link' ? 'Open its Settings page' : 'Open the editor';
+        pv.desc = it.desc;
+        pv.facts = [{ k: 'Where', v: it.where }];
+      } else if (it) {
+        pv.isOpen = true;
+        pv.verb = ({ app: 'Open', file: 'Open', window: 'Switch to it', project: 'Open project', clip: 'Paste', theme: 'Apply theme', command: 'Run' })[it.tag] || 'Open';
+        pv.desc = it.sub;
+        var facts = [];
+        if (it.path) facts.push({ k: it.tag === 'file' ? 'Path' : 'Program', v: it.path });
+        if (it.cmd) facts.push({ k: 'Command', v: it.cmd });
+        if (it.key) facts.push({ k: 'Key', v: it.key });
+        if (it.swatch) { pv.isTheme = true; pv.barStyle = 'display: block; height: 14px; border-radius: 999px; background: linear-gradient(90deg, ' + it.swatch.join(', ') + '); box-shadow: 0 0 24px ' + it.swatch[0] + '40'; }
+        if (it.tag === 'window') facts.push({ k: 'Preview', v: 'live thumbnail (DWM) here' });
+        if (it.tag === 'clip') facts.push({ k: 'Kept', v: 'skips password managers’ copies' });
+        pv.facts = facts;
+      } else {
+        pv.isOpen = true;
+        pv.verb = selEntry.kind === 'more' ? 'Show them all' : (selEntry.kind === 'calc' ? 'Copy the result' : 'Go');
+        pv.desc = selEntry.sub;
+        pv.facts = [];
+      }
+    }
+
+    var actions = [];
+    if (selEntry && selEntry.kind === 'item') {
+      var t2 = selEntry.it.tag;
+      var map = {
+        app: [['Open', 'Enter'], ['Run as administrator', 'Ctrl Shift Enter'], ['Show in folder', 'Ctrl O'], ['Pin to home', 'Ctrl P'], ['Uninstall…', '']],
+        setting: [['Switch it', 'Enter'], ['Open in Settings', 'Ctrl O'], ['Copy its command', 'Ctrl C'], ['Pin to home', 'Ctrl P']],
+        file: [['Open', 'Enter'], ['Open in editor', 'Ctrl E'], ['Terminal here', 'Ctrl T'], ['Copy path', 'Ctrl C'], ['Who has it open?', ''], ['Show in Explorer', 'Ctrl O']],
+        command: [['Run', 'Enter'], ['Copy command', 'Ctrl C'], ['Pin to home', 'Ctrl P']],
+        window: [['Switch to it', 'Enter'], ['Close', 'Ctrl W'], ['Move to workspace…', ''], ['Picture in picture', '']],
+        project: [['Open project', 'Enter'], ['Open in editor', 'Ctrl E'], ['Terminal here', 'Ctrl T'], ['Copy path', 'Ctrl C']],
+        clip: [['Paste', 'Enter'], ['Paste as plain text', 'Ctrl Shift V'], ['Pin', 'Ctrl P'], ['Delete', 'Ctrl D']],
+        theme: [['Apply', 'Enter'], ['Preview', 'Space'], ['Next background', '']]
+      };
+      actions = (map[t2] || []).map(function (a) { return { label: a[0], key: a[1], pick: function () { self.setState({ actions: false }); self.say(a[0] + ': ' + selEntry.it.name); } }; });
+    }
+
+    var quickDefs = [{ key: 'wifi', name: 'Wi-Fi' }, { key: 'bt', name: 'Bluetooth' }, { key: 'dark', name: 'Dark mode' }, { key: 'mic', name: 'Microphone' }];
+    var quick = quickDefs.map(function (d) {
+      var on = !!s.sw[d.key];
+      return {
+        name: d.name, on: on, state: on ? 'On' : 'Off',
+        style: 'border-radius: 18px; padding: 14px 16px; text-align: left; cursor: pointer; ' + (on ? 'border: 1px solid rgba(158,206,106,0.45); background: rgba(158,206,106,0.07); color: #c3e88d; box-shadow: 0 0 30px -8px rgba(158,206,106,0.35)' : 'border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.025); color: #a9b1d6'),
+        dot: 'width: 6px; height: 6px; border-radius: 50%; background: ' + (on ? '#9ece6a; box-shadow: 0 0 8px #9ece6a' : '#565f89'),
+        pick: function () { var sw = Object.assign({}, self.state.sw); sw[d.key] = !on; self.setState({ sw: sw, last: { type: 'sw', key: d.key, was: on, name: d.name } }); self.say(d.name + (on ? ' off' : ' on') + ' · Ctrl Z undoes'); }
+      };
+    });
+    var frequent = [{ name: 'Firefox', color: '#ff9e64', q: 'firefox' }, { name: 'Slack', color: '#bb9af7', q: 'slack' }].map(function (f) {
+      return { name: f.name, color: f.color, letter: f.name.charAt(0), pick: function () { self.say('Opening ' + f.name); } };
+    });
+
+    var scopeTag = TAG[r.eff];
+    var placeholders = { all: 'Search apps, settings, files, commands…', app: 'Search apps…', setting: 'Search every Windows setting…', command: 'Search commands…', file: 'Search files… (# searches inside them)', window: 'Search open windows…', project: 'Search projects…', clip: 'Search what you copied…', theme: 'Search themes…' };
+
+    return {
+      q: s.q,
+      placeholder: placeholders[r.eff] || placeholders.all,
+      scopeOn: r.eff !== 'all',
+      scopeLabel: scopeTag ? scopeTag.label : '',
+      scopeColor: scopeTag ? scopeTag.color : '#c0caf5',
+      chips: chips,
+      showHome: !r.q && r.eff === 'all',
+      showList: !!r.q || r.eff !== 'all',
+      rows: rows,
+      noResults: (!!r.q || r.eff !== 'all') && rows.length === 0,
+      hasSel: !!selEntry,
+      pv: pv,
+      actionsOn: s.actions && actions.length > 0,
+      actions: actions,
+      toastOn: !!s.toast,
+      toast: s.toast,
+      quick: quick,
+      frequent: frequent,
+      openTerminal: function () { self.say('Opening the terminal in Arch'); },
+      goProjects: function () { self.setState({ scope: 'project', sel: 0 }); },
+      goClip: function () { self.setState({ scope: 'clip', sel: 0 }); },
+      goThemes: function () { self.setState({ scope: 'theme', sel: 0 }); },
+      clearScope: function () { self.setState({ scope: 'all', sel: 0, q: (self.state.q.charAt(0) === '/' || self.state.q.charAt(0) === '>') ? self.state.q.slice(1) : self.state.q }); },
+      toggleActions: function () { self.setState({ actions: !self.state.actions }); },
+      activate: function () { self.activateEntry(selEntry); },
+      onQuery: function (ev) { self.setState({ q: ev.target.value, sel: 0, actions: false }); },
+      onKey: function (ev) {
+        var st = self.state;
+        if (ev.key === 'Tab') {
+          ev.preventDefault();
+          var typed = st.q.trim().toLowerCase();
+          if (typed && st.scope === 'all') {
+            var hit = TAGS.filter(function (t) { return t.id !== 'all' && t.label.toLowerCase().indexOf(typed) === 0; })[0];
+            if (hit) { self.setState({ scope: hit.id, q: '', sel: 0 }); return; }
+          }
+          var ids = TAGS.map(function (t) { return t.id; });
+          var at = ids.indexOf(st.scope);
+          var next = ids[(at + (ev.shiftKey ? ids.length - 1 : 1)) % ids.length];
+          self.setState({ scope: next, sel: 0, actions: false });
+        } else if (ev.key === 'ArrowDown') {
+          ev.preventDefault(); self.setState({ sel: Math.min(st.sel + 1, Math.max(0, entries.length - 1)), actions: false });
+        } else if (ev.key === 'ArrowUp') {
+          ev.preventDefault(); self.setState({ sel: Math.max(st.sel - 1, 0), actions: false });
+        } else if (ev.key === 'Enter') {
+          ev.preventDefault(); self.activateEntry(selEntry);
+        } else if (ev.key === 'Escape') {
+          ev.preventDefault();
+          if (st.actions) self.setState({ actions: false });
+          else if (st.q) self.setState({ q: '', sel: 0 });
+          else if (st.scope !== 'all') self.setState({ scope: 'all', sel: 0 });
+          else self.say('Esc on an empty search hides the window');
+        } else if (ev.key === 'Backspace' && !st.q && st.scope !== 'all') {
+          ev.preventDefault(); self.setState({ scope: 'all', sel: 0 });
+        } else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')) {
+          ev.preventDefault(); self.setState({ actions: !st.actions });
+        } else if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'z' || ev.key === 'Z') && !st.q) {
+          ev.preventDefault(); self.undo();
+        }
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>
