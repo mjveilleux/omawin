@@ -49,6 +49,8 @@ Logic in a process you can write in anything; looks in markup the shell themes a
 
 A replacement for the whole bar (`bar` kind) isn't in v1.
 
+Kinds omawin adds for its own first-party plugins (roadmap 8.0), open to everyone: `page` (a launcher page, like Localhost or Audio), `launcher-provider` (rows for what you type, like `top` for processes) and `finder-source` (another place the finder searches, like a whole-disk index). First-party plugins are written in C# on a small SDK (`plugins/sdk/Omawin.Plugin`) and compiled with Native AOT; admin work goes through omawin's admin helper with a fixed list of verbs, never by a plugin elevating itself.
+
 ## The manifest
 
 Omarchy's schema, unchanged, plus an `omawin` block for what runs on Windows. Omarchy fields omawin doesn't use (QML entry points) are ignored, so one repo can carry both.

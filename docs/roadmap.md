@@ -547,6 +547,60 @@ A launcher item and a short manual page: "Try real Omarchy" installs Try Omarchy
 
 The second half of the mission: Windows has good APIs under a poor experience. Each item below takes a daily Windows annoyance and builds the better version on an API Windows already offers, drawn by the shell (keyboard first, themed, searchable, every action an `omawin` command). Ordered roughly by how often the annoyance bites a developer. **Undocumented** marks APIs that aren't officially supported (used by well-known tools, but they can change); those get a fallback and a `minBuild`.
 
+### 8.0 Where each fix lives, and how it's written
+
+Not everything should be a plugin, and not everything belongs in the shell. Each fix has one of three homes.
+
+**The rule**, in order (the first that applies decides):
+1. **On a key, or needing one of the shell's shared hooks** (the keyboard hook, the clipboard listener, the notification listener, Explorer's selection) → **core**, in the menu app. A key must answer in one frame (phase 1), a plugin process can't share the shell's hook, and two keyboard hooks fighting is worse than one.
+2. **A setting Windows already has, changed by a value** → **a settings catalog entry** (1B): one line of data, no code, with undo and `omawin setting`.
+3. **A page, a panel, a launcher source or a background service you could live without** → **a first-party plugin**: in the repo, written to the plugin protocol ([plugins.md](plugins.md)), started only when used, turned off with one command. Keeps the core small, crashes contained, memory spent only by what you use, and it proves the plugin system on real work (Omarchy built its own bar, menu and panels as plugins the same way).
+
+Shared building blocks that several features need (who holds a file, display layouts, the event log readers) live in a small library both the core and first-party plugins use, so nothing is written twice.
+
+**Where each item goes:**
+
+| Item | Home | Why |
+|---|---|---|
+| 8.1 Who holds a file | core library + command | the finder's actions need it instantly; `omawin who-has` for scripts |
+| 8.2 Whole-disk search | first-party plugin (service + finder source) | an admin service most people may not want; adds an *Everywhere* chip to the finder |
+| 8.3 Disk cleanup | first-party plugin (page) | an occasional page |
+| 8.4 Quick Look in Explorer | core | Space in Explorer must answer instantly; needs the keyboard hook |
+| 8.5 Window switcher | core | on a key |
+| 8.6 Picture-in-picture | first-party plugin (own window) | self-contained; a window of its own |
+| 8.7 Monitor profiles | core | reacts to every dock and undock; the bar already watches monitors |
+| 8.8 Wallpaper per monitor | core (themes) | part of a theme switch |
+| 8.9 Keyboard lights | first-party plugin (service) | only for people with such a keyboard |
+| 8.10 Per-app volume and output | core (the Audio page) | the Audio page is core (`Audio.cs`) |
+| 8.11 Microphone mute | core | on a key; a bar indicator |
+| 8.12 Key remaps | core (hook) + catalog (`Scancode Map`) | the shell's one keyboard hook; sign-in-screen remaps are a setting |
+| 8.13 Text snippets | core | the same hook |
+| 8.14 Clipboard | core | the clipboard listener exists (`Background.cs`) |
+| 8.15 Why did my PC restart / crash / wake | first-party plugin (page) | an occasional page |
+| 8.16 Startup list | first-party plugin (page) | an occasional page |
+| 8.17 Processes in the launcher | first-party plugin (launcher source) | a search source, not on a key of its own |
+| 8.18 Windows Update | catalog entries (active hours, pause) + first-party plugin (status page, bar indicator) | the settings are values; the status is a service |
+| 8.19 DNS, hosts, proxy | catalog entries (proxy, DNS presets) + first-party plugin (hosts editor) | values where possible |
+| 8.20 Connections per app | first-party plugin (launcher page) | an occasional page |
+| 8.21 Wi-Fi QR | core (Quick settings) | Quick settings is core |
+| 8.22 Notification history | core | the listener needs the shell's package identity and toasts |
+| 8.23 Copilot key | core | on a key |
+| 8.24 Classic right-click menu | catalog entry | one value |
+| 8.25 Files opened by type | core (forwarders to the shell) | the shell's viewer |
+
+Count: 12 core, 9 first-party plugins (some with catalog entries alongside), 3 catalog-only (plus the catalog parts of 8.12, 8.18 and 8.19).
+
+**How first-party plugins are written:**
+
+- **C#, compiled with Native AOT into a small exe**, like the menu app: no runtime to install, starts in ~50 ms, ~15-30 MB while running. One project per plugin: `plugins/<id>/` holds `manifest.json`, `src/<Id>.csproj`, and `Panel.xaml` when it has a panel.
+- **A plugin SDK**, `plugins/sdk/Omawin.Plugin` (a small library each plugin references): the JSON-lines protocol (read `init` / `action` / `settings`, write bar lines, `state`, `notify`, `log`), settings with defaults from the manifest, a data folder, logging, and a `--selftest` entry point. Win32 calls declared with the **CsWin32** source generator (typed, AOT-safe P/Invoke from Microsoft's metadata), so `RmGetList`, `EventLogReader`, `GetExtendedTcpTable` and the rest are one line each.
+- **The shared library**, `shared/Omawin.Windows` (also referenced by the menu app): the building blocks used by both, such as Restart Manager, display configuration, event log queries, so the core and plugins share code, not copies.
+- **Built and shipped by CI**: the release workflow builds each first-party plugin for x64 and arm64 and publishes it as an asset; a plugin is downloaded when it's first enabled (as the menu app is), so the default install stays lean. Checked against `SHA256SUMS.txt`.
+- **Admin, safely**: a plugin never elevates itself. Admin work (the disk index service, DNS, the hosts file) goes through **one omawin admin helper** with a fixed list of verbs (`dns set`, `hosts write`, `usn-index install`, …), installed once in the one admin prompt and reached over a named pipe only the user's session can open; the plugin asks with `{"type":"admin","verb":…}` and the shell shows what will change before it happens.
+- **New plugin kinds** these need, added to [plugins.md](plugins.md): `page` (a launcher page, like Localhost or Audio), `launcher-provider` (rows for a query: `top`, connections), and `finder-source` (8.2's index as a finder chip).
+- **Tested in CI** on a Windows runner: each plugin's `--selftest` (the Restart Manager on a file the test locks itself, an event log query, a TCP table read), the SDK's protocol tests, and `omawin plugin check` on every manifest.
+- **On by default or not**: the occasional pages (8.3, 8.15, 8.16, 8.20) are on, since they cost nothing until opened; services with a cost (8.2's index, 8.9's lights) are off until you turn them on, from the Plugins page.
+
 ### 8A. Files and disks
 
 - **8.1 "This file is in use" answered** (S). Windows refuses to delete or rename a locked file and doesn't say who holds it. The **Restart Manager API** (`RmStartSession`, `RmRegisterResources`, `RmGetList`) names the processes holding any file or folder. In the finder's actions (6.1) and as `omawin who-has <path>`: the processes, with *close* (politely, `WM_CLOSE`) and *end* (after confirming). Also when a delete fails in Explorer: a launcher row "Who has …" on the path in the clipboard.
