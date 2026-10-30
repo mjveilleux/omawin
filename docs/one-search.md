@@ -1,6 +1,6 @@
 # One Search (design)
 
-**Status: proposed** ([roadmap.md](roadmap.md), phase 1C). One search bar for everything omawin can find or do, every result tagged with what it is, filters by tag, and a bento home when you haven't typed yet. It replaces the separate launcher home, system menu tree and pages as places you have to know about; they become filters and views of the same window. Clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z).
+**Status: proposed** ([roadmap.md](roadmap.md), phase 1C). One search bar for everything omawin can find or do, every result tagged with what it is, filters by tag, and a bento home when you haven't typed yet. It replaces the separate launcher home, system menu tree and pages as places you have to know about; they become filters and views of the same window. **Win+Space is the one key for all of it; Win+Alt+Space is retired** (guardrail 10). Clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z).
 
 ## What it is
 
@@ -23,7 +23,7 @@
 7. **Enter does the obvious thing; nothing happens without a key.** Enter opens, switches or runs; anything that removes or needs admin says so first. Space types a space (no surprise toggles while you type). The web is never searched as you type: "Search the web for …" is a row you pick, last.
 8. **Honest labels.** A setting Windows won't let us change from outside is a link that says *Opens Settings*, never a fake switch.
 9. **Typing is never lost.** Changing the filter keeps what you typed; Esc steps back one thing at a time (actions, then the text, then the filter, then the window).
-10. **Keys stay as they are** (AGENTS.md). Win+Space opens it; Win+Alt+Space opens it on Settings and commands (the system menu's job); Win+F on Files; Win+Shift+V on Clipboard. Same window, different starting filter: no key changes meaning, so nothing to relearn.
+10. **One key for everything: Win+Space.** Decided 2026-10-30 by the maintainer: **Win+Alt+Space (the system menu) is retired**; everything it did is in Win+Space (settings in the Settings filter, its actions in Commands, its sections in the Browse view and on the home). The other keys stay and open the same window on a filter: Win+F on Files, Win+Shift+V on Clipboard. Retiring Win+Alt+Space, step by step: for one release it still opens One Search (on All) and the toast says *Win+Space does this now*; then the binding is removed from `glazewm/config.yaml` by a migration, the key is free, and `AGENTS.md`'s key list and `manual/05-system-menu.md` are updated in the same change. `omawin menu` stays as a command (it opens One Search on the Browse view), so scripts and the dock keep working.
 11. **Speed is a feature.** Under 50 ms from key to window, under 16 ms per keystroke (phase 1); typing never waits on a source.
 12. **One look: futuristic and minimal.** Hairline borders (white at ~5%) instead of boxes; a translucent window with one soft glow in the theme's accent; light type (a thin, large search text; small uppercase monospace labels with wide tracking for tags, filters and keys); outlined icons and outlined, glowing states (an *On* switch glows in green, the selected row is a faint accent wash with a hairline ring) rather than filled blocks; filters as underlined tabs, not pills; one row height and one type scale; the theme's palette and the shell's motion tokens; crisp icons (1.8). **The theme shows as one bar** whose colours blend into each other (its palette as a single gradient), on the home's Theme tile and in a theme's preview. No emoji, no decoration that isn't information.
 
@@ -32,7 +32,7 @@
 | Today | In One Search |
 |---|---|
 | The launcher's tile home (Win+Space) | the bento home, kept and refined |
-| The system menu's tile home and tree (Win+Alt+Space) | the Settings and Commands filters; the tree's sections become a *Browse* view under Commands (Install, Update, Style, System…) for discovery, still searchable |
+| The system menu's tile home and tree (Win+Alt+Space, **retired**) | the Settings and Commands filters; the tree's sections become a *Browse* view under Commands (Install, Update, Style, System…) for discovery, still searchable; a *Menu* tile on the home opens it |
 | Launcher pages (Projects, Clipboard, Localhost, Audio, Quick settings, Packages, About, Shortcuts) | filters (Projects, Clipboard) or views opened from a result (Audio, Quick settings, Packages, Localhost) |
 | The file finder (Win+F) | the Files filter, with its preview, chips for places, and content search (`#`, phase 6) |
 | The theme picker | the Themes filter, as a grid of pictures (themes are pictures; a grid is right there) |
