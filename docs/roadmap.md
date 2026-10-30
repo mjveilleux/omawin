@@ -25,6 +25,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Linux follows **all of Omarchy's package sources and decisions**: Omarchy's repositories (stable channel), Omarchy's package choices for the terminal, **no AUR** |
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
+| 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
 
 ## Where we are
 
@@ -56,7 +57,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 | **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
 | **"fast"** | Phase 2 and 7.1: CI install timing, desktop first, mise tools, one release zip, the Sandbox install test | a fresh PC is a desktop in three minutes |
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
-| **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins | you add to the bar and menu without touching omawin |
+| **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
 | **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
 
 ---
@@ -362,9 +363,28 @@ The music drop-down (Zebar's today, `zebar/tokyo-islands/music.js`), the agents 
 
 From Raycast and PowerToys' Command Palette: a script dropped in `~/omawin-account/scripts/` (PowerShell, bash for Linux, anything with a header comment for its name and icon) shows up in the launcher, no manifest needed. The smallest possible plugin.
 
-### 4.9 Omarchy plugins unchanged (M to L)
+### 4.9 Omarchy plugins unchanged (L)
 
-The least-change route for Omarchy's catalog ([plugins.md](plugins.md), "Running Omarchy plugins unchanged"): stand-ins in Arch for the Omarchy and Hyprland commands plugins call (`omarchy-notification-send`, `omarchy-shell`, `hyprctl`, `xdg-open`) and Omarchy's theme folder kept current; then a host for their QML, first in Arch through WSLg (a prototype), then natively on Windows with Qt 6 if it earns it; and `omawin plugin scan` to say which plugins run as is.
+**Why:** Omarchy's marketplace has thousands of plugins. Porting each one by hand (4.1-4.8) means rewriting its UI; running them as they are gives omawin the whole catalog at once. It's possible because **Windows runs QML**: QML is part of Qt, which is cross-platform. What doesn't run on Windows is Quickshell, the Linux program that hosts Omarchy's QML and gives it Linux-only modules (`Quickshell` for edge-pinned windows, `Quickshell.Io` for processes and files, `Quickshell.Hyprland`, system services). A plugin is ordinary QML plus a few of those modules, so omawin provides the same module names on Windows and the plugin's QML loads unchanged. Four community plugins checked (2026-10-30) import only Qt Quick, Omarchy's `qs.Commons` / `qs.Ui`, `Quickshell` and `Quickshell.Io`, and two of them `Quickshell.Hyprland` ([plugins.md](plugins.md), "Running Omarchy plugins unchanged").
+
+**Build, in order:**
+1. **Stand-ins in Arch** (S): scripts named like Omarchy's commands, forwarding to Windows through `omawin.exe`: `omarchy-notification-send` (a toast), `omarchy-shell` (`omawin shell`), `xdg-open` (https and files only), `hyprctl` (the common reads answered from GlazeWM's IPC and the theme; binds become proposed keys, never bound silently). omawin's theme switch also writes `~/.config/omarchy/current/theme/` in Arch, in Omarchy's format. Omarchy's command bar modules then run unchanged (`side: linux`). Files: `wsl/omarchy-shims/`, `wsl/setup.sh`, `themes/set-theme.ps1`.
+2. **`omawin plugin scan <git-url>`** (S): reads a plugin's QML imports and the commands it runs; says *runs as is*, *runs with stand-ins*, or *needs a port*. Run over the marketplace's catalog to rank which modules and stand-ins unlock the most plugins. Files: `bin/plugin-scan.ps1` (or Bun), `bin/commands.txt`.
+3. **Prototype in Arch through WSLg** (M, 🖥): Quickshell from Omarchy's repositories plus a small `omawin-qs` shell (Omarchy's plugin host: `qs.Commons`, `qs.Ui`, the injected `shell` / `manifest` objects, its IPC) shows plugin panels and overlays as windows on the Windows desktop; GlazeWM floats and places them. Proves plugins run unchanged before investing in the native host. Limits: no layer-shell (panels as plain windows), weaker transparency, WSLg's latency and memory, the VM's view of battery and media.
+4. **The native host: `omawin-qs.exe`** (L, 🖥): a Qt 6 program for Windows (MSVC build, released by CI like the menu app) that provides the module subset plugins use, implemented for Windows:
+   - `Quickshell`: `PanelWindow` / `FloatingWindow` as frameless, always-on-top, positioned windows, anchored to the bar or the screen's edges, hidden from GlazeWM's tiling (window class rule), per monitor; `Singleton`; `Quickshell.env`; `IpcHandler` over omawin's shell IPC.
+   - `Quickshell.Io`: `Process` runs Windows programs directly and anything else in Arch (`wsl.exe -d <distro> -- …`), with stdout / stderr parsers as Quickshell's; `FileView` with `$HOME` and `$XDG_*` paths mapped into Arch's home (`\\wsl.localhost\<distro>\…`) or to Windows folders, per the plugin's `side`.
+   - `Quickshell.Hyprland`: workspaces, monitors, the focused window, `dispatch` and global shortcuts, answered by GlazeWM's IPC (and the fork's `emit`, 1.2).
+   - Omarchy's `qs.Commons` and `qs.Ui` shipped as they are (MIT, credited), reading omawin's palette; Omarchy's plugin registry behaviour (enable, disable, hot reload) driven by `omawin plugin`.
+   - **Bar widgets**: omawin's native bar reserves a slot for each QML widget; the host draws it in a small borderless window kept exactly over the slot (moved with the bar, per monitor), so it looks part of the bar.
+   - System-service modules (`Quickshell.Services.*`: Mpris, UPower, Notifications, PipeWire) come later, by demand from the scan: Windows' media controls, battery, toasts, Core Audio.
+5. **Upstream and credit**: offer the Windows module implementations to Quickshell if its maintainers want them; NOTICE entries for Qt (LGPL, shipped as DLLs) and Omarchy's QML.
+
+**Files:** new `qs-host/` (Qt 6 / C++ and QML, CMake), `.github/workflows/release.yml` (a job building it), `bin/install-binaries.ps1` (downloaded only when a QML plugin is enabled), `menu-app/Bar/` (slots for QML widgets), `wsl/omarchy-shims/`.
+
+**Done when:** Omadoro and Omastonk run unchanged on the native host, their widgets in omawin's bar and their panels opening under them in the omawin theme; Calendar for Omarchy runs with the stand-ins; `omawin plugin scan` over the catalog reports the share that runs as is.
+
+**Risks:** keeping the module subset in step with Quickshell and Omarchy's host API (pin versions; the scan shows what plugins need); Qt's size (~50 MB on disk, ~80-120 MB of memory while a QML plugin is on, nothing otherwise); a second UI toolkit in the desktop: an exception to "WinUI for everything you see" (mission.md), only for plugins you add, never for omawin's own surfaces; Quickshell's licence (believed LGPL, to confirm before reusing its code); plugins that rely on Wayland-only behaviour still need a port.
 
 ### 4.10 A gallery (later)
 
