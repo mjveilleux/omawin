@@ -296,3 +296,65 @@ Omadoro uses nearly every part of the design, so it's a good first outside plugi
 - **A bar widget fed by the web** ([Omastonk](https://github.com/brianblakely/omastonk), a stock symbol's price): the same steps with an `interval` command that fetches and prints one line. `allowMultiple: true` (one widget per symbol) means one process per widget instance, each with its own settings.
 - **A plugin store** (Okomart, which reads a `plugins.txt` of git URLs and installs through `omarchy plugin`): on omawin that's Setup › Plugins › Browse, built in; Okomart's catalog format (one git URL a line) is a good one to copy for `plugins/index.txt`.
 - **Plugins that drive the window manager** (a window overview like Exposé): these need Hyprland's APIs; on omawin they become features of the GlazeWM fork or the shell, reached through GlazeWM's IPC, not ports.
+
+## Worked example: porting Calendar for Omarchy
+
+[Calendar for Omarchy](https://github.com/crmne/omarchy-calendar) (MIT, by Carmine Paolino; id `crmne.omacal`, v1.2.1) is a big plugin and a useful stress test: Omarchy's clock and calendar popup with HEY, Google Calendar and `.ics` feeds laid over it; a month grid with per-calendar chips, a day view, creating and editing events with loosely typed dates and times and time zones, place suggestions, reminders as notifications, the next event in the bar, HEY time tracking, live sync, and a quick-add card on Alt+Shift+Space. Kinds: `service`, `bar-widget`, `overlay`.
+
+### What it's made of (~8,600 lines)
+
+| Part | Files | Lines | On omawin |
+|---|---|---|---|
+| Logic in plain JavaScript | `Calendar.js` (1,815), `TimeZones.js` (347), `Model.js` (296), `Places.js` (196), `KeyEdit.js`, `ShortcutModel.js` | ~2,850 | **reused**, run by Bun; `TimeZones.js` reads `/usr/share/zoneinfo`, so on Windows it either runs in Linux or switches to `Intl`'s time-zone data |
+| Talking to services | `Source.qml`, `Writer.qml`, `ApiWriter.qml`, `Service.qml` | ~670 | rewritten as `service.ts`: the same calls to `hey`, to the two Python helpers, and to HEY's API |
+| Helpers | `backends/google.py`, `backends/feeds.py` (Python standard library only), the `hey` CLI, the `gws` CLI | | **reused as they are** |
+| Bar | `BarWidget.qml` | 752 | the command widget: `󰃭 Team standup · in 12m` is text, the hover list a tooltip |
+| Panel | `Panel.qml`, `EventCard.qml`, `TimeTrackRow.qml`, `FocusRing.qml` | ~1,900 | XAML, or (better) omawin's own calendar drawing the data (below) |
+| Event form and quick add | `EventForm.qml`, `QuickAdd.qml`, `ZoneField.qml`, `PlaceSearch.qml` | ~1,400 | one XAML form used in the panel and in a quick-add overlay |
+| Its own settings | `SettingsView.qml`, `KeyField.qml` | ~990 | the generated settings page for the schema; a small XAML page for feeds and API keys, stored as `secret`s |
+| Desktop calls | notifications over D-Bus (Python), `xdg-open` for links, `hyprctl` to bind the shortcut | | protocol messages: `notify`, `run` (https links only), and a proposed key |
+
+### The shortcut: run it in Linux
+
+Everything this plugin runs — `hey`, `gws`, `python3`, `/usr/share/zoneinfo` — is Linux, and omawin has Arch in WSL by default. So the service runs there (`"side": "linux"` in the `omawin` block): `service.ts` under Bun in Arch, calling `hey`, `gws` and the Python helpers exactly as on Omarchy, with time zones from Arch's own zoneinfo. Only the three desktop calls change, and they were already the narrowest part of the plugin:
+
+| On Omarchy | On omawin |
+|---|---|
+| a Python script sends the reminder over D-Bus | `{"type":"notify","title":…,"body":…,"open":"https://…"}`: a Windows toast from the shell; clicking it opens the link |
+| `xdg-open <https link>` | `{"type":"run","open":"https://…"}`; the shell opens only `https` links, as the plugin itself insists |
+| `hyprctl` binds Alt+Shift+Space while loaded | `keys` in the manifest proposes `alt+shift+space` → `overlay quick-add`; bound in GlazeWM only when you accept, never over a key already in use (the plugin's own rule, and AGENTS.md's) |
+
+Its secrets stay where they are: the HEY token from `hey auth token`, Google's sign-in through `gws`, the feed list in `~/.config/omacal/feeds.json` (mode 600) — all inside Linux, never on a command line, exactly as the README promises. The Google Maps key, if you set one, goes in the plugin's settings as a `secret`.
+
+### The panel: let omawin's calendar draw it
+
+Porting ~3,300 lines of QML panel and form into loose XAML would work but costs the most and gives a second calendar beside omawin's own (the bar's clock gets a calendar popup: [mission-todo.md](mission-todo.md), track 4). The plugin itself is "the stock calendar with your calendars laid over it", so do the same here:
+
+- omawin's clock widget gets its native calendar popup (month grid, day view, Today, the theme's colours, the motion tokens).
+- It accepts **calendar providers**: a plugin kind (`calendar-provider`) whose service sends events (`{"type":"events","from":…,"to":…,"items":[{"id","title","start","end","allDay","calendar","color","place","link","reminders"}]}`) and calendars, and receives `create`, `update`, `delete` and `join` actions with the event's id and fields.
+- The shell draws the chips, the day view, the event card and the form; the provider does the reading, writing and loose date parsing (`Calendar.js` already has it).
+
+The port then shrinks to `service.ts` plus a mapping from the plugin's model to omawin's event shape: on the order of 500 lines, with ~2,850 reused, instead of ~1,500 new lines of XAML on top. And any other calendar (Outlook through Microsoft Graph, Fastmail's CalDAV) can be a provider of the same popup.
+
+HEY time tracking has no place in a generic calendar: it stays a small XAML section the provider adds under the day view (an extension slot in the popup), or its own panel.
+
+### What this example adds to the design
+
+| Need | Addition |
+|---|---|
+| a list where each row has its own actions (click an event, delete it) | `omawin:Action.Arg="id"` on templated items: the action carries that item's value |
+| typing that the plugin reacts to (dates, places) | `omawin:Action.TextChanged` with a debounce, and `AutoSuggestBox` allowed, its suggestions bound to state |
+| keys inside a panel (N, E, T, J, 1-9) | `KeyboardAccelerator`s in the XAML carrying `omawin:Action` |
+| a card in the middle of the screen from anywhere (quick add) | the `overlay` kind: a panel shown centred, summoned by a key or `omawin shell summon <id> <name>` |
+| a plugin that replaces a built-in widget (the clock) | `"replaces": "clock"` in the `omawin` block, or better, providers that extend the built-in |
+| shared surfaces several plugins can fill | provider kinds the shell draws: `calendar-provider` now; launcher search providers and notification actions later |
+| Linux-only plugins | `side: linux` (already in the design) is what makes this port small |
+
+### Steps, in order
+
+1. omawin builds its native calendar popup on the clock widget, and the `calendar-provider` contract (v2).
+2. A fork or pull request adds `omawin/service.ts` and the `omawin` block (`side: linux`, `kinds` gains `calendar-provider`, the `keys` proposal), reusing `Calendar.js`, `Model.js`, `TimeZones.js` and `backends/` untouched.
+3. In Arch: `hey` and `gws` installed (from their releases, or mise), signed in once (`hey auth login`, `gws auth login -s calendar`) in the terminal.
+4. `omawin plugin add https://github.com/<fork>/omarchy-calendar.git`, `omawin plugin enable crmne.omacal`; accept the quick-add key on the Plugins page.
+5. Check: events from HEY, Google and a feed in the popup; a reminder arrives as a toast; Alt+Shift+Space opens quick add; an edit made in HEY shows within seconds (`hey watch`).
+6. Upstream: offer the author the `omawin/` folder, so one repo serves both desktops.
