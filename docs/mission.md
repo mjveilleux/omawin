@@ -34,7 +34,7 @@ Windows ships defaults made for everyone; omawin replaces the ones that slow a d
 
 ## Principles
 
-1. **One line to install, one command to update.** `irm … | iex` on a fresh PC, under Windows PowerShell 5.1, no admin prompt unless a piece truly needs it. `omawin update` is safe to run any day: it never fails because you customized something.
+1. **One line to install, one command to update.** `irm … | iex` on a fresh PC, under Windows PowerShell 5.1, no admin prompt: everything installs for your account; the few things that truly need admin are opt-in, asked once for all of them when you choose them, and never during an update. `omawin update` is safe to run any day: it never fails because you customized something.
 2. **Fast.** Anything on a key answers instantly, so it runs in the always-running menu app or a native exe, never a fresh PowerShell. Terminal changes are measured (`omawin profile terminal`), not felt.
 3. **Lightweight.** The whole desktop (WM, bar, dock, menu app, helpers) stays under ~600 MB RAM and ~1% CPU idle; every new feature says what it costs. The install is a lean core, with the rest opt-in.
 4. **As native to Windows as possible.** WinUI 3 and C# (the Windows App SDK) for everything you see, Win32 and WinRT APIs for system features, Rust where it's already the right tool (the GlazeWM fork). No web views in the desktop itself: Zebar goes once the native bar replaces it. Like Omarchy 4's Hyprland + Quickshell split: GlazeWM is the engine with no UI; the shell is the one process that draws everything.
@@ -51,7 +51,7 @@ Not yet a product: configs are linked straight into the git checkout so any edit
 
 ## How we'll know
 
-- A clean Windows 11 VM goes from `irm … | iex` to a working desktop with no errors, in under 20 minutes, with at most one admin prompt.
+- A clean Windows 11 VM goes from `irm … | iex` to a working desktop with no errors, in under 20 minutes, with no admin prompt (one only if the user picks something that needs it).
 - `omawin check`: 0 failed, 0 warnings, on that VM and on this PC.
 - Someone who isn't the author installs it, uses it for a week, customizes it, updates it, and nothing breaks.
 - Every row in the Omarchy parity list ([mission-todo.md](mission-todo.md)) is have, Windows-native instead, or decided against.

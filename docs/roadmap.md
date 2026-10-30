@@ -60,8 +60,9 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 | Release | Contents | Feels like |
 |---|---|---|
 | **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
+| **"one search"** | Phase 1C: one bar for everything, tagged results and filters, the bento home, the futuristic minimal look ([one-search.md](one-search.md), [mockup](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z)) | you type one thing and find anything |
 | **"settings"** | Phase 1B: every Windows setting in the system menu, switches inline, `omawin setting`, your settings applied on a new PC | you never open Settings again |
-| **"fast"** | Phase 2 and 7.1: the omawin bundle, CI install timing, desktop first, the welcome page, background steps, the Sandbox install test | a fresh PC is an omawin desktop in under a minute |
+| **"fast"** | Phase 2, 2.9 (no admin) and 7.1: the omawin bundle, CI install timing, desktop first, the welcome page, background steps, the Sandbox install test | a fresh PC is an omawin desktop in under a minute |
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
 | **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
 | **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
