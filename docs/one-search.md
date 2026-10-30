@@ -25,7 +25,7 @@
 9. **Typing is never lost.** Changing the filter keeps what you typed; Esc steps back one thing at a time (actions, then the text, then the filter, then the window).
 10. **Keys stay as they are** (AGENTS.md). Win+Space opens it; Win+Alt+Space opens it on Settings and commands (the system menu's job); Win+F on Files; Win+Shift+V on Clipboard. Same window, different starting filter: no key changes meaning, so nothing to relearn.
 11. **Speed is a feature.** Under 50 ms from key to window, under 16 ms per keystroke (phase 1); typing never waits on a source.
-12. **One look.** One row height, one type scale (Inter-like UI text, a monospace for paths and keys), the theme's palette, the shell's motion tokens; crisp icons (1.8). No gradients, no shadows-on-shadows, no emoji.
+12. **One look: futuristic and minimal.** Hairline borders (white at ~5%) instead of boxes; a translucent window with one soft glow in the theme's accent; light type (a thin, large search text; small uppercase monospace labels with wide tracking for tags, filters and keys); outlined icons and outlined, glowing states (an *On* switch glows in green, the selected row is a faint accent wash with a hairline ring) rather than filled blocks; filters as underlined tabs, not pills; one row height and one type scale; the theme's palette and the shell's motion tokens; crisp icons (1.8). **The theme shows as one bar** whose colours blend into each other (its palette as a single gradient), on the home's Theme tile and in a theme's preview. No emoji, no decoration that isn't information.
 
 ## What happens to today's pieces
 
