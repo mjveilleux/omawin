@@ -1,6 +1,6 @@
 # Phase 1: snappy, how to build it
 
-The implementation side of [roadmap.md](../roadmap.md) Phase 1 (1.1-1.10). Read the roadmap item first for the why; this file is the how: files, code, checks.
+The implementation side of [roadmap.md](roadmap.md) Phase 1 (1.1-1.10). Read the roadmap item first for the why; this file is the how: files, code, checks.
 
 **All code here is a sketch that hasn't been compiled or run.** It names real files and functions as of 2026-10-30 (line numbers drift: search for the function name). Anything uncertain about a Windows, WinUI or crate API is marked *(check)*. Languages, by where the code lives (AGENTS.md):
 
@@ -27,7 +27,7 @@ Order (README.md): 1.1, 1.3, 1.8, 1.9 first; then 1.4, 1.2, 1.5, 1.6, 1.10. 1.7 
 | `menu-app/MainWindow.xaml.cs` | marks in `Show`, after `appWindow.Show()`, on the next frame; typing marks around `Render` |
 | `bin/profile-menu.ps1` | new: the driver |
 | `bin/commands.txt` | `profile menu` row |
-| `docs/roadmap.md` | the baseline numbers under 1.1 once measured |
+| `docs/plan/roadmap.md` | the baseline numbers under 1.1 once measured |
 
 **`bin/omawin.cs`** (C# 5). `Trace(string)` already exists (search `static void Trace(string label)`). In `Send`:
 

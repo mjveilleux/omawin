@@ -2,7 +2,7 @@
 
 > **Untested sketch.** Nothing here has been compiled or run. It names real files and functions as of 2026-10-30 (`bin/omawin.cs`, `wsl/setup.sh`, `themes/render.ps1`, ...) and follows [AGENTS.md](../../AGENTS.md): `bin/omawin.cs` is C# 5 for the in-box `csc.exe` (no `?.`, no `$"..."`, no `out var`, no `=>` members, non-ASCII only as `\uXXXX`); install scripts and `bin/linux.ps1` run under Windows PowerShell 5.1; files under `bash/` and `wsl/` are LF. Anything uncertain is marked *(check)*; numbers to take on the PC are marked *(measure)*.
 
-Roadmap: [roadmap.md](../roadmap.md) Phase 3 (3.1-3.11) and 3B. Omarchy's source: `mjveilleux/omarchy` (the fork), pinned below.
+Roadmap: [roadmap.md](roadmap.md) Phase 3 (3.1-3.11) and 3B. Omarchy's source: `mjveilleux/omarchy` (the fork), pinned below.
 
 ## Files
 

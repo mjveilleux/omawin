@@ -2,7 +2,7 @@
 
 > **Uncompiled sketch.** Everything below was written in a cloud session that can't run Windows (2026-10-30). It's C# 12 for the menu app (.NET 9, Native AOT-safe: no reflection, `LibraryImport` source-generated P/Invoke, `System.Text.Json` only through `Json.cs`'s generated context), C# 5 for `bin/omawin.cs`, Windows PowerShell 5.1 for migrations. Names are suggestions. Registry paths and values marked **(check)** are from memory and must be confirmed on the PC before their catalog line ships; the rest are long-stable and widely documented, but CI's round-trip (§17) is still what proves them.
 
-The why is in [roadmap.md](../roadmap.md) (Phase 1B, 1C, 2.9) and [one-search.md](../one-search.md). This file is the how, for someone who has lost all other context. one-search.md §1-§5 already has the result model, `ISearchSource`, `QueryParser`, `Merger` and the bar's key handler: they are referenced here, not repeated; §12 lists the corrections they need against the real code.
+The why is in [roadmap.md](roadmap.md) (Phase 1B, 1C, 2.9) and [one-search.md](one-search.md). This file is the how, for someone who has lost all other context. one-search.md §1-§5 already has the result model, `ISearchSource`, `QueryParser`, `Merger` and the bar's key handler: they are referenced here, not repeated; §12 lists the corrections they need against the real code.
 
 ## 0. Files
 
@@ -1208,7 +1208,7 @@ static class SettingWatch
 
 ## 8. Admin entries: queued, one prompt (roadmap 2.9)
 
-The rule ([roadmap 2.9](../roadmap.md)): nothing asks for admin by default; a shielded setting you choose is queued; **one** prompt applies everything queued, after omawin has listed exactly what will change; declining keeps everything else working; **an update never prompts**.
+The rule ([roadmap 2.9](roadmap.md)): nothing asks for admin by default; a shielded setting you choose is queued; **one** prompt applies everything queued, after omawin has listed exactly what will change; declining keeps everything else working; **an update never prompts**.
 
 - `AdminQueue` (in `WinSettings`): `%LOCALAPPDATA%\launcher\settings-admin-queue.tsv`, lines `<id>\t<value>`; the same id twice keeps the last.
 - In the window, a shielded row's Enter adds to the queue and the list gains a sticky row at the top: **"Apply 2 admin changes ⛨"**. Enter on it opens a confirm view listing each change in words ("Turn on developer mode", "Long paths on (applies to programs started after)", "Restart needed: Virtual Machine Platform") with *Apply* and *Not now*. *Apply* = one UAC prompt.

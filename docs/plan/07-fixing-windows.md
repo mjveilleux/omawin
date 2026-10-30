@@ -1,8 +1,8 @@
 # Phase 8: fixing Windows, how to build it
 
-> **Uncompiled sketch.** Nothing below has been built or run. It's the code and data [roadmap.md](../roadmap.md) Phase 8 (8.0-8.51, 8K) needs, written so the work could start from this file alone. Signatures, struct layouts and registry values are what the SDK headers and Microsoft's docs say as far as the author knows; anything marked **(check)** is uncertain and must be confirmed on a PC (or in the header) before it ships. Nothing here invents an API: where no documented one exists it says so.
+> **Uncompiled sketch.** Nothing below has been built or run. It's the code and data [roadmap.md](roadmap.md) Phase 8 (8.0-8.51, 8K) needs, written so the work could start from this file alone. Signatures, struct layouts and registry values are what the SDK headers and Microsoft's docs say as far as the author knows; anything marked **(check)** is uncertain and must be confirmed on a PC (or in the header) before it ships. Nothing here invents an API: where no documented one exists it says so.
 
-Read with: [AGENTS.md](../../AGENTS.md) (no admin by default, one prompt for opt-in admin; keys never change by guesswork), [roadmap.md](../roadmap.md) 1B (the settings catalog) and 2.9 (no admin), [plugins.md](../plugins.md) (the plugin protocol).
+Read with: [AGENTS.md](../../AGENTS.md) (no admin by default, one prompt for opt-in admin; keys never change by guesswork), [roadmap.md](roadmap.md) 1B (the settings catalog) and 2.9 (no admin), [plugins.md](plugins.md) (the plugin protocol).
 
 ## 0. Ground rules for this code
 

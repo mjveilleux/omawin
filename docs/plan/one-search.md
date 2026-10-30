@@ -1,6 +1,6 @@
 # One Search (design)
 
-**Status: proposed** ([roadmap.md](roadmap.md), phase 1C). One search bar for everything omawin can find or do, every result tagged with what it is, filters by tag, and a bento home when you haven't typed yet. It replaces the separate launcher home, system menu tree and pages as places you have to know about; they become filters and views of the same window. **Win+Space is the one key for all of it; Win+Alt+Space is retired** (guardrail 10). Clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z) (private link); **its full source is in the repo: [`docs/design/one-search/mockup.dc.html`](design/one-search/mockup.dc.html)** (how to read it: [README](design/one-search/README.md)).
+**Status: proposed** ([roadmap.md](roadmap.md), phase 1C). One search bar for everything omawin can find or do, every result tagged with what it is, filters by tag, and a bento home when you haven't typed yet. It replaces the separate launcher home, system menu tree and pages as places you have to know about; they become filters and views of the same window. **Win+Space is the one key for all of it; Win+Alt+Space is retired** (guardrail 10). Clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z) (private link); **its full source is in the repo: [`docs/plan/design/one-search/mockup.dc.html`](design/one-search/mockup.dc.html)** (how to read it: [README](design/one-search/README.md)).
 
 ## What it is
 

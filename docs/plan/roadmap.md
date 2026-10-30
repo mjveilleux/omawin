@@ -2,7 +2,7 @@
 
 The big plan: where omawin stands on 2026-10-30, where it's going, and for each piece of work what to build, which files it touches, how we'll know it's done, and what could go wrong. The goal is to come close to Omarchy 4 in how omawin installs and how it feels to use: a menu that answers instantly, windows that move smoothly, an install that's done before your coffee is, Linux as a first-class home, and a shell you can extend with plugins.
 
-**The how, with code for every piece: [plan/](plan/README.md)** (start there if you have no context). [mission.md](mission.md) says why omawin exists; [mission-todo.md](mission-todo.md) is the running checklist by track. This file is the plan behind it. When an item lands, tick it in mission-todo.md with the commit; this file changes when the plan changes.
+**The how, with code for every piece: [plan/](README.md)** (start there if you have no context). [mission.md](../mission.md) says why omawin exists; [mission-todo.md](../mission-todo.md) is the running checklist by track. This file is the plan behind it. When an item lands, tick it in mission-todo.md with the commit; this file changes when the plan changes.
 
 Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-shell.md`, `docs/menu.md`, `docs/update-process.md`, `agents/skills/motion.md`, `default/hypr/looknfeel.lua`, `install/omarchy-base.packages`); our GlazeWM fork (`mjveilleux/glazewm`, branches `omawin`, `feat/accordian-v1`, `feat/master-stack`, `feat/auto-tiling`); a web survey of Windows sandboxes and similar projects (2026-10-30, links in phase 7). File and line references are as of 2026-10-30 and will drift; they say where to start, not what to trust blindly.
 
@@ -17,7 +17,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 
 | Date | Decision |
 |---|---|
-| 2026-10-15 | One always-running native shell (the menu app) draws everything (the bar included); Explorer stays ([shell-apps.md](shell-apps.md)) |
+| 2026-10-15 | One always-running native shell (the menu app) draws everything (the bar included); Explorer stays ([shell-apps.md](../shell-apps.md)) |
 | 2026-10-30 | Plugins keep **Omarchy's `manifest.json`**; panels are **loose XAML** loaded by the shell; widgets and services are **commands that print JSON lines** |
 | 2026-10-30 | omawin's **command-line tools come through mise**, pinned in the repo; desktop apps stay on winget |
 | 2026-10-30 | **winget, Scoop and Chocolatey all stay** as your choice on the Packages page; omawin's own installs still avoid Chocolatey |
@@ -35,7 +35,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 
 ## Where we are
 
-**Done and solid:** the one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI, so a new PC downloads binaries instead of compiling; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, colour picker, QR, calculator, the packages page); 24 Omarchy themes applied live across every app; noctty (our Ghostty fork) and herdr; Linux in WSL with Arch as the default, on Omarchy's package repositories, Ubuntu as the other choice; dev environments through mise and Omarchy's Docker databases (Install › Development, [dev-envs.md](dev-envs.md)); Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
+**Done and solid:** the one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI, so a new PC downloads binaries instead of compiling; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, colour picker, QR, calculator, the packages page); 24 Omarchy themes applied live across every app; noctty (our Ghostty fork) and herdr; Linux in WSL with Arch as the default, on Omarchy's package repositories, Ubuntu as the other choice; dev environments through mise and Omarchy's Docker databases (Install › Development, [dev-envs.md](../dev-envs.md)); Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
 
 **Built, not yet shipped:** window animations in the GlazeWM fork (branch `omawin`): new windows fade in where they tile, the others slide, drawn from snapshots (Windows Graphics Capture, D3D11, DirectComposition), ease-out-quint, 200 ms. Never tried on a PC, not in a release.
 
@@ -112,7 +112,7 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 ### 1.3 The Native AOT build for everyone (S)
 
-**Why:** AOT starts in 0.34 s instead of 1.04 s and uses 114 MB instead of 173 MB ([native-bar.md](native-bar.md)).
+**Why:** AOT starts in 0.34 s instead of 1.04 s and uses 114 MB instead of 173 MB ([native-bar.md](../native-bar.md)).
 
 **Build:** the release job (`release.yml:87-105`) calls `menu-app\build.ps1 -BuildOnly` without `-Aot`; `build.ps1:39-44` picks AOT only if it finds Visual Studio's C++ tools. Pass `-Aot` in CI so a runner image change can't silently ship the JIT build, and fail the job unless `build-kind.txt` says `native`.
 
@@ -150,7 +150,7 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 ### 1.6 The native bar only (M, 🖥)
 
-The bar is the menu app's own ([native-bar.md](native-bar.md)); what's left: its media widget, and the music and agents drop-downs moved into the shell (they become the first plugins, 4.6). Then the old web bar is **uninstalled**: a migration stops it, removes what omawin set up for it, and uninstalls the program omawin installed for it (per user: at once; if an older install put it machine-wide, the uninstall waits in the pending admin list for you to say when, 2.9, never a prompt during the update). Saves ~220-350 MB and the 2 s sign-in paint.
+The bar is the menu app's own ([native-bar.md](../native-bar.md)); what's left: its media widget, and the music and agents drop-downs moved into the shell (they become the first plugins, 4.6). Then the old web bar is **uninstalled**: a migration stops it, removes what omawin set up for it, and uninstalls the program omawin installed for it (per user: at once; if an older install put it machine-wide, the uninstall waits in the pending admin list for you to say when, 2.9, never a prompt during the update). Saves ~220-350 MB and the 2 s sign-in paint.
 
 ### 1.7 Typing never waits (S, 🖥)
 
@@ -396,7 +396,7 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 
 | What | Why it needs admin now | Without admin |
 |---|---|---|
-| **The GlazeWM fork's install** (`install/glazewm-fork.ps1`) | GlazeWM asks for `uiAccess` (to manage windows of programs running as admin); Windows grants that only to a program signed by a certificate the PC trusts, in Program Files. Today a certificate is made on the PC and the fork copied into Program Files | **A per-user GlazeWM by default**: the fork built twice in CI, a normal build (no `uiAccess`) that runs from the bundle in `%LOCALAPPDATA%` with no admin at all, and the `uiAccess` build. The only loss: windows of programs you started *as admin* aren't tiled or moved. **Opt-in** "Manage admin windows too": one prompt puts the CI-signed `uiAccess` build in Program Files (no certificate made on the PC once CI signing exists, [release-signing.md](release-signing.md)); its later updates are offered, never forced |
+| **The GlazeWM fork's install** (`install/glazewm-fork.ps1`) | GlazeWM asks for `uiAccess` (to manage windows of programs running as admin); Windows grants that only to a program signed by a certificate the PC trusts, in Program Files. Today a certificate is made on the PC and the fork copied into Program Files | **A per-user GlazeWM by default**: the fork built twice in CI, a normal build (no `uiAccess`) that runs from the bundle in `%LOCALAPPDATA%` with no admin at all, and the `uiAccess` build. The only loss: windows of programs you started *as admin* aren't tiled or moved. **Opt-in** "Manage admin windows too": one prompt puts the CI-signed `uiAccess` build in Program Files (no certificate made on the PC once CI signing exists, [release-signing.md](../release-signing.md)); its later updates are offered, never forced |
 | **Whole-PC packages** (`$WholePC` in `packages.ps1`: PowerShell, Git, Node, Neovim, …) | installed machine-wide, for every account | **Per user by default** (`--scope user`, or the bundle's portable copies); machine-wide only if you choose it (a shared PC) through `omawin pkg install --machine` |
 | **The .NET desktop runtime** | machine-wide installer | not needed: the menu app is AOT, the music player published self-contained (2.7) |
 | **The local code-signing certificate** | the PC's certificate store | gone: signing happens in CI |
@@ -421,7 +421,7 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 
 - **Install › Remove** (exists for winget packages) lists everything installed by any manager (`omawin pkg list`, 2B): winget, Scoop, Chocolatey, mise, the bundle's tools, Arch's packages, and Windows' own extra apps (8.50); Enter removes, Ctrl+Space picks several. `omawin pkg remove <name>` does the same from a terminal.
 - **omawin's own parts, one at a time:** `omawin remove <part>` for the optional pieces (the music player, dictation, the agents, WSL's Arch, a preset, a plugin, a theme): stops it, removes it, removes its settings and its sign-in entries, says what's left (your files: never touched).
-- **All of omawin:** `omawin uninstall` does what [install.md](install.md)'s *Undoing it* lists by hand: stops the desktop, removes the sign-in tasks, puts back each config it replaced (the `.backup-<timestamp>` copies), removes its PATH entries and environment variables, the taskbar back to normal, and asks whether to also remove the programs it installed (each listed, all ticked by default) and the Linux it made. Your files, your account folder and anything you installed yourself stay unless you tick them.
+- **All of omawin:** `omawin uninstall` does what [install.md](../install.md)'s *Undoing it* lists by hand: stops the desktop, removes the sign-in tasks, puts back each config it replaced (the `.backup-<timestamp>` copies), removes its PATH entries and environment variables, the taskbar back to normal, and asks whether to also remove the programs it installed (each listed, all ticked by default) and the Linux it made. Your files, your account folder and anything you installed yourself stay unless you tick them.
 - **What omawin no longer needs**, it uninstalls itself in a migration, said in the update's summary (the old web bar, 1.6); never something you installed yourself.
 - **No admin unless the program needs it** (2.9): per-user installs uninstall without a prompt; a machine-wide one waits in the pending admin list, and several go in one prompt.
 
@@ -466,7 +466,7 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 
 ## Phase 3: Linux in WSL, first class (Arch by default, Omarchy's way)
 
-Linux is first class; Arch is the default Linux, Ubuntu the other choice. On Arch, omawin follows **all of Omarchy's package sources and decisions**: Omarchy's repositories on the stable channel (already: `wsl/setup.sh` writes Omarchy's `pacman.conf` and mirrorlist and trusts its key), Omarchy's package choices for anything that runs in a terminal, Omarchy's shell defaults, mise for languages, Docker the way Omarchy runs it, and **no AUR** (no `yay`, though Omarchy's base list has it). Your Linux is the default terminal and where your code lives. A distro you already had stays yours ([AGENTS.md](../AGENTS.md)).
+Linux is first class; Arch is the default Linux, Ubuntu the other choice. On Arch, omawin follows **all of Omarchy's package sources and decisions**: Omarchy's repositories on the stable channel (already: `wsl/setup.sh` writes Omarchy's `pacman.conf` and mirrorlist and trusts its key), Omarchy's package choices for anything that runs in a terminal, Omarchy's shell defaults, mise for languages, Docker the way Omarchy runs it, and **no AUR** (no `yay`, though Omarchy's base list has it). Your Linux is the default terminal and where your code lives. A distro you already had stays yours ([AGENTS.md](../../AGENTS.md)).
 
 What exists: `wsl/install.ps1` picks the distro (your `-Linux`, the saved pick, a distro you have, else Arch), installs it with `wsl --install -d <name> --no-launch`, makes a Linux user named after yours (sudo without a password), then runs `wsl/setup.sh root` and `setup.sh user`. Arch gets base-devel, the CLI tools, Neovim, Node, Python and herdr from Omarchy's repos; Ubuntu gets apt's equivalents plus Neovim and tree-sitter from their releases. `setup.sh user` links `~/.config/nvim` to the repo, adds an omawin block to `~/.bashrc` that sources `bash/bashrc`, points git at Windows' credential manager and installs the agents. `omawin update` runs `setup.sh update` (Arch only). `/etc/wsl.conf` gets only the default user. Linux projects show in the launcher, Linux servers in Localhost, and Neovim in Linux follows the theme live.
 
@@ -474,7 +474,7 @@ What exists: `wsl/install.ps1` picks the distro (your `-Linux`, the saved pick, 
 
 The `wsl` preset joins the default set (`packages.ps1`, `Initialize-Presets`) with Arch preselected: Enter through the questions gives you Arch. WSL is already in the one admin prompt (`install/admin-batch.ps1:97-125`) and resumes at the next sign-in after Windows' restart (`wsl/install.ps1:51-65`).
 
-**Risks:** virtualization off in the firmware. Detect it before offering (Try Omarchy does: [inspiration.md](inspiration.md)) and say "turn on virtualization" rather than looping; PowerShell stays the shell until then.
+**Risks:** virtualization off in the firmware. Detect it before offering (Try Omarchy does: [inspiration.md](../inspiration.md)) and say "turn on virtualization" rather than looping; PowerShell stays the shell until then.
 
 ### 3.2 Omarchy's terminal layer in Arch (M)
 
@@ -495,7 +495,7 @@ The `wsl` preset joins the default set (`packages.ps1`, `Initialize-Presets`) wi
 
 ### 3.3 A good WSL VM out of the box (S)
 
-`wsl/.wslconfig` today only sets `autoMemoryReclaim`. Add `networkingMode=mirrored` (localhost both ways, VPNs behave), `dnsTunneling=true`, `firewall=true`, `sparseVhd=true`, and a longer `vmIdleTimeout` (3.5). `setup.sh root` writes `/etc/wsl.conf`: `[boot] systemd=true` (Docker, timers), `[interop] appendWindowsPath=false` (Linux tools win in Linux), `[user] default=<user>` (as now). Each overridable by the account folder ([work.md](work.md)).
+`wsl/.wslconfig` today only sets `autoMemoryReclaim`. Add `networkingMode=mirrored` (localhost both ways, VPNs behave), `dnsTunneling=true`, `firewall=true`, `sparseVhd=true`, and a longer `vmIdleTimeout` (3.5). `setup.sh root` writes `/etc/wsl.conf`: `[boot] systemd=true` (Docker, timers), `[interop] appendWindowsPath=false` (Linux tools win in Linux), `[user] default=<user>` (as now). Each overridable by the account folder ([work.md](../work.md)).
 
 **Risks:** mirrored networking trips some VPN clients; `appendWindowsPath=false` breaks `code .` and `explorer.exe .`: small wrappers in `~/.local/bin` for `code`, `explorer`, `clip` and `omawin` (calling `omawin.exe` through interop).
 
@@ -663,7 +663,7 @@ Borrowed as data where we can, the way the themes were.
   - Layout cycling, pop-out (float and centre), corner style and transparency toggles in the menu (GlazeWM's `window_effects` supports both).
   - Upstream's `feat/master-stack` and `feat/auto-tiling` (both WIP) are worth watching for Omarchy's master layout.
 - **5.8 Detect before offering** (M): menu rows with a condition (`?wsl`, `?docker`, `?installed <id>`), answered in the background and cached; the menu opens on the last answers, as Omarchy's guards do (`docs/menu.md`).
-- **5.9 Update channels and undo** (M): `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what [install.md](install.md) lists by hand. Update › All apps (`launcher/menu.txt:257`, only `winget upgrade --all` today) also runs `scoop update *` and `choco upgrade all` when those are installed (Chocolatey's needs admin: one prompt, said up front).
+- **5.9 Update channels and undo** (M): `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what [install.md](../install.md) lists by hand. Update › All apps (`launcher/menu.txt:257`, only `winget upgrade --all` today) also runs `scoop update *` and `choco upgrade all` when those are installed (Chocolatey's needs admin: one prompt, said up front).
 - **5.10 Coding agents first class:** install, sign in, a key for the default agent, the theme followed (mission-todo track 7).
 - **5.11 From Raycast and the Command Palette** (2026): a window-capture action in the snip tool (a window's image with its shadow); pinnable CPU / GPU / network readouts on the bar (as Command Palette's dock has); dictation in the launcher (omawin has dictation; a launcher row to start it).
 
@@ -671,7 +671,7 @@ Borrowed as data where we can, the way the themes were.
 
 ## Phase 6: files (the finder, Win+F)
 
-The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. It grows into the place you act on files from. Explorer stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)).
+The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. It grows into the place you act on files from. Explorer stays (replacing it breaks Windows; [shell-apps.md](../shell-apps.md)).
 
 What exists: fff v0.11.0's C library (`menu-app/fetch-fff.ps1:10`), one index per root, started in the background (`FileSearch.cs:44-85`); roots are Desktop, Documents (and OneDrive's), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder; `launcher/finder-skip.txt` skips folders; results ranked by own-name match, folders first, then fff's score, with opened files tracked (`fff_track_query`). Bound functions: `fff_create_instance_with`, `fff_search_mixed`, `fff_track_query` and result accessors; content indexing exists in the options (`EnableContentIndexing`) but is off, and no grep call is bound. The preview (`MainWindow.xaml.cs:743-844`) shows images, the first 22 lines of text, or a folder's first 18 entries. Keys: Tab cycles chips, Enter opens, Ctrl+Enter reveals, Esc clears or goes back.
 
@@ -823,16 +823,16 @@ Shared building blocks that several features need (who holds a file, display lay
 
 ### 8F. Windows' own surfaces, done better
 
-- **8.22 A notification history you can search** (L, 🖥). Windows' notification centre is a pile. With package identity (the sparse package, [shell-apps.md](shell-apps.md) decision 7) and your consent, **`UserNotificationListener`** reads every notification: the shell keeps a searchable history, groups by app, and does what Omarchy's notifications do, like spotting **verification codes** and offering to copy them, and opening links.
-- **8.23 The Copilot key opens the launcher** (S). The Copilot key sends Win+Shift+F23; the keyboard hook takes it for the launcher (or anything you choose), as [shell-apps.md](shell-apps.md) notes.
+- **8.22 A notification history you can search** (L, 🖥). Windows' notification centre is a pile. With package identity (the sparse package, [shell-apps.md](../shell-apps.md) decision 7) and your consent, **`UserNotificationListener`** reads every notification: the shell keeps a searchable history, groups by app, and does what Omarchy's notifications do, like spotting **verification codes** and offering to copy them, and opening links.
+- **8.23 The Copilot key opens the launcher** (S). The Copilot key sends Win+Shift+F23; the keyboard hook takes it for the launcher (or anything you choose), as [shell-apps.md](../shell-apps.md) notes.
 - **8.24 The full right-click menu back** (S). Windows 11's shortened context menu hides most entries behind *Show more options*; the classic menu returns with one documented-in-practice registry key (a catalog switch, 1B; Explorer restarts).
-- **8.25 Files and folders opened by type go to omawin** (later). Images, `.md`, `.json`, `.log` opened in the shell's own viewer (tiny forwarder exes, [shell-apps.md](shell-apps.md) decision 6); defaults set by you once, since Windows forbids setting them by script (UCPD).
+- **8.25 Files and folders opened by type go to omawin** (later). Images, `.md`, `.json`, `.log` opened in the shell's own viewer (tiny forwarder exes, [shell-apps.md](../shell-apps.md) decision 6); defaults set by you once, since Windows forbids setting them by script (UCPD).
 
 ### 8G. Faster and calmer by default
 
 omawin's install already turns off Windows' ads and suggestions, OEM upsells and Copilot's background process (`no-ads.ps1`). What's left is speed, distractions and conflicts with omawin itself. **The principle that sets this apart from the many "debloat" scripts: every tweak is measured, explained and reversible.** Each is a settings catalog entry (1B) marked *recommended*, with a sentence saying what it does and why; `omawin tune-up` shows what's applied, `omawin profile login` and `omawin profile ram` (exist) show the effect before and after, and anything that can't show a difference isn't shipped. No placebo tweaks (HPET, "network throttling", registry "speed-ups" from forum posts), and nothing that breaks Windows Update, Defender or the Store.
 
-- **8.26 Windows stops fighting the tiling manager** (S, catalog, on by default). Snap Layouts' flyout on the maximize button and dragging to edges (`EnableSnapAssistFlyout`, `WindowArrangementActive`), Aero Shake, and Windows' own Win+key shortcuts that clash with GlazeWM's (`DisabledHotkeys`, Explorer restart; [shell-apps.md](shell-apps.md)). GlazeWM tiles; Windows shouldn't also try.
+- **8.26 Windows stops fighting the tiling manager** (S, catalog, on by default). Snap Layouts' flyout on the maximize button and dragging to edges (`EnableSnapAssistFlyout`, `WindowArrangementActive`), Aero Shake, and Windows' own Win+key shortcuts that clash with GlazeWM's (`DisabledHotkeys`, Explorer restart; [shell-apps.md](../shell-apps.md)). GlazeWM tiles; Windows shouldn't also try.
 - **8.27 Snappier menus and switching** (S, catalog). Classic menus open after 400 ms by default (`MenuShowDelay` → 100); Alt+Tab shows Edge's tabs as windows (`MultiTaskingAltTabFilter` → windows only); minimize / maximize animations off where GlazeWM animates instead.
 - **8.28 Less running in the background** (M, catalog). Edge's startup boost and running after it's closed (Edge's per-user policies), Widgets and its board, the Game Bar's background recording (`GameDVR`), Phone Link, Teams' and OneDrive's start at sign-in (asked, never removed: they may hold your files), per-app background permission for Store apps you don't use, Delivery Optimization uploading updates to other PCs, automatic maintenance waking the PC at night on battery. Each shown with the memory or wake-ups it was costing.
 - **8.29 Accidents that don't happen** (S, catalog). Alt+Shift switching the keyboard layout mid-sentence, the Narrator shortcut (Win+Ctrl+Enter), Sticky Keys' and Filter Keys' prompts, the "let's finish setting up your device" screen after updates (partly done), Recall and other AI features that record the screen (their policies), Spotlight's "learn about this picture" icon.
@@ -844,7 +844,7 @@ omawin's install already turns off Windows' ads and suggestions, OEM upsells and
 - **8.32 Dev Drive for code and caches** (M, admin once, 🖥). Microsoft's **Dev Drive** (ReFS, with Defender's performance mode, which scans asynchronously) speeds up builds and installs noticeably on Windows. omawin offers to create one (a VHD of a chosen size, or a spare partition; `Format-Volume -DevDrive`), puts `~/src` and the package caches on it (npm, pnpm, Bun, NuGet, pip, uv, cargo, Go, mise, through their environment variables), and measures a build before and after. Existing code is never moved without asking.
 - **8.33 Git as fast on Windows as on Linux** (S, the `shell` step). Git for Windows is slow on big repos without its Windows-specific settings: `core.fscache`, `core.preloadindex`, `core.untrackedCache`, and Git's built-in **file system monitor** (`core.fsmonitor`, a daemon that watches the working tree so `git status` doesn't walk it). In omawin's git includes; `git status` timed in a big repo to prove it.
 - **8.34 "Port already in use" that isn't** (S, admin). Hyper-V and WSL reserve random ranges of ports at boot (`netsh int ipv4 show excludedportrange protocol=tcp`), so a dev server on 3000 or 8080 fails for no visible reason. omawin moves Windows' dynamic port range out of the common dev ports and reserves them (`netsh int ipv4 set dynamicport` / `add excludedportrange`), through the admin helper; Localhost (exists) explains a blocked port when it sees one.
-- **8.35 A PATH doctor** (S). Windows' PATH collects duplicates, folders that no longer exist, a system PATH that silently beats the user's (the mise shims problem, [dev-envs.md](dev-envs.md)), and a 2,047-character limit for some programs. `omawin path` lists both PATHs, flags each problem, says which `node` / `python` / `git` wins and why, and fixes with undo.
+- **8.35 A PATH doctor** (S). Windows' PATH collects duplicates, folders that no longer exist, a system PATH that silently beats the user's (the mise shims problem, [dev-envs.md](../dev-envs.md)), and a 2,047-character limit for some programs. `omawin path` lists both PATHs, flags each problem, says which `node` / `python` / `git` wins and why, and fixes with undo.
 - **8.36 An environment variables editor in the menu** (M). Windows' dialog is from 1995. A launcher page: search variables (user and system), edit inline, PATH as a list you reorder, admin for system ones in one prompt, and `WM_SETTINGCHANGE` so new terminals see it at once.
 - **8.37 UTF-8 everywhere** (S, catalog, asked). Windows' system-wide UTF-8 option (`ACP` / `OEMCP` 65001, Settings' "Beta: Use Unicode UTF-8") ends a whole class of encoding bugs in scripts and old tools; it can break a few legacy programs, so it's offered with that said, not applied silently. PowerShell's own output encoding is set to UTF-8 in the profile regardless.
 - **8.38 Firewall prompts for every dev server** (S, asked). Each new runtime that listens pops "Allow on private networks?". omawin asks once which dev runtimes (node, bun, python, dotnet, go) may listen on **private networks only**, and adds those rules; public networks keep asking. Servers that only need `localhost` never need a rule.
@@ -920,7 +920,7 @@ Never inject code into Explorer or other processes (no hook DLLs, no Windhawk-st
 
 ## Phase 9: the rest of Omarchy (from a code review)
 
-A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 commands, the menu, every shell plugin, the Hyprland bindings, bash, templates, install, docs, manual), each feature marked *have*, *planned*, *new* or *n/a on Windows*: **[plan/08-omarchy-review.md](plan/08-omarchy-review.md)**, with how each new one works on Windows, its home (core, catalog, first-party plugin, script, Linux side), its size and code. The new items, in the review's order of value for a developer:
+A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 commands, the menu, every shell plugin, the Hyprland bindings, bash, templates, install, docs, manual), each feature marked *have*, *planned*, *new* or *n/a on Windows*: **[plan/08-omarchy-review.md](08-omarchy-review.md)**, with how each new one works on Windows, its home (core, catalog, first-party plugin, script, Linux side), its size and code. The new items, in the review's order of value for a developer:
 
 1. **9.1 A drop-down console** (`omawin console`; Omarchy's Quake-style console): a terminal that slides down over everything on a key and hides again; built on the scratchpad (5.7), with Windows Terminal's quake mode as the bridge until the fork has it (M).
 2. **9.2 Hooks** (`omawin hook`): your scripts run on events (theme set, after an update, font set, …), from the account folder, as Omarchy's hooks (S).
@@ -928,13 +928,13 @@ A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 co
 4. **9.4 Crash watch**: a toast when a program crashes, with a button that asks your coding agent to diagnose it from the event log (8.15's reader) (M).
 5. **9.5 The theme reaches more apps**: the browser's colour (per-user policy), Claude Code, OpenCode, lazygit, Helix, Alacritty (M).
 6. **9.6 `omawin debug` and `omawin version`**: a redacted support bundle for bug reports (S).
-7. **9.7 `omawin pick`**: menus scripts and plugins can show and get an answer from (over the reply channel of [plan/02](plan/02-settings-and-one-search.md)) (S-M).
+7. **9.7 `omawin pick`**: menus scripts and plugins can show and get an answer from (over the reply channel of [plan/02](02-settings-and-one-search.md)) (S-M).
 8. **9.8 Agent accounts**: several accounts per coding agent (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`), switched near a usage limit; Codex in the usage panel (M).
 9. **9.9 `omawin reset <config>`**: one config back to omawin's version, yours kept as `.backup-<timestamp>` (S).
 10. **9.10 `omawin display internal|external|mirror|extend`** (`SetDisplayConfig`, no admin), and display scaling (S, scaling M).
 11. **Next in line:** a Tailscale panel and Taildrop; toggles for the bar and the gaps; herdr's keys on the Shortcuts page; Share through Windows' share sheet or LocalSend; and the small items in the review's N15 table.
 
-**Already on the to-do list but not yet on the roadmap** (the review found them only in [mission-todo.md](mission-todo.md); they belong here, and two would rank in the top ten):
+**Already on the to-do list but not yet on the roadmap** (the review found them only in [mission-todo.md](../mission-todo.md); they belong here, and two would rank in the top ten):
 - **9.11 Screen recording** (Windows.Graphics.Capture or ffmpeg's `ddagrab`), and **9.12 annotation** in the snip tool (pen, arrow, box).
 - **9.13 A font switcher** (one font across the bar, the menu, the terminal and the editor, rendered like the theme) and **9.14 text size** as one knob.
 - **9.15 Claude Code follows the theme** (Omarchy 4 does) — part of 9.5.
@@ -978,7 +978,7 @@ Open questions to measure or try before building, collected from every phase. Ea
 | motion values (`looknfeel.lua`, `motion.md`) | `menu-app/Motion.cs`, `glazewm/config.yaml` | by hand; rarely changes |
 | menu sections (`omarchy-menu.jsonc`) | `launcher/menu.txt` | compared per release |
 | dev envs and databases | `bin/install-dev-env.ps1` | compared per release |
-| plugin manifests | `docs/plugins.md` | the schema followed (4.1) |
+| plugin manifests | `docs/plan/plugins.md` | the schema followed (4.1) |
 | web apps | 5.3's starting list | imported |
 
 ## Testing without a PC in the loop

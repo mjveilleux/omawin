@@ -2,7 +2,7 @@
 
 > **Uncompiled, untested sketch.** Nothing here has run. It names real files and functions as of 2026-10-30 and follows [AGENTS.md](../../AGENTS.md) (install scripts run under Windows PowerShell 5.1; no admin by default; never delete the user's files). Anything uncertain is marked *(check)*. Versions, URLs and hashes in examples are placeholders: the bump job fills the real ones. Build it, test it, fix this file where reality differs.
 
-The *what* and *why*: [roadmap.md](../roadmap.md) Phase 2 (2.0-2.9), Phase 2B, Phase 7.1, and [install-speed.md](../install-speed.md). This file is the *how*.
+The *what* and *why*: [roadmap.md](roadmap.md) Phase 2 (2.0-2.9), Phase 2B, Phase 7.1, and [install-speed.md](install-speed.md). This file is the *how*.
 
 ## Contents
 

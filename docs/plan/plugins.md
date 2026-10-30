@@ -252,7 +252,7 @@ The same honesty as Omarchy's docs: **a plugin is code you run with your own rig
 2. **v2: panels and settings.** Theme resources in `Application.Resources`, `PanelHost` with `omawin:Bind` / `omawin:Action`, the settings page generated from each manifest's `schema`, `secret` settings, the event relay.
 3. **v3: ecosystem.** The gallery and index, `side: linux` for Omarchy's command modules, the shared PowerShell host, `omawin shell` IPC for scripts, restricted-token sandboxing, proposed keys.
 
-Files: `menu-app/Plugins/` (`PluginRegistry.cs`, `PluginProcess.cs`, `PanelHost.cs`, `Bind.cs`), `menu-app/Bar/CommandWidget.cs`, `menu-app/MenuModel.cs` (layered menu and fragments), `bin/plugin.ps1` and `bin/commands.txt`, `plugins/` (built-ins and `index.txt`), `docs/plugins.md` (this file, turned into the reference), `manual/` (a page for users).
+Files: `menu-app/Plugins/` (`PluginRegistry.cs`, `PluginProcess.cs`, `PanelHost.cs`, `Bind.cs`), `menu-app/Bar/CommandWidget.cs`, `menu-app/MenuModel.cs` (layered menu and fragments), `bin/plugin.ps1` and `bin/commands.txt`, `plugins/` (built-ins and `index.txt`), `docs/plan/plugins.md` (this file, turned into the reference), `manual/` (a page for users).
 
 ## Running Omarchy plugins unchanged (the compatibility layer)
 
@@ -391,7 +391,7 @@ Its secrets stay where they are: the HEY token from `hey auth token`, Google's s
 
 ### The panel: let omawin's calendar draw it
 
-Porting ~3,300 lines of QML panel and form into loose XAML would work but costs the most and gives a second calendar beside omawin's own (the bar's clock gets a calendar popup: [mission-todo.md](mission-todo.md), track 4). The plugin itself is "the stock calendar with your calendars laid over it", so do the same here:
+Porting ~3,300 lines of QML panel and form into loose XAML would work but costs the most and gives a second calendar beside omawin's own (the bar's clock gets a calendar popup: [mission-todo.md](../mission-todo.md), track 4). The plugin itself is "the stock calendar with your calendars laid over it", so do the same here:
 
 - omawin's clock widget gets its native calendar popup (month grid, day view, Today, the theme's colours, the motion tokens).
 - It accepts **calendar providers**: a plugin kind (`calendar-provider`) whose service sends events (`{"type":"events","from":…,"to":…,"items":[{"id","title","start","end","allDay","calendar","color","place","link","reminders"}]}`) and calendars, and receives `create`, `update`, `delete` and `join` actions with the event's id and fields.

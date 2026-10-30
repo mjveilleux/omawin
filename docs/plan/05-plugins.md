@@ -1,6 +1,6 @@
 # 05 · Plugins: how (Phase 4, 8.0)
 
-> **Uncompiled sketch.** Nothing here has been built or run. It names real files and functions in this repo as of 2026-10-30, follows [AGENTS.md](../../AGENTS.md), and marks every API it isn't sure of with *(check)*. The design and its reasons are in [plugins.md](../plugins.md); the what and why in [roadmap.md](../roadmap.md) Phase 4 (4.1-4.10) and 8.0. Build it, test it, and fix this file where reality differs.
+> **Uncompiled sketch.** Nothing here has been built or run. It names real files and functions in this repo as of 2026-10-30, follows [AGENTS.md](../../AGENTS.md), and marks every API it isn't sure of with *(check)*. The design and its reasons are in [plugins.md](plugins.md); the what and why in [roadmap.md](roadmap.md) Phase 4 (4.1-4.10) and 8.0. Build it, test it, and fix this file where reality differs.
 
 Constraints that shape every line below:
 
@@ -737,7 +737,7 @@ Status is rewritten on every start, stop and crash (`PluginProcess` calls `Plugi
 
 ### 3.1 The protocol: `menu-app/Plugins/Protocol.cs`
 
-Every message from [plugins.md](../plugins.md), plus the provider and admin ones (§7, §9.6). Inbound lines are parsed with `JsonNode` and a switch on `type` (no reflection, no serializer); outbound are written with `Utf8JsonWriter`.
+Every message from [plugins.md](plugins.md), plus the provider and admin ones (§7, §9.6). Inbound lines are parsed with `JsonNode` and a switch on `type` (no reflection, no serializer); outbound are written with `Utf8JsonWriter`.
 
 **Plugin → shell (stdout)**
 
@@ -4754,4 +4754,4 @@ Proportionate (AGENTS.md: a test earns its place by catching a regression nothin
 9. §9 SDK, CI for first-party plugins, admin verbs (with 8.19's hosts editor as the first user).
 10. §10.1 stand-ins, `plugin scan`, the catalog run; then §10.2, then §10.3.
 11. `plugins/index.txt` and Setup › Plugins › Browse (4.10).
-12. `docs/plugins.md` turned from design into reference; a `manual/plugins.md` page for users.
+12. `docs/plan/plugins.md` turned from design into reference; a `manual/plugins.md` page for users.

@@ -1,8 +1,16 @@
 # The master plan: omawin, nearly perfect
 
-**Start here if you have no context.** This folder is the implementation side of [the roadmap](../roadmap.md): the roadmap says *what* and *why* for every piece of work; the files here hold the *how*, with the code each piece needs (new files, changes to existing ones, data formats, CI workflows), written so the work can continue even if every conversation that produced it is lost.
+**Start here if you have no context.** This folder is the implementation side of [the roadmap](roadmap.md): the roadmap says *what* and *why* for every piece of work; the files here hold the *how*, with the code each piece needs (new files, changes to existing ones, data formats, CI workflows), written so the work can continue even if every conversation that produced it is lost.
 
 The code in these files is a **sketch that hasn't been compiled or run**. It names real files and functions in this repo (as of 2026-10-30), follows the repo's rules ([AGENTS.md](../../AGENTS.md)), and marks anything uncertain with *(check)*. Treat it as a strong first draft: build it, test it, fix it, and update the plan file when reality differs.
+
+## What's in this folder
+
+Everything decided and planned lives here:
+- [roadmap.md](roadmap.md): what, why and in what order, every phase and item, the decisions table, milestones, things to explore.
+- [decisions.md](decisions.md): every decision from the planning conversation, with where it's carried, and the open questions.
+- Design docs: [one-search.md](one-search.md) (with its [mockup source](design/one-search/README.md)), [plugins.md](plugins.md), [install-speed.md](install-speed.md).
+- The per-area implementation files with code, below (01-08).
 
 ## The goal
 
@@ -20,17 +28,17 @@ The code in these files is a **sketch that hasn't been compiled or run**. It nam
 | File | Roadmap | What it holds |
 |---|---|---|
 | [01-snappy.md](01-snappy.md) | Phase 1 (1.1-1.10) | `omawin profile menu`; keys straight to the shell (GlazeWM fork `emit`); AOT in CI; motion tokens and exit animations; shipping window animations (close animation, enabled flag, the CI frame check); Zebar's removal; a virtualized list; crisp icons; theme thumbnails built in CI and preloaded; community themes in the picker |
-| [02-settings-and-one-search.md](02-settings-and-one-search.md) | Phase 1B, 1C | the Windows settings catalog (format, handlers, undo, `omawin setting`), Windows' settings index, One Search's sources, window, keys and Win+Alt+Space's retirement; also [one-search.md](../one-search.md) and its [mockup source](../design/one-search/) |
-| [03-install-update-packages.md](03-install-update-packages.md) | Phase 2, 2B, 2.9 | the omawin bundle and its CI; the new bootstrap; the background queue; delta updates; `omawin pkg` over winget, Scoop, Chocolatey, mise, the bundle and pacman; no admin (a per-user GlazeWM, the opt-in admin batch, CI as a standard user); install timing in CI and in Windows Sandbox; also [install-speed.md](../install-speed.md) |
+| [02-settings-and-one-search.md](02-settings-and-one-search.md) | Phase 1B, 1C | the Windows settings catalog (format, handlers, undo, `omawin setting`), Windows' settings index, One Search's sources, window, keys and Win+Alt+Space's retirement; also [one-search.md](one-search.md) and its [mockup source](design/one-search/) |
+| [03-install-update-packages.md](03-install-update-packages.md) | Phase 2, 2B, 2.9 | the omawin bundle and its CI; the new bootstrap; the background queue; delta updates; `omawin pkg` over winget, Scoop, Chocolatey, mise, the bundle and pacman; no admin (a per-user GlazeWM, the opt-in admin batch, CI as a standard user); install timing in CI and in Windows Sandbox; also [install-speed.md](install-speed.md) |
 | [04-linux.md](04-linux.md) | Phase 3, 3B | Linux as the default shell (`omawin.cs`); Omarchy's terminal layer in Arch; the WSL VM's settings; keep-warm; Docker in Linux; credentials; the theme in Linux; the Linux / PowerShell tint, prompt and titles; backup and reset; container CI |
-| [05-plugins.md](05-plugins.md) | Phase 4, 8.0 | the manifest and registry; plugin processes (Job Objects, JSON lines); command widgets; XAML panels with `omawin:Bind` / `omawin:Action`; providers; `omawin plugin`; the first-party plugin SDK and admin verbs; the Omarchy compatibility layer (stand-ins in Arch, the Qt QML host); the Omadoro port; also [plugins.md](../plugins.md) |
+| [05-plugins.md](05-plugins.md) | Phase 4, 8.0 | the manifest and registry; plugin processes (Job Objects, JSON lines); command widgets; XAML panels with `omawin:Bind` / `omawin:Action`; providers; `omawin plugin`; the first-party plugin SDK and admin verbs; the Omarchy compatibility layer (stand-ins in Arch, the Qt QML host); the Omadoro port; also [plugins.md](plugins.md) |
 | [06-dx-finder-sandbox.md](06-dx-finder-sandbox.md) | Phases 5, 6, 7 | web apps; the key cheat sheet from GlazeWM's config; toasts and the OSD; idle lock; the scratchpad (fork); menu conditions; the finder's actions, browsing, content search, previews, filters and drag-out; `omawin sandbox test`; agents in a sandbox |
 | [07-fixing-windows.md](07-fixing-windows.md) | Phase 8 (8.1-8.51, 8K) | who holds a file; whole-disk search; dev disk cleanup; Quick Look in Explorer; the window switcher and picture-in-picture; monitor profiles; per-app audio and mic mute; key remaps and snippets; the clipboard; the Health page from event logs; startup list; processes and ports; Windows Update; DNS and hosts; notifications; the tune-up catalog entries; Dev Drive, git, ports, PATH, environment variables; idle memory |
 | [08-omarchy-review.md](08-omarchy-review.md) | Phase 9 | every Omarchy feature (at commit `7f4b1dd`) marked have / planned / new / n/a, and the new ones with how they work on Windows and code: the drop-down console, hooks, `setup git`, crash watch, the theme in more apps, `debug`, `pick`, agent accounts, `reset`, display modes |
 
 ## The order of work
 
-Each milestone is a release ([roadmap.md](../roadmap.md), Milestones). Within a milestone, items are independent unless noted. **Measure first** wherever a number decides (the roadmap's *Things to explore* table).
+Each milestone is a release ([roadmap.md](roadmap.md), Milestones). Within a milestone, items are independent unless noted. **Measure first** wherever a number decides (the roadmap's *Things to explore* table).
 
 | # | Milestone | First do | Then | Done when |
 |---|---|---|---|---|

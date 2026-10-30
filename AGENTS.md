@@ -9,7 +9,7 @@ Read before working:
 - [`docs/themes.md`](docs/themes.md): how a theme reaches every app
 - [`docs/work.md`](docs/work.md): your own settings, outside omawin: the PC's shared folder (`C:\ProgramData\omawin\shared`: yours in every Windows account, which every account reads and only the account that made it may change, so nothing secret or employer-specific) and each account's folder (`~/omawin-account`: identity, an employer's or client's launcher items and sites, tool paths, work shares, VPN, reports)
 - [`manual/`](manual/): what the user sees and uses; keep it current when behavior changes
-- [`docs/roadmap.md`](docs/roadmap.md) and [`docs/plan/`](docs/plan/README.md): where omawin is going (what, why, in what order) and how to build each piece, with code; check them before starting new work
+- [`docs/plan/roadmap.md`](docs/plan/roadmap.md) and [`docs/plan/`](docs/plan/README.md): where omawin is going (what, why, in what order) and how to build each piece, with code; check them before starting new work
 
 ## Rules
 
@@ -21,7 +21,7 @@ Read before working:
 - **The public history started fresh on 2026-10-17.** The old private history is archived in a private repo; never merge or push a branch made before that date (it carries the old commits). Bring its changes over by cherry-picking or rebasing onto `origin/main`. A local pre-push hook refuses such pushes.
 - **Ask before driving the live desktop** (sending keys, clicking, opening windows to test). It's the user's working PC. GlazeWM ignores simulated keypresses anyway, so key bindings can only be tested with real keys.
 - **After a visible change, show it**: a screenshot of the result.
-- **No admin by default.** Installing, updating and using omawin never ask for admin: per-user installs (`%LOCALAPPDATA%`, `--scope user`, the bundle's portable copies) and `HKCU` settings first. Something that truly needs admin is opt-in, chosen by the user, and every admin change that choice needs is gathered into **one** prompt that first says exactly what will change; **an update never prompts** (it waits for the user to say when). No standing elevated service. Declining leaves everything else working. Details: [`docs/roadmap.md`](docs/roadmap.md) 2.9.
+- **No admin by default.** Installing, updating and using omawin never ask for admin: per-user installs (`%LOCALAPPDATA%`, `--scope user`, the bundle's portable copies) and `HKCU` settings first. Something that truly needs admin is opt-in, chosen by the user, and every admin change that choice needs is gathered into **one** prompt that first says exactly what will change; **an update never prompts** (it waits for the user to say when). No standing elevated service. Declining leaves everything else working. Details: [`docs/plan/roadmap.md`](docs/plan/roadmap.md) 2.9.
 - Don't run Neovim elevated (plugin folders become admin-owned).
 
 ## Conventions

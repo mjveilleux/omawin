@@ -55,7 +55,7 @@ One prebuilt download per release and architecture, built by CI, verified by `SH
 - **`curl.exe`** (built into Windows 10 1803+ and 11) instead of Windows PowerShell 5.1's `Invoke-WebRequest`, which is many times slower: stage 1 as one file, stage 2 in parallel parts (`curl --parallel`), resumable (`-C -`).
 - **`tar.exe`** (built in) to unpack, instead of `Expand-Archive`.
 - Into `%LOCALAPPDATA%\omawin\<tag>\` with a **`current` junction**: nothing needs admin; an update is a new folder and a junction flip; a rollback is flipping back.
-- Files fetched by `curl.exe` carry no mark of the web, so no "this file came from the internet" prompts; executables are signed in CI ([release-signing.md](release-signing.md)) so SmartScreen and Defender's reputation checks pass quickly. Defender scanning many new files on first run is measured (explore list).
+- Files fetched by `curl.exe` carry no mark of the web, so no "this file came from the internet" prompts; executables are signed in CI ([release-signing.md](../release-signing.md)) so SmartScreen and Defender's reputation checks pass quickly. Defender scanning many new files on first run is measured (explore list).
 
 **The budget** (100 Mbit/s, an SSD):
 
