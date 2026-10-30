@@ -62,6 +62,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
 | **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
 | **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
+| **"fixed"** | Phase 8: Windows' annoyances replaced, on Windows' own APIs | the parts of Windows you used to fight are calm |
 
 ---
 
@@ -541,6 +542,57 @@ Omarchy runs graphical acceptance tests in a disposable VM (`agents/skills/accep
 A launcher item and a short manual page: "Try real Omarchy" installs Try Omarchy for Windows (its signed launcher) for someone who wants Hyprland itself. Omawin and Omarchy side by side, credited.
 
 ---
+
+## Phase 8: fixing Windows
+
+The second half of the mission: Windows has good APIs under a poor experience. Each item below takes a daily Windows annoyance and builds the better version on an API Windows already offers, drawn by the shell (keyboard first, themed, searchable, every action an `omawin` command). Ordered roughly by how often the annoyance bites a developer. **Undocumented** marks APIs that aren't officially supported (used by well-known tools, but they can change); those get a fallback and a `minBuild`.
+
+### 8A. Files and disks
+
+- **8.1 "This file is in use" answered** (S). Windows refuses to delete or rename a locked file and doesn't say who holds it. The **Restart Manager API** (`RmStartSession`, `RmRegisterResources`, `RmGetList`) names the processes holding any file or folder. In the finder's actions (6.1) and as `omawin who-has <path>`: the processes, with *close* (politely, `WM_CLOSE`) and *end* (after confirming). Also when a delete fails in Explorer: a launcher row "Who has …" on the path in the clipboard.
+- **8.2 Instant whole-disk search** (M, admin once). Windows Search is slow and incomplete. The **NTFS USN change journal** (`FSCTL_ENUM_USN_DATA`, `FSCTL_READ_USN_JOURNAL`) lists every file name on a drive in seconds and keeps up with changes (how Everything works). A small service (admin, installed in the one admin prompt) keeps a name index the finder searches as an *Everywhere* chip beside fff's roots. Then Windows' own indexer can be switched off (a catalog setting, 1B), saving CPU and disk.
+- **8.3 Reclaim disk space a developer loses** (M). Windows' cleanup misses where developers' space goes. A *Disk* page: the biggest folders (from 8.2's index, or a fast `FindFirstFileEx` walk), and dev caches by name with their size and a clean action: `node_modules`, `target`, `.venv`, `bin/obj`, the npm / pnpm / Bun / NuGet / cargo / pip / uv / Go caches, Docker's and **WSL's virtual disks**, which never shrink on their own (`wsl --manage <distro> --set-sparse true`, or compaction after `wsl --shutdown`). Never deletes outside caches without asking.
+- **8.4 Quick Look in Explorer** (M, 🖥). Press Space on a file in Explorer and see it, as on a Mac. The selected item comes from Explorer's own automation (`IShellWindows` → the window's `IShellView` / `IFolderView2` selection); the preview reuses the finder's (6.4), with Windows' **preview handlers** (`IPreviewHandler`, what Explorer's preview pane uses) for Office files and PDFs. A keyboard hook passes Space through everywhere except Explorer's file list.
+
+### 8B. Windows and the desktop
+
+- **8.5 A window switcher that finds things** (M, 🖥). Alt+Tab shows thumbnails of everything, in no useful order. A fuzzy switcher in the shell: every window from GlazeWM's IPC (title, app, workspace), typed to filter, Enter to focus; live thumbnails with the **DWM thumbnail API** (`DwmRegisterThumbnail`, no capturing). Bound only once a key is confirmed (Alt+Tab itself stays Windows' unless you choose).
+- **8.6 Picture-in-picture for any window** (S). Keep an eye on a build, a call or a video while working: a small always-on-top window mirroring another window, or a region of it, live, through the same **DWM thumbnail API**. `omawin pip` on the focused window; GlazeWM floats it.
+- **8.7 Monitor profiles that follow the dock** (M, 🖥). Docking and undocking scrambles resolutions, scaling, layout and the primary monitor. `QueryDisplayConfig` / `SetDisplayConfig` save and restore a whole layout per set of monitors (identified by their EDID names); applied by itself when the monitors change (the bar already notices, `Bar/Bar.cs`), with **DDC/CI** (`SetVCPFeature`, already used for brightness) for an external monitor's input source and contrast.
+- **8.8 Wallpaper per monitor, from the theme** (S). `IDesktopWallpaper` sets a different picture per monitor and the slideshow; the theme's backgrounds spread across monitors instead of one stretched or repeated.
+- **8.9 The keyboard's lights follow the theme** (S, 🖥). Windows 11's **Dynamic Lighting** API (`Windows.Devices.Lights.LampArray`) drives RGB keyboards and mice of any brand that supports it; omawin paints them in the theme's accent on a theme switch (as an ambient controller, which Windows lets the user pick in Settings).
+
+### 8C. Sound, input and the clipboard
+
+- **8.10 Per-app volume and output** (M). Windows' volume mixer is buried. The Audio page (Win+A) gains each app's own volume and mute (**`IAudioSessionManager2`**, documented) and which speaker it plays to (**undocumented** `IAudioPolicyConfig`, as EarTrumpet does; fallback: open Windows' per-app page).
+- **8.11 A real microphone mute** (S). One key that mutes every microphone (`IAudioEndpointVolume::SetMute` on the capture devices), with a red indicator in the bar while muted and a toast when an app tries to listen (the privacy log `voice-meter` already reads). Key confirmed before binding.
+- **8.12 Keys the way you want them** (M). Caps Lock as Escape or Control, a Hyper key, swapped keys, without PowerToys: the menu app's low-level keyboard hook for live remaps (no restart), or the registry's `Scancode Map` for remaps that must work at the sign-in screen (admin, restart). In the settings catalog (1B) as choices.
+- **8.13 Text snippets** (S). Type `;sig` or `;date` anywhere and it expands (`SendInput`, triggered by the same hook); snippets in the account folder.
+- **8.14 A clipboard that respects secrets and does more** (S). Password managers mark what they copy (the clipboard formats `ExcludeClipboardContentFromMonitorProcessing` and `CanIncludeInClipboardHistory`, which Windows' own history honours); omawin's history honours them too. Plus images in the history, pins, and transforms on paste: plain text, JSON pretty, Base64, URL encode / decode, a timestamp to a date.
+
+### 8D. What's going on with my PC
+
+- **8.15 Why did my PC restart, crash or wake up?** (M). Windows records it all and shows none of it. A *Health* page from the event logs (`EventLogReader`): unexpected restarts (Kernel-Power 41) and blue screens (BugCheck 1001), who restarted it and why (User32 1074: often Windows Update), app crashes (Application Error 1000) by app, what woke it from sleep (`powercfg /lastwake`, Power-Troubleshooter 1), slow boots and which driver or app slowed them (Diagnostics-Performance 100-110), overnight battery drain (`powercfg /sleepstudy`). Plain sentences, newest first.
+- **8.16 Everything that starts with Windows, in one list** (M). Startup is scattered across Run keys, the Startup folder, scheduled tasks and services. One page lists them all with a switch each (the same `StartupApproved` values Task Manager uses for Run entries; disabling, never deleting, for tasks and services), what each costs at boot (8.15's boot events), and undo.
+- **8.17 A process list in the launcher** (S). Type `top` (or a process name): processes by CPU and memory, grouped by app, with the ports they listen on (Localhost has this already) and the files they hold (8.1); end with confirmation. Faster than opening Task Manager.
+- **8.18 Windows Update without surprises** (M). Restarts at bad moments are the oldest complaint. The **Windows Update Agent API** (`IUpdateSession`, `IUpdateSearcher`) says what's pending and whether a restart is needed; a bar indicator when it is; the menu sets active hours, pauses updates for a week, and schedules the restart (documented update policies, undo included). Nothing hidden from Windows Update; it just stops surprising you.
+
+### 8E. Network
+
+- **8.19 DNS, hosts and proxy from the menu** (S, admin). DNS per network adapter (`SetInterfaceDnsSettings`, Windows 10 2004+), with presets (your router, Cloudflare, Quad9) and DNS over HTTPS; a hosts file editor that adds and comments out lines (backed up first); the system proxy on / off (1B). Admin changes in one prompt.
+- **8.20 Which app is talking to the internet** (M). Connections per process (`GetExtendedTcpTable` / `GetExtendedUdpTable` with owning process ids), names resolved, refreshed live; a launcher page beside Localhost.
+- **8.21 Share Wi-Fi with a QR code** (S). The saved network's password (`WlanGetProfile` with the plain-key flag, for the signed-in user) drawn as a QR code in Quick settings (mission-todo's "QR to share a network").
+
+### 8F. Windows' own surfaces, done better
+
+- **8.22 A notification history you can search** (L, 🖥). Windows' notification centre is a pile. With package identity (the sparse package, [shell-apps.md](shell-apps.md) decision 7) and your consent, **`UserNotificationListener`** reads every notification: the shell keeps a searchable history, groups by app, and does what Omarchy's notifications do, like spotting **verification codes** and offering to copy them, and opening links.
+- **8.23 The Copilot key opens the launcher** (S). The Copilot key sends Win+Shift+F23; the keyboard hook takes it for the launcher (or anything you choose), as [shell-apps.md](shell-apps.md) notes.
+- **8.24 The full right-click menu back** (S). Windows 11's shortened context menu hides most entries behind *Show more options*; the classic menu returns with one documented-in-practice registry key (a catalog switch, 1B; Explorer restarts).
+- **8.25 Files and folders opened by type go to omawin** (later). Images, `.md`, `.json`, `.log` opened in the shell's own viewer (tiny forwarder exes, [shell-apps.md](shell-apps.md) decision 6); defaults set by you once, since Windows forbids setting them by script (UCPD).
+
+### What not to do
+
+Never inject code into Explorer or other processes (no hook DLLs, no Windhawk-style patching; shell-apps.md decision 5); never disable Windows Update, Defender or SmartScreen outright; never touch the protected default-app keys; anything undocumented has a fallback and is hidden when it stops working.
 
 ## Always: following Omarchy
 
