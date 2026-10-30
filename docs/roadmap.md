@@ -58,7 +58,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 |---|---|---|
 | **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
 | **"settings"** | Phase 1B: every Windows setting in the system menu, switches inline, `omawin setting`, your settings applied on a new PC | you never open Settings again |
-| **"fast"** | Phase 2 and 7.1: CI install timing, desktop first, mise tools, one release zip, the Sandbox install test | a fresh PC is a desktop in three minutes |
+| **"fast"** | Phase 2 and 7.1: the omawin bundle, CI install timing, desktop first, the welcome page, background steps, the Sandbox install test | a fresh PC is an omawin desktop in under a minute |
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
 | **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
 | **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
@@ -220,7 +220,48 @@ The "never open Settings" list: 30 everyday changes (dark mode, file extensions,
 
 ## Phase 2: fast install
 
-**Goal:** a clean Windows 11 PC goes from the one line to a working desktop in **under 3 minutes**, and to everything in **under 10**. Measured, not guessed.
+**Goal:** a clean Windows 11 PC goes from the one line to a working omawin desktop in **under one minute**, with no admin prompt on the way; everything else (presets, WSL, the forks' machine-wide install, dev tools) carries on in the background while you already use it. Measured, not guessed.
+
+### 2.0 How Omarchy is fast, and the same on Windows
+
+Omarchy's install is fast because almost nothing is fetched or decided on the machine (from its code, `docs/file-layout.md`):
+- **Everything comes on the image.** The ISO carries an **offline mirror** of every package in its list (the ISO builder reads `install/omarchy-base.packages` to build it), so installing is copying, not downloading; prebuilt images go further and are set up before they reach the machine.
+- **Configs are packages.** Omarchy's defaults ship as two Arch packages (`omarchy`, `omarchy-settings`) and reach a new account from `/etc/skel`: no per-file setup.
+- **What depends on the machine waits.** Hardware steps are queued and run at the first boot (`/var/lib/omarchy/image/deferred-steps`); migrations are simply marked done on a fresh install (`omarchy-provision-user`).
+- Downloads that do happen go five at a time (pacman's `ParallelDownloads = 5`).
+
+omawin's install today does the opposite: it decides and downloads everything on the PC, one package manager call after another (winget ~150 s before anything else, then three release downloads, then the steps), and the desktop starts only after a sign-out. The plan, in Omarchy's spirit:
+
+**The omawin bundle: one prebuilt download (L).**
+- CI builds, per release and architecture, **`omawin-bundle-<tag>-win-<arch>.zip`**: everything the desktop needs to run, as portable files, at pinned versions, checked by `SHA256SUMS.txt`. Our offline mirror.
+  - omawin's own: `omawin.exe`, the menu app (Native AOT, self-contained: no .NET runtime to install), noctty, the GlazeWM fork (per-user; the machine-wide install with its signed `uiAccess` follows in the background, see below).
+  - The command-line core as single exes (2.3's list: ripgrep, fd, fzf, eza, bat, jq, lazygit, zoxide, starship, fastfetch, gh, uv, mise), **MinGit** (Git for Windows' portable build) and **Neovim**, with **LazyVim's plugins already installed** at `lazy-lock.json`'s versions, so the first `nvim` opens ready.
+  - The JetBrainsMono Nerd Font, the default theme's rendered files and its first background.
+  - The repo itself at that tag (configs, scripts), so the install needs no `git clone`.
+  - Size target: ~200 MB compressed (to be measured; Neovim's plugins and MinGit are the big ones), ~15-20 s on a 100 Mbit/s line.
+- **`bootstrap.ps1` becomes a short, fixed sequence** (Windows PowerShell 5.1, no admin):
+  1. Download the bundle with **`curl.exe`** (in Windows 10 and 11; parallel ranges, resumable, far faster than 5.1's `Invoke-WebRequest`), verify its hash.
+  2. Unpack with **`tar.exe`** (also in Windows; much faster than `Expand-Archive`) into `%LOCALAPPDATA%\omawin\<tag>\`, with a `current` junction (an update is a new folder and a junction flip, and a rollback is the old one).
+  3. **Seed configs, don't build them**: the user's config files written from the bundle in one pass (Omarchy's `/etc/skel` idea), the PATH entry, the per-user font registration, the sign-in task.
+  4. **Start the desktop now**: GlazeWM, the bar and the menu app, in the default theme. No sign-out.
+  5. Mark every migration as done (a fresh install needs none, as Omarchy does).
+- **No questions before the desktop.** The defaults are good (that's omakase); the choices (presets, which Linux, git name and email, Dev Drive) move to a **welcome page** in the launcher, open on the first sign-in, which starts the background work below.
+- **Then, in the background**, with progress in the bar and a toast at the end (Omarchy's deferred steps): the one admin prompt (the forks' machine-wide install, WSL, whole-PC packages), the presets through mise and winget, WSL and Arch, Windows' tune-up (8G), the no-ads tweaks, the rest of the steps. A failed step stays queued and is retried at the next sign-in, as Omarchy's deferred queue does.
+- **What can't be in the bundle:** anything that installs machine-wide or needs admin (the forks' signed `uiAccess` install, WSL, Windows features), Store-only apps, and the user's presets; all of them background work.
+- **Updates the same way:** `omawin update` downloads the next bundle (later, a delta of the files that changed), unpacks it beside the current one, runs the new migrations, flips `current`; the running desktop restarts its parts.
+
+**The minute, budgeted** (100 Mbit/s, an SSD; CI measures each line, 2.1):
+
+| Step | Seconds |
+|---|---|
+| `irm … \| iex` to `bootstrap.ps1` running | 2 |
+| Download the bundle (~200 MB) | 15-20 |
+| Verify and unpack | 5-8 |
+| Seed configs, PATH, font, sign-in task | 3-5 |
+| Start GlazeWM, the bar and the menu app | 2-3 |
+| **Desktop up** | **~30-40** |
+
+**Risks:** a slow connection (the bundle is the floor: on 20 Mbit/s it's ~80 s, so the welcome page says so and the desktop still comes before everything else); SmartScreen and Defender scanning many new executables on first run (signing in CI, release-signing.md, and Defender's own cache); the per-user GlazeWM without `uiAccess` can't move elevated windows until the background step installs the signed one; keeping the bundle's pinned tools current (Renovate-style bumps in CI, each release).
 
 What install does today: `install.ps1` asks the questions, starts the one admin prompt as a separate hidden elevated process (`install/admin.ps1:61-89`; machine-wide packages three at a time, `admin-batch.ps1:40-80`), then runs `install/steps.txt` in order: `no-ads`; `software` (all core and preset winget packages in one batch, four at a time, `Invoke-WingetBatch`, `install/software.ps1:52-118`; then extras one by one; then the Nerd Font); `shell`; `desktop`; `helpers` (three separate release downloads, each resolving the tag and manifest again, `bin/install-binaries.ps1`); `look`; `other`; then migrations. The desktop isn't started: the summary says to sign out and back in (`install/ui.ps1:453`).
 
@@ -734,6 +775,26 @@ Saved runs (`-Save`) give before / after for every change below.
 
 Never inject code into Explorer or other processes (no hook DLLs, no Windhawk-style patching; shell-apps.md decision 5); never disable Windows Update, Defender or SmartScreen outright; never touch the protected default-app keys; anything undocumented has a fallback and is hidden when it stops working.
 
+## Things to explore
+
+Open questions to measure or try before building, collected from every phase. Each says what would decide it. Answers go back into the item; this list shrinks.
+
+| To explore | Decides | Where |
+|---|---|---|
+| **Idle memory**: where 6-7 GB goes on the maintainer's PC (whole-machine `omawin profile ram`, in use vs cached) | what to cut first, and whether under 4 GB is realistic | 8K |
+| **Windows 11's common complaints**, each reproduced and timed on this PC (slow Explorer, slow right-click, Bing in search, Bluetooth call quality, broken updates, AI everywhere) | which fixes ship in the recommended set | 8J, mission-todo track 9 |
+| **Idle CPU and wake-ups** by process, next to memory | 8.28's list | 8G, 8K |
+| **A warm WSL's cost** vs the first terminal's wait | whether Linux is kept warm by default | 3.5, 8K |
+| **The bundle's real size and time** (MinGit, Neovim with plugins, the menu app AOT) on 20, 100 and 500 Mbit/s | the one-minute promise, and what's left out | 2.0 |
+| **The per-user GlazeWM without `uiAccess`**: what it can't do until the signed install lands | whether the background admin step must come sooner | 2.0 |
+| **Windows' settings index format** (`AllSystemSettings_*.xml`) on the current build | settings search's source, or the curated fallback | 1B.1 |
+| **`XamlReader.Load` under Native AOT**, with omawin's binding | XAML panels, or the declarative fallback | 4.3 |
+| **Quickshell's licence** and which of its modules plugins use (a scan of the marketplace) | how much of the QML host to build, and what can be reused | 4.9 |
+| **fff's C API**: is there a content search call in v0.11 | content search through fff, or ripgrep | 6.3 |
+| **herdr and OSC 11**: does it pass a pane's background through | the Linux / PowerShell tint without a herdr change | 3B |
+| **`hey` and `gws` on Windows** (for the calendar plugin) | whether that plugin can ever run outside Linux | plugins.md |
+| **Window animations on this PC's GPU**, a week of daily use | shipping 1.5 | 1.5 |
+
 ## Always: following Omarchy
 
 `mjveilleux/omarchy` tracks upstream. At each Omarchy release, a short note in mission-todo.md of what's worth bringing over. Data we can import is imported by a script, not copied by hand:
@@ -780,7 +841,7 @@ This plan leans on what CI can check and saves the PC for what only a person can
 ## How we'll know
 
 - `omawin profile menu`: under 50 ms from key to pixels; under 16 ms per keystroke.
-- The CI install: desktop up in under 3 minutes, everything in under 10, `omawin check` without failures; `omawin sandbox test` clean on the PC.
+- The CI install: desktop up in under one minute from the bundle, everything else finishing in the background, `omawin check` without failures; `omawin sandbox test` clean on the PC.
 - Window animations pass the frame check, and a week of daily use finds no stuck overlay.
 - A fresh install, Enter through every question: Arch ready with Omarchy's terminal packages, Win+Enter opens it as fast as it opened PowerShell, and a Linux terminal looks different from a PowerShell one at a glance.
 - One plugin of ours and one written from an Omarchy plugin's idea, installed with `omawin plugin add`.
