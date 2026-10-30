@@ -1,6 +1,6 @@
 # Install in under a minute (plan)
 
-**Status: planned** ([roadmap.md](roadmap.md), phase 2). The sub-plan for one goal: from `irm … | iex` on a clean Windows 11 PC to a working omawin desktop **in under one minute**, then lower; everything else finishing in the background while you already use the desktop. And afterwards, every tool still updatable on its own through winget, Scoop or Chocolatey if you want.
+**Status: planned** ([roadmap.md](roadmap.md), phase 2). The sub-plan for one goal: from `irm … | iex` on a clean Windows 11 PC to a working omawin desktop **in under one minute**, then **less: under 30, under 15, and under 10 seconds as the stretch**; everything else finishing in the background while you already use the desktop. And afterwards, every tool still updatable on its own through winget, Scoop or Chocolatey if you want.
 
 ## What "installed" means at the minute
 
@@ -121,6 +121,7 @@ The bundle's copies are a fast start, never a lock-in. Anything can still be ins
 | **M1: under a minute** | < 60 s at 100 Mbit/s | B (one bundle, stage 1 + 2 together), C, E, F (questions moved), G |
 | **M2: under 30 seconds** | < 30 s | stage 1 split out, D (one-pass seeding), signed binaries |
 | **M3: under 15 seconds** | < 15 s | stage 1 trimmed to the bone (measured file by file), fewer, larger files; H's delta updates for the same speed on every update |
+| **M4: under 10 seconds (stretch)** | < 10 s | stage 1 split again: **1a** is only what draws the desktop and catches keys (`omawin.exe`, GlazeWM, the theme's files: a few MB), started the moment it lands, with the bar's painted strip in place; **1b** (the menu app, noctty, the font) follows seconds later, so the first key press finds it there. Compression tuned for unpacking speed (zstd where `tar.exe` has it), the bundle served from GitHub's release CDN with a fallback mirror |
 
 ## Things to explore
 
