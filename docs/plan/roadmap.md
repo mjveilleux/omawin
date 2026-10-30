@@ -358,6 +358,8 @@ What install does today: `install.ps1` asks the questions, starts the one admin 
 
 **Risks:** runner images come with Git, Node and PowerShell 7 preinstalled, so the install looks faster than on a real clean PC. Report install's own "already there" counts, and keep the Windows Sandbox run (7.1) as the honest clean test.
 
+**Progress:** started 2026-10-30 with today's install (no bundle yet): `.github/workflows/install.yml` makes a standard user on `windows-2025`, runs the README's bootstrap as that user through a scheduled task (a real logon; `Start-Process -Credential` can't from the runner's service session), then `omawin check`, and writes the step times to the job summary. When the bundle lands, it switches to 03 §8.1's version.
+
 ### 2.2 Desktop first (M, 🖥)
 
 **Why:** today you wait for every package, then sign out. The desktop should come up while the rest installs.
