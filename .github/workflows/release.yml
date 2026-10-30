@@ -216,5 +216,23 @@ jobs:
           # PowerShell passes 'dist/*' to a program as-is: the list is built here.
           $files = (Get-ChildItem dist -File | Sort-Object Name).FullName
           Write-Host "publishing $tag with $($files.Count) files"
+          # A version with a suffix (v0.3.0-rc.1) is a pre-release: GitHub's "latest", which installs
+          # and updates take, stays on the last full one.
+          $pre = @(if ($tag -match '-') { '--prerelease' })
           gh release create $tag --repo '${{ github.repository }}' --verify-tag `
-            --generate-notes --title $tag @files
+            --generate-notes --title $tag @pre @files
+
+  # The release just published, installed the way a new PC does: the one-line bootstrap, as a new
+  # standard user, downloading everything from GitHub (PowerShell 7 too: the runner's own is
+  # hidden). The time is in this job's summary (roadmap 2.1).
+  time-install:
+    needs: [meta, release]
+    if: needs.meta.outputs.publish == 'true'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: ./.github/actions/time-install
+        with:
+          release-tag: ${{ needs.meta.outputs.version }}
+          fresh: 'true'
