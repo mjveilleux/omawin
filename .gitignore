@@ -40,3 +40,5 @@ cli/obj/
 cli.Tests/bin/
 cli.Tests/obj/
 out/
+build/bundle/bin/
+build/bundle/obj/

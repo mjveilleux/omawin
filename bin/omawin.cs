@@ -716,9 +716,19 @@ static class Omawin
         catch (Exception) { }
     }
 
+    // The whole-PC GlazeWM (Program Files: the official build, or our signed fork), else the
+    // per-user copy from the release's tools bundle (install/software.ps1, no admin).
+    static string GlazeWMExe()
+    {
+        var machine = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io", "GlazeWM", "glazewm.exe");
+        if (File.Exists(machine)) return machine;
+        var mine = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"omawin\tools\glazewm\glazewm.exe");
+        return File.Exists(mine) ? mine : machine;
+    }
+
     static int StartGlazeWM()
     {
-        var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io", "GlazeWM", "glazewm.exe");
+        var exe = GlazeWMExe();
         if (!File.Exists(exe)) return Fail("GlazeWM isn't installed (" + exe + ")");
         var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         // Our fork (install/glazewm-fork.ps1, signed on this PC) starts without the taskbar, so

@@ -153,17 +153,164 @@ function Register-WingetSource {
     finally { Remove-Item $msix -Force -ErrorAction SilentlyContinue }
 }
 
+# --- the tools bundle (roadmap 2.0, bundle/tools.txt) -------------------------------------------
+# Omarchy installs from its ISO's offline package cache; omawin's release carries the core tools
+# the same way, built by CI from each tool's own release: a zip per tool, all fetched at once and
+# unpacked side by side into %LOCALAPPDATA%\omawin\tools. No winget, no installers, no admin.
+# What isn't in the bundle (or a release without one) still goes through winget below.
+$ToolsDir = Join-Path $env:LOCALAPPDATA 'omawin\tools'
+
+# Where the release's files are: OMAWIN_RELEASE_URL (a folder or URL: a locally built release, a
+# mirror), else this repo's GitHub release (OMAWIN_RELEASE's tag, or the newest). The names carry
+# no version, so the newest is releases/latest/download/<name>, with no API call.
+function Get-ReleaseBase {
+    if ($env:OMAWIN_RELEASE_URL) { return $env:OMAWIN_RELEASE_URL.TrimEnd('/', '\') }
+    $repoName = if ($env:OMAWIN_REPO) { $env:OMAWIN_REPO } else { 'mjveilleux/omawin' }
+    if ($env:OMAWIN_RELEASE -and $env:OMAWIN_RELEASE -ne 'latest') { return "https://github.com/$repoName/releases/download/$env:OMAWIN_RELEASE" }
+    "https://github.com/$repoName/releases/latest/download"
+}
+
+# One release file: copied from a folder, or downloaded. $null when it isn't there.
+function Get-ReleaseText([string]$Base, [string]$Name) {
+    if ($Base -notmatch '^[a-z]+://') {
+        $path = Join-Path $Base $Name
+        if (Test-Path -LiteralPath $path) { return [IO.File]::ReadAllText($path) } else { return $null }
+    }
+    $tmp = Join-Path $env:TEMP "omawin-$Stamp-$Name"
+    try { Save-Download "$Base/$Name" $tmp; return [IO.File]::ReadAllText($tmp) } catch { return $null }
+    finally { Remove-Item $tmp -Force -ErrorAction SilentlyContinue }
+}
+
+# The bundle's list (omawin-tools.txt), checked against the release's SHA256SUMS.txt; $null when
+# the release has none (an older one), or it doesn't match (then nothing in it is trusted).
+function Read-ToolBundle {
+    if ($script:ToolBundleRead) { return $script:ToolBundle }
+    $script:ToolBundleRead = $true
+    $base = Get-ReleaseBase
+    $text = Get-ReleaseText $base 'omawin-tools.txt'
+    if (-not $text) { return $null }
+    $sums = Get-ReleaseText $base 'SHA256SUMS.txt'
+    $want = if ($sums) { ($sums -split "`n" | Where-Object { $_ -match '^\s*([0-9a-fA-F]{64})\s+\*?omawin-tools\.txt\s*$' } | ForEach-Object { $Matches[1].ToLower() }) | Select-Object -First 1 }
+    $sha = [Security.Cryptography.SHA256]::Create()
+    $have = -join ($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($text)) | ForEach-Object { $_.ToString('x2') })
+    if (-not $want -or $want -ne $have) { Write-Warn "the release's tool list doesn't match its SHA256SUMS: not used"; return $null }
+    $script:ToolBundle = @(foreach ($line in $text -split "`r?`n") {
+            $f = $line -split "`t"
+            if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
+            $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base }
+        })
+    $script:ToolBundle
+}
+
+# The winget ids the bundle stands in for (the admin step and the winget batch leave them out).
+function Get-BundleProvides { @(Read-ToolBundle | Where-Object Provides | ForEach-Object Provides) }
+
+# A tool you put in yourself, some other way: its command on the PATH, or in winget's list. Only
+# what's already known: asking winget about each one would cost a second apiece.
+function Test-ToolTheirs($Tool, $Installed) {
+    $exe = if ($WingetCommands[$Tool.Provides]) { $WingetCommands[$Tool.Provides] } else { $Tool.Name }
+    if (Get-Command $exe -CommandType Application -ErrorAction SilentlyContinue) { return $true }
+    return [bool]($Installed -and $Installed.ContainsKey($Tool.Provides))
+}
+
+# A tool's line on the install screen: the package row it stands in for, or its own.
+function Set-ToolItem($Tool, [string]$State) {
+    if ($Tool.Provides) { Set-BoardPackage $Tool.Provides $State } else { Add-InstallItem 'Tools' "tool:$($Tool.Name)" $Tool.Name $State }
+}
+
+# Puts the bundle's tools in: all downloads at once (curl --parallel), then every unzip at once
+# (tar.exe, in Windows since 10 1803), then one PATH write. A tool already here at the same
+# version is left alone; one you installed yourself some other way (its command is on the PATH,
+# or winget has it) is used as it is.
+function Install-ToolBundle($Installed) {
+    $tools = @(Read-ToolBundle)
+    $script:BundleHave = @()
+    if (-not $tools) { return }
+    Write-Step 'tools (the bundle)'
+    $todo = @()
+    foreach ($t in $tools) {
+        $stamp = Join-Path $t.Dir '.omawin-version'
+        $label = if ($t.Provides) { Get-PackageName $t.Provides } else { $t.Name }
+        $mine = (Test-Path -LiteralPath $stamp) -and ((Get-Content -LiteralPath $stamp -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
+        if ($mine) { $script:BundleHave += $t; Set-ToolItem $t 'have'; continue }
+        if (-not (Test-Path -LiteralPath $stamp) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
+            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'; continue
+        }
+        $todo += $t
+        Set-ToolItem $t 'run'
+    }
+    if ($todo) {
+        $work = Join-Path $env:TEMP "omawin-tools-$Stamp"
+        New-Item -ItemType Directory -Force $work | Out-Null
+        try {
+            # The zips: straight from a folder, or downloaded all at once.
+            $remote = @($todo | Where-Object { $_.Base -match '^[a-z]+://' })
+            foreach ($t in $todo) { $t | Add-Member -Force NoteProperty Zip $(if ($t.Base -match '^[a-z]+://') { Join-Path $work $t.File } else { Join-Path $t.Base $t.File }) }
+            if ($remote) {
+                $config = Join-Path $work 'curl.txt'
+                # Forward slashes: a backslash in a curl config's quotes is an escape.
+                $lines = foreach ($t in $remote) { "url = `"$($t.Base)/$($t.File)`""; "output = `"$($t.Zip -replace '\\', '/')`"" }
+                [IO.File]::WriteAllLines($config, [string[]]$lines)
+                $curl = Join-Path $env:WINDIR 'System32\curl.exe'
+                & { $ErrorActionPreference = 'Continue'; & $curl -fsSL --retry 3 --parallel --parallel-max 8 -K $config 2>$null }
+            }
+            # Checked, then unpacked: every tar at once, each into a fresh folder.
+            $jobs = @()
+            foreach ($t in $todo) {
+                if (-not (Test-Path -LiteralPath $t.Zip) -or (Get-FileHash -LiteralPath $t.Zip -Algorithm SHA256).Hash.ToLower() -ne $t.Sha) {
+                    Write-Warn "$($t.Name): the download doesn't match the release's list; left out"
+                    Set-ToolItem $t 'fail'; continue
+                }
+                if (Test-Path -LiteralPath $t.Dir) {
+                    # An older copy of ours: moved out of the way (a running one keeps its files).
+                    $old = "$($t.Dir).old-$Stamp"
+                    try { Rename-Item -LiteralPath $t.Dir -NewName (Split-Path $old -Leaf) -ErrorAction Stop }
+                    catch { Write-Warn "$($t.Name) is in use: close it and run install.ps1 again"; continue }
+                }
+                New-Item -ItemType Directory -Force $t.Dir | Out-Null
+                $p = Start-Process "$env:WINDIR\System32\tar.exe" -ArgumentList "-xf `"$($t.Zip)`" -C `"$($t.Dir)`"" -NoNewWindow -PassThru
+                $null = $p.Handle  # read now, or Windows PowerShell has no ExitCode later
+                $jobs += [pscustomobject]@{ Tool = $t; Process = $p }
+            }
+            $dirs = @()
+            foreach ($j in $jobs) {
+                $j.Process.WaitForExit()
+                $t = $j.Tool
+                if ($j.Process.ExitCode -ne 0) { Write-Warn "$($t.Name): unpacking failed ($($j.Process.ExitCode))"; Set-ToolItem $t 'fail'; continue }
+                Set-Content -LiteralPath (Join-Path $t.Dir '.omawin-version') "$($t.Version) $($t.Sha)"
+                Get-ChildItem (Split-Path $t.Dir) -Filter "$(Split-Path $t.Dir -Leaf).old-*" -Directory -ErrorAction SilentlyContinue |
+                    Remove-Item -Recurse -Force -ErrorAction SilentlyContinue
+                $script:BundleHave += $t
+                Set-ToolItem $t 'done'
+            }
+        } finally { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+    $bins = @($script:BundleHave | Where-Object { $_.Bin -ne '-' } | ForEach-Object { if ($_.Bin -eq '.') { $_.Dir } else { Join-Path $_.Dir $_.Bin } })
+    if ($bins) {
+        $added = Add-UserPaths $bins
+        if ($added) { Write-Note "$added tool folder(s) on the PATH" }
+        Update-SessionPath
+    }
+    Write-Note "$(@($script:BundleHave).Count) of $($tools.Count) tools from the bundle"
+}
+
 function Install-WingetPackages([string[]]$Ids) {
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Warn 'winget not found. Install "App Installer" from the Microsoft Store, then re-run.'
         return
     }
     $winget = (Get-Command winget).Source
-    Register-WingetSource
     $installed = Get-WingetInstalled
+    Install-ToolBundle $installed
+    $bundled = @($script:BundleHave | Where-Object Provides | ForEach-Object Provides)
+    # Everything left came from the bundle: winget isn't asked anything.
+    if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
+    Register-WingetSource
 
     $todo = New-Object Collections.Generic.List[string]
     foreach ($id in $Ids) {
+        if ($bundled -contains $id) { continue }
         if (Test-PackageInstalled $id $installed) { Set-BoardPackage $id 'have'; Write-Ok $id }
         else { Set-BoardPackage $id 'wait'; $todo.Add($id) }
     }

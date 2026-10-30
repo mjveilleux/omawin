@@ -57,6 +57,8 @@ if (-not (Get-Command Write-Note -ErrorAction SilentlyContinue)) {
 $Repo = Split-Path $PSScriptRoot
 $Arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
 if (-not $Release) { $Release = if ($env:OMAWIN_RELEASE) { $env:OMAWIN_RELEASE } else { 'latest' } }
+# OMAWIN_RELEASE_URL: a mirror or a locally built release for a whole install (the tools bundle reads it too).
+if (-not $BaseUrl -and $env:OMAWIN_RELEASE_URL) { $BaseUrl = $env:OMAWIN_RELEASE_URL }
 if ($env:OMAWIN_PREBUILT -eq '0') { $NoDownload = $true }
 if ($env:OMAWIN_PREBUILT -eq '1') { $NoBuild = $true }
 # The .NET SDK, for a build here: only now, when one is needed (the core has just the runtime).

@@ -8,6 +8,11 @@
 #
 # The standard user runs through a scheduled task (a real logon with a profile): Start-Process
 # -Credential from the runner's service session can't make a desktop for the new user.
+#
+# This branch's release is built first (release.yml, unpublished: the tools bundle, the menu
+# app, the helpers) and laid out in C:\mirror, which the install reads instead of GitHub
+# (OMAWIN_RELEASE_URL). So the time is the install of this code, without the build: what a PC
+# pays once the release is out, minus the download (the next step: time it against the real one).
 name: Install
 
 on:
@@ -16,17 +21,37 @@ on:
     - cron: '43 3 * * 1'   # Mondays, for the trend
   push:
     branches: [main, 'claude/**']
-    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'packages.ps1', 'check.ps1', 'bin/migrate.ps1', 'migrations/**', '.github/workflows/install.yml']
+    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'packages.ps1', 'check.ps1', 'bin/migrate.ps1', 'bin/install-binaries.ps1', 'bin/release.ps1', 'bin/noctty.ps1', 'migrations/**', 'bundle/**', 'build/**', '.github/workflows/install.yml', '.github/workflows/release.yml']
 
 permissions:
   contents: read
 
 jobs:
+  build:
+    uses: ./.github/workflows/release.yml
+    with:
+      version: v0.0.0-ci
+    # release.yml's publish job asks for these; it doesn't run here (nothing is published), but a
+    # called workflow can't ask for more than its caller allows.
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+
   install:
+    needs: build
     runs-on: windows-2025
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: C:\built
+      - name: The release, laid out as GitHub would serve it
+        shell: pwsh
+        run: |
+          .\build\release.ps1 -Tag v0.0.0-ci -InDir C:\built -OutDir C:\mirror -Arch x64
+          Get-ChildItem C:\mirror | Format-Table Name, Length
 
       - name: A standard user, and the run for it
         shell: pwsh
@@ -52,6 +77,7 @@ jobs:
           $start = Get-Date
           Copy-Item -Recurse C:\ci\repo "$HOME\omawin"
           $env:OMAWIN_LOCAL = '1'; $env:OMAWIN_PLAIN = '1'
+          $env:OMAWIN_RELEASE_URL = 'C:\mirror'; $env:OMAWIN_RELEASE = 'v0.0.0-ci'
           try {
               & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\omawin\bootstrap.ps1" *> C:\ci\out\install.log
               "bootstrap exit $LASTEXITCODE" | Add-Content C:\ci\out\result.txt

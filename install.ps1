@@ -130,7 +130,9 @@ try {
 
     # --- 2. the one admin prompt -----------------------------------------------------------------
     Write-Note 'what needs admin ...'
-    $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages }) -NoPackages:$LinkOnly
+    # What the release's tools bundle carries goes in per-user without admin (install/software.ps1).
+    $bundled = @(if (-not $LinkOnly) { Get-BundleProvides })
+    $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages | Where-Object { $bundled -notcontains $_ } }) -NoPackages:$LinkOnly
     if ($plan.Packages.Count -or $plan.Forks.Count -or $plan.Wsl) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
         # omawin update's pull came before it.

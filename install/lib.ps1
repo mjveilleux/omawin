@@ -110,6 +110,23 @@ function Add-UserPath([string]$Dir, [switch]$Prepend) {
     return $true
 }
 
+# Several folders onto the user PATH in one write and one notice to running programs (each
+# notice is a broadcast that can wait on a busy window). Returns how many were added.
+function Add-UserPaths([string[]]$Dirs) {
+    $key = Get-Item 'HKCU:\Environment'
+    $raw = ([string]$key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')).Trim(';')
+    $norm = { param($p) [Environment]::ExpandEnvironmentVariables($p).TrimEnd('\').ToLowerInvariant() }
+    $have = @{}
+    foreach ($entry in $raw -split ';') { if ($entry) { $have[(& $norm $entry)] = $true } }
+    $new = @(foreach ($dir in $Dirs) { $k = & $norm $dir; if (-not $have[$k]) { $have[$k] = $true; $dir } })
+    if (-not $new) { return 0 }
+    $value = (@($raw) + $new | Where-Object { $_ }) -join ';'
+    Set-ItemProperty 'HKCU:\Environment' -Name Path -Value $value -Type ExpandString
+    [Environment]::SetEnvironmentVariable('OMAWIN_PATH_NUDGE', '1', 'User')
+    [Environment]::SetEnvironmentVariable('OMAWIN_PATH_NUDGE', $null, 'User')
+    return $new.Count
+}
+
 function Move-Aside([string]$Path) {
     if (Test-Path -LiteralPath $Path) {
         $backup = "$Path.backup-$Stamp"
