@@ -44,13 +44,14 @@ foreach ($exe in 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch') {
 
 if ([Environment]::GetEnvironmentVariable('ZEBAR_ASSET_PORT', 'User')) { [Environment]::SetEnvironmentVariable('ZEBAR_ASSET_PORT', $null, 'User') }
 
-if (Get-Command winget -ErrorAction SilentlyContinue) {
-    & { $ErrorActionPreference = 'Continue'; winget pin remove --id glzr-io.zebar --exact *> $null }
-    & { $ErrorActionPreference = 'Continue'; winget list --id glzr-io.zebar --exact --scope user --accept-source-agreements *> $null }
-    if ($LASTEXITCODE -eq 0) {
-        & { $ErrorActionPreference = 'Continue'; winget uninstall --id glzr-io.zebar --exact --scope user --silent --disable-interactivity *> $null }
-        if ($LASTEXITCODE -eq 0) { 'uninstalled Zebar (this account''s)' } else { "! couldn't uninstall Zebar (winget exited $LASTEXITCODE): Install > Remove" }
-    }
+# winget only when this account has Zebar (its entry in this account's installed programs): on a
+# new account winget can wait for ever on its first run, so a PC that never had Zebar never asks it.
+$mine = Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
+    Get-ItemProperty -ErrorAction SilentlyContinue | Where-Object { "$($_.DisplayName)" -like 'Zebar*' }
+if ($mine -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+    & { $ErrorActionPreference = 'Continue'; winget pin remove --id glzr-io.zebar --exact --disable-interactivity *> $null }
+    & { $ErrorActionPreference = 'Continue'; winget uninstall --id glzr-io.zebar --exact --scope user --silent --disable-interactivity --accept-source-agreements *> $null }
+    if ($LASTEXITCODE -eq 0) { 'uninstalled Zebar (this account''s)' } else { "! couldn't uninstall Zebar (winget exited $LASTEXITCODE): Install > Remove" }
 }
 if (Test-Path "$env:ProgramFiles\glzr.io\Zebar\zebar.exe") {
     '! Zebar is still installed for the whole PC; removing it takes admin: Install > Remove, or `winget uninstall glzr-io.zebar` in an admin terminal'
