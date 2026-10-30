@@ -45,7 +45,8 @@ if ((Get-ExecutionPolicy -Scope CurrentUser) -notin 'RemoteSigned', 'Unrestricte
     # The Process scope set just above is more specific, so PowerShell saves this one and then
     # reports "overridden by a policy defined at a more specific scope" as an error, which under
     # Stop would end the install. The setting is saved either way: that error is expected.
-    try { Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force } catch [System.Security.SecurityException] { }
+    try { Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force }
+    catch { if ((Get-ExecutionPolicy -Scope CurrentUser) -ne 'RemoteSigned') { throw } }
 }
 
 # How it looks: install.ps1's banner and step glyphs (install/ui.ps1) in a small copy, since this
