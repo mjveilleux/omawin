@@ -6,9 +6,9 @@
 #
 #   <name> | <source> | <asset> | <bin> | <winget id it stands in for> | <home> | <flags>
 #
-#   source  github:<owner>/<repo> (its latest release), node-lts, zig-stable
-#   asset   a regex for the release file's name; "=> <name>" renames a single-file asset (an
-#           .exe, or a .gz holding one)
+#   source  github:<owner>/<repo> (its latest release), node-lts
+#   asset   a regex for the release file's name: a zip, a 7-Zip self-extractor (.7z.exe, unpacked
+#           in CI), or with "=> <name>" a single file renamed (an .exe, or a .gz holding one)
 #   bin     the folder inside the tool that goes on the PATH ("." for its top, "-" for none)
 #   winget  the core package it replaces (install/packages.ps1): that one isn't installed through winget
 #   home    where it goes instead of tools\<name>, under %LOCALAPPDATA% (a tool other scripts
@@ -19,6 +19,7 @@
 #           family omawin names, "JetBrainsMono NF", not all 96: ~10 MB of 135)
 
 pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
+git         | github:git-for-windows/git        | ^PortableGit-[0-9.]+-64-bit\.7z\.exe$             | cmd | Git.Git
 wt          | github:microsoft/terminal         | ^Microsoft\.WindowsTerminal_[0-9.]+_x64\.zip$      | .   | Microsoft.WindowsTerminal
 gh          | github:cli/cli                    | ^gh_[0-9.]+_windows_amd64\.zip$                    | bin | GitHub.cli
 starship    | github:starship/starship          | ^starship-x86_64-pc-windows-msvc\.zip$             | .   | Starship.Starship

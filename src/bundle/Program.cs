@@ -87,20 +87,11 @@ async Task<(string, string, string)> Resolve(Tool t, CancellationToken ct)
         }
         throw new InvalidOperationException("node: no LTS release");
     }
-    if (t.Source == "zig-stable")
-    {
-        using var doc = JsonDocument.Parse(await http.GetStringAsync("https://ziglang.org/download/index.json", ct));
-        var stable = doc.RootElement.EnumerateObject()
-            .Where(p => p.Name != "master" && Version.TryParse(p.Name, out _))
-            .MaxBy(p => Version.Parse(p.Name))!;
-        var url = stable.Value.GetProperty(t.Asset.ToString()).GetProperty("tarball").GetString()!;
-        return (url, stable.Name, url[(url.LastIndexOf('/') + 1)..]);
-    }
     throw new InvalidOperationException($"{t.Name}: unknown source {t.Source}");
 }
 
-// The download into stage/, in the tool's shape: a zip without its one top folder, a single file
-// (.exe, or .gz holding one) under its new name.
+// The download into stage/, in the tool's shape: a zip without its one top folder, a 7-Zip
+// self-extractor's contents, a single file (.exe, or .gz holding one) under its new name.
 static void Unpack(Tool t, string download, string stage)
 {
     if (download.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -119,6 +110,19 @@ static void Unpack(Tool t, string download, string stage)
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             e.ExtractToFile(dest, overwrite: true);
         }
+        return;
+    }
+    if (download.EndsWith(".7z.exe", StringComparison.OrdinalIgnoreCase))
+    {
+        // A 7-Zip self-extractor (Git for Windows' PortableGit): 7-Zip opens it like an archive.
+        // The CI runner has 7z; the PC gets a plain zip like every other tool.
+        var psi = new System.Diagnostics.ProcessStartInfo("7z") { RedirectStandardOutput = true, RedirectStandardError = true };
+        foreach (var a in new[] { "x", "-y", "-o" + stage, download }) psi.ArgumentList.Add(a);
+        using var p = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException($"{t.Name}: 7z didn't start");
+        var err = p.StandardError.ReadToEndAsync();
+        p.StandardOutput.ReadToEnd();
+        p.WaitForExit();
+        if (p.ExitCode != 0) throw new InvalidOperationException($"{t.Name}: 7z exited {p.ExitCode}: {err.Result}");
         return;
     }
     var target = Path.Combine(stage, t.Rename ?? Path.GetFileName(download));

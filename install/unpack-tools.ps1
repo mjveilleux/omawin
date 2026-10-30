@@ -40,6 +40,13 @@ try {
             New-Item -ItemType Directory -Force $t.Dir | Out-Null
             & $using:tar -xf $t.Zip -C $t.Dir
             if ($LASTEXITCODE) { throw "unpacking failed ($LASTEXITCODE)" }
+            # Git for Windows' portable build finishes its setup (Git Bash's /etc and /dev) with
+            # post-install.bat, which removes itself when it's done.
+            $postInstall = Join-Path $t.Dir 'post-install.bat'
+            $gitBash = Join-Path $t.Dir 'git-bash.exe'
+            if ((Test-Path -LiteralPath $postInstall) -and (Test-Path -LiteralPath $gitBash)) {
+                Start-Process $gitBash -ArgumentList '--no-needs-console', '--hide', '--no-cd', '--command=post-install.bat' -WorkingDirectory $t.Dir -WindowStyle Hidden -Wait
+            }
             Set-Content -LiteralPath (Join-Path $t.Dir '.omawin-version') "$($t.Version) $($t.Sha)"
             if (-not $t.Merge) {
                 Get-ChildItem (Split-Path $t.Dir) -Filter "$(Split-Path $t.Dir -Leaf).old-*" -Directory -ErrorAction SilentlyContinue |

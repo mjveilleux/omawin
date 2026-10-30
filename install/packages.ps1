@@ -32,10 +32,10 @@ $WingetPackages = @(
     'OpenJS.NodeJS.LTS'             # mason.nvim (Neovim) installs most LSPs with npm
     'astral-sh.uv'                  # Python tools (harlequin, the Fabric CLI) and mason.nvim's Python LSPs
 
-    # The menu app and the music player run on it (they come prebuilt from the release). The
-    # 1 GB SDK that builds them is installed only where one has to be built: no release for this
-    # PC, or a checkout being worked on (bin/install-binaries.ps1, Install-DotNetSdk).
-    'Microsoft.DotNet.DesktopRuntime.9'
+    # No .NET runtime: the release's menu app is one native program (Native AOT). The music
+    # player needs the runtime and brings it (its preset). The 1 GB SDK that builds them is
+    # installed only where one has to be built: no release for this PC, or a checkout being worked
+    # on (bin/install-binaries.ps1, Install-DotNetSdk).
 )
 
 # Opt-in groups. Winget: winget ids. Extras: names in $ExtraInstalls. Tools: the commands
@@ -52,7 +52,7 @@ $Presets = [ordered]@{
     'docker'         = @{ Summary = 'lazydocker (Docker Desktop: Install > Development)'; Winget = @('JesseDuffield.Lazydocker'); Tools = @('lazydocker') }
     'cli-extras'     = @{ Summary = 'make, cloc, wget'; Winget = @('ezwinports.make', 'AlDanial.Cloc', 'JernejSimoncic.Wget'); Tools = @('make', 'cloc', 'wget') }
     'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
-    'music'          = @{ Summary = "yt-dlp and mpv, for the bar's music player (src/music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv'); Tools = @('yt-dlp', 'mpv') }
+    'music'          = @{ Summary = "yt-dlp, mpv and the .NET runtime, for the music player (src/music/)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv', 'Microsoft.DotNet.DesktopRuntime.9'); Tools = @('yt-dlp', 'mpv') }
     'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
     'wsl'            = @{ Summary = "Linux in WSL, Arch (Omarchy's packages) or Ubuntu, with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('linux') }
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
@@ -101,7 +101,8 @@ $ExtraInstalls = [ordered]@{
     'herdr'     = { Invoke-RestMethod https://herdr.dev/install.ps1 | Invoke-Expression }
     'claude'    = { Invoke-RestMethod https://claude.ai/install.ps1 | Invoke-Expression }
     # opencode's official installer is a bash script; Git Bash runs it (lands in ~/.opencode/bin).
-    'opencode'  = { & "$env:ProgramFiles\Git\bin\bash.exe" -lc 'curl -fsSL https://opencode.ai/install | bash' }
+    # Git Bash is next to git, wherever git came from (the bundle's copy, or an installer's).
+    'opencode'  = { & (Join-Path (Split-Path (Split-Path (Get-Command git -CommandType Application | Select-Object -First 1).Source)) 'bin\bash.exe') -lc 'curl -fsSL https://opencode.ai/install | bash' }
     'harlequin' = { uv tool install 'harlequin[odbc]' }
     'fab'       = { uv tool install ms-fabric-cli }
     # This account's Linux in WSL (omawin default linux), set up by wsl/setup.sh: the wsl preset.

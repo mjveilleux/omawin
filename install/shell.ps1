@@ -44,6 +44,12 @@ function Set-TerminalSettings([string]$LocalState) {
     New-Item -ItemType Directory -Force -Path $LocalState, (Split-Path $marker) | Out-Null
     Move-Aside $settings
     Copy-Item "$Repo\config\windows-terminal\settings.json" $settings
+    # Its Git Bash profile names Git for Windows' usual folder; the bundle's copy is this account's.
+    $gitHome = Get-GitHome
+    if ($gitHome -and $gitHome -ne "$env:ProgramFiles\Git") {
+        $json = [IO.File]::ReadAllText($settings).Replace('C:\\Program Files\\Git\\', ($gitHome -replace '\\', '\\') + '\\')
+        [IO.File]::WriteAllText($settings, $json)
+    }
     [IO.File]::WriteAllText($marker, "$settings`n")
     Write-Note "seeded $settings from config/windows-terminal/settings.json"
     Add-InstallItem 'Settings' 'wt' 'Windows Terminal' 'done'
