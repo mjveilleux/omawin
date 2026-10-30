@@ -25,6 +25,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Linux follows **all of Omarchy's package sources and decisions**: Omarchy's repositories (stable channel), Omarchy's package choices for the terminal, **no AUR** |
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
+| 2026-10-30 | **Never open Settings again**: every Windows setting is searchable in the system menu (Win+Alt+Space), and the common ones switch on and off right there |
 | 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
 
 ## Where we are
@@ -45,6 +46,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | Everyday dev setup | dev envs, Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev envs and Docker databases on Windows; no web apps; a hand-kept key list |
 | Linux | it *is* Linux | WSL opt-in; the terminal opens PowerShell unless the window in front is in a Linux folder |
 | Where am I? | one OS | Linux and PowerShell terminals look identical |
+| Changing a setting | one menu for every setting (Omarchy's Setup menu) | the system menu opens a few Settings pages; everything else is Windows' Settings app |
 | Files | Nautilus, Sushi previews, "here" keys | the Win+F finder: search, preview, chips; open or show in folder, nothing more |
 | Trying things safely | disposable VMs in its acceptance tests | nothing; the install has never run on a clean PC |
 
@@ -55,6 +57,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 | Release | Contents | Feels like |
 |---|---|---|
 | **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
+| **"settings"** | Phase 1B: every Windows setting in the system menu, switches inline, `omawin setting`, your settings applied on a new PC | you never open Settings again |
 | **"fast"** | Phase 2 and 7.1: CI install timing, desktop first, mise tools, one release zip, the Sandbox install test | a fresh PC is a desktop in three minutes |
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
 | **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
@@ -146,6 +149,73 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574). Virtualize the list (an `ItemsRepeater` with recycling) so only visible rows are built, and keep icon loading off the UI thread. Measured by 1.1's typing timeline: under 16 ms per key.
 
 ---
+
+## Phase 1B: every Windows setting in the system menu (next)
+
+**Why:** Windows' Settings app is slow to open, deep, and changes between builds. Omarchy has one menu for everything you change; omawin's system menu (Win+Alt+Space) has a few rows that open Settings pages (`launcher/menu.txt:70-76`). The goal: **you never open Settings again**. Type a few letters ("dark", "ext", "mic", "hz"), see the setting with its current state, press Space to switch it. What can't be switched from outside Windows' own app opens on its exact page, one keystroke away.
+
+What exists to build on: the system menu's search (`MenuModel.Search`, fuzzy, `MainWindow.xaml.cs:598`), the launcher's usage ranking (`Launcher.cs:173-222`), and Quick settings' working switches (`menu-app/QuickSettings.cs`: Wi-Fi, Bluetooth and other radios, brightness per monitor, power mode, battery, night light's state, notifications' state, change watching).
+
+### 1B.1 The index: every setting Windows has (M, 🖥)
+
+- **Windows' own search data.** Settings' search box reads an index Windows ships: `%WINDIR%\ImmersiveControlPanel\Settings\AllSystemSettings_*.xml`, one entry per setting with its name, keywords and the page that holds it, in the PC's language (names are resource strings, resolved with `SHLoadIndirectString`). Read it once in the background, cache it in `%LOCALAPPDATA%\launcher\settings-index.tsv`, rebuild when Windows updates (the file's date). Confirm the format on the PC first; it's undocumented.
+- **Fallback and extras:** the documented `ms-settings:` pages (a curated list in the repo), Control Panel items (the shell's Control Panel folder), the admin consoles (Device Manager, Services, Event Viewer, Disk Management, Task Scheduler), and classic dialogs people still need (environment variables: `rundll32 sysdm.cpl,EditEnvironmentVariables`; advanced system settings; network adapters).
+- Each becomes a row: icon, name, the page it's on (`System › Display`) as the dimmed second line.
+
+### 1B.2 Switches: change it without opening anything (L, 🖥)
+
+The core of the feature: a catalog of settings omawin can **read and change itself**, shown as switches, choices or sliders in the row.
+
+- **The catalog** is data, `launcher/settings.txt` (layered like `items.txt`: the PC's shared folder and the account folder can add their own), one setting per line: `id | icon | name | keywords | kind | how | notes`.
+  - `kind`: `switch` (on / off), `choice` (one of a few values), `slider` (a number in a range), `action` (do it once), `link` (open its page).
+  - `how`, declarative where possible: `reg HKCU\…\Value on=1 off=0 [broadcast] [restart-explorer]`; `spi <SystemParametersInfo action>`; `powercfg <setting>`; `builtin <name>` for anything that needs code (radios, display modes, HDR, default audio device, proxy); `link ms-settings:<page>`.
+  - `notes`: `admin` (needs elevation), `signout` / `restart` (when it takes effect), `minBuild` (the Windows build it's known to work on).
+- **Handlers** in `menu-app/Settings/` (`Catalog.cs` reads the file; `Switches.cs` does `reg`, `spi`, `powercfg`; `Builtins.cs` reuses `QuickSettings.cs` and adds the rest). After a registry change, the `broadcast` flag sends `WM_SETTINGCHANGE` so Explorer and apps pick it up without a restart.
+- **The first catalog, ~80 settings** (each checked on the PC before it ships):
+  - *Look:* dark mode for apps and for Windows, transparency, animations, accent colour from the omawin theme, show desktop icons.
+  - *Explorer:* file extensions, hidden files, protected system files, full path in the title, compact view, open to Home or This PC, Gallery and recommendations, end task on the taskbar's menu, seconds on the clock.
+  - *Privacy:* camera, microphone and location for apps (the per-user consent store), advertising ID, tailored experiences, online speech recognition, activity history.
+  - *Input:* mouse acceleration, pointer speed, key repeat rate and delay, sticky keys' shortcut prompt, touchpad tap to click and scrolling direction.
+  - *System:* clipboard history, notifications on / off, game mode and the game bar, startup delay, power mode (exists), screen and sleep timeouts, lid close action, hibernate and fast startup (admin).
+  - *Display:* refresh rate and resolution per monitor (`ChangeDisplaySettingsEx`), HDR (`DisplayConfigSetDeviceInfo`), brightness (exists), night light (state readable; switching opens its page, as today).
+  - *Connections:* Wi-Fi, Bluetooth, airplane mode (radios, exist), mobile hotspot (`NetworkOperatorTetheringManager`), the system proxy on / off, VPN connections (exist).
+  - *Sound:* default output and input (exist in Audio), mono audio.
+  - *Developer:* developer mode, long paths, sudo for Windows (`sudo config`), Windows features (WSL, Windows Sandbox, Hyper-V; admin and a restart), Dev Drive and Defender exclusions for dev folders (admin; explained before doing it).
+- Reading is lazy (only rows on screen), each a registry or API read of microseconds, and kept fresh with `RegNotifyChangeKeyValue` and the APIs' change events, so a change made elsewhere shows at once.
+
+### 1B.3 In the menu (M, 🖥)
+
+- Typing in the system menu searches its own rows **and** every setting, mixed and ranked by the fuzzy score plus what you use most (the launcher's history, so "dark" puts *Dark mode* first after you've used it once). Tab reaches a **Settings** chip to search settings only.
+- A switch row shows its state as a pill (On / Off); **Space** or **Enter** flips it at once, then re-reads to confirm. A choice row lists its values inline (← / → to step, Enter to pick); a slider moves with ← / →. A link row ends in ↗ and opens its page. Admin rows show a shield; `signout` / `restart` rows say when the change takes effect.
+- **Undo**: every change goes to `%LOCALAPPDATA%\launcher\settings-history.tsv` with the value before it; Ctrl+Z in the menu and an *Undo last change* row put it back.
+- The launcher (Win+Space) shows the top setting matches under apps, so either key finds them.
+- `launcher/menu.txt`'s Setup section gains a *Windows* submenu by area (Look, Explorer, Privacy, Input, System, Display, Connections, Sound, Developer) for browsing without typing.
+
+### 1B.4 Every setting is a command (S)
+
+`omawin setting list [area]`, `omawin setting get <id>`, `omawin setting set <id> <value>`, `omawin setting toggle <id>` (rows in `bin/commands.txt`, handled by the menu app, so no PowerShell start). Bind one to a key, run it from a script, or let an agent change a setting with a command it can read back. Tab completion in the PowerShell profile.
+
+### 1B.5 Your settings follow you to a new PC (M)
+
+`omawin settings save` writes the settings you've changed (`id = value`) to the account folder (`~/omawin-account/settings.txt`) or the PC's shared folder; install and `omawin settings apply` set them on a new PC, admin ones in the one admin prompt. The no-ads tweaks and Explorer's developer defaults (6.8) become entries in the same catalog: one mechanism for every Windows setting omawin touches, each with undo. Dotfiles, for Windows itself.
+
+### 1B.6 Safety (part of every item)
+
+Never break Windows (mission.md): only settings that are documented or long-stable; never the keys Windows protects (default apps, under UCPD); no group policies unless you ask; admin changes said up front, batched into one prompt, never silent; every change undoable; each catalog entry carries the build it's known to work on, and is hidden on others.
+
+### Testing
+
+CI (a Windows runner) round-trips every `reg`, `spi` and `powercfg` entry: read, set the other value, read back, restore. The PC checks the builtins and what takes effect where (🖥).
+
+### fff and ripgrep here
+
+Neither is the right tool at run time, and the plan doesn't use them there: fff indexes files on disk and ripgrep searches file contents, while settings are a few thousand rows in memory, which the menu's own fuzzy matcher scores in microseconds (what the system menu already does). fff's idea does carry over: rank by what you use (frecency). ripgrep helps at development time: a script that searches Windows' settings files and policy definitions (`C:\Windows\PolicyDefinitions\*.admx`) after a Windows update for new settings worth adding to the catalog.
+
+### Done when
+
+The "never open Settings" list: 30 everyday changes (dark mode, file extensions, the microphone for apps, refresh rate, mouse acceleration, notifications, power mode, developer mode, …) each done from Win+Alt+Space in a few letters and one key, with undo; CI's round-trip passing; `omawin settings apply` setting up a fresh PC (in `omawin sandbox test`, 7.1).
+
+**Risks:** the settings index's format is undocumented (fallback: the curated page list); Windows changing a setting's registry value between builds (`minBuild`, CI on current Windows); settings that only apply after sign-out (said in the row); some settings have no supported way to change (night light, do not disturb): those stay links, honestly labelled.
 
 ## Phase 2: fast install
 
