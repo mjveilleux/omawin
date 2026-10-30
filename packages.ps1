@@ -85,6 +85,7 @@ $WingetCommands = @{
     'Typst.Typst' = 'typst'; 'Erlang.ErlangOTP' = 'erl'; 'Elixir.Elixir' = 'elixir'; 'BrechtSanders.WinLibs.POSIX.UCRT' = 'gcc'
     'JesseDuffield.Lazydocker' = 'lazydocker'; 'ezwinports.make' = 'make'; 'AlDanial.Cloc' = 'cloc'; 'JernejSimoncic.Wget' = 'wget'
     'jqlang.jq' = 'jq'; 'junegunn.fzf' = 'fzf'; 'sharkdp.fd' = 'fd'; 'BurntSushi.ripgrep.MSVC' = 'rg'; 'JesseDuffield.lazygit' = 'lazygit'
+    'Git.Git' = 'git'; 'Microsoft.PowerShell' = 'pwsh'; 'GitHub.cli' = 'gh'; 'OpenJS.NodeJS.LTS' = 'node'; 'Neovim.Neovim' = 'nvim'
 }
 
 # Tools with their own installers (run after the winget ones, so uv exists). herdr is the core's

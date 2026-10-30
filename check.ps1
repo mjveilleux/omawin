@@ -129,7 +129,11 @@ foreach ($file in Get-ChildItem "$env:LOCALAPPDATA\launcher\defaults" -File -Err
 }
 $wt = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.WindowsTerminal_*' -Directory -ErrorAction SilentlyContinue | Select-Object -First 1
 # Terminal's settings.json is Terminal's own, in LocalState, seeded once from windows-terminal/ (install/shell.ps1).
-if (-not $wt) { Fail 'Windows Terminal' 'package folder not found' }
+$wtMine = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json"   # the tools bundle's unpackaged Terminal
+if (-not $wt -and (Test-Path "$env:LOCALAPPDATA\omawin\tools\wt\WindowsTerminal.exe")) {
+    if (Test-Path $wtMine) { Pass 'Windows Terminal' "$wtMine (its own)" } else { Warn 'Windows Terminal' 'no settings.json yet (install.ps1 -Step shell seeds it)' }
+}
+elseif (-not $wt) { Fail 'Windows Terminal' 'package folder not found' }
 elseif ((Get-Item "$($wt.FullName)\LocalState" -Force -ErrorAction SilentlyContinue).LinkType) { Fail 'Windows Terminal' 'LocalState is still a link into the repo (omawin migrate)' }
 elseif (Test-Path "$($wt.FullName)\LocalState\settings.json") { Pass 'Windows Terminal' "$($wt.FullName)\LocalState\settings.json (its own)" }
 else { Warn 'Windows Terminal' 'no settings.json yet (install.ps1 -Step shell seeds it)' }

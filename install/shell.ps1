@@ -52,6 +52,11 @@ $wtPackage = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.Windo
 if ($wtPackage) {
     try { Set-TerminalSettings "$($wtPackage.FullName)\LocalState" }
     catch { Write-Warn "couldn't seed Windows Terminal's settings (is it open?). Close it and run: .\install.ps1 -LinkOnly from another shell. $_" }
+} elseif (Test-Path "$env:LOCALAPPDATA\omawin\tools\wt\WindowsTerminal.exe") {
+    # The tools bundle's copy is Terminal's unpackaged build: it reads its settings from here, with
+    # no Store package folder to wait for.
+    try { Set-TerminalSettings "$env:LOCALAPPDATA\Microsoft\Windows Terminal" }
+    catch { Write-Warn "couldn't seed Windows Terminal's settings (is it open?). Close it and run: .\install.ps1 -LinkOnly from another shell. $_" }
 } elseif (Get-Command wt -ErrorAction SilentlyContinue) {
     # Installed but never opened: its settings folder doesn't exist yet. Open it once
     # (minimized) so Windows creates it, close it, and seed.

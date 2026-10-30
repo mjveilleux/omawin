@@ -227,6 +227,7 @@ function Set-ToolItem($Tool, [string]$State) {
 function Install-ToolBundle($Installed, [string[]]$Only) {
     $tools = @(Read-ToolBundle | Where-Object { -not $Only -or $Only -contains $_.Name })
     $script:BundleHave = @()
+    $script:BundleTheirs = @()   # winget ids already here some other way: winget leaves them alone too
     if (-not $tools) { return }
     Write-Step 'tools (the bundle)'
     $todo = @()
@@ -237,7 +238,7 @@ function Install-ToolBundle($Installed, [string[]]$Only) {
         $mine = (Test-Path -LiteralPath $versionFile) -and ((Get-Content -LiteralPath $versionFile -Raw).Trim() -eq "$($t.Version) $($t.Sha)")
         if ($mine) { $script:BundleHave += $t; Set-ToolItem $t 'have'; continue }
         if (-not (Test-Path -LiteralPath $versionFile) -and $t.Provides -and (Test-ToolTheirs $t $Installed)) {
-            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'
+            Write-Ok "$label (yours)"; Set-ToolItem $t 'have'; $script:BundleTheirs += $t.Provides
             if ($Installed -and $Installed.ContainsKey($t.Provides)) { Set-PackageSource $t.Provides 'winget' $t.Provides }
             elseif (-not (Get-PackageSources)[$t.Provides]) { Set-PackageSource $t.Provides 'found' $t.Provides }
             continue
@@ -309,7 +310,7 @@ function Install-WingetPackages([string[]]$Ids) {
     $winget = (Get-Command winget).Source
     $installed = Get-WingetInstalled
     Install-ToolBundle $installed
-    $bundled = @($script:BundleHave | Where-Object Provides | ForEach-Object Provides)
+    $bundled = @(@($script:BundleHave | Where-Object Provides | ForEach-Object Provides) + @($script:BundleTheirs))
     # Everything left came from the bundle: winget isn't asked anything.
     if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     Register-WingetSource
@@ -359,7 +360,10 @@ function Install-WingetPackages([string[]]$Ids) {
         }
     }
     Set-BoardPackageNote $null
-    if ($failed) { $failed = @(Invoke-WingetBatch $winget @($failed | ForEach-Object Id) 1) }
+    # The second go is for what failed by bad luck (an MSI already running). "No installer that
+    # fits" (-1978335216: this package has no per-user one, and admin was declined) won't change.
+    $again = @($failed | Where-Object { $_.ExitCode -ne -1978335216 })
+    if ($again) { $failed = @(@($failed | Where-Object { $_.ExitCode -eq -1978335216 }) + @(Invoke-WingetBatch $winget @($again | ForEach-Object Id) 1)) }
     foreach ($f in $failed) {
         Set-BoardPackage $f.Id 'fail'
         if ($env:OMAWIN_NO_ADMIN -and $WholePC -contains $f.Id) { Write-Warn "$($f.Id) installs for the whole PC only, which takes admin: run install.ps1 again and approve its one prompt" }
@@ -395,9 +399,34 @@ function Add-ToolPaths([string[]]$Tools) {
     if ($added) { Update-SessionPath }
 }
 
+# The core's own installers (herdr's) don't wait for winget or the bundle: each starts at the
+# top of the software step in a PowerShell of its own, and Install-Extras collects it.
+$EarlyExtras = @{}
+function Start-EarlyExtras([string[]]$Names) {
+    foreach ($name in $Names) {
+        if (Get-Command $name -ErrorAction SilentlyContinue) { continue }
+        $log = Join-Path $env:TEMP "omawin-extra-$name-$Stamp.log"
+        $code = "`$ErrorActionPreference = 'Stop'; & { $($ExtraInstalls[$name]) } *> '$log'"
+        $p = Start-Process (Join-Path $PSHOME 'pwsh.exe') -ArgumentList '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $code -WindowStyle Hidden -PassThru
+        $null = $p.Handle  # read now, so its ExitCode is there later
+        $EarlyExtras[$name] = @{ Process = $p; Log = $log }
+    }
+}
+
 function Install-Extras([string[]]$Names) {
     foreach ($name in $Names) { Add-InstallItem 'Tools' "tool:$name" $name 'wait' }
     foreach ($name in $Names) {
+        if ($EarlyExtras[$name]) {
+            $e = $EarlyExtras[$name]
+            Add-InstallItem 'Tools' "tool:$name" $name 'run'
+            $e.Process.WaitForExit()
+            Get-Content $e.Log -ErrorAction SilentlyContinue | ForEach-Object { if ("$_".Trim()) { Write-Note "$_" } }
+            Remove-Item $e.Log -Force -ErrorAction SilentlyContinue
+            if ($e.Process.ExitCode -eq 0) { Add-InstallItem 'Tools' "tool:$name" $name 'done'; Set-PackageSource $name 'script' $name }
+            else { Write-Warn "$name failed (exit $($e.Process.ExitCode))"; Add-InstallItem 'Tools' "tool:$name" $name 'fail' }
+            Update-SessionPath
+            continue
+        }
         if (Get-Command $name -ErrorAction SilentlyContinue) { Write-Note "ok  $name"; Add-InstallItem 'Tools' "tool:$name" $name 'have'; continue }
         Write-Note "installing $name"
         Add-InstallItem 'Tools' "tool:$name" $name 'run'
@@ -493,6 +522,7 @@ function Install-NerdFont {
 
 if (-not $SoftwareFunctionsOnly) {
     if (-not $LinkOnly) {
+        Start-EarlyExtras @($CoreExtras)
         Write-Step 'winget packages'
         Initialize-Presets
         $chosen = @(Get-ChosenPresets)

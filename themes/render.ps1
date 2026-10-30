@@ -177,7 +177,8 @@ Write-Rendered "$PSScriptRoot\templates\windows-terminal.json" "$env:LOCALAPPDAT
 # A running Windows Terminal doesn't watch its fragments, only settings.json, and reloads
 # (fragments included) when that file's time changes; its contents stay as they are.
 if (Get-Process WindowsTerminal -ErrorAction SilentlyContinue) {
-    $wtSettings = Get-Item "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_*\LocalState\settings.json" -ErrorAction SilentlyContinue | Select-Object -First 1
+    # The Store build's, or the tools bundle's unpackaged one's.
+    $wtSettings = Get-Item "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_*\LocalState\settings.json", "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($wtSettings) { $wtSettings.LastWriteTime = Get-Date }
 }
 
