@@ -16,7 +16,7 @@ on:
     - cron: '43 3 * * 1'   # Mondays, for the trend
   push:
     branches: [main, 'claude/**']
-    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'packages.ps1', 'bin/migrate.ps1', 'migrations/**', '.github/workflows/install.yml']
+    paths: ['bootstrap.ps1', 'install.ps1', 'install/**', 'packages.ps1', 'check.ps1', 'bin/migrate.ps1', 'migrations/**', '.github/workflows/install.yml']
 
 permissions:
   contents: read
