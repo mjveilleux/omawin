@@ -239,3 +239,60 @@ The same honesty as Omarchy's docs: **a plugin is code you run with your own rig
 3. **v3: ecosystem.** The gallery and index, `side: linux` for Omarchy's command modules, the shared PowerShell host, `omawin shell` IPC for scripts, restricted-token sandboxing, proposed keys.
 
 Files: `menu-app/Plugins/` (`PluginRegistry.cs`, `PluginProcess.cs`, `PanelHost.cs`, `Bind.cs`), `menu-app/Bar/CommandWidget.cs`, `menu-app/MenuModel.cs` (layered menu and fragments), `bin/plugin.ps1` and `bin/commands.txt`, `plugins/` (built-ins and `index.txt`), `docs/plugins.md` (this file, turned into the reference), `manual/` (a page for users).
+
+## Worked example: porting Omadoro
+
+[Omadoro](https://github.com/brianblakely/omadoro) (MIT, by Brian Blakely; listed in the [Okomart](https://github.com/brianblakely/omarchy-plugins) catalog) is a typical community Omarchy plugin: a Pomodoro timer with a bar widget, a panel, settings and notifications. What it's made of (v0.0.5):
+
+| File | Lines | What it does | On omawin |
+|---|---|---|---|
+| `manifest.json` | | id `b.omadoro`, kinds `service` + `bar-widget`, four integer settings | **kept as is**, plus an `omawin` block |
+| `TimerModel.js` | 244 | all the timer logic as plain functions (start, pause, resume, add time, advance, recover after a restart, format) | **reused unchanged**, run by Bun |
+| `Service.qml` | 208 | holds the state, ticks every second, saves to `$XDG_STATE_HOME/omarchy/omadoro.json`, notifies through `omarchy-notification-send` | rewritten as `service.ts` (~120 lines) |
+| `BarWidget.qml` + `CircularProgress.qml` | 146 | a ring that empties as the phase runs, the time beside it | **none**: the shell's command widget with its `ring` style |
+| `Panel.qml` | 224 | phase name, a big ring and time, four buttons (play/stop, pause, +5 min, skip), arrow keys and hjkl | rewritten as `Panel.xaml` (~70 lines) |
+| `tests/` | | tests for `TimerModel.js` | run with `bun test` |
+
+### Steps
+
+1. **Fork or branch the repo.** Better still, open a pull request to the author: the omawin files sit beside the QML ones and change nothing for Omarchy, so one repo serves both.
+2. **Add the `omawin` block** to `manifest.json`:
+   ```json
+   "omawin": {
+     "command": ["bun", "omawin/service.ts"],
+     "panel": "omawin/Panel.xaml",
+     "widget": { "style": "ring" },
+     "permissions": []
+   }
+   ```
+   The settings `schema` already there gives omawin's settings page for free (work, short break, long break, phases per long break).
+3. **Reuse the logic.** `TimerModel.js` is a QML JavaScript library: plain `var`s and functions, no exports. `service.ts` loads it without changing it: `const M = new Function(readFileSync(join(pluginDir, "TimerModel.js"), "utf8") + "; return { normalizeConfig, stoppedState, startNewCycle, pause, resume, addSeconds, advance, recoverInterrupted, sanitizeState, serializableState, remainingSeconds, elapsedProgress, formatRemaining, phaseLabel };")()`. The same file now runs on both desktops, and a fix to it fixes both.
+4. **Write `service.ts`** (what `Service.qml` did, over the JSON-lines protocol):
+   - Read stdin lines. On `init`: `config = M.normalizeConfig(settings)`, load `<dataDir>/omadoro.json` if there, `M.sanitizeState`, then `M.recoverInterrupted` (a phase that ended while the PC was off advances, and notifies).
+   - On `action`: `playStop`, `pause`, `add5`, `skip` call the model's functions, as `Service.qml`'s `playOrStop()`, `togglePause()`, `addFiveMinutes()`, `skip()` did; save with `M.serializableState` to `<dataDir>/omadoro.json` (instead of `$XDG_STATE_HOME`).
+   - On `settings`: reconfigure (a stopped timer takes the new durations).
+   - Every second while running, and on each change, print the bar line and the panel state:
+     ```json
+     {"text":"24:13","tooltip":"Work · 2 of 4 before a long break","class":"work","percentage":3.1}
+     {"type":"state","data":{"phase":"Work","time":"24:13","progress":0.031,"playGlyph":"","pauseGlyph":"","running":true}}
+     ```
+     `class` is `work` / `shortBreak` / `longBreak`, which the theme maps to colours (accent, green, cyan). `percentage` drives the ring.
+   - When a phase ends: `M.advance`, then `{"type":"notify","title":"Break time","body":"Short break · 5 minutes"}` (a Windows toast from the shell) instead of calling `omarchy-notification-send`.
+   - While stopped, print one line and nothing more: no wasted ticks.
+5. **Write `Panel.xaml`**: a `TextBlock` with `omawin:Bind.Text="phase"`, a WinUI `ProgressRing` (`IsIndeterminate="False"`, `omawin:Bind.Value="progress"`, `Foreground="{ThemeResource OmawinAccent}"`) with the time over it, and four `Button`s with `omawin:Bind.Content` for the glyphs and `omawin:Action.Click="playStop|pause|add5|skip"`. The arrow keys move between buttons on their own (WinUI's XY focus); hjkl comes from the shell's panel host, which maps h/j/k/l to the arrows for every panel (Omarchy users expect it).
+6. **Test the logic** with `bun test` on the existing tests; check the files with `omawin plugin check .`.
+7. **Try it live**: `omawin plugin add <your fork's URL>`, then `omawin plugin enable b.omadoro`. Edit `service.ts` or `Panel.xaml` and the shell reloads it. `omawin plugin log b.omadoro` shows errors.
+8. **Publish**: the GitHub topic `omawin-plugin`, and a line in omawin's `plugins/index.txt` with the reviewed commit.
+
+### What omawin needs first
+
+Omadoro uses nearly every part of the design, so it's a good first outside plugin to aim for:
+
+- v1: the registry, the process host, the command widget **with a `ring` style** (alongside plain text and a meter; custom drawn widgets like `CircularProgress.qml` aren't possible, so the shell offers a few stock looks), and `notify` as Windows toasts.
+- v2: the panel host with `omawin:Bind` / `omawin:Action`, `ProgressRing` and `Button` allowed, theme resources, hjkl in panels, the settings page from `schema`.
+
+### Other kinds of plugin
+
+- **A bar widget fed by the web** ([Omastonk](https://github.com/brianblakely/omastonk), a stock symbol's price): the same steps with an `interval` command that fetches and prints one line. `allowMultiple: true` (one widget per symbol) means one process per widget instance, each with its own settings.
+- **A plugin store** (Okomart, which reads a `plugins.txt` of git URLs and installs through `omarchy plugin`): on omawin that's Setup › Plugins › Browse, built in; Okomart's catalog format (one git URL a line) is a good one to copy for `plugins/index.txt`.
+- **Plugins that drive the window manager** (a window overview like Exposé): these need Hyprland's APIs; on omawin they become features of the GlazeWM fork or the shell, reached through GlazeWM's IPC, not ports.
