@@ -35,6 +35,13 @@ jobs:
           $secure = ConvertTo-SecureString $password -AsPlainText -Force
           New-LocalUser -Name omawinci -Password $secure -PasswordNeverExpires -AccountNeverExpires | Out-Null
           Add-LocalGroupMember -Group Users -Member omawinci
+          # A scheduled task runs as a batch logon, which Windows Server allows only admins by default.
+          $sid = (Get-LocalUser omawinci).SID.Value
+          secedit /export /cfg C:\sec.inf /areas USER_RIGHTS | Out-Null
+          $inf = Get-Content C:\sec.inf
+          $inf = if ($inf -match '^SeBatchLogonRight') { $inf -replace '^(SeBatchLogonRight\s*=.*)$', "`$1,*$sid" } else { $inf -replace '^\[Privilege Rights\]$', "[Privilege Rights]`r`nSeBatchLogonRight = *$sid" }
+          $inf | Set-Content C:\sec.inf -Encoding Unicode
+          secedit /configure /db C:\sec.sdb /cfg C:\sec.inf /areas USER_RIGHTS | Out-Null
           # The user's own run: copy the checkout to ~/omawin (OMAWIN_LOCAL skips the clone), then
           # the one-line install as written in the README, under Windows PowerShell 5.1.
           New-Item -ItemType Directory -Force C:\ci\out | Out-Null
@@ -67,9 +74,13 @@ jobs:
           while (-not (Test-Path C:\ci\out\done.txt) -and ((Get-Date) - $start).TotalMinutes -lt 50) {
             Start-Sleep 10
             $state = (Get-ScheduledTask -TaskName omawin-ci).State
-            if ($state -ne 'Running' -and ((Get-Date) - $start).TotalSeconds -gt 30 -and -not (Test-Path C:\ci\out\done.txt)) {
-              Write-Host "the task stopped ($state, last result $((Get-ScheduledTaskInfo -TaskName omawin-ci).LastTaskResult))"; break
+            $last = (Get-ScheduledTaskInfo -TaskName omawin-ci).LastTaskResult
+            # 267011 (0x41303): not started yet; 267009 (0x41301): running. Anything else while not
+            # running means it ended without writing done.txt.
+            if ($state -ne 'Running' -and $last -notin 267011, 267009 -and -not (Test-Path C:\ci\out\done.txt)) {
+              Write-Host "the task ended early ($state, result $last)"; break
             }
+            if ($last -eq 267011 -and ((Get-Date) - $start).TotalMinutes -gt 3) { Write-Host 'the task never started'; break }
           }
           Get-Content C:\ci\out\result.txt -ErrorAction SilentlyContinue
 
