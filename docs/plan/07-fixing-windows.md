@@ -10,7 +10,7 @@ Read with: [AGENTS.md](../../AGENTS.md) (no admin by default, one prompt for opt
 - The existing menu-app code still uses `[DllImport]` (works under AOT for blittable signatures); new code uses `[LibraryImport]`. Moving old code over is not part of Phase 8.
 - **Scripts:** anything in `install/` or run by the admin batch is **Windows PowerShell 5.1** (no `??`, no `?.`, no ternary). `bin/profile-ram.ps1` and other `omawin` commands run in pwsh 7 (they already use `??`).
 - **Homes** (roadmap 8.0): *core* = `menu-app/`; *shared library* = `shared/Omawin.Windows/` (referenced by the menu app and first-party plugins); *first-party plugin* = `plugins/<id>/` (`manifest.json`, `src/<Id>.csproj`, AOT exe, `--selftest`); *catalog* = a line in `launcher/settings.txt` (1B.2).
-- **Admin** (2.9): code never elevates itself. It queues a verb; the shell shows the list; one UAC prompt runs `install/admin-batch.ps1 -Verbs <file>`; the elevated process does the fixed list and exits. Section 0.3.
+- **Admin** (2.9): code never elevates itself. It queues a verb (`admin-pending.txt`, plan 03's mechanism); `omawin admin` shows the list; one UAC prompt runs `install/admin-batch.ps1`; the elevated process does the fixed list and exits. Section 0.3.
 - **User data** (history, indexes, profiles, snapshots) goes in `%LOCALAPPDATA%\launcher\`, never the repo.
 
 ### 0.1 What already exists (don't rebuild)
@@ -159,7 +159,61 @@ In `install/admin-batch.ps1`'s `switch ($s.Verb)`, each case splits `$s.Arg` its
 function Split-Arg([string]$Arg) { @([regex]::Matches($Arg, '"([^"]*)"|(\S+)') | ForEach-Object { if ($_.Groups[1].Success) { $_.Groups[1].Value } else { $_.Groups[2].Value } }) }
 ```
 
-Each verb's case is in its section below (`$a = Split-Arg $s.Arg`). Undo: before changing a value the case writes the old one to the status file (`"<line>\tbefore\t<what>\t<old>"`), which `bin/admin.ps1` copies to `settings-history.tsv` (plan 02's undo), so undo is another verb in a later batch.
+The small verbs' cases are here; the bigger ones are in their sections below (`$a = Split-Arg $s.Arg`).
+
+```powershell
+'service-start' {
+    $a = Split-Arg $s.Arg
+    $svc = Get-Service -Name $a[0] -ErrorAction Stop
+    Say $s.Line 'before' "$($a[0])`t$($svc.StartType)"
+    switch ($a[1]) {
+        'delayed'  { sc.exe config $a[0] start= delayed-auto | Out-Null }
+        'auto'     { Set-Service $a[0] -StartupType Automatic }
+        'manual'   { Set-Service $a[0] -StartupType Manual }
+        'disabled' { Set-Service $a[0] -StartupType Disabled; Stop-Service $a[0] -Force -ErrorAction SilentlyContinue }
+    }
+}
+'task-enable' {
+    $a = Split-Arg $s.Arg
+    if ($a[2] -eq 'on') { Enable-ScheduledTask -TaskPath $a[0] -TaskName $a[1] | Out-Null } else { Disable-ScheduledTask -TaskPath $a[0] -TaskName $a[1] | Out-Null }
+}
+'startup-machine' {
+    $a = Split-Arg $s.Arg
+    $key = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\$($a[0])"
+    if (-not (Test-Path $key)) { New-Item $key -Force | Out-Null }
+    $bytes = New-Object byte[] 12
+    if ($a[2] -eq 'off') { $bytes[0] = 3; [BitConverter]::GetBytes([DateTime]::UtcNow.ToFileTimeUtc()).CopyTo($bytes, 4) } else { $bytes[0] = 2 }
+    Set-ItemProperty $key -Name $a[1] -Value $bytes -Type Binary
+}
+'firewall-allow' {
+    $a = Split-Arg $s.Arg
+    if (-not (Test-Path -LiteralPath $a[0])) { throw "not found: $($a[0])" }
+    $name = "omawin: $($a[1]) (private networks)"
+    if (-not (Get-NetFirewallRule -DisplayName $name -ErrorAction SilentlyContinue)) {
+        New-NetFirewallRule -DisplayName $name -Direction Inbound -Program $a[0] -Action Allow -Profile Private | Out-Null
+    }
+}
+'ssh-agent' {
+    Set-Service ssh-agent -StartupType $(if ($s.Arg -eq 'auto') { 'Automatic' } else { 'Manual' })
+    if ($s.Arg -eq 'auto') { Start-Service ssh-agent }
+    # The user's side then sets, without admin: git config --global core.sshCommand C:/Windows/System32/OpenSSH/ssh.exe
+}
+'hibernate' { powercfg /hibernate $s.Arg | Out-Null }
+'end-process' {
+    $a = Split-Arg $s.Arg
+    $p = Get-Process -Id ([int]$a[0]) -ErrorAction Stop
+    if ($p.StartTime.ToFileTimeUtc() -ne [long]$a[1]) { throw 'that process already ended (its id now belongs to another)' }
+    Stop-Process -Id $p.Id -Force
+}
+'wsl-compact' {
+    $vhd = (Split-Arg $s.Arg)[0]
+    wsl.exe --shutdown
+    $tmp = Join-Path $env:TEMP "omawin-compact-$PID.txt"
+    "select vdisk file=`"$vhd`"", 'attach vdisk readonly', 'compact vdisk', 'detach vdisk' | Set-Content $tmp -Encoding ascii
+    diskpart /s $tmp | Out-Null
+    Remove-Item $tmp
+}
+``` Undo: before changing a value the case writes the old one to the status file (`"<line>\tbefore\t<what>\t<old>"`), which `bin/admin.ps1` copies to `settings-history.tsv` (plan 02's undo), so undo is another verb in a later batch.
 
 ## 8A. Files and disks
 
@@ -546,7 +600,7 @@ static unsafe partial class Service
 
 Pipe: `\\.\pipe\omawin-disk-index`, JSON lines `{"q":"report","max":200,"drives":"C"}` → `{"paths":[…]}`. Created with `NamedPipeServerStreamAcl.Create(…, PipeSecurity)` allowing `Authenticated Users` read/write, `SYSTEM` full; no write commands exist on the pipe (it only answers searches). Responses never include other accounts' profile folders.
 
-Admin verb `usn-index install` (PS 5.1 in the batch): copy the plugin's exe (checked against `SHA256SUMS.txt`) to `%ProgramFiles%\omawin\disk-index\`, then
+Admin verb `usn-index-install` (PS 5.1 in the batch): copy the plugin's exe (checked against `SHA256SUMS.txt`) to `%ProgramFiles%\omawin\disk-index\`, then
 
 ```powershell
 sc.exe create omawin-disk-index binPath= "`"$env:ProgramFiles\omawin\disk-index\omawin-disk-index.exe`" --service" start= delayed-auto obj= LocalSystem DisplayName= "omawin whole-disk search"
@@ -555,7 +609,7 @@ sc.exe failure omawin-disk-index reset= 86400 actions= restart/60000
 sc.exe start omawin-disk-index
 ```
 
-`usn-index uninstall`: `sc.exe stop`, `sc.exe delete`, remove the folder and `%ProgramData%\omawin\disk-index\` (the saved index). After it's installed, 8.31's catalog entry (indexer off) is offered.
+`usn-index-remove`: `sc.exe stop`, `sc.exe delete`, remove the folder and `%ProgramData%\omawin\disk-index\` (the saved index). After it's installed, 8.31's catalog entry (indexer off) is offered.
 
 ### 8.3 Disk cleanup (`plugins/disk/`, a page)
 
@@ -1237,7 +1291,7 @@ Windows only lets an app drive the lights while it's in the foreground, unless t
 
 ### 8.10 Per-app volume and output (exists; what's left)
 
-`Audio.cs` already lists sessions (`IAudioSessionManager2::GetSessionEnumerator` → `IAudioSessionControl2` / `ISimpleAudioVolume`), sets each app's level and mute, and routes an app to a speaker through the undocumented `IAudioPolicyConfig` with a fallback. Left: the Audio page re-reads `Apps()` on open and on keys; a new app starting to play while the page is open isn't seen until then. Add `IAudioSessionManager2::RegisterSessionNotification` (slot 5, after `GetSessionEnumerator`) with an `IAudioSessionNotification` (`OnSessionCreated`) implemented as a `[GeneratedComClass]`:
+`Audio.cs` already lists sessions (`IAudioSessionManager2::GetSessionEnumerator` → `IAudioSessionControl2` / `ISimpleAudioVolume`), sets each app's level and mute, and routes an app to a speaker through the undocumented `IAudioPolicyConfig` with a fallback. Left: the Audio page re-reads `Apps()` on open and on keys; a new app starting to play while the page is open isn't seen until then. Add `IAudioSessionManager2::RegisterSessionNotification` (slot 6, after `GetSessionEnumerator`) with an `IAudioSessionNotification` (`OnSessionCreated`) implemented as a `[GeneratedComClass]`:
 
 ```csharp
 // Audio.cs: extend the interface (slots: GetAudioSessionControl 3, GetSimpleAudioVolume 4,
@@ -1463,10 +1517,11 @@ public static class ScancodeMap
 ```
 
 ```powershell
-# admin batch, verb 'scancode-map' (PS 5.1): '' removes the value. Takes effect after a restart.
+# admin batch, verb 'scancode-map <hex|remove>' (PS 5.1). Takes effect after a restart.
 'scancode-map' {
+    $a = Split-Arg $s.Arg
     $key = 'HKLM:\SYSTEM\CurrentControlSet\Control\Keyboard Layout'
-    if ($a[0] -eq '') { Remove-ItemProperty $key -Name 'Scancode Map' -ErrorAction SilentlyContinue }
+    if ($a[0] -eq 'remove') { Remove-ItemProperty $key -Name 'Scancode Map' -ErrorAction SilentlyContinue }
     else {
         $bytes = [byte[]]($a[0] -split '(..)' -ne '' | ForEach-Object { [Convert]::ToByte($_, 16) })
         Set-ItemProperty $key -Name 'Scancode Map' -Value $bytes -Type Binary
@@ -1770,7 +1825,7 @@ static class StartupApproved
     public static byte[] Disabled() { var b = new byte[12]; b[0] = 3; BitConverter.TryWriteBytes(b.AsSpan(4), DateTime.UtcNow.ToFileTimeUtc()); return b; }
     public static byte[] Enabled() { var b = new byte[12]; b[0] = 2; return b; }
 
-    // HKCU ones directly; HKLM ones as admin verb reg-set HKLM\…\StartupApproved\Run <name> binary <hex>.
+    // HKCU ones directly; HKLM ones as the admin verb startup-machine <Run|Run32|StartupFolder> "<name>" <on|off>.
     public static void Set(string approvedKey, string name, bool on)
     {
         using var k = Microsoft.Win32.Registry.CurrentUser.CreateSubKey(approvedKey);
@@ -1903,14 +1958,7 @@ $history = $searcher.QueryHistory(0, [Math]::Min(100, $searcher.GetTotalHistoryC
 
 Bar line when a restart is pending: "Restart needed for updates" with *Restart tonight* (`shutdown /r /t <seconds until 03:00> /c "omawin: updates"`, no admin), *Not today*.
 
-Catalog entries (all admin; these are what Settings › Windows Update writes, or the documented Windows Update for Business policies; values **(check)** against the PC before shipping):
-
-```
-wu-active-hours | md-clock | Windows Update: active hours | update restart hours | choice | reg HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\ActiveHoursStart type=dword values=7,8,9 + reg …\ActiveHoursEnd type=dword values=19,22,23 | admin (check)
-wu-pause-week   | md-pause | Pause Windows updates for a week | update pause | action | builtin wu-pause 7 | admin; writes PauseUpdatesExpiryTime, PauseQualityUpdatesStartTime/EndTime, PauseFeatureUpdatesStartTime/EndTime (ISO strings) under HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings (check)
-wu-no-auto-restart | md-restart_off | No automatic restart while you're signed in | update restart | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU\NoAutoRebootWithLoggedOnUsers type=dword on=1 off=- | admin; documented policy
-wu-no-drivers   | md-chip | Drivers not replaced by Windows Update (8.43) | update driver | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\ExcludeWUDriversInQualityUpdate type=dword on=1 off=- | admin; documented policy; asked, with the trade-off said
-```
+Catalog entries (active hours, pause a week, no automatic restart while signed in, drivers excluded: 8.43): `system.update-*` in the catalog section below.
 
 ## 8E. Network
 
@@ -1919,12 +1967,14 @@ wu-no-drivers   | md-chip | Drivers not replaced by Windows Update (8.43) | upda
 Reading the current DNS (no admin) with .NET's `NetworkInterface.GetAllNetworkInterfaces()` → `GetIPProperties().DnsAddresses` (its `Id` is the adapter GUID). Setting needs admin, so it's a verb. The batch runs PowerShell, where the DnsClient module's cmdlets do it:
 
 ```powershell
-# admin batch, verb 'dns-set' <interface alias> <servers|dhcp> (PS 5.1, DnsClient module, Windows 8+)
+# admin batch, verbs 'dns-set <ifIndex> <servers>' and 'dns-reset <ifIndex>' (PS 5.1, DnsClient module, Windows 8+).
+# ifIndex: NetworkInterface.GetIPProperties().GetIPv4Properties().Index on the shell's side.
 'dns-set' {
-    if ($a[1] -eq 'dhcp') { Set-DnsClientServerAddress -InterfaceAlias $a[0] -ResetServerAddresses }
-    else { Set-DnsClientServerAddress -InterfaceAlias $a[0] -ServerAddresses ($a[1] -split ',') }
+    $a = Split-Arg $s.Arg
+    Set-DnsClientServerAddress -InterfaceIndex ([int]$a[0]) -ServerAddresses ($a[1] -split ',')
     Clear-DnsClientCache
 }
+'dns-reset' { Set-DnsClientServerAddress -InterfaceIndex ([int]$s.Arg) -ResetServerAddresses; Clear-DnsClientCache }
 # DNS over HTTPS (Windows 11): Cloudflare, Google and Quad9 are in Windows' built-in list
 # (Get-DnsClientDohServerAddress), so setting their IPs is enough to make DoH possible; making it
 # required per adapter (check: syntax and whether it's per interface in 23H2+):
@@ -1964,11 +2014,13 @@ static unsafe partial class Dns
 
 Presets: *Your router* (dhcp), *Cloudflare* (`1.1.1.1,1.0.0.1` / `2606:4700:4700::1111,2606:4700:4700::1001`), *Quad9* (`9.9.9.9,149.112.112.112` / `2620:fe::fe,2620:fe::9`), *Google* (`8.8.8.8,8.8.4.4`).
 
-Hosts editor: reads `%SystemRoot%\System32\drivers\etc\hosts` (readable by users), edits as rows (address, names, comment, on/off = commented with `# omawin-off `), writes the whole new file to `%LOCALAPPDATA%\launcher\pending.hosts`, then the verb:
+Hosts editor: reads `%SystemRoot%\System32\drivers\etc\hosts` (readable by users), edits as rows (address, names, comment, on/off = commented with `# omawin-off `), writes the whole new file to `%LOCALAPPDATA%\launcher\pending.hosts`, then queues `hosts-write <its SHA-256>`. The elevated batch may run as another account, so it finds the file beside the status file it was given (in the queuing user's `launcher` folder) **(check: plan 03's status path)**, and refuses it if the hash differs from what you approved:
 
 ```powershell
 'hosts-write' {
-    $new = Get-Content -LiteralPath $a[0] -Encoding UTF8
+    $file = Join-Path (Split-Path $Status) 'pending.hosts'
+    if ((Get-FileHash $file -Algorithm SHA256).Hash -ne $s.Arg) { throw 'pending.hosts changed after you approved it' }
+    $new = Get-Content -LiteralPath $file -Encoding UTF8
     # Every line: blank, a comment, or "<IPv4|IPv6> <name> [names…] [# comment]". Anything else refuses the batch item.
     foreach ($l in $new) {
         if ($l -notmatch '^\s*(#.*)?$' -and $l -notmatch '^\s*[0-9a-fA-F:.]+\s+[A-Za-z0-9._-]+(\s+[A-Za-z0-9._-]+)*\s*(#.*)?$') { throw "bad line: $l" }
@@ -2067,7 +2119,7 @@ The page: established TCP grouped by app (8.17's grouping), remote names from `S
 private static partial uint WlanGetProfile(IntPtr client, in Guid iface, string profileName, IntPtr reserved, out IntPtr xml, ref uint flags, out uint grantedAccess);
 const uint WLAN_PROFILE_GET_PLAINTEXT_KEY = 0x4;
 
-public static (string Ssid, string? Key, string Auth)? Profile(string profileName)
+public static (string Ssid, string? Key, string Encryption)? Profile(string profileName)
 {
     using var s = new Session();
     foreach (var iface in s.Interfaces)
@@ -2080,10 +2132,11 @@ public static (string Ssid, string? Key, string Auth)? Profile(string profileNam
             System.Xml.Linq.XNamespace ns = "http://www.microsoft.com/networking/WLAN/profile/v1";
             var ssid = x.Element(ns + "SSIDConfig")?.Element(ns + "SSID")?.Element(ns + "name")?.Value ?? profileName;
             var security = x.Element(ns + "MSM")?.Element(ns + "security");
-            var auth = security?.Element(ns + "authEncryption")?.Element(ns + "authentication")?.Value ?? "open";
+            // authEncryption: authentication (open, shared, WPA2PSK, WPA3SAE, …) and encryption (none, WEP, AES, …).
+            var encryption = security?.Element(ns + "authEncryption")?.Element(ns + "encryption")?.Value ?? "none";
             var key = security?.Element(ns + "sharedKey");
             bool plain = key?.Element(ns + "protected")?.Value == "false";
-            return (ssid, plain ? key!.Element(ns + "keyMaterial")?.Value : null, auth);
+            return (ssid, plain ? key!.Element(ns + "keyMaterial")?.Value : null, encryption);
         }
         finally { WlanFreeMemory(xmlPtr); }
     }
@@ -2092,10 +2145,10 @@ public static (string Ssid, string? Key, string Auth)? Profile(string profileNam
 
 // The QR text phones understand: WIFI:T:<WPA|WEP|nopass>;S:<ssid>;P:<password>;H:<true|false>;;
 // with \ ; , : " escaped by a backslash.
-static string WifiQrText(string ssid, string? key, string auth)
+static string WifiQrText(string ssid, string? key, string encryption)
 {
     static string E(string s) => System.Text.RegularExpressions.Regex.Replace(s, @"([\\;,:""])", @"\$1");
-    var type = key == null ? "nopass" : auth.StartsWith("WEP", StringComparison.OrdinalIgnoreCase) || auth == "open" && key != null ? "WEP" : "WPA";
+    var type = key == null ? "nopass" : encryption.Equals("WEP", StringComparison.OrdinalIgnoreCase) ? "WEP" : "WPA"; // WPA covers WPA2/WPA3 personal
     return $"WIFI:T:{type};S:{E(ssid)};{(key != null ? $"P:{E(key)};" : "")}H:false;;";
 }
 
@@ -2375,6 +2428,7 @@ The quick path is Windows' own page: `link ms-settings:disksandvolumes` (Setting
 # admin batch, verb 'devdrive-create' <vhdx path> <size GB> <letter> (PS 5.1). Dev Drive needs
 # Windows 11 with the Dev Drive update (22621.2338+) and is at least 50 GB. A VHDX grows as used.
 'devdrive-create' {
+    $a = Split-Arg $s.Arg
     $vhd, $gb, $letter = $a[0], [int]$a[1], $a[2]
     if ($gb -lt 50) { throw 'a Dev Drive is at least 50 GB' }
     if (Test-Path $vhd) { throw "$vhd exists" }
@@ -2395,7 +2449,7 @@ The quick path is Windows' own page: `link ms-settings:disksandvolumes` (Setting
     Register-ScheduledTask -TaskName 'omawin Dev Drive' -TaskPath '\omawin\' -Action $action -Trigger (New-ScheduledTaskTrigger -AtStartup) `
         -Principal (New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest) -Force | Out-Null
 }
-'devdrive-trust' { fsutil devdrv trust "$($a[0]):" | Out-Null }
+'devdrive-trust' { fsutil devdrv trust "$($s.Arg):" | Out-Null }
 # Filters some tools need on a Dev Drive (they're blocked by default) (check per tool):
 #   fsutil devdrv setfiltersallowed "PrjFlt, bindFlt, wcifs"     # ProjFS (VFS for Git), Docker/containers
 ```
@@ -2488,7 +2542,7 @@ static List<(int Start, int End)> ExcludedTcpRanges()
 # server can still bind it (check: that binding inside an administered exclusion works on current builds).
 'reserve-port' {
     net stop winnat 2>$null | Out-Null
-    netsh int ipv4 add excludedportrange protocol=tcp startport=$($a[0]) numberofports=1 store=persistent | Out-Null
+    netsh int ipv4 add excludedportrange protocol=tcp startport=$($s.Arg) numberofports=1 store=persistent | Out-Null
     net start winnat 2>$null | Out-Null
 }
 ```
@@ -2558,9 +2612,12 @@ if ($Fix) {
     Add-Content $history "$(Get-Date -Format s)`tenv:user:Path`t$user"           # undo: `omawin undo`
     $k = [Microsoft.Win32.Registry]::CurrentUser.OpenSubKey('Environment', $true)
     $k.SetValue('Path', $new, [Microsoft.Win32.RegistryValueKind]::ExpandString)
-    omawin.exe env broadcast                                                     # WM_SETTINGCHANGE "Environment" (8.36)
+    omawin.exe env broadcast      # WM_SETTINGCHANGE "Environment" (8.36); new row: env broadcast | … | app --env-broadcast
     $sysKeep = $entries | Where-Object { $_.Scope -eq 'system' -and -not $_.Problem } | ForEach-Object Raw
-    if (($sysKeep -join ';') -ne $system) { omawin.exe admin queue env-machine Path ($sysKeep -join ';') }
+    if (($sysKeep -join ';') -ne $system) {
+        Add-Content (Join-Path $env:LOCALAPPDATA 'launcher\admin-pending.txt') "env-machine Path $($sysKeep -join ';')"
+        'The system PATH fix waits for admin: omawin admin'
+    }
 }
 ```
 
@@ -2611,9 +2668,11 @@ Explorer rebuilds its environment on that broadcast, so programs started from Ex
 ```powershell
 # admin batch, verb 'env-machine' <name> <value>
 'env-machine' {
+    $name, $value = $s.Arg -split ' ', 2          # the value may hold spaces: not Split-Arg
     $k = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment', $true)
-    $kind = if ($a[1] -match '%') { 'ExpandString' } else { 'String' }
-    if ($a[1] -eq '') { $k.DeleteValue($a[0], $false) } else { $k.SetValue($a[0], $a[1], $kind) }
+    Say $s.Line 'before' "$name`t$($k.GetValue($name, '', 'DoNotExpandEnvironmentNames'))"   # for undo
+    $kind = if ($value -match '%') { 'ExpandString' } else { 'String' }
+    if ($value -eq '') { $k.DeleteValue($name, $false) } else { $k.SetValue($name, $value, $kind) }
     # The broadcast is sent by the user's side after the batch reports done (an elevated process
     # broadcasting works too, but the shell does it once for the whole batch).
 }
@@ -2661,20 +2720,30 @@ Driver memory (8K item 8): the non-paged pool's size from 8K's counters; above ~
 
 ### 8.42 A restore point inside an approved batch
 
+Plan 03 already has the `restore-point` verb, run first in a batch. Two refinements for it:
+
 ```powershell
-# admin batch, verb 'restore-point' <description>, always first in a batch that changes Windows.
-'restore-point' {
-    $enabled = (Get-ComputerRestorePoint -ErrorAction SilentlyContinue) -ne $null -or
-               ((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore' -ErrorAction SilentlyContinue).RPSessionInterval -eq 1)  # (check) how to read "protection on for C:"
-    if (-not $enabled) { Say 'restore-point' 'skip' 'System Protection is off for C:'; continue }
-    # Windows makes at most one restore point a day unless this is 0; set for the call, then put back.
+# install/admin-batch.ps1, the restore-point step. Windows makes at most one restore point a day unless
+# SystemRestorePointCreationFrequency is 0 (minutes) (check: the value name and unit); set it for the call
+# and put it back. With System Protection off for C:, Checkpoint-Computer fails: report "skip", don't turn
+# protection on (that's the user's choice, a catalog line of its own if wanted).
+foreach ($s in @($steps | Where-Object Verb -eq 'restore-point')) {
+    Say $s.Line 'run'
     $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'
     $old = (Get-ItemProperty $key -ErrorAction SilentlyContinue).SystemRestorePointCreationFrequency
-    Set-ItemProperty $key -Name SystemRestorePointCreationFrequency -Value 0 -Type DWord
-    try { Checkpoint-Computer -Description $a[0] -RestorePointType MODIFY_SETTINGS }
-    finally { if ($null -eq $old) { Remove-ItemProperty $key -Name SystemRestorePointCreationFrequency } else { Set-ItemProperty $key -Name SystemRestorePointCreationFrequency -Value $old } }
+    try {
+        Set-ItemProperty $key -Name SystemRestorePointCreationFrequency -Value 0 -Type DWord
+        Checkpoint-Computer -Description "omawin: $(@($steps | Where-Object Verb -ne 'restore-point').Count) changes" -RestorePointType MODIFY_SETTINGS -ErrorAction Stop
+        Say $s.Line 'done'
+    } catch { Say $s.Line 'skip' "no restore point: $($_.Exception.Message)" }
+    finally {
+        if ($null -eq $old) { Remove-ItemProperty $key -Name SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue }
+        else { Set-ItemProperty $key -Name SystemRestorePointCreationFrequency -Value $old }
+    }
 }
 ```
+
+`omawin undo` lists both kinds: omawin's own changes (`settings-history.tsv`, newest first, each undoable without admin unless it was an admin one) and the restore points (`Get-ComputerRestorePoint` needs admin to list (check); otherwise a link to `rstrui.exe`).
 
 ### 8.44 Undo the update that broke it
 
@@ -2715,7 +2784,7 @@ static IEnumerable<Suspect> Suspects(IReadOnlyList<Install> installs, IReadOnlyL
 # that was combined with its servicing stack (wusa refuses those) (check: /quiet is ignored by wusa
 # /uninstall on Windows 10+, it shows its own window).
 'update-uninstall' {
-    $kb = $a[0]
+    $kb = $s.Arg
     $p = Start-Process wusa.exe -ArgumentList "/uninstall /kb:$kb /norestart" -Wait -PassThru
     if ($p.ExitCode -notin 0, 3010) {
         $pkg = Get-WindowsPackage -Online | Where-Object { $_.PackageName -like '*RollupFix*' -and $_.PackageState -eq 'Installed' } |
@@ -2723,7 +2792,7 @@ static IEnumerable<Suspect> Suspects(IReadOnlyList<Install> installs, IReadOnlyL
         if ($pkg) { Remove-WindowsPackage -Online -PackageName $pkg.PackageName -NoRestart | Out-Null } else { throw "wusa exit $($p.ExitCode)" }
     }
 }
-# Then in the same batch: wu-pause-week (8.18) so it doesn't come straight back, and a restart offered.
+# Then in the same batch: `setting system.update-pause` (8.18) so it doesn't come straight back, and a restart offered.
 ```
 
 ### 8.47 The slow right-click extensions
@@ -2775,7 +2844,7 @@ static class Extensions
     }
 
     // Per user, undoable: a REG_SZ named by the CLSID in HKCU's Blocked key (check: Explorer honours the
-    // HKCU list as well as HKLM's; if only HKLM, this becomes admin verb reg-set HKLM\…\Blocked). Explorer restarts once.
+    // HKCU list as well as HKLM's; if only HKLM's, this becomes an admin verb shellext-block <clsid> <on|off>). Explorer restarts once.
     public static void Block(string clsid, string name, bool block)
     {
         using var k = Registry.CurrentUser.CreateSubKey(BlockedKey);
