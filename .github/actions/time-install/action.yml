@@ -50,7 +50,7 @@ runs:
           if ($env:IN_URL) { "`$env:OMAWIN_RELEASE_URL = '$($env:IN_URL -replace "'", "''")'" }
           if ($env:IN_TAG) { "`$env:OMAWIN_RELEASE = '$($env:IN_TAG -replace "'", "''")'" }
           # The runner has PowerShell 7 for every account; a new PC has none, so the bootstrap gets it.
-          if ($env:IN_FRESH -eq 'true') { '$env:Path = ($env:Path -split '';'' | Where-Object { $_ -notmatch ''\\PowerShell\\7'' }) -join '';''' }
+          if ($env:IN_FRESH -eq 'true') { "`$env:OMAWIN_PWSH = 'bundle'" }
         ) -join "`n"
         $body = @'
         $ErrorActionPreference = 'Continue'

@@ -146,7 +146,9 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
 # Its download starts now and runs while git gets the repo.
 Write-Step 'PowerShell 7'
 $Pwsh = $null
-$pwshFound = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+# OMAWIN_PWSH=bundle takes the release's copy even when the PC has one (the install-timing job:
+# a runner comes with PowerShell 7, a new PC doesn't).
+$pwshFound = if ($env:OMAWIN_PWSH -ne 'bundle') { Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 }
 if ($pwshFound -and $pwshFound.Version.Major -ge 7) { $Pwsh = $pwshFound.Source; Write-Note "ok  $Pwsh" }
 $PwshFetch = $null
 if (-not $Pwsh) {
