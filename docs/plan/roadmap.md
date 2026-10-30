@@ -26,6 +26,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 | 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
+| 2026-10-30 | **No telemetry**: omawin never sends anything on its own; `omawin report` makes a redacted report the user reads and chooses to post (10.7) |
 | 2026-10-30 | **Compiled C# first, then Rust, then Bun** for every tool and script; PowerShell only for the bootstrap entry and the profile; bash only inside Linux; no Python (2.11, AGENTS.md) |
 | 2026-10-30 | **Uninstall anything you choose** (Install › Remove for everything, `omawin remove <part>`, `omawin uninstall`); omawin uninstalls what it no longer needs in a migration, e.g. the old web bar (2.10) |
 | 2026-10-30 | **No admin by default**: install, update and everyday use never ask for admin; a feature that truly needs it is opt-in, asks once for everything at the moment you choose it, says exactly what it will do, and never asks during an update (2.9) |
@@ -987,6 +988,20 @@ A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 co
 - **9.19 Backups like Time Machine**: restic (it runs on Windows) backing up your Windows home and your Arch home to the cloud on a schedule, with the bar showing the last backup and a launcher page to browse and restore files (M).
 - **9.20 Workspaces that show what's on them**: the native bar's workspace indicators show each workspace's apps (their icons), from GlazeWM's IPC, as Omarchy's Spaces plugin does (S).
 - **9.21 A tray overflow for plugin widgets**: drag a plugin's widget into the tray's overflow to keep the bar tidy, as Omarchy's Tray plugin does (S).
+
+## Phase 10: omawin for everyone
+
+Code and detail: [09-for-everyone.md](09-for-everyone.md). The plan above makes omawin fast and complete on a personal x64 PC in English, at a desk; this phase covers everyone else, and the trust a stranger needs before running the install line.
+
+| # | What | Size | Notes |
+|---|---|---|---|
+| 10.1 | **Security model**: the bootstrap from a release, the bundle checked against signed `SHA256SUMS.txt`, themes are data only, plugins pinned to a commit with new permissions shown on update, secrets in Credential Manager, `SECURITY.md` | M | `Sums`, `ThemeFiles` built and tested 2026-10-30 (`cli/`) |
+| 10.2 | **Work and school PCs**: the user's proxy and PAC passed to omawin's tools, Windows' trusted roots for git, Bun and Arch (TLS inspection), an AppLocker probe before unpacking, policy-managed settings shown locked, managed-device facts in `omawin check` | M | (check) behind a PAC file |
+| 10.3 | **ARM64**: every binary built for `win-arm64` on GitHub's ARM runners, a bundle per architecture, the machine's architecture read through `IsWow64Process2`; Linux on ARM defaults to Ubuntu until Arch has an aarch64 WSL image | M | |
+| 10.4 | **Accessibility**: text from any theme readable (`Contrast.Readable`), Narrator names and live counts, Windows' animation switch honoured by the menu and the window animations, text size, high contrast, focus rings | M | contrast check built and tested 2026-10-30: accent as text fails in Rosé Pine, Miasma, Catppuccin Latte; `comment` in most themes |
+| 10.5 | **Windows in other languages**: APIs or machine output instead of translated command output (a CI lint), known folders, localized setting names through Windows' index, digits bound by key position, the user's number and date formats | S–M | the lint built 2026-10-30 |
+| 10.6 | **Laptops**: power mode in One Search and the bar, a battery widget driven by events, background work waits on low battery, the lid as a setting, four-finger swipes move workspaces, dock/undock re-applies the monitor profile | M | |
+| 10.7 | **Strangers**: a README with a loop and a Sandbox trial, a website built from `manual/` with Bun, release notes from commits and migrations, no telemetry (`omawin report` makes a redacted report you choose to post), issue forms, `CONTRIBUTING.md` | M | `Redact`, release `Notes` built and tested 2026-10-30 |
 
 ## Things to explore
 

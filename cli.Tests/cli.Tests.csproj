@@ -12,6 +12,7 @@
   <ItemGroup>
     <Compile Include="../cli/CommandTable.cs" Link="cli/CommandTable.cs" />
     <Compile Include="../cli/Actions.cs" Link="cli/Actions.cs" />
+    <Compile Include="../cli/Security/*.cs;../cli/Themes/*.cs;../cli/Report/*.cs;../cli/Release/*.cs" LinkBase="cli" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

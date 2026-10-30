@@ -46,6 +46,7 @@ Everything decided and planned lives here:
 | [06-dx-finder-sandbox.md](06-dx-finder-sandbox.md) | Phases 5, 6, 7 | web apps; the key cheat sheet from GlazeWM's config; toasts and the OSD; idle lock; the scratchpad (fork); menu conditions; the finder's actions, browsing, content search, previews, filters and drag-out; `omawin sandbox test`; agents in a sandbox |
 | [07-fixing-windows.md](07-fixing-windows.md) | Phase 8 (8.1-8.51, 8K) | who holds a file; whole-disk search; dev disk cleanup; Quick Look in Explorer; the window switcher and picture-in-picture; monitor profiles; per-app audio and mic mute; key remaps and snippets; the clipboard; the Health page from event logs; startup list; processes and ports; Windows Update; DNS and hosts; notifications; the tune-up catalog entries; Dev Drive, git, ports, PATH, environment variables; idle memory |
 | [08-omarchy-review.md](08-omarchy-review.md) | Phase 9 | every Omarchy feature (at commit `7f4b1dd`) marked have / planned / new / n/a, and the new ones with how they work on Windows and code: the drop-down console, hooks, `setup git`, crash watch, the theme in more apps, `debug`, `pick`, agent accounts, `reset`, display modes |
+| [09-for-everyone.md](09-for-everyone.md) | Phase 10 | the security model (signed sums, themes as data, plugin pinning); work and school PCs (proxy, TLS inspection, AppLocker, policies); ARM64 builds; accessibility (contrast, Narrator, reduced motion, text size, high contrast); Windows in other languages; laptops (power mode, lid, gestures, battery); strangers (README, website, release notes, redacted reports, no telemetry) |
 
 ## The order of work
 
@@ -63,6 +64,7 @@ Each milestone is a release ([roadmap.md](roadmap.md), Milestones). Within a mil
 | 7 | **parity** | 5.x DX, the finder's actions and browsing, `omawin sandbox test` | content search, previews, web apps, scratchpad, notifications | Omarchy's habits work |
 | 8 | **fixed** | 8K idle memory (measure, then cut), 8.1 who-has, 8.15 Health, 8.14 clipboard, 8.11 mic mute | the rest of phase 8, most as settings catalog entries | idle < 4 GB; Windows' common complaints answered |
 | 9 | **omarchy** | 9.2 hooks, 9.3 setup git, 9.6 debug, 9.9 reset (all small) | 9.1 drop-down console (after the scratchpad), 9.4 crash watch, 9.5 theme in more apps, 9.11 screen recording, 9.13 fonts | nothing an Omarchy user reaches for is missing |
+| 10 | **everyone** | 10.1 sums and theme files, 10.4 contrast, 10.5 the lint, 10.7 redaction and release notes (pure C#, tested) | 10.2 work PCs, 10.3 ARM64 builds, 10.4 Narrator and motion, 10.6 laptops, the README and website | a stranger on a managed, German, ARM laptop installs it and can read every line |
 
 **Cloud or PC?** Sessions without Windows (like the one that wrote this plan) can do: plain C# with unit tests (One Search's merger, the settings catalog parser, the plugin protocol), CI workflows, PowerShell and bash scripts, the GlazeWM fork's Rust with its tests and CI frame check, docs. Anything visual, on a key, or touching the live desktop needs the PC (🖥 in the roadmap), and AGENTS.md's rules: ask before driving the desktop, screenshot visible changes.
 

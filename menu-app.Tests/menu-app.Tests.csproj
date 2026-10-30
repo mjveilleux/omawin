@@ -23,6 +23,7 @@
     <Compile Include="..\menu-app\Plugins\Manifest.cs" Link="Linked\Plugins\Manifest.cs" />
     <Compile Include="..\menu-app\Plugins\ManifestCheck.cs" Link="Linked\Plugins\ManifestCheck.cs" />
     <Compile Include="..\menu-app\Plugins\Protocol.cs" Link="Linked\Plugins\Protocol.cs" />
+    <Compile Include="..\menu-app\Contrast.cs" Link="Linked\Contrast.cs" />
   </ItemGroup>
 
   <ItemGroup>
