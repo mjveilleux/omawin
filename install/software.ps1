@@ -117,16 +117,40 @@ function Invoke-WingetBatch([string]$Winget, [string[]]$Ids, [int]$Width, [scrip
     $failed
 }
 
+# A download to a file, fast: curl.exe (in Windows since 10 1803) when it's there, else
+# Invoke-WebRequest with its progress bar off (Windows PowerShell redraws it so often that a
+# 100 MB file takes minutes).
+function Save-Download([string]$Url, [string]$OutFile) {
+    $curl = Join-Path $env:WINDIR 'System32\curl.exe'
+    if (Test-Path $curl) {
+        & { $ErrorActionPreference = 'Continue'; & $curl -fsSL --retry 3 -o $OutFile $Url 2>$null }
+        if ($LASTEXITCODE -eq 0) { return }
+    }
+    $before = $ProgressPreference
+    $ProgressPreference = 'SilentlyContinue'
+    try { Invoke-WebRequest $Url -OutFile $OutFile -UseBasicParsing } finally { $ProgressPreference = $before }
+}
+
 # winget's package list (the "winget" source) is an app package of its own, registered for an
 # account at its first desktop sign-in. An account that hasn't had one yet (made moments ago,
 # or signed in some other way) gets "0x8a15000f: Data required by the source is missing" for
 # every package. Registering it is per-user and needs no admin.
 function Register-WingetSource {
+    # When the PC has no copy to register (Windows Server, a trimmed image), Microsoft's own signed
+    # package list is downloaded and added for this account instead.
     if (Get-AppxPackage -Name Microsoft.Winget.Source -ErrorAction SilentlyContinue) { return }
     try {
         Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.Winget.Source_8wekyb3d8bbwe -ErrorAction Stop
         Write-Note "registered winget's package list for this account"
+        return
+    } catch { }
+    $msix = Join-Path $env:TEMP "winget-source-$Stamp.msix"
+    try {
+        Save-Download 'https://cdn.winget.microsoft.com/cache/source.msix' $msix
+        Add-AppxPackage -Path $msix -ErrorAction Stop
+        Write-Note "added winget's package list for this account"
     } catch { Write-Warn "winget's package list isn't set up for this account ($($_.Exception.Message)); sign out and in, then run install.ps1 again" }
+    finally { Remove-Item $msix -Force -ErrorAction SilentlyContinue }
 }
 
 function Install-WingetPackages([string[]]$Ids) {
@@ -286,7 +310,7 @@ function Install-NerdFont {
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     $zip = Join-Path $tmp "$NerdFont.zip"
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
-    Invoke-WebRequest "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$NerdFont.zip" -OutFile $zip -UseBasicParsing
+    Save-Download "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$NerdFont.zip" $zip
     Expand-Archive $zip -DestinationPath $tmp -Force
 
     # Per-user install: no admin needed. A new account has no per-user font key until it's made.
