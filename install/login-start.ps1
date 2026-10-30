@@ -10,6 +10,8 @@
 
 $ErrorActionPreference = 'Stop'
 $glazewm = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
+# Else the per-user copy from the release's tools bundle (install/software.ps1).
+if (-not (Test-Path $glazewm)) { $glazewm = "$env:LOCALAPPDATA\omawin\tools\glazewm\glazewm.exe" }
 # Who's signed in, from Windows itself (USERNAME can be something else in a service's shell).
 $user = [Security.Principal.WindowsIdentity]::GetCurrent().Name
 # Task names are one list for the whole PC: each account's carries its name.

@@ -52,8 +52,10 @@ function Get-Token {
     if ($env:GH_TOKEN) { return $env:GH_TOKEN }
     if ($env:GITHUB_TOKEN) { return $env:GITHUB_TOKEN }
     if (Get-Command gh -ErrorAction SilentlyContinue) {
-        $t = (& gh auth token 2>$null | Select-Object -First 1)
-        if ($t) { return $t.Trim() }
+        # gh signed out says so on stderr, which Windows PowerShell turns into a terminating error
+        # under Stop even when redirected; a public repo needs no token, so that's not a failure.
+        $t = try { & { $ErrorActionPreference = 'Continue'; & gh auth token 2>$null } | Select-Object -First 1 } catch { $null }
+        if ($t) { return "$t".Trim() }
     }
     return $null
 }

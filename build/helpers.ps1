@@ -7,7 +7,7 @@
 #   .\build\helpers.ps1 -OutDir ..\scratch\bin
 #   .\build\helpers.ps1 -OutDir ..\scratch\bin -Release v0.1.0   (omawin --version says so)
 #
-# Safe to run again: an exe newer than its source is left alone. A running helper (Zebar's) locks
+# Safe to run again: an exe newer than its source is left alone. A running helper (the bar's voice-meter) locks
 # its exe, but a running exe can still be renamed: the old one is moved aside and the running copy
 # goes on until it is restarted.
 param(
@@ -32,16 +32,10 @@ $csc = Get-ChildItem "$env:WINDIR\Microsoft.NET\Framework64\v4*\csc.exe" -ErrorA
 if (-not $csc) { throw 'the C# compiler (csc.exe) is not on this PC; it ships with Windows/.NET Framework' }
 
 # omawin: the setup's commands (bin/commands.txt; the keys run it). voice-meter: the bar's
-# voice typing (Win+H) equalizer. cpu-cores: the bar's per-core CPU bars. win-keys: the dock's
-# Start / Search / quick settings buttons. app-icons: the dock's app icons. theme-watch: tells
-# the bar and dock when the theme changed.
+# voice typing (Win+H) equalizer.
 $helpers = @(
     @{ Name = 'omawin'; Source = "$Repo\bin\omawin.cs"; Target = 'exe' }
-    @{ Name = 'voice-meter'; Source = "$Repo\zebar\tokyo-islands\voice-meter.cs"; Target = 'exe' }
-    @{ Name = 'cpu-cores'; Source = "$Repo\zebar\tokyo-islands\cpu-cores.cs"; Target = 'exe' }
-    @{ Name = 'win-keys'; Source = "$Repo\zebar\tokyo-islands\win-keys.cs"; Target = 'winexe' }
-    @{ Name = 'app-icons'; Source = "$Repo\zebar\tokyo-islands\app-icons.cs"; Target = 'exe'; References = '/r:System.Drawing.dll' }
-    @{ Name = 'theme-watch'; Source = "$Repo\zebar\tokyo-islands\theme-watch.cs"; Target = 'exe' }
+    @{ Name = 'voice-meter'; Source = "$Repo\bin\voice-meter.cs"; Target = 'exe' }
     # omawin-listen: Ctrl+Win+H, records what you say for omawin's agent (agent/).
     @{ Name = 'omawin-listen'; Source = "$Repo\agent\omawin-listen.cs"; Target = 'winexe' }
 )
@@ -71,7 +65,7 @@ try {
         $out = Join-Path $OutDir "$($h.Name).exe"
         $exe = Get-Item $out -ErrorAction SilentlyContinue
         if ($exe -and $exe.LastWriteTime -ge (Get-Item $h.Source).LastWriteTime) { Write-Note "ok  $($h.Name).exe"; continue }
-        # A running helper (Zebar's) locks its exe: move it aside so the new one can be written.
+        # A running helper (the bar's voice-meter) locks its exe: move it aside so the new one can be written.
         if ($exe) {
             Remove-Item "$out.old" -Force -ErrorAction SilentlyContinue
             try { Move-Item $out "$out.old" -ErrorAction Stop } catch { }

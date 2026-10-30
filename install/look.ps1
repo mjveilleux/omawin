@@ -29,7 +29,7 @@ try {
     Write-Note "ok  lock screen rotates on unlock (task 'omawin lock screen ($([Environment]::UserName))')"
     Add-InstallItem 'Desktop' 'lock screen' 'lock screen' 'have'
 } catch { Write-Warn "lock screen rotation task not made: $_"; Add-InstallItem 'Desktop' 'lock screen' 'lock screen' 'fail' }
-# No taskbar, like Omarchy: it auto-hides (the Zebar bar has workspaces, apps and the
+# No taskbar, like Omarchy: it auto-hides (omawin's bar has workspaces, apps and the
 # tray); pushing the mouse to the bottom edge or pressing Win still brings it up. Set
 # through the app-bar API, so it applies right away and is saved like the Settings toggle.
 Add-Type -Namespace Dotfiles -Name AppBar -MemberDefinition @'

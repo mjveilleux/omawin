@@ -34,6 +34,8 @@
 #>
 param([switch]$UserOnly, [switch]$Admin)
 $ErrorActionPreference = 'Stop'
+# Get-AppxPackage is Windows PowerShell's: PowerShell 7 loads it through its compatibility layer.
+if ($PSVersionTable.PSEdition -eq 'Core' -and -not (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue)) { Import-Module Appx -UseWindowsPowerShell -WarningAction SilentlyContinue -ErrorAction SilentlyContinue }
 
 function Set-Dword([string]$Key, [string]$Name, [int]$Value) {
     if (-not (Test-Path $Key)) { New-Item -Path $Key -Force | Out-Null }

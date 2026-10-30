@@ -6,6 +6,7 @@
 #   omawin-helpers-<tag>.zip                 omawin.exe and the bar's helpers (any architecture)
 #   SystemMenu-<tag>-win-<arch>.zip          the menu app, unpacked into %LOCALAPPDATA%\system-menu
 #   omawin-music-<tag>-win-<arch>.exe        the music player, into ~/.local/bin
+#   omawin-tools.txt, omawin-tool-<name>.zip the tools bundle (build/bundle), as built
 #   SHA256SUMS.txt                           `<sha256>  <file>` per asset
 #
 # The input layout is what the jobs produce:
@@ -60,6 +61,23 @@ if (-not $OnlyManifest) {
         if (Test-Path $music) { Add-File $music "omawin-music-$Tag-win-$a.exe" }
         else { Write-Warning "no music player for win-$a ($music): left out of this release" }
     }
+
+    # The tools bundle (build/bundle): its zips and list, published as they are.
+    $tools = Join-Path $InDir 'tools'
+    if (Test-Path (Join-Path $tools 'omawin-tools.txt')) { Get-ChildItem $tools -File | ForEach-Object { Add-File $_.FullName $_.Name } }
+    else { Write-Warning "no tools bundle ($tools): left out of this release" }
+    # Neovim's prebuilt treesitter parsers (release.yml's parsers job): one more bundle entry,
+    # merged into Neovim's data folder (no PATH, nothing of yours moved aside).
+    $parsers = Join-Path $InDir 'parsers\omawin-tool-nvim-parsers.zip'
+    $list = Join-Path $OutDir 'omawin-tools.txt'
+    if ((Test-Path $parsers) -and (Test-Path $list)) {
+        Add-File $parsers 'omawin-tool-nvim-parsers.zip'
+        $version = (Get-Content (Join-Path $InDir 'parsers\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $parsers -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('nvim-parsers', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-nvim-parsers.zip', $sha, '-', '', 'nvim-data\site', 'merge') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "nvim-parsers`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no prebuilt Neovim parsers ($parsers): left out of this release" }
 }
 
 if (-not $NoManifest) {

@@ -14,7 +14,7 @@
       1. the questions, all at once (which presets, on a first install; your git name, if git has
          none), so nothing waits on a person after that
       2. the one admin prompt (install/admin.ps1), when anything needs admin: the whole-PC
-         packages, omawin's GlazeWM and Zebar, and WSL for the wsl preset, done in the
+         packages, omawin's GlazeWM, and WSL for the wsl preset, done in the
          background from then on. Nothing asks for admin after it, approved or not.
       3. the steps listed in install/steps.txt, each its file in install/ (-Step runs just one)
       4. the migrations not run on this PC yet (bin/migrate.ps1: what older versions left behind)
@@ -35,6 +35,19 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# PowerShell 7 only (bootstrap.ps1 puts it in first, from the release's tools bundle). Started
+# from Windows PowerShell 5.1, this goes again in 7, with the same arguments.
+if ($PSVersionTable.PSVersion.Major -lt 7) {
+    $pwsh = @((Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | ForEach-Object Source),
+        "$env:LOCALAPPDATA\omawin\tools\pwsh\pwsh.exe") | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if (-not $pwsh) { throw 'install.ps1 runs in PowerShell 7. Run the one-line install (bootstrap.ps1), which puts it in first.' }
+    $again = @('-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $PSCommandPath)
+    foreach ($p in $PSBoundParameters.GetEnumerator()) {
+        if ($p.Value -is [switch]) { if ($p.Value) { $again += "-$($p.Key)" } } else { $again += "-$($p.Key)", "$($p.Value)" }
+    }
+    & $pwsh @again
+    exit $LASTEXITCODE
+}
 # Never as administrator (see bootstrap.ps1): it would set up whichever account the admin
 # password belongs to, not the one signed in. The admin step asks for admin itself.
 if (([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
@@ -130,7 +143,15 @@ try {
 
     # --- 2. the one admin prompt -----------------------------------------------------------------
     Write-Note 'what needs admin ...'
-    $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages }) -NoPackages:$LinkOnly
+    # What the release's tools bundle carries goes in per-user without admin (install/software.ps1).
+    $bundled = @(if (-not $LinkOnly) { Get-BundleProvides })
+    # Its unpacking starts now, in the background, and runs alongside everything up to the end of
+    # the software step (install/unpack-tools.ps1). "Yours" is judged by the PATH here; winget's
+    # list isn't read yet.
+    if (-not $LinkOnly) { Start-ToolBundle $null; Start-EarlyHelpers }
+    Write-Log ("    bundle and helpers started at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
+    $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages | Where-Object { $bundled -notcontains $_ } }) -NoPackages:$LinkOnly
+    Write-Log ("    admin plan done at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
     if ($plan.Packages.Count -or $plan.Forks.Count -or $plan.Wsl) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
         # omawin update's pull came before it.

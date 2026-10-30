@@ -1,0 +1,131 @@
+# The install, timed: a new standard user on this Windows runner runs the one-line install (the
+# README's bootstrap.ps1) and then omawin check (roadmap 2.1). Used by install.yml (against this
+# branch's release, laid out in a folder) and release.yml (against the release just published:
+# real downloads). The step summary has the times, the install-logs artifact the logs.
+#
+# What a runner can't show: WSL (no nested virtualization) and the desktop (nobody signs in).
+name: Time the install
+description: Run omawin's one-line install as a new standard user and time it
+inputs:
+  release-url:
+    description: A folder or URL holding the release's files (OMAWIN_RELEASE_URL); empty for GitHub's
+    default: ''
+  release-tag:
+    description: The release to install from (OMAWIN_RELEASE); empty for the newest
+    default: ''
+  fresh:
+    description: "'true': hide the runner's own PowerShell 7 from the bootstrap, so it gets it the way a new PC does"
+    default: 'false'
+  artifact:
+    description: The name of the logs artifact
+    default: install-logs
+runs:
+  using: composite
+  steps:
+    - name: A standard user, and the run for it
+      shell: pwsh
+      env:
+        IN_URL: ${{ inputs.release-url }}
+        IN_TAG: ${{ inputs.release-tag }}
+        IN_FRESH: ${{ inputs.fresh }}
+      run: |
+        $password = [Convert]::ToBase64String((1..24 | ForEach-Object { Get-Random -Max 256 }) -as [byte[]]) + 'a1!'
+        $secure = ConvertTo-SecureString $password -AsPlainText -Force
+        New-LocalUser -Name omawinci -Password $secure -PasswordNeverExpires -AccountNeverExpires | Out-Null
+        Add-LocalGroupMember -Group Users -Member omawinci
+        # The user runs through a scheduled task (a real logon with a profile): Start-Process
+        # -Credential from the runner's service session can't make a desktop for it. A task runs as
+        # a batch logon, which Windows Server allows only admins by default.
+        $sid = (Get-LocalUser omawinci).SID.Value
+        secedit /export /cfg C:\sec.inf /areas USER_RIGHTS | Out-Null
+        $inf = Get-Content C:\sec.inf
+        $inf = if ($inf -match '^SeBatchLogonRight') { $inf -replace '^(SeBatchLogonRight\s*=.*)$', "`$1,*$sid" } else { $inf -replace '^\[Privilege Rights\]$', "[Privilege Rights]`r`nSeBatchLogonRight = *$sid" }
+        $inf | Set-Content C:\sec.inf -Encoding Unicode
+        secedit /configure /db C:\sec.sdb /cfg C:\sec.inf /areas USER_RIGHTS | Out-Null
+        New-Item -ItemType Directory -Force C:\ci\out | Out-Null
+        Copy-Item -Recurse $env:GITHUB_WORKSPACE C:\ci\repo
+        icacls C:\ci /grant 'omawinci:(OI)(CI)M' | Out-Null
+        # What this run installs from, and whether PowerShell 7 is hidden: fixed into the script.
+        $setup = @(
+          if ($env:IN_URL) { "`$env:OMAWIN_RELEASE_URL = '$($env:IN_URL -replace "'", "''")'" }
+          if ($env:IN_TAG) { "`$env:OMAWIN_RELEASE = '$($env:IN_TAG -replace "'", "''")'" }
+          # The runner has PowerShell 7 for every account; a new PC has none, so the bootstrap gets it.
+          if ($env:IN_FRESH -eq 'true') { "`$env:OMAWIN_PWSH = 'bundle'" }
+        ) -join "`n"
+        $body = @'
+        $ErrorActionPreference = 'Continue'
+        # The checkout, as ~/omawin (OMAWIN_LOCAL skips the clone: the bootstrap would clone main).
+        $copy = Get-Date
+        Copy-Item -Recurse C:\ci\repo "$HOME\omawin"
+        "copy $([int]((Get-Date) - $copy).TotalSeconds)" | Add-Content C:\ci\out\result.txt
+        $env:OMAWIN_LOCAL = '1'; $env:OMAWIN_PLAIN = '1'
+        $start = Get-Date
+        try {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\omawin\bootstrap.ps1" *> C:\ci\out\bootstrap.log
+            "bootstrap exit $LASTEXITCODE" | Add-Content C:\ci\out\result.txt
+        } catch { "bootstrap threw: $_" | Add-Content C:\ci\out\result.txt }
+        "seconds $([int]((Get-Date) - $start).TotalSeconds)" | Add-Content C:\ci\out\result.txt
+        Copy-Item "$env:LOCALAPPDATA\launcher\install-times.txt" C:\ci\out -ErrorAction SilentlyContinue
+        Copy-Item "$env:LOCALAPPDATA\launcher\install*.log" C:\ci\out -ErrorAction SilentlyContinue
+        # Its own process writing to a file, with a time limit: piped through this script, a
+        # program check starts that keeps running would hold the output open, and this would wait.
+        $check = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "$HOME\omawin\check.ps1" -RedirectStandardOutput C:\ci\out\check.log -RedirectStandardError C:\ci\out\check-errors.log -WindowStyle Hidden -PassThru
+        $null = $check.Handle  # read now, or Windows PowerShell has no ExitCode for it later
+        if ($check.WaitForExit(300000)) { "check exit $($check.ExitCode)" | Add-Content C:\ci\out\result.txt }
+        else { $check.Kill(); 'check timed out (5 min)' | Add-Content C:\ci\out\result.txt }
+        'done' | Set-Content C:\ci\out\done.txt
+        '@
+        ($setup + "`n" + $body) | Set-Content C:\ci\run.ps1 -Encoding utf8
+        $action = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -ExecutionPolicy Bypass -File C:\ci\run.ps1'
+        Register-ScheduledTask -TaskName omawin-ci -Action $action -User omawinci -Password $password -RunLevel Limited | Out-Null
+
+    - name: Install as that user
+      shell: pwsh
+      run: |
+        $start = Get-Date
+        Start-ScheduledTask -TaskName omawin-ci
+        while (-not (Test-Path C:\ci\out\done.txt) -and ((Get-Date) - $start).TotalMinutes -lt 50) {
+          Start-Sleep 5
+          $state = (Get-ScheduledTask -TaskName omawin-ci).State
+          $last = (Get-ScheduledTaskInfo -TaskName omawin-ci).LastTaskResult
+          # 267011 (0x41303): not started yet; 267009 (0x41301): running. Anything else while not
+          # running means it ended without writing done.txt.
+          if ($state -ne 'Running' -and $last -notin 267011, 267009 -and -not (Test-Path C:\ci\out\done.txt)) {
+            Write-Host "the task ended early ($state, result $last)"; break
+          }
+          if ($last -eq 267011 -and ((Get-Date) - $start).TotalMinutes -gt 3) { Write-Host 'the task never started'; break }
+        }
+        Get-Content C:\ci\out\result.txt -ErrorAction SilentlyContinue
+
+    - name: Summary
+      if: always()
+      shell: pwsh
+      env:
+        IN_URL: ${{ inputs.release-url }}
+        IN_TAG: ${{ inputs.release-tag }}
+      run: |
+        $result = @(Get-Content C:\ci\out\result.txt -ErrorAction SilentlyContinue)
+        $seconds = ($result | Where-Object { $_ -like 'seconds *' }) -replace 'seconds ', ''
+        $from = if ($env:IN_URL) { "the folder $env:IN_URL (no download)" } elseif ($env:IN_TAG) { "GitHub release $env:IN_TAG (real downloads)" } else { 'the newest GitHub release (real downloads)' }
+        $lines = @('## Install, as a standard user on windows-2025', '',
+          "From $from. Whole install (bootstrap to the end): **$seconds s**", '',
+          '| Step | Seconds |', '|---|---|')
+        foreach ($t in @(Get-Content C:\ci\out\install-times.txt -ErrorAction SilentlyContinue)) {
+          $mode, $step, $s = $t -split '\s+'
+          if ($mode -eq 'full') { $lines += "| $step | $s |" }
+        }
+        $lines += '', '```', $result, '```', '', 'No WSL and no desktop on a runner.'
+        $lines -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+        Write-Host '--- bootstrap.log ---'
+        Get-Content C:\ci\out\bootstrap.log -Tail 40 -ErrorAction SilentlyContinue
+        Write-Host '--- the last of install.log ---'
+        Get-Content C:\ci\out\install.log -Tail 120 -ErrorAction SilentlyContinue
+        Write-Host '--- check.log ---'
+        Get-Content C:\ci\out\check.log -Tail 60 -ErrorAction SilentlyContinue
+        if (-not ($result -contains 'bootstrap exit 0')) { Write-Host '::error::the install did not finish cleanly'; exit 1 }
+
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      if: always()
+      with:
+        name: ${{ inputs.artifact }}
+        path: C:\ci\out

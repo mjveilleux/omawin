@@ -110,6 +110,58 @@ function Add-UserPath([string]$Dir, [switch]$Prepend) {
     return $true
 }
 
+# Where each package on this PC came from, so `omawin pkg update` updates it the same way
+# (bin/pkg-update.ps1): %LOCALAPPDATA%\launcher\packages.tsv, a row each,
+#   <name> <TAB> <source> <TAB> <id> <TAB> <version> <TAB> <folder>
+# source: bundle (the release's tools bundle), winget, scoop, choco, mise, npm, script (its own
+# installer, run again), found (yours, from somewhere omawin can't tell: left alone).
+$PackagesFile = Join-Path $env:LOCALAPPDATA 'launcher\packages.tsv'
+function Get-PackageSources {
+    $rows = [ordered]@{}
+    if (Test-Path -LiteralPath $PackagesFile) {
+        foreach ($line in Get-Content -LiteralPath $PackagesFile) {
+            if ($line -match '^\s*(#|$)') { continue }
+            $f = $line -split "`t"
+            $rows[$f[0]] = [pscustomobject]@{ Name = $f[0]; Source = $f[1]; Id = $f[2]; Version = $(if ($f.Count -gt 3) { $f[3] }); Where = $(if ($f.Count -gt 4) { $f[4] }) }
+        }
+    }
+    $rows
+}
+function Set-PackageSource([string]$Name, [string]$Source, [string]$Id, [string]$Version = '', [string]$Where = '') {
+    $rows = Get-PackageSources
+    $was = $rows[$Name]
+    if ($was -and $was.Source -eq $Source -and $was.Id -eq $Id -and $was.Version -eq $Version -and $was.Where -eq $Where) { return }
+    $rows[$Name] = [pscustomobject]@{ Name = $Name; Source = $Source; Id = $Id; Version = $Version; Where = $Where }
+    New-Item -ItemType Directory -Force (Split-Path $PackagesFile) | Out-Null
+    $lines = @('# where each package came from (omawin pkg update updates it there): name, source, id, version, folder') +
+        @($rows.Values | ForEach-Object { (@($_.Name, $_.Source, $_.Id, $_.Version, $_.Where) -join "`t") })
+    Set-Content -LiteralPath $PackagesFile -Value $lines -Encoding utf8
+}
+
+# Windows' Appx cmdlets (Get-AppxPackage, Add-AppxPackage) are Windows PowerShell's: PowerShell 7
+# loads them through its compatibility layer, once, only where they're used.
+function Use-Appx {
+    if ($PSVersionTable.PSEdition -ne 'Core' -or (Get-Command Get-AppxPackage -ErrorAction SilentlyContinue)) { return }
+    Import-Module Appx -UseWindowsPowerShell -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+}
+
+# Several folders onto the user PATH in one write and one notice to running programs (each
+# notice is a broadcast that can wait on a busy window). Returns how many were added.
+function Add-UserPaths([string[]]$Dirs) {
+    $key = Get-Item 'HKCU:\Environment'
+    $raw = ([string]$key.GetValue('Path', '', 'DoNotExpandEnvironmentNames')).Trim(';')
+    $norm = { param($p) [Environment]::ExpandEnvironmentVariables($p).TrimEnd('\').ToLowerInvariant() }
+    $have = @{}
+    foreach ($entry in $raw -split ';') { if ($entry) { $have[(& $norm $entry)] = $true } }
+    $new = @(foreach ($dir in $Dirs) { $k = & $norm $dir; if (-not $have[$k]) { $have[$k] = $true; $dir } })
+    if (-not $new) { return 0 }
+    $value = (@($raw) + $new | Where-Object { $_ }) -join ';'
+    Set-ItemProperty 'HKCU:\Environment' -Name Path -Value $value -Type ExpandString
+    [Environment]::SetEnvironmentVariable('OMAWIN_PATH_NUDGE', '1', 'User')
+    [Environment]::SetEnvironmentVariable('OMAWIN_PATH_NUDGE', $null, 'User')
+    return $new.Count
+}
+
 function Move-Aside([string]$Path) {
     if (Test-Path -LiteralPath $Path) {
         $backup = "$Path.backup-$Stamp"

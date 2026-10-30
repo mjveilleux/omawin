@@ -1,6 +1,6 @@
 # Mission to-do
 
-The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item.
+The work between today and [the mission](mission.md), in tracks. Each track can be picked up on its own (one agent or one sitting per track); within a track, top items first. Tick items off here as they land, with the commit. Decisions for the maintainer are in `open-questions/` and linked from the item. The order we take it in, by phase: [roadmap.md](plan/roadmap.md).
 
 Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (Omarchy v4.0.4, `basecamp/omarchy` branch `quattro`). What similar Windows projects learned, mapped to these tracks: [inspiration.md](inspiration.md).
 
@@ -19,8 +19,8 @@ Sources: the distribution audit and the Omarchy 4 parity survey of 2026-10-15 (O
 - [ ] Product vs user config: the product checkout is never edited by the user; user overrides live in their own folder (e.g. `~/.config/omawin/`: items, sites, keys, menu rows, nvim `lua/plugins/user/`, `profile.ps1`, gitconfig include) and are merged at render time. Seed copies, not junctions into the repo
 - [x] Files apps write (nvim `lazy-lock.json`, Windows Terminal `settings.json`) live outside the checkout (2026-10-15: also `lazyvim.json` and pwsh's `Documents\PowerShell`; migration `writable-files-out`)
 - [ ] `omawin update` that can't fail on local changes: fetch and move to the latest release tag (channels: stable, edge), migrations as today, a System Restore point first. Done 2026-10-15: local changes are stashed and put back (kept in a named stash on a clash), local commits rebased or kept on a branch, never left mid-merge, `-DryRun`. **Next: release tags and channels — releases now exist to follow** (2026-10-16: `.github/workflows/release.yml` publishes them on a `v*` tag, install takes their binaries); the restore point
-- [x] Releases built in CI (GitHub Actions): `omawin.exe`, the menu app, `omawin-music`, so a new PC downloads binaries instead of installing the .NET SDK (2026-10-16: `.github/workflows/release.yml` on a `v*` tag or by hand — the same `build/helpers.ps1`, `menu-app\build.ps1`, `music\build.ps1` this PC runs, SDK pinned in `global.json`, actions by SHA; `build/release.ps1` packs `omawin-helpers-<tag>.zip`, `SystemMenu-<tag>-win-<arch>.zip`, `omawin-music-<tag>-win-<arch>.exe` and `SHA256SUMS.txt`; `bin/release.ps1` + `bin/install-binaries.ps1` download, verify and fall back to a build, `-NoDownload`/`-NoBuild` to force; `build/test-release.ps1` proves it against a fake release, [releases.md](../docs/releases.md))
-- [ ] Code signing in CI (e.g. Azure Trusted Signing) instead of a self-signed root made on every PC. **Designed 2026-10-16** ([release-signing.md](../docs/release-signing.md)): a `sign` step in the release job, off until `CODESIGN` is true, values as repo variables and secrets. Next: the Azure account, the certificate profile and identity validation (an account decision, not code)
+- [x] Releases built in CI (GitHub Actions): `omawin.exe`, the menu app, `omawin-music`, so a new PC downloads binaries instead of installing the .NET SDK (2026-10-16: `.github/workflows/release.yml` on a `v*` tag or by hand — the same `build/helpers.ps1`, `menu-app\build.ps1`, `music\build.ps1` this PC runs, SDK pinned in `global.json`, actions by SHA; `build/release.ps1` packs `omawin-helpers-<tag>.zip`, `SystemMenu-<tag>-win-<arch>.zip`, `omawin-music-<tag>-win-<arch>.exe` and `SHA256SUMS.txt`; `bin/release.ps1` + `bin/install-binaries.ps1` download, verify and fall back to a build, `-NoDownload`/`-NoBuild` to force; `build/test-release.ps1` proves it against a fake release, [releases.md](releases.md))
+- [ ] Code signing in CI (e.g. Azure Trusted Signing) instead of a self-signed root made on every PC. **Designed 2026-10-16** ([release-signing.md](release-signing.md)): a `sign` step in the release job, off until `CODESIGN` is true, values as repo variables and secrets. Next: the Azure account, the certificate profile and identity validation (an account decision, not code)
 - [ ] No Chocolatey: move its packages to winget or presets; the default install needs no admin except where a piece truly does (one prompt, batched). Packages done 2026-10-15 (all winget or presets; `unzip` / `gzip` dropped: no winget package puts them on the PATH, Windows' `tar` and Git Bash cover them); the menu still understands `choco <id>` rows. Admin prompts batched 2026-10-17: one prompt at the start (`install/admin.ps1`) for the whole-PC packages and both forks; `omawin no-ads`'s admin part is still its own
 - [ ] ARM64: menu app, music, the GlazeWM and noctty forks, helpers. Done 2026-10-16: the menu app and the player build for `win-arm64` (`menu-app\build.ps1 -Arch arm64`, `music\build.ps1 -Arch arm64`, the arm64 fff pinned in `menu-app\fetch-fff.ps1`; both verified by PE machine and published as arm64 assets), and the helpers are architecture-neutral IL. Next: the workflow's ARM64 jobs (`vars.ARM64_RUNNERS`) wait on a public repo, since GitHub's `windows-11-arm` runners are free for public repositories only; the GlazeWM and noctty forks are their own repos
 - [ ] Repo location not fixed to `~/omawin`
@@ -100,3 +100,22 @@ Decided 2026-10-15: no Zebar fork. The bar and dock move into the menu app (the 
 - [ ] Fork basecamp/omarchy (mjveilleux/omarchy) to track it; a note per Omarchy release of what's worth bringing over
 - [ ] Credit and license notices for everything borrowed (themes, backgrounds, ideas)
 - [ ] Keep this file's parity list current: each Omarchy feature is have, Windows-native instead (Windows Hello, Action Center, volume flyout), to do, or decided against (ISO install, hardware fixes, Windows VM)
+
+## 9. Fixing Windows (explore, measure, improve)
+
+Windows 11's common complaints (the 2026 survey in [roadmap.md](plan/roadmap.md), 8J) and the idle memory goal (8K), as things to explore: for each, reproduce or measure it on this PC, then fix it the measured, reversible way. The roadmap item for each is in brackets.
+
+- [ ] Idle memory: 6-7 GB in use at idle today; measure where it goes (`omawin profile ram`, whole machine), then get under 4 GB with omawin under 600 MB (8K)
+- [ ] Updates that break things: link a crash or failed shutdown to the update before it, undo it, pause (8.44, 8.18, 8.42)
+- [ ] AI pushed everywhere: every AI feature as one switch, off in the recommended set (8.45)
+- [ ] Slow File Explorer: time a big folder's open; folder type discovery, Home's cloud files, separate process (8.46)
+- [ ] Slow right-click menu: time each shell extension, block the slow ones (8.47, 8.24)
+- [ ] Start search slow and full of Bing: web results off (8.48); the launcher replaces it
+- [ ] Higher idle CPU than Windows 10: measure idle CPU and wake-ups by process, alongside memory (8.28, 8.31)
+- [ ] Bluetooth headphones dropping to call quality, audio clicks: keep headsets in stereo, enhancements off (8.49)
+- [ ] Random restarts and unfinished shutdowns: explain them from the event logs, fast startup off (8.15, 8.30)
+- [ ] Preinstalled apps: remove for this account, reinstallable (8.50)
+- [ ] Telemetry: diagnostic data at the minimum (8.51)
+- [ ] Taskbar and Start: replaced already (native bar, launcher); check nothing of the old taskbar shows through (auto-hide, Win key)
+- [ ] Microsoft account at setup: document the local-account route in the manual's install page
+

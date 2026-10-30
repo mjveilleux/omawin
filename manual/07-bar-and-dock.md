@@ -2,7 +2,7 @@
 
 One strip across the top of the screen, as in Omarchy 4: the theme's background, 26 pixels tall. There is no dock: the launcher (Win+Space) and the system menu (Win+Alt+Space) take its place, and the Windows taskbar auto-hides (the very bottom edge or the Win key still shows it).
 
-The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the record and the music player, and the agents panel. `omawin bar zebar` switches to the bar as it was before, drawn by Zebar, which has them; `omawin bar native` comes back. Win+M with the native bar says so.
+The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the record and the music player's panel, and the agents panel. They were in Zebar's bar, which omawin no longer uses (removed 2026-10-31), and come back as bar plugins; Win+M says so meanwhile.
 
 - **Left:**
   - **The menu**: Omarchy's logo. Click: the system menu; right-click: a terminal.
@@ -17,7 +17,7 @@ The bar is drawn by the menu app itself, with no web engine, so it's up within s
   - **Agents**: a little robot, red when you've used 90% of a Claude limit. Click it for your Claude Code limits (the 5-hour session, the week, and any per-model week), each with a meter and when it resets, and a line that turns through this week's numbers (tokens, today, the model you use most, your busiest day, prompts and sessions). It reads your Claude Code sign-in on this PC and asks Anthropic every 15 minutes; middle-click to check now, right-click to start Claude Code. `omawin` runs `bin/agent-usage.ps1 -Print` for the same in a terminal.
   - **Bluetooth**, **network** (wifi by strength, or ethernet), **sound** (the wheel changes the volume, right-click mutes, click for the sound page), **monitor** (the wheel changes the brightness), and **power** (the battery; right-click shows its percentage, click for sleep, restart and the rest). Bluetooth, network and monitor open Quick settings (Win+A).
 
-The layout is `zebar/tokyo-islands/bar.json`: which widgets sit where, as Omarchy's `shell.json` does. Each widget is a file in `zebar/tokyo-islands/widgets/`.
+The layout is `bar/bar.json`: which widgets sit where, as Omarchy's `shell.json` does (edit it, then `omawin restart menu`).
 
 ## Music, podcasts and radio
 
@@ -39,4 +39,4 @@ The record at the right of the bar is a music, podcast and radio player. It wear
 
 Windows' Task Manager, from the launcher. btop (btop4win) isn't installed any more; System menu › Install › Tools offers it, and once there it follows the theme from its next start.
 
-If the bar is missing or blank: `omawin restart zebar` (System menu › Update › Restart › Zebar).
+If the bar is missing or blank: `omawin restart menu` (the bar is the menu app's).

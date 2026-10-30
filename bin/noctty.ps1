@@ -28,12 +28,19 @@ if (-not $zip -or -not $sums) { throw "noctty $($release.tag_name): no x64 porta
 $work = Join-Path $env:TEMP "noctty-$(Get-Date -Format yyyyMMddHHmmss)"
 New-Item -ItemType Directory -Force $work | Out-Null
 try {
-    Invoke-WebRequest $zip.browser_download_url -OutFile "$work\noctty.zip" -UseBasicParsing
-    Invoke-WebRequest $sums.browser_download_url -OutFile "$work\sums.txt" -UseBasicParsing
+    # curl.exe and tar.exe (both in Windows): Windows PowerShell's Invoke-WebRequest redraws its
+    # progress bar so often, and Expand-Archive is so slow, that this took over a minute.
+    $curl = "$env:WINDIR\System32\curl.exe"
+    foreach ($pair in @(@($zip.browser_download_url, "$work\noctty.zip"), @($sums.browser_download_url, "$work\sums.txt"))) {
+        & { $ErrorActionPreference = 'Continue'; & $curl -fsSL --retry 3 -o $pair[1] $pair[0] 2>$null }
+        if ($LASTEXITCODE -ne 0) { $ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest $pair[0] -OutFile $pair[1] -UseBasicParsing }
+    }
     $want = (Get-Content "$work\sums.txt" | Where-Object { $_ -match [regex]::Escape($zip.name) } | Select-Object -First 1) -split '\s+' | Select-Object -First 1
     $have = (Get-FileHash "$work\noctty.zip" -Algorithm SHA256).Hash
     if (-not $want -or $have -ne $want.ToUpper()) { throw "$($zip.name) doesn't match its published SHA-256" }
-    Expand-Archive "$work\noctty.zip" "$work\x" -Force
+    New-Item -ItemType Directory -Force "$work\x" | Out-Null
+    & "$env:WINDIR\System32\tar.exe" -xf "$work\noctty.zip" -C "$work\x"
+    if ($LASTEXITCODE -ne 0) { Expand-Archive "$work\noctty.zip" "$work\x" -Force }
     $unpacked = Get-ChildItem "$work\x" -Recurse -Filter 'noctty.exe' | Select-Object -First 1
     if (-not $unpacked) { throw 'no noctty.exe in the ZIP' }
 

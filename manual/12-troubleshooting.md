@@ -2,7 +2,7 @@
 
 Start with `omawin check`: it lists anything missing, stale or not running.
 
-- **Bar missing or blank:** `omawin restart zebar`.
+- **Bar missing or blank:** `omawin restart menu`.
 - **Launcher, menu or screenshots stuck or out of date:** `omawin restart menu` rebuilds and restarts the menu app. Its errors go to `%LOCALAPPDATA%\launcher\system-menu.log`.
 - **Window animations feel slow, or something is left on screen after a move:** new windows fade in and the windows making room slide (the `animations` section of `glazewm/config.yaml`, which only omawin's GlazeWM fork reads). Lower `duration_ms`, or delete the section and `omawin restart glazewm` to turn them off. Windows flashing a yellow outline as they start to move: Windows' switch for capturing without a border is off (Settings › Privacy & security); the install turns it on for your account (`install/capture-borderless.ps1`).
 - **A key does nothing:** `omawin restart glazewm` reloads GlazeWM's config. Errors are in `~/.glzr/glazewm/errors.log`. GlazeWM ignores simulated keypresses, so test keys with real ones.

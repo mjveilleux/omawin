@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     One snapshot of every process, grouped into apps: an app's helper processes count as the app
-    (the WebView2 browsers behind Zebar, the Suno window, Copilot, Slack…; the shells inside a
+    (WebView2 browsers such as the Suno window, Copilot, Slack…; the shells inside a
     terminal don't, they're their own). omawin's parts are listed first, each against a budget
     (below), then everything else, biggest first.
 
@@ -30,7 +30,6 @@ $ErrorActionPreference = 'Stop'
 # omawin's parts: process names (no .exe) -> the part, and its idle budget (Memory MB, CPU %).
 $Parts = [ordered]@{
     'window manager (GlazeWM)' = @{ Names = 'glazewm', 'glazewm-watcher'; MB = 80; Cpu = 1 }
-    'bar and dock (Zebar)'     = @{ Names = 'zebar'; MB = 350; Cpu = 2 }
     'theme-watch'              = @{ Names = 'theme-watch'; MB = 30; Cpu = 0.5 }
     'menu app (launcher)'      = @{ Names = 'SystemMenu'; MB = 250; Cpu = 1 }
     'music player'             = @{ Names = 'omawin-music', 'mpv'; MB = 250; Cpu = 3 }

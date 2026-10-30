@@ -1,9 +1,0 @@
-{
-  "//": "The bar's layout, after Omarchy 4's shell.json bar section: which widgets, in which place, in order. Each name is widgets/<name>.js. bar.html reads this; edit it and restart the bar (omawin restart zebar).",
-  "left": ["menu", "workspaces"],
-  "centerBegin": ["indicators"],
-  "center": ["clock"],
-  "centerEnd": ["system-update"],
-  "right": ["media", "tray", "agents", "bluetooth", "network", "audio", "monitor", "power"],
-  "clock": { "format": "EEEE HH:mm", "formatAlt": "d MMMM 'W'WW yyyy" }
-}

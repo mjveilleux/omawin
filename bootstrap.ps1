@@ -16,9 +16,11 @@
          yours in every account; found if another account made it, else started empty or from
          a private backup repo) and this account's (~/omawin-account, from a private repo or
          started fresh). A private repo opens Git's sign-in window.
-      4. runs install.ps1, which sets up everything else
+      4. PowerShell 7, from the release's tools bundle (downloaded while git clones)
+      5. runs install.ps1 in PowerShell 7, which sets up everything else
 
-    Safe to run again. Runs under Windows PowerShell 5.1, which every Windows PC has.
+    Safe to run again. Runs under Windows PowerShell 5.1, which every Windows PC has: the only part
+    of omawin that does. It gets PowerShell 7 and hands everything after it to that.
     OMAWIN_REPO=<owner>/<name> installs a fork; OMAWIN_LOCAL=1 skips the clone and uses the copy
     already at ~/omawin (testing in a VM).
 #>
@@ -42,7 +44,11 @@ $Local = $env:OMAWIN_LOCAL -eq '1' -or $env:DOTFILES_LOCAL -eq '1'
 # A new PC only runs signed scripts; install.ps1 and the PowerShell profile are local files.
 Set-ExecutionPolicy -Scope Process Bypass -Force
 if ((Get-ExecutionPolicy -Scope CurrentUser) -notin 'RemoteSigned', 'Unrestricted', 'Bypass') {
-    Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force
+    # The Process scope set just above is more specific, so PowerShell saves this one and then
+    # reports "overridden by a policy defined at a more specific scope" as an error, which under
+    # Stop would end the install. The setting is saved either way: that error is expected.
+    try { Set-ExecutionPolicy -Scope CurrentUser RemoteSigned -Force }
+    catch { if ((Get-ExecutionPolicy -Scope CurrentUser) -ne 'RemoteSigned') { throw } }
 }
 
 # How it looks: install.ps1's banner and step glyphs (install/ui.ps1) in a small copy, since this
@@ -135,6 +141,44 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     }
 }
 
+# PowerShell 7 runs everything after this script (install.ps1 needs it). Taken from the release's
+# tools bundle (bundle/tools.txt): per-user, no admin, checked against the release's SHA256SUMS.
+# Its download starts now and runs while git gets the repo.
+Write-Step 'PowerShell 7'
+$Pwsh = $null
+# OMAWIN_PWSH=bundle takes the release's copy even when the PC has one (the install-timing job:
+# a runner comes with PowerShell 7, a new PC doesn't).
+$pwshFound = if ($env:OMAWIN_PWSH -ne 'bundle') { Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 }
+if ($pwshFound -and $pwshFound.Version.Major -ge 7) { $Pwsh = $pwshFound.Source; Write-Note "ok  $Pwsh" }
+$PwshFetch = $null
+if (-not $Pwsh) {
+    $releaseBase = if ($env:OMAWIN_RELEASE_URL) { $env:OMAWIN_RELEASE_URL.TrimEnd('/', '\') }
+                   elseif ($env:OMAWIN_RELEASE -and $env:OMAWIN_RELEASE -ne 'latest') { "https://github.com/$Repo/releases/download/$env:OMAWIN_RELEASE" }
+                   else { "https://github.com/$Repo/releases/latest/download" }
+    $curl = "$env:WINDIR\System32\curl.exe"
+    $work = Join-Path $env:TEMP "omawin-bootstrap-$PID"
+    New-Item -ItemType Directory -Force $work | Out-Null
+    function Get-ReleaseFile([string]$Name, [switch]$Background) {
+        if ($releaseBase -notmatch '^[a-z]+://') { return @{ Path = Join-Path $releaseBase $Name; Process = $null } }
+        $out = Join-Path $work $Name
+        $p = Start-Process $curl -ArgumentList "-fsSL --retry 3 -o `"$out`" `"$releaseBase/$Name`"" -NoNewWindow -PassThru
+        $null = $p.Handle
+        if (-not $Background) { $p.WaitForExit() }
+        @{ Path = $out; Process = $p }
+    }
+    $sums = Get-ReleaseFile 'SHA256SUMS.txt'
+    $list = Get-ReleaseFile 'omawin-tools.txt'
+    $row = $null
+    if ((Test-Path $sums.Path) -and (Test-Path $list.Path)) {
+        $want = (Get-Content $sums.Path | Where-Object { $_ -match '^([0-9a-fA-F]{64})\s+\*?omawin-tools\.txt$' } | ForEach-Object { $Matches[1] }) | Select-Object -First 1
+        if ($want -and (Get-FileHash $list.Path -Algorithm SHA256).Hash -eq $want.ToUpper()) {
+            foreach ($line in Get-Content $list.Path) { $f = $line -split "`t"; if ($f[0] -eq 'pwsh' -and $f.Count -ge 4) { $row = $f; break } }
+        }
+    }
+    if ($row) { $PwshFetch = @{ Row = $row; File = Get-ReleaseFile $row[2] -Background } }
+    else { Write-Note 'this release has no tools bundle: PowerShell 7 comes through winget' }
+}
+
 Write-Step 'git'
 if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
     winget install --id Git.Git --exact --silent --accept-source-agreements --accept-package-agreements
@@ -196,9 +240,40 @@ if ($Local) {
     }
 }
 
-# install.ps1 shows the same look; it skips the logo, shown a moment ago.
+# PowerShell 7, now that its download has had the clone's time: checked, unpacked where the
+# install's tools go (install/software.ps1 then sees it's there), and put on the PATH.
+if (-not $Pwsh -and $PwshFetch) {
+    $row = $PwshFetch.Row
+    if ($PwshFetch.File.Process) { $PwshFetch.File.Process.WaitForExit() }
+    $zip = $PwshFetch.File.Path
+    if (-not (Test-Path $zip) -or (Get-FileHash $zip -Algorithm SHA256).Hash -ne $row[3].ToUpper()) { throw "PowerShell 7 from the release doesn't match its published SHA-256" }
+    $dir = Join-Path $env:LOCALAPPDATA 'omawin\tools\pwsh'
+    if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
+    if ($LASTEXITCODE -ne 0) { throw "couldn't unpack PowerShell 7 ($LASTEXITCODE)" }
+    Set-Content (Join-Path $dir '.omawin-version') "$($row[1]) $($row[3])"
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (($userPath -split ';') -notcontains $dir) { [Environment]::SetEnvironmentVariable('Path', (@($userPath.TrimEnd(';'), $dir) | Where-Object { $_ }) -join ';', 'User') }
+    $Pwsh = Join-Path $dir 'pwsh.exe'
+    Write-Note "PowerShell $($row[1]) -> $dir"
+}
+if ($work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
+if (-not $Pwsh) {
+    winget install --id Microsoft.PowerShell --exact --silent --accept-source-agreements --accept-package-agreements
+    Update-SessionPath
+    $pwshFound = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $pwshFound) { throw 'PowerShell 7 is missing and winget could not install it: install it (aka.ms/powershell), then run this again.' }
+    $Pwsh = $pwshFound.Source
+}
+
+# install.ps1 shows the same look; it skips the logo, shown a moment ago. It runs in PowerShell 7.
 if ($Fancy) { Complete-Step; $env:OMAWIN_BANNER = 'shown' } else { Write-Step 'install.ps1' }
-try { & "$Target\install.ps1" }
+try {
+    & $Pwsh -NoLogo -NoProfile -ExecutionPolicy Bypass -File "$Target\install.ps1"
+    # A throw, not exit: run as `irm | iex`, exit would close your PowerShell window.
+    if ($LASTEXITCODE) { throw "install.ps1 stopped (exit $LASTEXITCODE): its log is in $env:LOCALAPPDATA\launcher\install.log" }
+}
 finally {
     $env:OMAWIN_BANNER = $null
     if ($Fancy) { [Console]::OutputEncoding = $Boot.Encoding }

@@ -3,7 +3,7 @@ using Microsoft.Win32;
 namespace OmawinMusic;
 
 // Is dictation listening right now? The same test as the bar's voice-meter
-// (zebar/tokyo-islands/voice-meter.cs): Handy (Win+H) or Windows voice typing is using the mic,
+// (bin/voice-meter.cs): Handy (Win+H) or Windows voice typing is using the mic,
 // per Windows' microphone privacy log (LastUsedTimeStop is 0 while in use).
 static class Dictation
 {

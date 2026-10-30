@@ -46,7 +46,7 @@ public static class About
         Add("omawin", () => version.Result, 0xF02A2);
         Add("Windows", WindowsVersion, 0xF05B3);
         Add("WM", () => Running("glazewm", "GlazeWM"), 0xF0570);
-        Add("Bar", () => Running("zebar", "Zebar"), 0xF10A9);
+        Add("Bar", () => "omawin's own (drawn by the menu app)", 0xF10A9);
         Add("Shell", MenuApp, 0xF0614);
         Add("Terminal", () => Running("noctty", "noctty"), 0xF018D);
         Add("Packages", Packages, 0xF03D7);

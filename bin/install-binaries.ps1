@@ -57,9 +57,20 @@ if (-not (Get-Command Write-Note -ErrorAction SilentlyContinue)) {
 $Repo = Split-Path $PSScriptRoot
 $Arch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'x64' }
 if (-not $Release) { $Release = if ($env:OMAWIN_RELEASE) { $env:OMAWIN_RELEASE } else { 'latest' } }
+# OMAWIN_RELEASE_URL: a mirror or a locally built release for a whole install (the tools bundle reads it too).
+if (-not $BaseUrl -and $env:OMAWIN_RELEASE_URL) { $BaseUrl = $env:OMAWIN_RELEASE_URL }
 if ($env:OMAWIN_PREBUILT -eq '0') { $NoDownload = $true }
 if ($env:OMAWIN_PREBUILT -eq '1') { $NoBuild = $true }
 # The .NET SDK, for a build here: only now, when one is needed (the core has just the runtime).
+# A zip unpacked with Windows' tar.exe (in Windows since 10 1803): Expand-Archive is many
+# times slower on a folder of many files (the menu app's 38 MB). It's the fallback.
+function Expand-Zip([string]$Zip, [string]$Dest) {
+    New-Item -ItemType Directory -Force $Dest | Out-Null
+    $tar = "$env:WINDIR\System32\tar.exe"
+    if (Test-Path $tar) { & $tar -xf $Zip -C $Dest; if ($LASTEXITCODE -eq 0) { return } }
+    Expand-Archive -Path $Zip -DestinationPath $Dest -Force
+}
+
 function Install-DotNetSdk {
     if (Test-DotNetSdk) { return $true }
     Write-Note 'installing the .NET 9 SDK to build here (about 1 GB, once)'
@@ -200,11 +211,7 @@ try {
         # IL, so one ZIP covers x64 and ARM64.
         $helpers = @(
             @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
-            @{ Exe = 'voice-meter'; Source = 'zebar\tokyo-islands\voice-meter.cs' }
-            @{ Exe = 'cpu-cores'; Source = 'zebar\tokyo-islands\cpu-cores.cs' }
-            @{ Exe = 'win-keys'; Source = 'zebar\tokyo-islands\win-keys.cs' }
-            @{ Exe = 'app-icons'; Source = 'zebar\tokyo-islands\app-icons.cs' }
-            @{ Exe = 'theme-watch'; Source = 'zebar\tokyo-islands\theme-watch.cs' }
+            @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
             @{ Exe = 'omawin-listen'; Source = 'agent\omawin-listen.cs' }
         )
         $paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
@@ -218,12 +225,12 @@ try {
             $zip = Get-PieceRelease 'omawin-helpers-*.zip' $paths (-not $NoBuild)
             if ($zip) {
                 # Unpacked aside, then put in one file at a time. A running helper (the bar's
-                # theme-watch, voice-meter) locks its exe: it's moved aside, and keeps running until
+                # voice-meter) locks its exe: it's moved aside, and keeps running until
                 # the bar restarts it. One that can't be moved stays as it is, for the next update;
                 # unpacking straight over the folder stopped at such a file, halfway, with
                 # omawin.exe already moved aside and no new one written.
                 $unpacked = Join-Path $work 'helpers'
-                Expand-Archive -Path $zip -DestinationPath $unpacked -Force
+                Expand-Zip $zip $unpacked
                 $kept = @()
                 foreach ($file in Get-ChildItem $unpacked -File) {
                     $dest = Join-Path $BinDir $file.Name
@@ -263,7 +270,7 @@ try {
             $zip = Get-PieceRelease "SystemMenu-*-win-$Arch.zip" @('menu-app') (-not $NoBuild -and (Test-DotNetSdk))
             if ($zip) {
                 if (-not $NoStart) { & "$Repo\menu-app\stop-menu.ps1" -Dir $MenuDir }
-                Expand-Archive -Path $zip -DestinationPath $MenuDir -Force
+                Expand-Zip $zip $MenuDir
                 # Unpacked, not built: nothing started it (menu-app\build.ps1 does that itself).
                 # This account's: another account signed in has its own, and counting it left this
                 # one stopped (stop-menu.ps1 stops only this account's).

@@ -23,14 +23,12 @@ $WingetPackages = @(
 
     # desktop
     'glzr-io.glazewm'               # tiling window manager
-    'glzr-io.zebar'                 # the top bar and the dock
     'Oven-sh.Bun'                   # omawin's JavaScript runtime
 
     # editor
     'Neovim.Neovim'
     'Neovide.Neovide'
     'tree-sitter.tree-sitter-cli'   # nvim-treesitter builds parsers with it
-    'zig.zig'                       # C compiler for nvim-treesitter parsers
     'OpenJS.NodeJS.LTS'             # mason.nvim (Neovim) installs most LSPs with npm
     'astral-sh.uv'                  # Python tools (harlequin, the Fabric CLI) and mason.nvim's Python LSPs
 
@@ -66,7 +64,7 @@ $Presets = [ordered]@{
 # raise a prompt of its own; one listed that has no whole-PC installer falls back to this
 # account's. Declined, the listed ones install for this account where they can (--scope user).
 $WholePC = @(
-    'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'glzr-io.zebar', 'Neovim.Neovim',
+    'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'Neovim.Neovim',
     'Neovide.Neovide', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.DesktopRuntime.9',
     'GoLang.Go', 'Erlang.ErlangOTP', 'Elixir.Elixir', 'RProject.R', 'Posit.RStudio', 'Microsoft.Sqlcmd',
     'Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'
@@ -85,6 +83,14 @@ $WingetCommands = @{
     'Typst.Typst' = 'typst'; 'Erlang.ErlangOTP' = 'erl'; 'Elixir.Elixir' = 'elixir'; 'BrechtSanders.WinLibs.POSIX.UCRT' = 'gcc'
     'JesseDuffield.Lazydocker' = 'lazydocker'; 'ezwinports.make' = 'make'; 'AlDanial.Cloc' = 'cloc'; 'JernejSimoncic.Wget' = 'wget'
     'jqlang.jq' = 'jq'; 'junegunn.fzf' = 'fzf'; 'sharkdp.fd' = 'fd'; 'BurntSushi.ripgrep.MSVC' = 'rg'; 'JesseDuffield.lazygit' = 'lazygit'
+    'Git.Git' = 'git'; 'Microsoft.PowerShell' = 'pwsh'; 'GitHub.cli' = 'gh'; 'OpenJS.NodeJS.LTS' = 'node'; 'Neovim.Neovim' = 'nvim'
+}
+
+# A package with no command on the PATH counts as installed when its file is there (a new install
+# doesn't read winget's whole list: install/software.ps1, Get-WingetInstalled).
+$WingetFiles = @{
+    'glzr-io.glazewm'                   = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
+    'Microsoft.DotNet.DesktopRuntime.9' = "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App\9.*"
 }
 
 # Tools with their own installers (run after the winget ones, so uv exists). herdr is the core's

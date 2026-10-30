@@ -26,6 +26,7 @@ $cache = "$HOME\.cache\pwsh"
 if (Test-Path $cache) { Remove-Item $cache -Recurse -Force; Write-Note 'cleared starship/zoxide init cache (rebuilt on next start)' }
 
 Write-Step 'Windows Terminal'
+if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools wt }   # the tools bundle's Terminal, if it brings one
 # Terminal writes its own settings.json (its settings UI), so it lives in Terminal's LocalState, not
 # in the repo: omawin's windows-terminal/settings.json seeds it once (Terminal's generated one is
 # backed up), and after that it's yours. The colors come from a fragment (themes/render.ps1).
@@ -51,6 +52,11 @@ $wtPackage = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.Windo
     Select-Object -First 1
 if ($wtPackage) {
     try { Set-TerminalSettings "$($wtPackage.FullName)\LocalState" }
+    catch { Write-Warn "couldn't seed Windows Terminal's settings (is it open?). Close it and run: .\install.ps1 -LinkOnly from another shell. $_" }
+} elseif (Test-Path "$env:LOCALAPPDATA\omawin\tools\wt\WindowsTerminal.exe") {
+    # The tools bundle's copy is Terminal's unpackaged build: it reads its settings from here, with
+    # no Store package folder to wait for.
+    try { Set-TerminalSettings "$env:LOCALAPPDATA\Microsoft\Windows Terminal" }
     catch { Write-Warn "couldn't seed Windows Terminal's settings (is it open?). Close it and run: .\install.ps1 -LinkOnly from another shell. $_" }
 } elseif (Get-Command wt -ErrorAction SilentlyContinue) {
     # Installed but never opened: its settings folder doesn't exist yet. Open it once
