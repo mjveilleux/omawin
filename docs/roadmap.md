@@ -2,7 +2,7 @@
 
 The big plan: where omawin stands on 2026-10-30, where it's going, and for each piece of work what to build, which files it touches, how we'll know it's done, and what could go wrong. The goal is to come close to Omarchy 4 in how omawin installs and how it feels to use: a menu that answers instantly, windows that move smoothly, an install that's done before your coffee is, Linux as a first-class home, and a shell you can extend with plugins.
 
-[mission.md](mission.md) says why omawin exists; [mission-todo.md](mission-todo.md) is the running checklist by track. This file is the plan behind it. When an item lands, tick it in mission-todo.md with the commit; this file changes when the plan changes.
+**The how, with code for every piece: [plan/](plan/README.md)** (start there if you have no context). [mission.md](mission.md) says why omawin exists; [mission-todo.md](mission-todo.md) is the running checklist by track. This file is the plan behind it. When an item lands, tick it in mission-todo.md with the commit; this file changes when the plan changes.
 
 Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-shell.md`, `docs/menu.md`, `docs/update-process.md`, `agents/skills/motion.md`, `default/hypr/looknfeel.lua`, `install/omarchy-base.packages`); our GlazeWM fork (`mjveilleux/glazewm`, branches `omawin`, `feat/accordian-v1`, `feat/master-stack`, `feat/auto-tiling`); a web survey of Windows sandboxes and similar projects (2026-10-30, links in phase 7). File and line references are as of 2026-10-30 and will drift; they say where to start, not what to trust blindly.
 
