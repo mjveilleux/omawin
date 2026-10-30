@@ -115,6 +115,10 @@ The bundle's copies are a fast start, never a lock-in. Anything can still be ins
 - `install.ps1 -Bundle <path>`: install from a saved bundle (a USB stick, a share), no internet for the desktop (Omarchy's ISO, for Windows). Stage 2 and presets queue until there's a connection.
 - A second Windows account on the same PC reuses the version folder (machine-wide `%ProgramData%\omawin\<tag>` when the first install had admin) and only seeds its own configs: seconds.
 
+### K. No admin
+
+The minute has **no admin prompt**, and neither does any update ([roadmap.md](roadmap.md), 2.9): the per-user GlazeWM build, per-user packages and the bundle need none; the few admin things (the `uiAccess` GlazeWM, Virtual Machine Platform for WSL when it's off, machine-wide settings) are opt-in from the welcome page, batched into one prompt at a moment you choose. CI runs the install and the update as a standard user and fails on any attempt to elevate.
+
 ## Milestones
 
 | Milestone | Desktop up in | What it takes |

@@ -26,6 +26,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 | 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
+| 2026-10-30 | **No admin by default**: install, update and everyday use never ask for admin; a feature that truly needs it is opt-in, asks once for everything at the moment you choose it, says exactly what it will do, and never asks during an update (2.9) |
 | 2026-10-30 | **One Search**: one bar for everything, results tagged and filterable, a bento home for the empty state, a list for results ([one-search.md](one-search.md)); proposed, open questions with the maintainer |
 | 2026-10-30 | **Never open Settings again**: every Windows setting is searchable in the system menu (Win+Alt+Space), and the common ones switch on and off right there |
 | 2026-10-30 | **Omarchy plugins run unchanged** on omawin: stand-ins for Omarchy's commands in Arch, and a Qt host on Windows that runs their QML (Windows runs QML; only Quickshell's Linux modules are missing, so omawin provides them) |
@@ -383,6 +384,34 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 
 ---
 
+### 2.9 No admin: zero prompts by default, one when you ask for something that needs it (M)
+
+**The rule:** installing, updating and using omawin never ask for admin. If you choose something that truly needs it, omawin gathers everything that choice needs into **one** prompt, says exactly what it will change before Windows asks, and does it all at once. **Updates never ask**: a pending admin change waits for you to say when (a quiet line on the welcome page or the bar, never a surprise prompt). Declining is always fine: everything else keeps working.
+
+**Everything that needs admin today or in this plan, and how it stops needing it:**
+
+| What | Why it needs admin now | Without admin |
+|---|---|---|
+| **The GlazeWM fork's install** (`install/glazewm-fork.ps1`) | GlazeWM asks for `uiAccess` (to manage windows of programs running as admin); Windows grants that only to a program signed by a certificate the PC trusts, in Program Files. Today a certificate is made on the PC and the fork copied into Program Files | **A per-user GlazeWM by default**: the fork built twice in CI, a normal build (no `uiAccess`) that runs from the bundle in `%LOCALAPPDATA%` with no admin at all, and the `uiAccess` build. The only loss: windows of programs you started *as admin* aren't tiled or moved. **Opt-in** "Manage admin windows too": one prompt puts the CI-signed `uiAccess` build in Program Files (no certificate made on the PC once CI signing exists, [release-signing.md](release-signing.md)); its later updates are offered, never forced |
+| **Whole-PC packages** (`$WholePC` in `packages.ps1`: PowerShell, Git, Node, Neovim, …) | installed machine-wide, for every account | **Per user by default** (`--scope user`, or the bundle's portable copies); machine-wide only if you choose it (a shared PC) through `omawin pkg install --machine` |
+| **Zebar** | machine-wide installer | gone with the native bar (1.6) |
+| **The .NET desktop runtime** | machine-wide installer | not needed: the menu app is AOT, the music player published self-contained (2.7) |
+| **The local code-signing certificate** | the PC's certificate store | gone: signing happens in CI |
+| **WSL** (Arch by default) | Windows' *Virtual Machine Platform* feature must be on, which only admin can turn on, plus a restart | checked first: on many PCs it's already on, and then WSL and Arch install **with no prompt** (the WSL app and distros are per user). If it's off, this is **the** one prompt, at the moment you pick Linux on the welcome page, never in the first minute |
+| **No-ads' admin half** (machine-wide policies) | `HKLM` policies | the per-user equivalents (`HKCU`) wherever Windows honours them (most suggestion and ad settings); the few machine-only ones become opt-in catalog entries |
+| **Chocolatey** | installs machine-wide | only if you choose it (`omawin pkg prefer`); winget and Scoop work per user |
+| **A restore point before changes** (8.42) | `Checkpoint-Computer` needs admin | omawin's own rollback needs none (version folders, `omawin update --rollback`, every setting's undo); a restore point is made only inside an admin batch you already approved |
+| **Phase 8 and 1B's admin settings** (developer mode, long paths, sudo, Windows features, Dev Drive, DNS, the hosts file, the dev port ranges, Defender exclusions, the whole-disk index, driver and update policies) | they're machine-wide | **opt-in, shown with a shield**; choosing several queues them, and one prompt applies the batch |
+| **The admin helper** (8.0) | a standing service would hold admin rights all the time | **no standing service**: each approved batch runs as one short elevated process with a fixed list of verbs, then exits; nothing elevated stays running. (A whole-disk index service, 8.2, is the one exception, and only if you turn that feature on) |
+
+**What already needs no admin, kept that way:** per-user fonts (Windows 10 1809+), the sign-in task (a scheduled task for your own account), the theme, the bar, the menu app, noctty, the configs, the PATH, Scoop, mise, per-user winget packages, WSL distros once the feature is on.
+
+**How a prompt looks when one is needed:** before Windows' UAC dialog, omawin shows the list (*"Turn on Virtual Machine Platform (needs a restart), developer mode, long paths"*), why, and *Not now*. One UAC dialog; the work runs; a summary of what changed; undo where possible. Never more than one dialog for one choice.
+
+**Checked in CI:** the install job (2.1) and the update job run **as a standard (non-admin) user** created on the runner, and fail if anything tries to elevate (no `RunAs` process, no UAC). The Sandbox test (7.1) does the same.
+
+**Done when:** a fresh install and an update, Enter through every question, raise **no** admin prompt; picking Linux on a PC without Virtual Machine Platform raises exactly one; turning on any shielded setting raises at most one per batch.
+
 ## Phase 2B: `omawin pkg`, one package command over winget, Scoop and Chocolatey
 
 **Why:** Windows has three package managers, each with a different catalogue, different ids, different scopes and different update commands, and you have to remember which one installed what. Omarchy wraps pacman and the AUR in its own commands (`omarchy-pkg-add`, `omarchy-pkg-drop`, `omarchy-update`); omawin should do the same for Windows: **one command, and omawin picks and remembers the manager.** omawin is already partway there: the launcher's Packages page searches all three (`omawin pkg find`), `omawin pkg install` / `remove` are winget-only today (`bin/pkg-install.ps1`, `bin/pkg-remove.ps1`), and `%LOCALAPPDATA%\launcher\installed.txt` records what's installed.
@@ -736,7 +765,7 @@ Shared building blocks that several features need (who holds a file, display lay
 - **A plugin SDK**, `plugins/sdk/Omawin.Plugin` (a small library each plugin references): the JSON-lines protocol (read `init` / `action` / `settings`, write bar lines, `state`, `notify`, `log`), settings with defaults from the manifest, a data folder, logging, and a `--selftest` entry point. Win32 calls declared with the **CsWin32** source generator (typed, AOT-safe P/Invoke from Microsoft's metadata), so `RmGetList`, `EventLogReader`, `GetExtendedTcpTable` and the rest are one line each.
 - **The shared library**, `shared/Omawin.Windows` (also referenced by the menu app): the building blocks used by both, such as Restart Manager, display configuration, event log queries, so the core and plugins share code, not copies.
 - **Built and shipped by CI**: the release workflow builds each first-party plugin for x64 and arm64 and publishes it as an asset; a plugin is downloaded when it's first enabled (as the menu app is), so the default install stays lean. Checked against `SHA256SUMS.txt`.
-- **Admin, safely**: a plugin never elevates itself. Admin work (the disk index service, DNS, the hosts file) goes through **one omawin admin helper** with a fixed list of verbs (`dns set`, `hosts write`, `usn-index install`, …), installed once in the one admin prompt and reached over a named pipe only the user's session can open; the plugin asks with `{"type":"admin","verb":…}` and the shell shows what will change before it happens.
+- **Admin, safely, and rarely** (2.9): a plugin never elevates itself. Admin work (DNS, the hosts file, installing the disk index) is a fixed list of verbs (`dns set`, `hosts write`, `usn-index install`, …) the plugin requests with `{"type":"admin","verb":…}`; the shell shows what will change, and an approved batch runs as one short elevated process that then exits. No standing admin service.
 - **New plugin kinds** these need, added to [plugins.md](plugins.md): `page` (a launcher page, like Localhost or Audio), `launcher-provider` (rows for a query: `top`, connections), and `finder-source` (8.2's index as a finder chip).
 - **Tested in CI** on a Windows runner: each plugin's `--selftest` (the Restart Manager on a file the test locks itself, an event log query, a TCP table read), the SDK's protocol tests, and `omawin plugin check` on every manifest.
 - **On by default or not**: the occasional pages (8.3, 8.15, 8.16, 8.20) are on, since they cost nothing until opened; services with a cost (8.2's index, 8.9's lights) are off until you turn them on, from the Plugins page.
@@ -810,7 +839,7 @@ omawin's install already turns off Windows' ads and suggestions, OEM upsells and
 ### 8I. Keep it healthy
 
 - **8.41 Disk and battery health** on the Health page (8.15): SMART reliability counters (`Get-StorageReliabilityCounter`: wear, temperature, read errors), battery wear (`powercfg /batteryreport`'s design vs full charge capacity), devices with driver problems (`Win32_PnPEntity` with an error code), each with what to do.
-- **8.42 A restore point before omawin changes Windows** (S). Before install, `omawin update` and any batch of admin settings (`Checkpoint-Computer`, with System Protection on for the system drive at a modest size); `omawin undo` lists them.
+- **8.42 A restore point before omawin changes Windows** (S). Only inside an admin batch you already approved (it needs admin itself, 2.9): before that batch's changes (`Checkpoint-Computer`). omawin's own changes roll back without admin (version folders, every setting's undo); `omawin undo` lists both.
 - **8.43 Driver updates on your terms** (S, catalog, asked). Windows Update can replace a working vendor driver with an older or generic one; the documented policy to exclude drivers from quality updates, offered with that trade-off said.
 
 ### 8J. What Windows 11 users complain about, answered
