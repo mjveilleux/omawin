@@ -59,8 +59,11 @@ jobs:
           "seconds $([int]((Get-Date) - $start).TotalSeconds)" | Add-Content C:\ci\out\result.txt
           Copy-Item "$env:LOCALAPPDATA\launcher\install-times.txt" C:\ci\out -ErrorAction SilentlyContinue
           Copy-Item "$env:LOCALAPPDATA\launcher\install*.log" C:\ci\out -ErrorAction SilentlyContinue
-          & pwsh -NoProfile -File "$HOME\omawin\check.ps1" *> C:\ci\out\check.log
-          "check exit $LASTEXITCODE" | Add-Content C:\ci\out\result.txt
+          # Its own process writing to a file, with a time limit: piped through this script, a
+          # program check starts that keeps running would hold the output open, and this would wait.
+          $check = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "$HOME\omawin\check.ps1" -RedirectStandardOutput C:\ci\out\check.log -RedirectStandardError C:\ci\out\check-errors.log -WindowStyle Hidden -PassThru
+          if ($check.WaitForExit(300000)) { "check exit $($check.ExitCode)" | Add-Content C:\ci\out\result.txt }
+          else { $check.Kill(); 'check timed out (5 min)' | Add-Content C:\ci\out\result.txt }
           'done' | Set-Content C:\ci\out\done.txt
           '@ | Set-Content C:\ci\run.ps1 -Encoding utf8
           $action = New-ScheduledTaskAction -Execute powershell.exe -Argument '-NoProfile -ExecutionPolicy Bypass -File C:\ci\run.ps1'
