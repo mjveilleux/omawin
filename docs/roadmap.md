@@ -20,7 +20,7 @@ Sources: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-she
 | Install | packages from pacman, 5 downloads at once | winget, 4 at once, ~150 s of packages before the desktop is up; the AOT build only where Visual Studio's C++ tools are |
 | Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | menu rows and launcher items in text files; no widgets, panels or plugins of your own |
 | Everyday dev setup | `install-dev-env` (mise), Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | WSL and presets; the rest by hand |
-| Files | Nautilus, with a preview (Sushi) and "here" keys | Explorer as Windows ships it, plus Win+F (fff) |
+| Files | Nautilus, with a preview (Sushi) and "here" keys | the Win+F finder (fff): search, preview, chips; no actions beyond open and show in folder, no browsing |
 
 ## Phase 1: snappy (now)
 
@@ -72,14 +72,18 @@ Borrowed as data where we can, the way the themes were.
 8. **Detect before offering**: menu rows with a condition (`?wsl`, `?docker`), answered in the background and cached, so the menu opens on the last answers, as Omarchy's guards do.
 9. **Update channels and undo**: `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what install.md lists by hand.
 
-## Phase 5: files
+## Phase 5: files (the finder, Win+F)
 
-Explorer stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)). Make it, and the finder around it, better. What to start with: [open-questions/file-explorer.md](../open-questions/file-explorer.md).
+The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. Make it the place you act on files from, so Explorer is rarely needed. Explorer itself stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)).
 
-1. **Explorer's developer defaults**, as tweaks with undo: file extensions and hidden files shown, opens to your home folder, full path in the title, compact view, no Gallery / Home recommendations; dark or light following the theme.
-2. **A files key that honors your pick**: `omawin launch files [here]` and `omawin default files explorer|yazi|…`, like the terminal; "here" opens the focused terminal's folder (Omarchy's Super+Alt+Shift+F).
-3. **Win+F does more**: Space previews (images, text, code with the theme's colors, like Sushi), Ctrl+Enter shows the file in Explorer, keys to open the folder in the terminal or editor and to copy the path.
-4. **yazi as a preset**, themed from the palette, for files in the terminal.
+1. **Actions on a result.** A small action list on the selected file or folder (Ctrl+K, or →): open in the editor (`omawin launch editor`), a terminal there (`omawin launch terminal --dir`), open as a project (herdr), copy the path or the relative path, copy the file itself (pastes into Explorer, Teams, mail), rename, send to the Recycle Bin. The common ones get keys of their own.
+2. **Browse, not just search.** → goes into a folder and ← goes up, the list showing that folder's contents with the preview beside it (yazi's way), so the finder works as a keyboard file manager when you know roughly where something is.
+3. **Search inside files.** A prefix (e.g. `#`) searches contents: fff's own grep if its library offers it, else ripgrep, results by file and line; Enter opens the editor at that line.
+4. **Better previews.** Code with the theme's syntax colors, Markdown drawn, a PDF's first page (`Windows.Data.Pdf`), a CSV as a table, Office files and videos by Windows' own thumbnails.
+5. **Filters and places.** `.pdf`, `today`, `this week` as filters; your own places in the account folder (`launcher/finder-places.txt`), WSL repos, and pinned favorites at the top of the empty list.
+6. **Many at once and drag out.** Mark several (Space), act on all of them; drag a result into another app.
+7. **Into file dialogs.** When an app's Open or Save dialog is in front, choosing a folder sends the dialog there, so the finder works inside every app.
+8. **Explorer's developer defaults**, for when you do open it: extensions and hidden files shown, opens to your home folder, full path in the title, no Gallery / recommendations, dark or light following the theme; as tweaks with undo.
 
 ## Always: following Omarchy
 
