@@ -190,7 +190,7 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 **How a community theme gives us what we need, without cloning it:** an Omarchy theme repo holds `colors.toml` (the palette; older ones `alacritty.toml`, which `convert-theme.ps1` and Omarchy's `omarchy-theme-colors-from-alacritty` turn into a palette), `backgrounds/`, and usually **`preview.png`** (what Omarchy's own switcher shows), sometimes `light.mode`. All readable as single files from GitHub (`raw.githubusercontent.com/<repo>/<commit>/…`), so the picker needs only the palette and one picture per theme, not the repo.
 
 **Build:**
-1. **A community theme index, built by CI** (a scheduled workflow, weekly): the list of community themes (from omarchy.org/themes' list, plus GitHub repos with the `omarchy-theme` topic or named `omarchy-*-theme`, plus a hand-kept `themes/community-extra.txt`), and for each, at a pinned commit: its palette (converted to omawin's format), whether it's light or dark, its author and licence, and a thumbnail made from `preview.png` (or its first background) at the picker's sizes (1.9). Published as one small release asset (`community-themes-<date>.zip`: an index JSON and the thumbnails; a few MB) and refreshed in the background by the menu app.
+1. **A community theme index, built by CI** (a scheduled workflow, weekly): the list of community themes (**primarily [omarchy.org/themes](https://omarchy.org/themes/)**, which lists them; it isn't in Omarchy's repo, so CI reads the page itself; plus GitHub repos with the `omarchy-theme` topic or named `omarchy-*-theme`, plus a hand-kept `themes/community-extra.txt`), and for each, at a pinned commit: its palette (converted to omawin's format), whether it's light or dark, its author and licence, and a thumbnail made from `preview.png` (or its first background) at the picker's sizes (1.9). Published as one small release asset (`community-themes-<date>.zip`: an index JSON and the thumbnails; a few MB) and refreshed in the background by the menu app.
 2. **The picker shows them.** Style › Theme gets a **Community** chip (Tab) beside the built-in themes: every community theme's picture and colour swatches at once (from the index, preloaded like 1.9), searchable by name, author and light / dark, sorted by popularity (stars) or newest.
 3. **Try before installing.** Selecting a community theme previews it live: omawin's themes are a palette plus pictures, so the index's palette is enough to apply it to every app for a moment (the same render as `theme set`, from a temporary palette) with its thumbnail as the background; moving away or Esc puts your theme back. **Enter installs it** (the existing `theme install`, at the index's reviewed commit) and keeps it.
 4. **Install by name:** `omawin theme add <name>` finds it in the index (`omawin theme add <git link>` still works for anything not listed); `omawin theme search <words>` lists matches. `theme install` stays as an alias.
@@ -200,7 +200,7 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 
 **Done when:** opening Style › Theme › Community shows every listed community theme's picture and colours in the first frame, selecting one previews it across the desktop, and Enter installs it with no link to copy.
 
-**Explore first:** whether omarchy.org/themes has a machine-readable list (or which page to read), and the share of community themes that ship `preview.png` vs only backgrounds.
+**Explore first:** how [omarchy.org/themes](https://omarchy.org/themes/) presents its list (static HTML, or a data file the page loads; which fields: name, author, repo, preview picture) so CI reads it reliably, and the share of community themes that ship `preview.png` vs only backgrounds. (Not reachable from the cloud session that wrote this; to check from a session with omarchy.org allowed.)
 
 ---
 
@@ -890,7 +890,7 @@ Open questions to measure or try before building, collected from every phase. Ea
 | **herdr and OSC 11**: does it pass a pane's background through | the Linux / PowerShell tint without a herdr change | 3B |
 | **`hey` and `gws` on Windows** (for the calendar plugin) | whether that plugin can ever run outside Linux | plugins.md |
 | **Window animations on this PC's GPU**, a week of daily use | shipping 1.5 | 1.5 |
-| **Omarchy's community theme list**: a machine-readable source, and how many themes ship `preview.png` | the community index's sources | 1.10 |
+| **omarchy.org/themes' list**: its structure (HTML or a data file, which fields), and how many themes ship `preview.png` | how CI reads the community index | 1.10 |
 
 ## Always: following Omarchy
 
