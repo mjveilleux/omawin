@@ -4,7 +4,8 @@
 # it's done with <Done>\<name>.json (Name, Ok, Error, Seconds), so the install can take each one
 # as it lands, and leave the ones marked later (zig) to finish after it.
 #
-#   -Plan    a JSON list: Name, Url (or none: Zip is already a file), Zip, Sha, Dir, Version, Merge
+#   -Plan    a JSON list: Name, Url (or none: Zip is already a file), Zip, Sha, Dir, Version, Merge,
+#            Sfx (Zip is a 7-Zip self-extractor: run to unpack, not tar)
 #   -Done    the folder for the done files; this script removes its own work files when it ends
 param([Parameter(Mandatory)][string]$Plan, [Parameter(Mandatory)][string]$Done)
 $ErrorActionPreference = 'Stop'
@@ -38,8 +39,14 @@ try {
                 catch { throw 'in use: close it and run install.ps1 again' }
             }
             New-Item -ItemType Directory -Force $t.Dir | Out-Null
-            & $using:tar -xf $t.Zip -C $t.Dir
-            if ($LASTEXITCODE) { throw "unpacking failed ($LASTEXITCODE)" }
+            if ($t.Sfx) {
+                # 7-Zip's self-extractor: -o the folder, -y no questions.
+                $p = Start-Process -FilePath $t.Zip -ArgumentList "-o`"$($t.Dir)`"", '-y' -WindowStyle Hidden -Wait -PassThru
+                if ($p.ExitCode) { throw "unpacking failed ($($p.ExitCode))" }
+            } else {
+                & $using:tar -xf $t.Zip -C $t.Dir
+                if ($LASTEXITCODE) { throw "unpacking failed ($LASTEXITCODE)" }
+            }
             # Git for Windows' portable build finishes its setup (Git Bash's /etc and /dev) with
             # post-install.bat, which removes itself when it's done.
             $postInstall = Join-Path $t.Dir 'post-install.bat'

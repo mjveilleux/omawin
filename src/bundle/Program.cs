@@ -36,15 +36,24 @@ try
             await using var f = File.Create(download);
             await res.Content.CopyToAsync(f, ct);
         }
-        var stage = Path.Combine(dir, "stage");
-        Directory.CreateDirectory(stage);
-        Unpack(t, download, stage);
-        var zip = Path.Combine(outDir, Tools.FileName(t.Name));
+        var zip = Path.Combine(outDir, Tools.FileName(t.Name, t.Sfx));
         File.Delete(zip);
-        ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
+        if (t.Sfx)
+        {
+            // A self-extractor goes out as it is: its LZMA is far smaller than a zip of what's
+            // inside (Git for Windows: ~60 MB against ~160), and the PC runs it to unpack.
+            File.Copy(download, zip);
+        }
+        else
+        {
+            var stage = Path.Combine(dir, "stage");
+            Directory.CreateDirectory(stage);
+            Unpack(t, download, stage);
+            ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
+        }
         await using var z = File.OpenRead(zip);
         var sha = Convert.ToHexStringLower(await SHA256.HashDataAsync(z, ct));
-        built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later);
+        built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later, t.Sfx);
         Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}");
     });
 }
@@ -90,8 +99,8 @@ async Task<(string, string, string)> Resolve(Tool t, CancellationToken ct)
     throw new InvalidOperationException($"{t.Name}: unknown source {t.Source}");
 }
 
-// The download into stage/, in the tool's shape: a zip without its one top folder, a 7-Zip
-// self-extractor's contents, a single file (.exe, or .gz holding one) under its new name.
+// The download into stage/, in the tool's shape: a zip without its one top folder, a single file
+// (.exe, or .gz holding one) under its new name.
 static void Unpack(Tool t, string download, string stage)
 {
     if (download.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
@@ -110,19 +119,6 @@ static void Unpack(Tool t, string download, string stage)
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             e.ExtractToFile(dest, overwrite: true);
         }
-        return;
-    }
-    if (download.EndsWith(".7z.exe", StringComparison.OrdinalIgnoreCase))
-    {
-        // A 7-Zip self-extractor (Git for Windows' PortableGit): 7-Zip opens it like an archive.
-        // The CI runner has 7z; the PC gets a plain zip like every other tool.
-        var psi = new System.Diagnostics.ProcessStartInfo("7z") { RedirectStandardOutput = true, RedirectStandardError = true };
-        foreach (var a in new[] { "x", "-y", "-o" + stage, download }) psi.ArgumentList.Add(a);
-        using var p = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException($"{t.Name}: 7z didn't start");
-        var err = p.StandardError.ReadToEndAsync();
-        p.StandardOutput.ReadToEnd();
-        p.WaitForExit();
-        if (p.ExitCode != 0) throw new InvalidOperationException($"{t.Name}: 7z exited {p.ExitCode}: {err.Result}");
         return;
     }
     var target = Path.Combine(stage, t.Rename ?? Path.GetFileName(download));

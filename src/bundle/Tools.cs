@@ -3,13 +3,15 @@ using System.Text.RegularExpressions;
 namespace Omawin.Bundle;
 
 // One row of install/tools.txt.
-public sealed record Tool(string Name, string Source, Regex Asset, string? Rename, string Bin, string? Provides, string? Home = null, bool Later = false, string? Keep = null);
+public sealed record Tool(string Name, string Source, Regex Asset, string? Rename, string Bin, string? Provides, string? Home = null, bool Later = false, string? Keep = null, bool Sfx = false);
 
 // One row of the manifest the install reads (omawin-tools.txt), tab-separated so Windows
-// PowerShell splits it with one -split: name, version, file, sha256, bin, winget id, home, later.
-public sealed record Built(string Name, string Version, string File, string Sha256, string Bin, string? Provides, string? Home, bool Later = false)
+// PowerShell splits it with one -split: name, version, file, sha256, bin, winget id, home, flags
+// (later, sfx: space-separated).
+public sealed record Built(string Name, string Version, string File, string Sha256, string Bin, string? Provides, string? Home, bool Later = false, bool Sfx = false)
 {
-    public string Line => string.Join('\t', Name, Version, File, Sha256, Bin, Provides ?? "", Home ?? "", Later ? "later" : "");
+    public string Line => string.Join('\t', Name, Version, File, Sha256, Bin, Provides ?? "", Home ?? "",
+        string.Join(' ', new[] { Later ? "later" : null, Sfx ? "sfx" : null }.Where(f => f != null)));
 }
 
 public static class Tools
@@ -31,15 +33,18 @@ public static class Tools
             if (p[3].Contains("..") || Path.IsPathRooted(p[3])) throw new FormatException($"install/tools.txt: bin '{p[3]}'");
             string? home = p.Length > 5 && p[5].Length > 0 ? p[5] : null;
             if (home != null && (home.Contains("..") || Path.IsPathRooted(home) || home.StartsWith('\\'))) throw new FormatException($"install/tools.txt: home '{home}'");
-            // The 7th field: flags. later (not waited for), keep:<pattern> (only those files of it).
-            bool later = false; string? keep = null;
+            // The 7th field: flags. later (not waited for), keep:<pattern> (only those files of it),
+            // sfx (a 7-Zip self-extractor, shipped as it is: the PC runs it to unpack).
+            bool later = false, sfx = false; string? keep = null;
             foreach (var flag in (p.Length > 6 ? p[6] : "").Split(' ', StringSplitOptions.RemoveEmptyEntries))
             {
                 if (flag == "later") later = true;
+                else if (flag == "sfx") sfx = true;
                 else if (flag.StartsWith("keep:") && flag.Length > 5) keep = flag[5..];
-                else throw new FormatException($"install/tools.txt: flag '{flag}' (later, keep:<pattern>)");
+                else throw new FormatException($"install/tools.txt: flag '{flag}' (later, sfx, keep:<pattern>)");
             }
-            tools.Add(new Tool(p[0], p[1], new Regex(asset), rename, p[3], p.Length > 4 && p[4].Length > 0 ? p[4] : null, home, later, keep));
+            if (sfx && keep != null) throw new FormatException($"install/tools.txt: {p[0]}: sfx ships the file as it is, so keep: can't apply");
+            tools.Add(new Tool(p[0], p[1], new Regex(asset), rename, p[3], p.Length > 4 && p[4].Length > 0 ? p[4] : null, home, later, keep, sfx));
         }
         if (tools.GroupBy(t => t.Name).FirstOrDefault(g => g.Count() > 1) is { } dup) throw new FormatException($"install/tools.txt: {dup.Key} twice");
         return tools;
@@ -48,7 +53,7 @@ public static class Tools
     // The release file names. No version in them, so the install can take
     // releases/latest/download/<name> straight, without asking GitHub's API which release is newest.
     public const string Manifest = "omawin-tools.txt";
-    public static string FileName(string name) => $"omawin-tool-{name}.zip";
+    public static string FileName(string name, bool sfx = false) => $"omawin-tool-{name}{(sfx ? ".exe" : ".zip")}";
 
     // An archive whose entries all sit in one top folder ("nvim-win64/bin/nvim.exe") is unpacked
     // without it, so every tool's zip has the same shape: the tool's own files at the top.

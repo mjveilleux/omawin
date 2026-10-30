@@ -45,6 +45,7 @@ public class BundleTests
     [InlineData("a | github:o/r | ^x$")]                // too few fields
     [InlineData("a | github:o/r | ^x$ | . | X | ..\\up")] // home climbs out
     [InlineData("a | github:o/r | ^x$ | . | X | | soon")]    // an unknown flag
+    [InlineData("a | github:o/r | ^x$ | . | X | | sfx keep:*.exe")] // a self-extractor goes out whole
     public void BadRowsAreRefused(string row) => Assert.Throws<FormatException>(() => Tools.Parse([row]));
 
     [Fact]
@@ -58,4 +59,16 @@ public class BundleTests
     [Fact]
     public void ManifestLinesAreTabSeparatedWithEmptyOptionals() =>
         Assert.Equal("fd\tv10.2.0\tomawin-tool-fd.zip\tabc\t.\tsharkdp.fd\t\t", new Built("fd", "v10.2.0", Tools.FileName("fd"), "abc", ".", "sharkdp.fd", null).Line);
+
+    // Git for Windows goes out as its own self-extractor (~60 MB, against ~160 as a zip of what's
+    // inside), and the install runs it rather than tar: the flag reaches the manifest and the name.
+    [Fact]
+    public void ASelfExtractorKeepsItsExeAndSaysSo()
+    {
+        var git = Tools.Parse(File.ReadAllLines(Path.Combine(Repo(), "install", "tools.txt"))).Single(t => t.Name == "git");
+        Assert.True(git.Sfx);
+        Assert.Equal("omawin-tool-git.exe", Tools.FileName(git.Name, git.Sfx));
+        Assert.EndsWith("\tsfx", new Built("git", "v2", "omawin-tool-git.exe", "abc", "cmd", "Git.Git", null, Sfx: true).Line);
+        Assert.EndsWith("\tlater sfx", new Built("x", "v1", "f", "abc", ".", null, null, Later: true, Sfx: true).Line);
+    }
 }

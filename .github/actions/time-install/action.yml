@@ -14,7 +14,7 @@ inputs:
     description: The release to install from (OMAWIN_RELEASE); empty for the newest
     default: ''
   fresh:
-    description: "'true': hide the runner's own PowerShell 7 from the bootstrap, so it gets it the way a new PC does"
+    description: "'true': the bootstrap takes PowerShell 7 and git from the bundle even though the runner has them, as a new PC does"
     default: 'false'
   artifact:
     description: The name of the logs artifact
@@ -49,8 +49,9 @@ runs:
         $setup = @(
           if ($env:IN_URL) { "`$env:OMAWIN_RELEASE_URL = '$($env:IN_URL -replace "'", "''")'" }
           if ($env:IN_TAG) { "`$env:OMAWIN_RELEASE = '$($env:IN_TAG -replace "'", "''")'" }
-          # The runner has PowerShell 7 for every account; a new PC has none, so the bootstrap gets it.
-          if ($env:IN_FRESH -eq 'true') { "`$env:OMAWIN_PWSH = 'bundle'" }
+          # The runner has PowerShell 7 and git for every account; a new PC has neither, so the
+          # bootstrap gets them from the bundle.
+          if ($env:IN_FRESH -eq 'true') { "`$env:OMAWIN_PWSH = 'bundle'"; "`$env:OMAWIN_GIT = 'bundle'" }
         ) -join "`n"
         $body = @'
         $ErrorActionPreference = 'Continue'

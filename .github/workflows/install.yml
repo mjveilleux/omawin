@@ -57,3 +57,4 @@ jobs:
         with:
           release-url: C:\mirror
           release-tag: v0.0.0-ci
+          fresh: 'true'

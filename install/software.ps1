@@ -208,7 +208,7 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge') }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx') }
         })
     $script:ToolBundle
 }
@@ -264,7 +264,7 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
     $plan = foreach ($t in $todo) {
         $remote = $t.Base -match '^[a-z]+://'
         [pscustomobject]@{
-            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge
+            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge; Sfx = [bool]$t.Sfx
             Url = $(if ($remote) { "$($t.Base)/$($t.File)" } else { $null })
             Zip = $(if ($remote) { Join-Path $work $t.File } else { Join-Path $t.Base $t.File })
         }

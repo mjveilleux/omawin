@@ -153,8 +153,14 @@ function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
     $dir = Join-Path $env:LOCALAPPDATA "omawin\tools\$($row[0])"
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
     New-Item -ItemType Directory -Force $dir | Out-Null
-    & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
-    if ($LASTEXITCODE -ne 0) { throw "couldn't unpack $What ($LASTEXITCODE)" }
+    if ($row.Count -gt 7 -and ($row[7] -split ' ') -contains 'sfx') {
+        # 7-Zip's self-extractor (Git for Windows' portable build): -o the folder, -y no questions.
+        $p = Start-Process -FilePath $zip -ArgumentList "-o`"$dir`"", '-y' -WindowStyle Hidden -Wait -PassThru
+        if ($p.ExitCode -ne 0) { throw "couldn't unpack $What ($($p.ExitCode))" }
+    } else {
+        & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
+        if ($LASTEXITCODE -ne 0) { throw "couldn't unpack $What ($LASTEXITCODE)" }
+    }
     Set-Content (Join-Path $dir '.omawin-version') "$($row[1]) $($row[3])"
     $onPath = if ($Bin -and $Bin -ne '.') { Join-Path $dir $Bin } else { $dir }
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
@@ -175,7 +181,9 @@ $pwshFound = if ($env:OMAWIN_PWSH -ne 'bundle') { Get-Command pwsh -CommandType 
 if ($pwshFound -and $pwshFound.Version.Major -ge 7) { $Pwsh = $pwshFound.Source; Write-Note "ok  $Pwsh" }
 $PwshFetch = $null
 $GitFetch = $null
-$needGit = -not (Get-Command git -ErrorAction SilentlyContinue)
+# OMAWIN_GIT=bundle takes the release's git even when the PC has one (the install test: a runner
+# comes with git, a new PC doesn't).
+$needGit = $env:OMAWIN_GIT -eq 'bundle' -or -not (Get-Command git -ErrorAction SilentlyContinue)
 if (-not $Pwsh -or $needGit) {
     $releaseBase = if ($env:OMAWIN_RELEASE_URL) { $env:OMAWIN_RELEASE_URL.TrimEnd('/', '\') }
                    elseif ($env:OMAWIN_RELEASE -and $env:OMAWIN_RELEASE -ne 'latest') { "https://github.com/$Repo/releases/download/$env:OMAWIN_RELEASE" }
