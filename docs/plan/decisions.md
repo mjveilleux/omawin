@@ -99,6 +99,7 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | 39 | Developer Tools' top 30, scanned: 4 run as is, 11 with stand-ins, 9 with extra host modules, 5 "see Linux"; none use Quickshell's system services. The host adds `Quickshell.Wayland` and `Quickshell.Widgets`; the stand-ins add `omarchy-launch-*`, `notify-send`, `wl-copy` / `wl-paste` | plugins.md, roadmap 4.9 |
 | 40 | fff v0.11 has a content search call (`fff_live_grep_ex`), so the finder's Contents mode uses fff, with ripgrep only as a fallback | 06-dx-finder-sandbox.md, roadmap 6.3 |
 | 41 | A user's five favourite plugins map to: the calendar example, backups (9.19), workspace indicators with apps (9.20), monitor profiles (8.7), a tray overflow (9.21) | plugins.md, roadmap phase 9 |
+| 42 | `JsonNode`, `Utf8JsonWriter` and source-generated JSON (with `[JsonExtensionData]`) work under Native AOT with no IL2026/IL3050 warnings: the plugin manifest and protocol, One Search and the settings catalog were published as a real AOT binary and run (2026-10-30) | 05-plugins.md §3.1's (check) |
 
 ## Open questions
 

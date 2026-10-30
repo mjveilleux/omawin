@@ -20,6 +20,9 @@
     <Compile Include="..\menu-app\Search\QueryParser.cs" Link="Linked\Search\QueryParser.cs" />
     <Compile Include="..\menu-app\Search\Merger.cs" Link="Linked\Search\Merger.cs" />
     <Compile Include="..\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
+    <Compile Include="..\menu-app\Plugins\Manifest.cs" Link="Linked\Plugins\Manifest.cs" />
+    <Compile Include="..\menu-app\Plugins\ManifestCheck.cs" Link="Linked\Plugins\ManifestCheck.cs" />
+    <Compile Include="..\menu-app\Plugins\Protocol.cs" Link="Linked\Plugins\Protocol.cs" />
   </ItemGroup>
 
   <ItemGroup>

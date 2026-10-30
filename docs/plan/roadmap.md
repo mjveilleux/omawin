@@ -613,6 +613,8 @@ What exists: the bar reads its layout from `zebar/tokyo-islands/bar.json` (`Bar/
 
 ### 4.1 The manifest (S)
 
+**Started 2026-10-30:** the manifest model, the manifest check and the JSON-lines protocol are in (`menu-app/Plugins/Manifest.cs`, `ManifestCheck.cs`, `Protocol.cs`; pure C#, [05-plugins.md](05-plugins.md) §2.1-2.2, §3.1), with tests in `menu-app.Tests/Plugins/`. Built as a real Native AOT binary with the trimming and AOT analysers on: no warnings, and it runs (manifests round-trip, messages parse and write). Next: the registry and plugin processes (§2.4, §3.2-3.4), which need Windows.
+
 A plugin is a folder (a git repo) with `manifest.json` in Omarchy's schema (`shell/services/PluginRegistry.qml`): `schemaVersion` (1), `id`, `name`, `version`, `author`, `description`, `kinds` (`bar-widget`, `panel`, `menu`, `service`), `entryPoints`, `keepLoaded`, and the `barWidget` block (`displayName`, `category`, `allowMultiple`, `defaultSection`, `defaults`, settings `schema`). An `omawin` block holds what's ours (`"command": "widget.exe"`, `"xaml": "Panel.xaml"`). [`plugins.md`](plugins.md) has the full design (protocol, panels, safety, commands), with Omarchy's names kept so an Omarchy plugin author recognizes it.
 
 ### 4.2 Widgets and services as commands (M, 🖥)
