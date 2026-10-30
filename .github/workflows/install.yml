@@ -62,6 +62,7 @@ jobs:
           # Its own process writing to a file, with a time limit: piped through this script, a
           # program check starts that keeps running would hold the output open, and this would wait.
           $check = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "$HOME\omawin\check.ps1" -RedirectStandardOutput C:\ci\out\check.log -RedirectStandardError C:\ci\out\check-errors.log -WindowStyle Hidden -PassThru
+          $null = $check.Handle  # read now, or Windows PowerShell has no ExitCode for it later
           if ($check.WaitForExit(300000)) { "check exit $($check.ExitCode)" | Add-Content C:\ci\out\result.txt }
           else { $check.Kill(); 'check timed out (5 min)' | Add-Content C:\ci\out\result.txt }
           'done' | Set-Content C:\ci\out\done.txt
