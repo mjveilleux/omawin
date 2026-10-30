@@ -1,116 +1,501 @@
 # Roadmap: Omarchy's developer experience on Windows
 
-Where omawin stands on 2026-10-30, and the order we take the rest in to get close to Omarchy 4 in how it installs and how it feels to use. [mission.md](mission.md) says why; [mission-todo.md](mission-todo.md) is the full checklist by track. This file picks from it, adds what the 2026-10-30 review found, and puts it in phases. Tick items in mission-todo.md as they land; this file changes only when the order changes.
+The big plan: where omawin stands on 2026-10-30, where it's going, and for each piece of work what to build, which files it touches, how we'll know it's done, and what could go wrong. The goal is to come close to Omarchy 4 in how omawin installs and how it feels to use: a menu that answers instantly, windows that move smoothly, an install that's done before your coffee is, Linux as a first-class home, and a shell you can extend with plugins.
 
-Sources: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-shell.md`, `docs/menu.md`, `agents/skills/motion.md`, `default/hypr/looknfeel.lua`); our GlazeWM fork (`mjveilleux/glazewm`, branch `omawin`).
+[mission.md](mission.md) says why omawin exists; [mission-todo.md](mission-todo.md) is the running checklist by track. This file is the plan behind it. When an item lands, tick it in mission-todo.md with the commit; this file changes when the plan changes.
+
+Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-shell.md`, `docs/menu.md`, `docs/update-process.md`, `agents/skills/motion.md`, `default/hypr/looknfeel.lua`, `install/omarchy-base.packages`); our GlazeWM fork (`mjveilleux/glazewm`, branches `omawin`, `feat/accordian-v1`, `feat/master-stack`, `feat/auto-tiling`); a web survey of Windows sandboxes and similar projects (2026-10-30, links in phase 7). File and line references are as of 2026-10-30 and will drift; they say where to start, not what to trust blindly.
+
+## How to read this
+
+- **Phases** run roughly in order, but most items inside a phase are independent: one agent or one sitting each.
+- Every item says **why** (what you feel), **what to build**, **which files**, **done when**, and **risks**. Size: **S** (an afternoon), **M** (a few days), **L** (a week or more).
+- **🖥 = try it on the PC.** This plan was written in a cloud session that can't run Windows. Items marked 🖥 need a try on a real Windows PC before they merge to main (AGENTS.md: ask before driving the desktop; screenshot visible changes). Items CI can check say so.
+- Keys never change by guesswork (AGENTS.md). Nothing here rebinds a key; where an item proposes a binding, it's confirmed first.
+
+## Decisions made
+
+| Date | Decision |
+|---|---|
+| 2026-10-15 | One always-running native shell (the menu app) draws everything; no Zebar fork; Explorer stays ([shell-apps.md](shell-apps.md)) |
+| 2026-10-30 | Plugins keep **Omarchy's `manifest.json`**; panels are **loose XAML** loaded by the shell; widgets and services are **commands that print JSON lines** |
+| 2026-10-30 | omawin's **command-line tools come through mise**, pinned in the repo; desktop apps stay on winget |
+| 2026-10-30 | **winget, Scoop and Chocolatey all stay** as your choice on the Packages page; omawin's own installs still avoid Chocolatey |
+| 2026-10-30 | **Linux is first class; Arch is the default Linux** (Ubuntu alongside). Linux is the default terminal |
+| 2026-10-30 | Linux follows **all of Omarchy's package sources and decisions**: Omarchy's repositories (stable channel), Omarchy's package choices for the terminal, **no AUR** |
+| 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
+| 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 
 ## Where we are
 
-**Done and solid:** one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI so a new PC downloads binaries; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, calculator, packages page); 24 Omarchy themes, applied live; noctty and herdr; WSL with Arch as the default Linux, on Omarchy's package repositories; dev environments through mise and Omarchy's Docker databases (Install › Development, [dev-envs.md](dev-envs.md)); Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
+**Done and solid:** the one-line bootstrap; one admin prompt; presets on a lean core; releases built in CI, so a new PC downloads binaries instead of compiling; the install screen; migrations; `omawin check`; the menu app as one always-running native process (launcher, system menu, file finder, clipboard, Quick settings, screenshots with OCR, colour picker, QR, calculator, the packages page); 24 Omarchy themes applied live across every app; noctty (our Ghostty fork) and herdr; Linux in WSL with Arch as the default, on Omarchy's package repositories, Ubuntu as the other choice; dev environments through mise and Omarchy's Docker databases (Install › Development, [dev-envs.md](dev-envs.md)); Native AOT for the menu app (first start 0.34 s, 114 MB); the native bar, now the default.
 
-**Built, not yet shipped:** window animations in the GlazeWM fork (`omawin` branch: new windows fade in, the others slide, on snapshots drawn with Windows Graphics Capture and DirectComposition, ease-out-quint 200 ms). Not tried on a PC, not in a release.
+**Built, not yet shipped:** window animations in the GlazeWM fork (branch `omawin`): new windows fade in where they tile, the others slide, drawn from snapshots (Windows Graphics Capture, D3D11, DirectComposition), ease-out-quint, 200 ms. Never tried on a PC, not in a release.
 
 **The gaps against Omarchy, by what you feel:**
 
 | You notice | Omarchy | omawin today |
 |---|---|---|
-| A key opens the menu | the key goes straight to the resident shell; no process starts | GlazeWM starts `omawin.exe` (~35 ms), which writes a file and signals the menu app |
-| The menu opens and closes | fades in within 250 ms, out in ⅔ of that (ease-out-quint) | appears and disappears |
+| A key opens the menu | the key goes straight to the resident shell; no process starts | GlazeWM starts `omawin.exe` (~35 ms), which writes a request file and signals the menu app |
+| The menu opens and closes | in within 250 ms, out in ⅔ of that (ease-out-quint) | a 140 ms fade and rise in; out is instant |
 | Windows open and move | pop in and slide (Hyprland) | instant (animations unreleased) |
-| Install | packages from pacman, 5 downloads at once | winget, 4 at once, ~150 s of packages before the desktop is up; the AOT build only where Visual Studio's C++ tools are |
-| Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | menu rows and launcher items in text files; no widgets, panels or plugins of your own |
-| Everyday dev setup | `install-dev-env` (mise), Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev environments and Docker databases (Windows side); no web apps, a hand-kept key list |
-| Linux | it *is* Linux | Linux in WSL (Arch by default, or Ubuntu), opt-in at install; the terminal opens PowerShell unless the window in front is in a Linux folder |
-| Files | Nautilus, with a preview (Sushi) and "here" keys | the Win+F finder (fff): search, preview, chips; no actions beyond open and show in folder, no browsing |
+| Install | pacman, 5 downloads at once, a prebuilt image | winget, 4 at once; ~150 s of packages before anything else; the desktop starts only after you sign out and in |
+| Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | rows in text files; no widgets, panels or plugins of your own |
+| Everyday dev setup | dev envs, Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev envs and Docker databases on Windows; no web apps; a hand-kept key list |
+| Linux | it *is* Linux | WSL opt-in; the terminal opens PowerShell unless the window in front is in a Linux folder |
+| Where am I? | one OS | Linux and PowerShell terminals look identical |
+| Files | Nautilus, Sushi previews, "here" keys | the Win+F finder: search, preview, chips; open or show in folder, nothing more |
+| Trying things safely | disposable VMs in its acceptance tests | nothing; the install has never run on a clean PC |
 
-## Phase 1: snappy (now)
+## Milestones
+
+Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`).
+
+| Release | Contents | Feels like |
+|---|---|---|
+| **"snappy"** | Phase 1: menu profiled, keys straight to the shell, motion tokens, window animations shipped, Zebar gone | everything answers instantly and moves smoothly |
+| **"fast"** | Phase 2 and 7.1: CI install timing, desktop first, mise tools, one release zip, the Sandbox install test | a fresh PC is a desktop in three minutes |
+| **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
+| **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins | you add to the bar and menu without touching omawin |
+| **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
+
+---
+
+## Phase 1: snappy
 
 Every key answers in one frame, and everything moves the way Omarchy moves.
 
-1. **Measure the menu first.** `omawin profile menu`, like `omawin profile terminal`: real key down to the first painted frame of the launcher and system menu, from the trace marks `omawin.exe` and the menu app already write. Budget: 50 ms to pixels, 16 ms per keystroke while typing (fuzzy search, icons off the UI thread). Measure before changing anything below.
-2. **Keys straight to the shell, no process.** Omarchy's menu key is a Hyprland global shortcut the shell registered, so nothing starts. Ours: the menu app already holds a GlazeWM IPC subscription (`Tiling.cs`). Add a command to the fork that sends a named event to IPC subscribers (`emit omawin.launcher`), and bind Win+Space, Win+Alt+Space, Win+Shift+V, Win+A and Win+F to it; `omawin.exe` stays the fallback when the menu app isn't running. Saves the process start and the file write on every press.
-3. **The AOT build for everyone.** Releases ship the Native AOT menu app (CI has the C++ tools), so no PC runs the slower JIT build because it lacks Visual Studio.
-4. **Motion, from one place.** Omarchy's rules (`agents/skills/motion.md`): entrances within 250 ms, exits about ⅔ of that, ease-out-quint, never linear or ease-in. One set of tokens in the menu app (durations, curves, a global "animations off") used by the menu, the bar's fade-in, Quick settings and every future panel, through Composition animations (off the UI thread). The menu: fade and a slight scale-in on open, a quicker fade out.
-5. **Ship window animations.** Try the fork's `omawin` branch here, fix what shows, release it. Then: `omawin toggle animations` (GlazeWM's config and the shell's tokens together), off by default in a VM (as Omarchy does), a close animation, and the fork's own frame check (`scripts/animation-check.ps1`) back on in CI so a change that judders fails. Workspace switches stay instant, as in Omarchy.
-6. **Finish the native bar** ([native-bar.md](native-bar.md) step 3): media, then Zebar removed with a migration. One process fewer, ~220 MB less, a 2 s sign-in paint gone.
+### 1.1 `omawin profile menu` (S, 🖥)
+
+**Why:** "snappy" has to be a number before we change anything, as `omawin profile terminal` did for the terminal.
+
+**Build:**
+- Trace marks where they're missing. `omawin.exe` has `Trace()` (`bin/omawin.cs:72-80`) but none in `Send` (`:189-204`); the menu app has `Program.Trace()` (`menu-app/App.xaml.cs:52-56`) but none in `HandleRequest` (`:194-229`) or `Show` (`MainWindow.xaml.cs:196-247`). Add `omawin send`, `menu request`, `menu shown` and `menu painted` (on the first `CompositionTarget.Rendering` after `appWindow.Show()`).
+- `bin/profile-menu.ps1`, modelled on `bin/profile-terminal.ps1` (`:32-105`: the trace-on file, `Mark`, lines of `label\tticks`): opens each surface N times, prints a timeline per run and the median, for the launcher, the system menu and the finder. Its label map gains `menu`.
+- A row in `bin/commands.txt`: `profile menu | …`.
+- Typing too: from a key in the search box to the list redrawn, so regressions in `Fuzzy.cs`, `Launcher.cs` and `FileSearch.cs` show.
+
+**Done when:** `omawin profile menu` prints key → painted for each surface, and the baseline is written down here.
+
+**Risks:** GlazeWM ignores simulated keys (AGENTS.md), so the driver calls `omawin.exe launcher` directly and measures from there, plus one hand-pressed run for the keyboard hook's share.
+
+### 1.2 Keys straight to the shell (M, 🖥; fork + menu app)
+
+**Why:** each menu key now starts a process (`shell-exec --hide-window omawin.exe launcher`, `glazewm/config.yaml:300`), writes `%LOCALAPPDATA%\launcher\system-menu-request` and sets `Local\dotfiles-system-menu-signal`. Omarchy's Super+Space starts nothing: the shell registered a global shortcut. We can do the same, because the menu app already holds a websocket to GlazeWM (`Bar/GlazeWm.cs:29-58`, `Tiling.cs:28-45`).
+
+**Build (fork):** a new command `emit <name> [args…]` that broadcasts a custom event to IPC subscribers:
+- `InvokeCommand::Emit { name: String, args: Vec<String> }` in `packages/wm-common/src/app_command.rs` (the clap enum at ~:157; `ShellExec` at :208 is the model).
+- `WmEvent::Custom { name, args }` in `packages/wm-common/src/wm_event.rs`, and `SubscribableEvent::Custom` (`app_command.rs:137`).
+- An arm in `IpcServer::process_event`'s exhaustive match (`packages/wm/src/ipc_server.rs:357-404`) and in `WindowManager::run_command` (`packages/wm/src/wm.rs`) calling `state.emit_event`.
+- `emit_event` drops events before initialization and while paused (`wm_state.rs:558-570`); a menu key while paused should still work, so `Custom` gets the exemption `PauseChanged` has.
+- A unit test for parsing; doc comments on every new function (the fork's guidelines).
+
+**Build (menu app):** `Bar/GlazeWm.cs` subscribes to `custom` too (its `sub --events …`, :39) and hands `name == "omawin"` events to `App.HandleRequest(args)` on the UI thread, exactly as the request file does today.
+
+**Build (config):** the menu bindings become `emit omawin --launcher` and so on, for Win+Space, Win+Alt+Space, Win+Shift+V, Win+A and Win+F. If no subscriber is connected (the menu app isn't running) nothing happens; GlazeWM starts the menu app (`omawin start`) and `omawin check` warns when it isn't subscribed. Decide during the build whether to add an `emit --or-exec <command>` fallback.
+
+**Done when:** `omawin profile menu` shows the process start and file write gone; the menu still opens right after the menu app restarts.
+
+**Risks:** the official GlazeWM (no fork) doesn't know `emit`. `glazewm/config.yaml` is already a template (`themes/render.ps1`), so the renderer writes `emit` for the fork and `shell-exec … omawin.exe` otherwise.
+
+### 1.3 The Native AOT build for everyone (S)
+
+**Why:** AOT starts in 0.34 s instead of 1.04 s and uses 114 MB instead of 173 MB ([native-bar.md](native-bar.md)).
+
+**Build:** the release job (`release.yml:87-105`) calls `menu-app\build.ps1 -BuildOnly` without `-Aot`; `build.ps1:39-44` picks AOT only if it finds Visual Studio's C++ tools. Pass `-Aot` in CI so a runner image change can't silently ship the JIT build, and fail the job unless `build-kind.txt` says `native`.
+
+**Done when:** every release's `SystemMenu-*.zip` has `build-kind.txt` = `native`, checked by CI.
+
+### 1.4 Motion from one place (M, 🖥)
+
+**Why:** Omarchy's motion rules make it feel calm and quick: entrances within 250 ms, exits about ⅔ of that, ease-out-quint (`cubic-bezier(0.23, 1, 0.32, 1)`), never linear or ease-in (`agents/skills/motion.md`, `default/hypr/looknfeel.lua:69-93`). Ours are scattered: the menu's 140 ms fade and 180 ms rise (`MainWindow.xaml.cs:291-305`), staggered rows (`:350-376`), the bar's 280 ms widget fade (`Bar/Bar.cs:317-345`), the drawer's 200 ms (`Bar/Widgets.cs:310-315`), and no exit animation (`HideMenu` is `appWindow.Hide()`, `:249`).
+
+**Build:**
+- `menu-app/Motion.cs`: the tokens (`Enter = 200 ms`, `Exit = 130 ms`, `Stagger = 18 ms`, `EaseOut` = ease-out-quint as a `CubicBezierEasingFunction`), a global `Enabled` read from `%LOCALAPPDATA%\launcher\animations` (`on` / `off`), and helpers (`FadeIn`, `FadeOut(then)`, `Rise(px)`).
+- The menu's `Animate`, `Cascade` and `Slide`, the bar's fades and Quick settings use them. The bar's storyboards move to Composition (off the UI thread).
+- **An exit animation:** `Dismiss()` fades the root out (130 ms) and hides when done; a key during the exit cancels it and re-shows, so nothing ever waits on an animation.
+- `omawin toggle animations` (`bin/commands.txt`): writes the file the shell watches and sets GlazeWM's `animations.enabled` (1.5). Off by default in a VM (`Win32_ComputerSystem.Model`), as Omarchy's `vm-no-animations.sh` does.
+
+**Done when:** every surface uses `Motion.cs`; the menu fades out; animations off makes every duration 0.
+
+### 1.5 Ship window animations (L, 🖥; fork)
+
+**Why:** the single most visible difference from Omarchy.
+
+**What exists** (fork branch `omawin`): `packages/wm/src/animation_manager.rs` (906 lines) with three plans: `Slide` (a snapshot slides while the real window waits invisible at its target), `FadeIn` (the real window placed invisibly, then faded in) and `Live` (the real window moved each frame, Hyprland-style; judders on Windows because apps can't repaint while resized). Snapshots: `wm-platform/src/platform_impl/windows/animation_window.rs` (871 lines). Config in `wm-common/src/parsed_config.rs:393-437`: `animations.window_open` and `window_move` (`effect_type`, `duration_ms`, `easing`, `trigger_threshold`). omawin's `glazewm/config.yaml:55-65` asks for slide 200 ms ease-out-quint and fade 200 ms ease-out-cubic.
+
+**Build:**
+1. **Bring the frame check back to CI.** `scripts/animation-check.ps1` (opens Notepads, closes one, moves one; records frames; fails on a leftover overlay or a window not at full opacity) ran in `.github/workflows/animation-check.yaml` until commit `445d61e0` removed it. Restore it (`git revert 445d61e0`) so every fork change is checked on a Windows runner.
+2. **A daily-use week on the PC** (🖥). Known rough edges in the code: flicker during sync (`platform_sync.rs:207`), the fullscreen check (`:452`), `trigger_threshold` accepting non-pixel values (`animation_manager.rs:523`), the 100 ms settle wait for new windows.
+3. **A close animation.** No hook exists: `handle_window_destroyed.rs` → `unmanage_window` (`:28`) runs after the window is gone. Do it where we still have the window: GlazeWM's `close` command takes a snapshot, then closes; the snapshot fades out (Omarchy's windowsOut: 160 ms, pop-in to 95%). Windows closed by the app itself just vanish, as today. New config `animations.window_close`.
+4. **An enabled switch:** today animations are off only when the section is absent; `omawin toggle animations` needs `animations.enabled: false`, keeping the settings while off. Config reload already re-applies (`reload_config.rs:40-43`).
+5. **Release** the fork (`scripts/omawin-release.ps1`) and point `install/glazewm-fork.ps1` at it.
+6. **Upstream** what's general to glzr-io/glazewm (the snapshot slide, easing functions), so the fork stays small.
+
+**Done when:** the frame check passes in CI at 200 ms and 600 ms; a week of daily use without a stuck overlay; Omarchy's feel by eye.
+
+**Risks:** GPU drivers; Graphics Capture's yellow border on older Windows builds (a fix commit exists); fullscreen apps and games (animations skipped for fullscreen, as now); a DPI change mid-animation. Workspace switches stay instant, as Omarchy keeps them.
+
+### 1.6 Finish the native bar (M, 🖥)
+
+[native-bar.md](native-bar.md) step 2's media widget, then step 3: Zebar removed with a migration (`migrations/<date>-zebar-out.ps1`: stop it, uninstall the package, remove our Zebar fork's files and `ZEBAR_ASSET_PORT`). `bar.json` stays where the native bar reads it until 4.5 moves it. The music and agents drop-downs move to the shell (the first plugins, 4.6). Saves ~220 MB and the 2 s sign-in paint; removes `glzr-io.zebar` and the Zebar client build from install.
+
+### 1.7 Typing never waits (S, 🖥)
+
+The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574). Virtualize the list (an `ItemsRepeater` with recycling) so only visible rows are built, and keep icon loading off the UI thread. Measured by 1.1's typing timeline: under 16 ms per key.
+
+---
 
 ## Phase 2: fast install
 
-Goal: a clean Windows 11 PC goes from the one line to a working desktop in **under 3 minutes**, and to everything in under 10. Measured, not guessed.
+**Goal:** a clean Windows 11 PC goes from the one line to a working desktop in **under 3 minutes**, and to everything in **under 10**. Measured, not guessed.
 
-1. **Time it in CI.** A workflow runs `bootstrap.ps1` on a fresh GitHub Windows runner and fails when it gets slower than the budget or `omawin check` isn't 0 / 0. That is also the clean-PC test mission-todo.md asks for. `install-times.txt` gives the per-step times.
-2. **Desktop first, the rest after.** Today everything installs, then the desktop starts. Reorder: GlazeWM, the menu app, noctty, the theme and the font first (a few downloads, all from our release or one winget call each); start the desktop; the remaining packages carry on in the background, with progress in the bar (an install indicator, like the update arrow) and a toast when done. You're tiling windows while Node and Neovim's toolchain arrive.
-3. **The command-line tools through mise.** winget costs seconds per package before it downloads anything. The ~12 portable tools (ripgrep, fd, fzf, eza, bat, jq, lazygit, zoxide, starship, fastfetch, …) are single exes: mise installs them in parallel from their GitHub releases, pinned in a `mise.toml` in the repo, as Omarchy does and as Install › Development already does for languages ([dev-envs.md](dev-envs.md)). Desktop apps stay on winget. **winget, Scoop and Chocolatey all stay**: the launcher's Packages page keeps offering all three as your choice, and Update › All apps, which runs only `winget upgrade` today, also updates Scoop's and Chocolatey's packages when those are installed; only omawin's own installs avoid Chocolatey, as today. Decided 2026-10-30.
-4. **Neovim ready on first open.** Run `nvim --headless "+Lazy! sync" +qa` (and Mason's core LSPs) in the background after the install, so the first `nvim` doesn't stop to install plugins.
-5. **A leaner core.** Neovide and Windows Terminal move to presets (noctty is the terminal; Terminal is the fallback a new PC already has on Windows 11).
-6. **One fetch for our own pieces.** The helpers, the menu app and the music player come from one release zip per architecture instead of three downloads.
+What install does today: `install.ps1` asks the questions, starts the one admin prompt as a separate hidden elevated process (`install/admin.ps1:61-89`; machine-wide packages three at a time, `admin-batch.ps1:40-80`), then runs `install/steps.txt` in order: `no-ads`; `software` (all core and preset winget packages in one batch, four at a time, `Invoke-WingetBatch`, `install/software.ps1:52-118`; then extras one by one; then the Nerd Font); `shell`; `desktop`; `helpers` (three separate release downloads, each resolving the tag and manifest again, `bin/install-binaries.ps1`); `look`; `other`; then migrations. The desktop isn't started: the summary says to sign out and back in (`install/ui.ps1:453`).
 
-## Phase 3: Linux in WSL, first class (Arch by default)
+### 2.1 Time the install in CI (M)
 
-Linux is first class; Arch is the default Linux, not the only one. Today Arch is the default pick (Omarchy's stable package repositories, no AUR) and Ubuntu the other (`omawin default linux`, `wsl/setup.sh` handles both), but Linux is an opt-in preset and Windows comes first everywhere. First class means your Linux is the default terminal and where your code lives and runs, and omawin treats it as its second home: installed by default, warm when you need it, reachable from every key, kept up to date and checked like the rest. Everything below works for whichever Linux you picked; where a distro needs its own handling (packages, Docker), `setup.sh` does it per distro, Arch first and Ubuntu alongside. Never at the cost of a distro you already had: that one stays yours ([AGENTS.md](../AGENTS.md)).
+**Build:** `.github/workflows/install.yml`, scheduled and on demand: a fresh `windows-2025` runner runs `bootstrap.ps1` from the branch (`OMAWIN_PLAIN=1`), then `omawin check`, and uploads `install.log` and `install-times.txt`. It fails when `check` reports a failure or the time passes the budget. Runners have no WSL (no nested virtualization) and no interactive desktop, so the job skips the `wsl` preset and the desktop start, and says so.
 
-1. **On by default.** The install's Linux question starts on Arch (as now), with Ubuntu a choice, and the `wsl` preset is in the default set: pressing Enter through the questions gives you Arch. WSL's restart stays the one reboot, resumed at the next sign-in (it is today).
-2. **A good WSL VM out of the box** (`wsl/.wslconfig`, `/etc/wsl.conf`): systemd on, mirrored networking (localhost works both ways, VPNs behave) with DNS tunneling, sparse disk, memory handed back; each a setting your account folder can override.
-3. **The terminal opens in Linux.** Win+Enter (`omawin terminal here`) and `omawin launch terminal` open your Linux's shell by default whenever it's set up; a new `omawin default shell linux|windows` (in `bin/defaults.txt`, Linux first) switches it back to PowerShell for one PC. The window in front still decides the folder: a Linux folder opens there, a Windows folder (Explorer, a PowerShell tab) opens Linux in that folder under `/mnt/c`. No Linux yet (declined, or WSL waiting on its restart): PowerShell, without an error. PowerShell is still a launcher item and `omawin launch terminal --windows`; no key changes. Projects follow the same default (`--wsl` becomes the default, `--windows` the exception), new ones going in `~/src` inside Linux, and Install › Development installs into Linux.
-4. **No cold start.** Since the terminal is Linux, WSL starts your distro in the background at sign-in (after the desktop is up, so sign-in isn't slower), and the first Win+Enter opens as fast as PowerShell did; measured with `omawin profile terminal`. WSL's idle timeout is raised so it isn't stopped between terminals.
-5. **Omarchy's tooling in Linux.** Dev environments through mise and Omarchy's own lists, run inside Linux (`omawin install dev-env <lang> --linux`); Docker Engine inside the distro (pacman on Arch, apt on Ubuntu, under systemd) instead of Docker Desktop, so the Docker databases and lazydocker run there with no Windows-side licence or VM; Omarchy's bash defaults, as its Linux users have them.
-6. **Linux files in the finder and launcher.** Win+F searches your Linux home and repos (indexed inside the distro, where it's fast, not over the `\\wsl.localhost` share); Linux GUI apps (WSLg) appear in the launcher with their icons; Localhost already lists Linux servers.
-7. **Credentials that just work.** Git uses Windows' Git Credential Manager from Linux; the SSH agent and GPG reach Windows' (1Password or OpenSSH) through a relay, so one sign-in serves both sides.
-8. **The theme and tools match, live.** The prompt, Neovim, fastfetch, lazygit and btop in Linux follow the omawin theme on a switch, as Windows' do (they read the same repo through `/mnt/c` today; anything rendered gets its copy inside Linux too).
-9. **Kept and checked.** `omawin update` updates the distro's packages (Arch's today: `setup.sh update`; Ubuntu's too) and runs Linux-side migrations (`migrations/linux/`, a marker file per user, Omarchy's way); `omawin check` checks the distro (running, systemd, the repos, the tools, the user); a bar indicator says Linux is running and what it uses, a click to stop it.
-10. **Safe to break.** `omawin linux backup` (`wsl --export`, a dated file) and `omawin linux reset` (a fresh copy of your Linux beside your backup, set up again); never touches a distro omawin didn't make.
+**Done when:** every push to main has an install time, with the trend in the job summary.
 
-The clean-PC CI test (phase 2) can't run WSL (GitHub's runners have no nested virtualization), so Linux gets its own test: `setup.sh` in Arch and Ubuntu containers in CI, and a run on a real PC per release.
+**Risks:** runner images come with Git, Node and PowerShell 7 preinstalled, so the install looks faster than on a real clean PC. Report install's own "already there" counts, and keep the Windows Sandbox run (7.1) as the honest clean test.
+
+### 2.2 Desktop first (M, 🖥)
+
+**Why:** today you wait for every package, then sign out. The desktop should come up while the rest installs.
+
+**Build:**
+- A new early step `essentials` in `install/steps.txt`, right after `no-ads`: winget installs only GlazeWM and the .NET desktop runtime (if still needed, 2.7), in parallel with the one release download (2.5) and noctty; then the theme and the font.
+- Then **start the desktop**: register the sign-in task (`install/login-start.ps1`) and also start it now (`omawin start glazewm`), so GlazeWM, the bar and the menu app are up. The admin step's fork install restarts GlazeWM when it lands (`glazewm-fork.ps1 -Restart` exists).
+- The rest continues; the install screen stays in its terminal window (a window rule keeps it floating, like `menu-task`). The bar shows an install indicator that opens the log, and a toast says when it's done (5.5).
+- The summary stops saying "sign out and back in"; only WSL's restart remains.
+
+**Done when:** in 2.1's job, "GlazeWM and the menu app running" comes under 3 minutes; on the PC you're tiling windows while packages install.
+
+**Risks:** Explorer's taskbar auto-hide (the `look` step) should move earlier too; the console resizing under the install screen (it redraws on resize already).
+
+### 2.3 Command-line tools through mise (M)
+
+**Why:** winget spends seconds per package before downloading; these are single exes.
+
+**Build:**
+- `mise.toml` in the repo: ripgrep, fd, fzf, eza, bat, jq, lazygit, zoxide, starship, fastfetch, gh, tree-sitter, uv, and Neovim if mise's Windows build is good (else it stays on winget). Exact versions and mise's lockfile.
+- mise itself: move `Initialize-Mise` from `bin/install-dev-env.ps1:170-189` (winget `jdx.mise`, user scope, shims first on the user PATH) into `install/lib.ps1`, shared by install and dev envs; or fetch mise's release exe directly, which is faster than winget.
+- The early step runs `mise install` (parallel downloads) alongside the winget batch.
+- `packages.ps1` drops those winget ids and their `$WingetCommands` rows.
+- `check.ps1:44-60`: `Get-Command` finds shims on PATH; its fallback paths learn `%LOCALAPPDATA%\mise\shims`.
+- On existing PCs, a migration: tools winget installed stay (never uninstall the user's programs); mise's shims come first on PATH; `omawin update` runs `mise install` for new pins and `mise upgrade` for omawin's tools.
+
+**Done when:** a clean install fetches all the tools in a few seconds; `omawin check` passes.
+
+**Risks:** GitHub's anonymous limit (60 API requests an hour per IP): pinned versions and the lockfile avoid lookups. A work network blocking github.com: winget fallback per missing tool, said in the summary.
+
+### 2.4 Neovim ready on first open (S)
+
+lazy.nvim bootstraps on the first `nvim` (`nvim/lua/config/lazy.lua:1-15`), so the first open waits. After install's last step, run `nvim --headless "+Lazy! restore" +qa` hidden in the background (restore from `lazy-lock.json`, so versions match), and Mason's core tools. Same inside Linux (3.4).
+
+### 2.5 One download for our own pieces (S)
+
+Resolve the release tag once, fetch `SHA256SUMS.txt` once, then download the helpers zip, the menu app zip and the music exe in parallel (PowerShell 5.1-safe: `HttpClient` tasks or BITS), verifying each. Later, one `omawin-<tag>-win-<arch>.zip`.
+
+### 2.6 A leaner core (S)
+
+Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS.NodeJS.LTS` when mise provides Node (Mason needs `npm` on PATH; mise's shims give it). `zig.zig` stays while nvim-treesitter compiles parsers with it. Each change: `packages.ps1`, `check.ps1`'s list, the docs.
+
+### 2.7 Is the desktop runtime still needed? (S)
+
+`Microsoft.DotNet.DesktopRuntime.9` is one of the slowest items. The AOT menu app is self-contained; if it no longer needs the runtime, only the music player does: publish the player self-contained (or AOT) too, and the runtime leaves the core.
+
+---
+
+## Phase 3: Linux in WSL, first class (Arch by default, Omarchy's way)
+
+Linux is first class; Arch is the default Linux, Ubuntu the other choice. On Arch, omawin follows **all of Omarchy's package sources and decisions**: Omarchy's repositories on the stable channel (already: `wsl/setup.sh` writes Omarchy's `pacman.conf` and mirrorlist and trusts its key), Omarchy's package choices for anything that runs in a terminal, Omarchy's shell defaults, mise for languages, Docker the way Omarchy runs it, and **no AUR** (no `yay`, though Omarchy's base list has it). Your Linux is the default terminal and where your code lives. A distro you already had stays yours ([AGENTS.md](../AGENTS.md)).
+
+What exists: `wsl/install.ps1` picks the distro (your `-Linux`, the saved pick, a distro you have, else Arch), installs it with `wsl --install -d <name> --no-launch`, makes a Linux user named after yours (sudo without a password), then runs `wsl/setup.sh root` and `setup.sh user`. Arch gets base-devel, the CLI tools, Neovim, Node, Python and herdr from Omarchy's repos; Ubuntu gets apt's equivalents plus Neovim and tree-sitter from their releases. `setup.sh user` links `~/.config/nvim` to the repo, adds an omawin block to `~/.bashrc` that sources `bash/bashrc`, points git at Windows' credential manager and installs the agents. `omawin update` runs `setup.sh update` (Arch only). `/etc/wsl.conf` gets only the default user. Linux projects show in the launcher, Linux servers in Localhost, and Neovim in Linux follows the theme live.
+
+### 3.1 On by default (S)
+
+The `wsl` preset joins the default set (`packages.ps1`, `Initialize-Presets`) with Arch preselected: Enter through the questions gives you Arch. WSL is already in the one admin prompt (`install/admin-batch.ps1:97-125`) and resumes at the next sign-in after Windows' restart (`wsl/install.ps1:51-65`).
+
+**Risks:** virtualization off in the firmware. Detect it before offering (Try Omarchy does: [inspiration.md](inspiration.md)) and say "turn on virtualization" rather than looping; PowerShell stays the shell until then.
+
+### 3.2 Omarchy's terminal layer in Arch (M)
+
+**Why:** "all of Omarchy's decisions": the same packages an Omarchy user has in their terminal, chosen and kept current by Omarchy.
+
+**Build:**
+- **Packages from Omarchy's own list.** `setup.sh` reads Omarchy's `install/omarchy-base.packages` (from the `mjveilleux/omarchy` fork at a pinned commit) and installs what makes sense without a desktop. A small omawin file, `wsl/omarchy-skip.txt`, lists what to leave out: the desktop (hyprland, quickshell, sddm, uwsm, plymouth, xdg-desktop-portal-*), hardware (bluez, brightnessctl, networkmanager, cups, power-profiles, fcitx5), GUI apps (chromium, nautilus, obsidian, libreoffice, imv), fonts Windows draws, and `yay` (no AUR). Everything else comes: today bat, btop, docker (+ buildx, compose), eza, fastfetch, fd, fzf, git, gum, herdr, jq, lazygit, less, man-db, mise, nvim, ripgrep, starship, tldr, tmux, tree-sitter-cli, try, usage, yt-dlp, zoxide and more. A new terminal tool in Omarchy arrives on the next `omawin update` with no change in omawin.
+- **Omarchy's shell defaults:** Omarchy's `default/bash/` (rc, aliases, functions, envs, inputrc) sourced in Linux, then omawin's `bash/bashrc` on top for what's ours (the theme, `OMAWIN`, Windows interop, 3B). Where they disagree, Omarchy wins unless there's a Windows reason, written next to the override.
+- **Omarchy's configs** for terminal tools omawin doesn't configure itself (btop, lazygit, tmux): copied once from Omarchy's `config/<tool>` (its refresh-config pattern), themed by 3.8.
+- **Neovim stays omawin's config** (`nvim/`, shared with Windows), not `omarchy-nvim`: one config on both sides.
+- Ubuntu gets the nearest apt equivalents (as now), mise for what apt lacks.
+
+**Files:** `wsl/setup.sh`, new `wsl/omarchy-skip.txt`, `bash/bashrc`.
+
+**Done when:** a fresh Arch has every terminal package in Omarchy's base list except the skip list; `omawin check` compares the two.
+
+**Risks:** a package pulling a desktop in as a dependency (check what `pacman -S --needed` brought); Omarchy's bash files assuming `$OMARCHY_PATH` (source the files directly, or set it to a folder with just them).
+
+### 3.3 A good WSL VM out of the box (S)
+
+`wsl/.wslconfig` today only sets `autoMemoryReclaim`. Add `networkingMode=mirrored` (localhost both ways, VPNs behave), `dnsTunneling=true`, `firewall=true`, `sparseVhd=true`, and a longer `vmIdleTimeout` (3.5). `setup.sh root` writes `/etc/wsl.conf`: `[boot] systemd=true` (Docker, timers), `[interop] appendWindowsPath=false` (Linux tools win in Linux), `[user] default=<user>` (as now). Each overridable by the account folder ([work.md](work.md)).
+
+**Risks:** mirrored networking trips some VPN clients; `appendWindowsPath=false` breaks `code .` and `explorer.exe .`: small wrappers in `~/.local/bin` for `code`, `explorer`, `clip` and `omawin` (calling `omawin.exe` through interop).
+
+### 3.4 The terminal opens in Linux (M, 🖥)
+
+**Build** (`bin/omawin.cs`):
+- `bin/defaults.txt` gains `shell | linux | Linux (WSL) | …` first (the default) and `shell | windows | PowerShell | … | pwsh.exe`. `Choices()` / `Current()` (`:236-257`) work unchanged; `Default()`'s installed check (`:311-312`) treats `linux` as "the picked distro is registered" (`DistroRegistered`, `:334-348`).
+- `LaunchTerminal` (`:375-396`): with neither `--wsl` nor a new `--windows`, `Wsl = Current("shell").Name == "linux" && DistroRegistered(Distro)`. No Linux yet: PowerShell, silently.
+- `TerminalHere` (`:1010-1072`): a Windows folder in front (Explorer, a PowerShell tab) opens Linux there (`wsl.exe --cd C:\…` maps it to `/mnt/c/…`); a Linux folder opens there (as now); no folder opens Linux's home.
+- **OSC 7 from bash:** `omawin.cs:1000-1003` expects bash to report its folder, but `bash/bashrc` doesn't. Add it to `PROMPT_COMMAND` (`printf '\e]7;file://%s%s\e\\' "$HOSTNAME" "$PWD"`), so noctty's "the folder of the window in front" works for Linux windows.
+- **noctty's fast path:** a plain Windows shell is a hand-off to the running noctty (`+new-window`, `:581`), but a Linux shell starts a whole new noctty process (`--single-instance=false -e wsl.exe …`, `:589-597`). With Linux the default, the noctty fork learns `+new-window -e <command>` (or keeps a spare Linux shell, like `windows-spare-shell`), so Win+Enter into Linux is a hand-off too.
+- `noctty/config.ghostty:6` (`command = pwsh.exe -NoLogo`) stays as the Windows shell; Linux windows pass their command.
+- Windows Terminal: a profile per distro in `windows-terminal/`, `defaultProfile` from the pick.
+- `omawin launch project` (`:530-558`): Linux by default (`--windows` overrides); new projects in `~/src` in Linux.
+- Install › Development asks the side, Linux first: mise inside the distro (`wsl.exe -d <distro> -- mise use -g <tool>`).
+
+**Done when:** Win+Enter from anywhere opens Linux in the right folder, as fast as PowerShell (3.5); `omawin default shell windows` brings PowerShell back.
+
+**Risks:** git over `/mnt/c` is slow in big repos; projects go in Linux's own disk (`~/src`), and the finder and launcher show them (3.7).
+
+### 3.5 No cold start (S, 🖥)
+
+A cold WSL start takes ~8 s (`manual/04-launcher.md`). When Linux is the default shell, `omawin start` (at sign-in, after the desktop is up) runs `wsl.exe -d <distro> --exec /bin/true` hidden, and `vmIdleTimeout` keeps the VM alive between terminals. `omawin profile terminal` gains `--wsl`; `omawin profile ram` shows WSL's VM as its own line with a budget.
+
+### 3.6 Docker the Omarchy way, in Linux (M)
+
+Omarchy runs Docker Engine (docker, buildx, compose) under systemd, its databases with `docker run --restart unless-stopped` bound to 127.0.0.1 (`omarchy-install-docker-dbs`), and lazydocker on Super+Shift+D. In Linux: Docker Engine from Omarchy's list (3.2), systemd on (3.3), the user in the `docker` group; Install › Development › Docker DB runs inside Linux; mirrored networking makes `localhost:5432` reachable from Windows apps too. Docker Desktop stays a choice, never installed by default.
+
+### 3.7 Linux files in the finder and launcher (M, 🖥)
+
+- **Win+F over Linux:** fff over `\\wsl.localhost\<distro>` would crawl (9P is slow). Instead an indexer inside Linux (`fd` into `~/.cache/omawin/files.tsv`, refreshed by a systemd path unit or inotify) that `FileSearch.cs` reads as one more root, with the distro's chip and logo. A Linux file opens in Linux (`omawin launch editor` with a Linux path).
+- **Linux GUI apps** (WSLg) in the launcher: WSL makes Start menu shortcuts for them, which `AppsFolder.cs` may already pick up; check, then give them the distro's logo.
+- Projects: `Pages.cs:131-152` asks WSL only while it runs; kept warm (3.5), it always does.
+
+### 3.8 The theme in Linux, live (S)
+
+Starship, fzf, bat and herdr use the terminal's ANSI colours, so they follow already; Neovim follows live. Missing: btop (`themes/set-theme.ps1:209-226` writes btop4win only) and lazygit. `set-theme.ps1` also writes the Linux copies (through `\\wsl.localhost` while the distro runs; at its next start otherwise, from the bashrc block), using Omarchy's own per-theme files where its themes have them (`btop.theme`).
+
+### 3.9 Credentials that just work (S)
+
+Git already uses Windows' credential manager from Linux. Add SSH: Windows' OpenSSH agent (or 1Password's) reached from Linux through `npiperelay` and `socat` (in Omarchy's list), `SSH_AUTH_SOCK` set in the bashrc block; GPG likewise when there are keys. One sign-in, both sides.
+
+### 3.10 Kept, checked, recoverable (M)
+
+- `omawin update`: `setup.sh update` for Ubuntu too (apt), and **Linux-side migrations** (`wsl/migrations/<date>-<what>.sh`, a marker each in `~/.local/state/omawin/migrations/`, Omarchy's pattern), run by `setup.sh update`.
+- `omawin check` (today `check.ps1:67-78` only checks the distro is registered): running, systemd up, Omarchy's repos in `pacman.conf`, the tools present, the default user, `.wslconfig` current.
+- The bar: a Linux indicator (running, memory) with a click to stop it.
+- `omawin linux backup` (`wsl --export` to a dated file) and `omawin linux reset` (export, then unregister only a distro omawin made — the `/etc/omawin` marker — install fresh, set up again, offer to restore `~/src`). Never on a distro omawin didn't make.
+
+### 3.11 Tests for Linux (M)
+
+CI can't run WSL, but it can run `setup.sh` in containers: a workflow with `archlinux:latest` and `ubuntu:24.04` jobs runs `setup.sh root ci` and `setup.sh user` with the repo mounted, then checks the tools and the bashrc block. Plus one run on a real PC per release (🖥).
+
+### 3B. Always know which side you're on (M, 🖥)
+
+**Why:** Linux and PowerShell terminals look the same, so it's hard to tell what you're developing in.
+
+Four signals, cheapest first; the first two alone solve most of it.
+
+1. **The background tints by side.** Linux windows get a slightly different background from PowerShell's, made from the theme (the theme's background mixed ~6-8% toward its accent), so every theme stays coherent.
+   - `themes/render.ps1` computes `linux_background` into a small rendered file (`%LOCALAPPDATA%\launcher\theme-linux.sh`).
+   - The Linux shell sets its terminal's background with the standard escape for it (OSC 11: `printf '\e]11;%s\e\\' "$OMAWIN_LINUX_BG"`) at start and on each prompt, re-reading the file through `/mnt/c`, so a theme switch shows at the next prompt. noctty (Ghostty's core) and Windows Terminal both honour OSC 11; no terminal change needed.
+   - Check that herdr (projects' multiplexer) passes OSC 11 through; if not, herdr's pane background per side, or a small herdr patch.
+   - The cleaner alternative, later: the noctty fork takes a per-window colour (`--background`, or a `theme-linux.ghostty` include for Linux windows), with no escape codes.
+2. **The prompt says where.** One `starship/starship.toml` for both: the `os` module first in `format` (Arch , Ubuntu , Windows ), coloured by side, and the prompt character's colour by side (from `OMAWIN_SIDE`, set by the PowerShell profile and the bashrc block). Works in every terminal, in herdr, over SSH.
+3. **Window titles say where:** "arch · ~/src/app" or "pwsh · C:\…", from bash's `PROMPT_COMMAND` (with 3.4's OSC 7) and the PowerShell profile (`powershell/Microsoft.PowerShell_profile.ps1:120-136` already sets the title). The bar's window title and herdr's tabs show it too.
+4. **The window border by side** (fork, L): GlazeWM window rules gain a per-window border colour (matching the title prefix), so the tiling layout itself says which windows are Linux. GlazeWM already sets Windows 11's DWM border colour (`window_effects.*.border`).
+
+**Done when:** a screenshot of a Linux and a PowerShell terminal side by side is obvious at a glance, in a dark, a light and a high-contrast theme.
+
+**Risks:** light themes need the tint to go darker (mix toward the accent, then keep contrast); some TUIs reset the background on exit, so it's re-applied on each prompt.
+
+---
 
 ## Phase 4: plugins (Omarchy's shell, on Windows)
 
-Quickshell is Qt on Wayland and won't run on Windows, but its plugin model will: we keep **Omarchy's manifest format** and draw with our own shell. Like the themes, an Omarchy plugin's idea (and much of its manifest and data) carries over; its QML doesn't.
+Quickshell is Qt on Wayland and won't run on Windows, but its plugin model will. We keep **Omarchy's manifest format** and draw with our own shell, so an Omarchy plugin's idea (and much of its manifest and data) carries over; its QML doesn't.
 
-1. **The format.** A plugin is a folder (a git repo) with `manifest.json` in Omarchy's schema: `schemaVersion`, `id`, `name`, `version`, `author`, `description`, `kinds`, `entryPoints`, `keepLoaded`, the `barWidget` block (`displayName`, `defaultSection`, `defaults`, settings `schema`). Kinds as Omarchy's: `bar-widget`, `panel`, `menu`, `service`.
-2. **What a plugin can contain.** The menu app is Native AOT, so it can't load plugin DLLs. Instead:
-   - **Command widgets and services**: a program or script that prints JSON lines (Waybar's format, which Omarchy's `type: "command"` modules also use: `text`, `tooltip`, `class`, `percentage`); clicks call commands. Covers most bar widgets.
-   - **XAML panels**: a loose `.xaml` file the shell loads (`XamlReader.Load`), bound to the plugin's JSON state, styled by the theme's brushes. For panels and drop-downs.
-   - **Menu entries**: a `menu.txt` fragment, added after omawin's rows (as the account folder's already are), and launcher items.
-   Decided 2026-10-30: XAML for panels; a small declarative shorthand for simple settings panels may come later.
-3. **Where they live.** `~/omawin-account/plugins/<id>/` for one account, `C:\ProgramData\omawin\shared\plugins\` for every account on the PC; never the repo. `omawin plugin add <git-url> | update | remove | enable | list`; new plugins arrive disabled, as in Omarchy. The shell watches the folders and reloads a plugin when its files change.
-4. **Our own pieces become plugins.** The music panel, the agents panel, dictation and reports move to the format first, which proves it and keeps the core small.
-5. **IPC for plugins and scripts.** `omawin shell <method>` over the menu app's existing signal: `toggle`, `reload`, `list-plugins`, `put-bar-widget`, like `omarchy-shell`.
+What exists: the bar reads its layout from `zebar/tokyo-islands/bar.json` (`Bar/Bar.cs:21, 150-163`: `left`, `centerBegin`, `center`, `centerEnd`, `right`); each widget is a class chosen by a switch on its name (`Bar/Widgets.cs:35-49`); a `BarWidget` base with `Attach`, `Update(BarData)` and `Paint(Theme)`; data pushed from background threads to the UI thread (`Bar.cs:168-235`). The menu reads only the repo's `launcher/menu.txt` (`MenuModel.cs:64`), while `items.txt`, `sites.txt` and `keys.txt` are layered (repo, shared folder, account folder; `MenuModel.cs:57-61`). Theme colours are hex strings on a `Theme` object, brushes made in code; no XAML resources. `XamlReader.Load` isn't used yet. Requests are joined and split on spaces (`App.xaml.cs:114-128`), so arguments with spaces don't survive.
+
+### 4.1 The manifest (S)
+
+A plugin is a folder (a git repo) with `manifest.json` in Omarchy's schema (`shell/services/PluginRegistry.qml`): `schemaVersion` (1), `id`, `name`, `version`, `author`, `description`, `kinds` (`bar-widget`, `panel`, `menu`, `service`), `entryPoints`, `keepLoaded`, and the `barWidget` block (`displayName`, `category`, `allowMultiple`, `defaultSection`, `defaults`, settings `schema`). An `omawin` block holds what's ours (`"command": "widget.exe"`, `"xaml": "Panel.xaml"`). `docs/plugins.md` documents it, with Omarchy's names kept so an Omarchy plugin author recognizes it.
+
+### 4.2 Widgets and services as commands (M, 🖥)
+
+The menu app is Native AOT, so it can't load plugin DLLs. A widget or service is a program or script that prints **JSON lines** (Waybar's format, which Omarchy's `type: "command"` modules use: `text`, `tooltip`, `class`, `percentage`, `alt`), once per `interval` or continuously. Clicks, right-clicks and the wheel run the manifest's commands with the widget's settings.
+
+**Build:** `Bar/CommandWidget.cs`, a `BarWidget` owning a process, reading lines off the UI thread, drawing `text` (Nerd Font glyphs) in the theme's colours by `class`; `BarWidget.Create` falls back to the plugin registry for unknown names. A plugin process restarts with backoff if it dies, ends with the shell, and shows in `omawin profile ram`.
+
+### 4.3 Panels as XAML (M, 🖥)
+
+A panel (a drop-down from a widget, or a launcher page) is a loose `.xaml` file the shell loads with `XamlReader.Load`, bound to the JSON state the plugin's command prints. Buttons call the plugin's commands.
+
+**Build:**
+- **Theme resources:** the shell puts the theme into `Application.Resources` as brushes with fixed keys (`OmawinBackground`, `OmawinSurface`, `OmawinAccent`, `OmawinForeground`, `OmawinMuted`, … from `MenuModel.cs:14-33`) and updates them on a theme switch; plugin XAML uses `{ThemeResource OmawinAccent}`. Our own pages can move to them too.
+- `menu-app/Plugins/PanelHost.cs`: loads, sizes and places a panel under its widget, with the motion tokens (1.4).
+- **Prove it under AOT first:** WinUI's XAML parser is native, so `XamlReader.Load` should work trimmed; bindings need a reflection-free path. A sample panel decides; if it can't bind, the fallback is a declarative JSON format (rows, toggles, sliders, lists) drawn by the shell.
+
+### 4.4 Menu entries (S)
+
+A plugin's `menu.txt` fragment (same row format, `MenuModel.cs:107-142`) goes after omawin's rows, under an id prefix the plugin owns. While here, **layer `menu.txt` itself** like `items.txt` (shared folder, then account folder).
+
+### 4.5 Where they live, and `omawin plugin` (M)
+
+- `~/omawin-account/plugins/<id>/` (this account) and `C:\ProgramData\omawin\shared\plugins\<id>/` (every account); never the repo.
+- `bin/commands.txt`: `plugin add <git-url>`, `plugin update [id]`, `plugin remove <id>`, `plugin enable|disable <id>`, `plugin list`. New plugins arrive **disabled**, as in Omarchy; `%LOCALAPPDATA%\launcher\plugins.txt` lists the enabled ones.
+- Hot reload: a `FileSystemWatcher` per plugin folder (the pattern in `Background.cs` and `Bar.cs:347-356`), debounced.
+- `bar.json` moves out of `zebar/` to the account folder (the repo's as the default), as Omarchy's `shell.json`, so plugins can be placed.
+
+### 4.6 Our own pieces become plugins (M)
+
+The music drop-down (Zebar's today, `zebar/tokyo-islands/music.js`), the agents panel, dictation and reports move to the format first: that proves it and keeps the core small. `omawin-music watch` already prints lines; it becomes the widget's command.
+
+### 4.7 IPC for plugins and scripts (S)
+
+`omawin shell <method> [args]`: `toggle <panel>`, `reload`, `list-plugins`, `put-bar-widget <id> <section>`, `notify` (5.5), like Omarchy's `omarchy-shell`. Fix the request format while here: one argument per line in the request file instead of space-joined (`App.xaml.cs:114-128`, `omawin.cs:189-204`).
+
+### 4.8 Script commands (S)
+
+From Raycast and PowerToys' Command Palette: a script dropped in `~/omawin-account/scripts/` (PowerShell, bash for Linux, anything with a header comment for its name and icon) shows up in the launcher, no manifest needed. The smallest possible plugin.
+
+### 4.9 A gallery (later)
+
+A launcher page listing plugins from a curated `plugins.txt` in the repo (name, description, git URL), installable with Enter.
+
+---
 
 ## Phase 5: Omarchy's developer experience
 
 Borrowed as data where we can, the way the themes were.
 
-1. **Dev environments and Docker databases in Linux too** (they exist on the Windows side): see phase 3.
-2. **A Docker TUI on a key** (Omarchy's Super+Shift+D: lazydocker).
-3. **Web apps and TUIs** as launcher items with their own icon and window (`omawin install webapp <name> <url>`, Edge `--app=`), launch-or-focus.
-4. **The key cheat sheet built from `glazewm/config.yaml`**: each binding gets a description (as Omarchy's `o.bind`), the Shortcuts page reads them, and `launcher/keys.txt` goes.
-5. **Notifications and OSD in the shell**: our own toasts (reminders, timers, low battery, install finished) and a volume / brightness OSD drawn by the shell.
-6. **Idle lock and screensaver** (Omarchy: 150 s screensaver, 300 s lock), a toggle in the menu.
-7. **Window manager parity**: scratchpad (Super+S), window groups / tabs (the fork's old accordion branch is a start), pop-out and layout cycling.
-8. **Detect before offering**: menu rows with a condition (`?wsl`, `?docker`), answered in the background and cached, so the menu opens on the last answers, as Omarchy's guards do.
-9. **Update channels and undo**: `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what install.md lists by hand.
+- **5.1 Dev environments and Docker databases in Linux** (they exist on Windows): 3.4 and 3.6.
+- **5.2 lazydocker on a key** (Omarchy's Super+Shift+D): a launcher item now; a key once confirmed.
+- **5.3 Web apps and TUIs** (M): `omawin install webapp <name> <url> [icon]` makes a launcher item that opens Edge's `--app=<url>` with its own profile folder and the site's icon; `omawin install tui <name> <command>` likewise in the terminal; launch-or-focus through GlazeWM's IPC. Omarchy's web app list as the starting set.
+- **5.4 The key cheat sheet from `glazewm/config.yaml`** (M): each binding gets a description comment in a fixed form (`# desc: Open the launcher`); the Shortcuts page (`Pages.cs`) reads them instead of `launcher/keys.txt`; Enter runs the binding's command. Omarchy builds its cheat sheet from bind descriptions the same way.
+- **5.5 Notifications and the OSD in the shell** (M, 🖥): `AppNotificationManager` toasts for omawin's own events (install finished, update available, reminders, low battery) and `omawin notify <text>`; a volume / brightness OSD drawn by the shell (Windows' flyout as the fallback).
+- **5.6 Idle lock and screensaver** (S): Omarchy's defaults (screensaver 150 s, lock 300 s): `omawin toggle idle-lock`, Windows' own lock (`LockWorkStation`) after idle (`GetLastInputInfo`), skipped while stay awake is on or media plays.
+- **5.7 Window manager parity** (fork):
+  - **Scratchpad** (M): a workspace that's never displayed (a workspace flag `special: true`; `Workspace::is_displayed()` is true only for the monitor's first in focus order, `models/workspace.rs:67`) and `toggle-scratchpad`, which shows its windows floating and centred over the current workspace. Omarchy's Super+S.
+  - **Window groups / tabs** (L): `feat/accordian-v1` (accordion directions on `SplitContainer`, a hardcoded 30 px title offset, a z-order hack; 180 commits behind) is a reference, not a base: redo it on `omawin`, with the tab strip drawn by the shell from IPC.
+  - Layout cycling, pop-out (float and centre), corner style and transparency toggles in the menu (GlazeWM's `window_effects` supports both).
+  - Upstream's `feat/master-stack` and `feat/auto-tiling` (both WIP) are worth watching for Omarchy's master layout.
+- **5.8 Detect before offering** (M): menu rows with a condition (`?wsl`, `?docker`, `?installed <id>`), answered in the background and cached; the menu opens on the last answers, as Omarchy's guards do (`docs/menu.md`).
+- **5.9 Update channels and undo** (M): `omawin update` follows release tags (stable, edge) with a restore point first; `omawin uninstall` does what [install.md](install.md) lists by hand. Update › All apps (`launcher/menu.txt:257`, only `winget upgrade --all` today) also runs `scoop update *` and `choco upgrade all` when those are installed (Chocolatey's needs admin: one prompt, said up front).
+- **5.10 Coding agents first class:** install, sign in, a key for the default agent, the theme followed (mission-todo track 7).
+- **5.11 From Raycast and the Command Palette** (2026): a window-capture action in the snip tool (a window's image with its shadow); pinnable CPU / GPU / network readouts on the bar (as Command Palette's dock has); dictation in the launcher (omawin has dictation; a launcher row to start it).
+
+---
 
 ## Phase 6: files (the finder, Win+F)
 
-The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. Make it the place you act on files from, so Explorer is rarely needed. Explorer itself stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)).
+The finder on fff is already the file explorer you use: fuzzy search over your folders and repos, a preview, folder and image chips, Ctrl+Enter to show a file in its folder. It grows into the place you act on files from. Explorer stays (replacing it breaks Windows; [shell-apps.md](shell-apps.md)).
 
-1. **Actions on a result.** A small action list on the selected file or folder (Ctrl+K, or →): open in the editor (`omawin launch editor`), a terminal there (`omawin launch terminal --dir`), open as a project (herdr), copy the path or the relative path, copy the file itself (pastes into Explorer, Teams, mail), rename, send to the Recycle Bin. The common ones get keys of their own.
-2. **Browse, not just search.** → goes into a folder and ← goes up, the list showing that folder's contents with the preview beside it (yazi's way), so the finder works as a keyboard file manager when you know roughly where something is.
-3. **Search inside files.** A prefix (e.g. `#`) searches contents: fff's own grep if its library offers it, else ripgrep, results by file and line; Enter opens the editor at that line.
-4. **Better previews.** Code with the theme's syntax colors, Markdown drawn, a PDF's first page (`Windows.Data.Pdf`), a CSV as a table, Office files and videos by Windows' own thumbnails.
-5. **Filters and places.** `.pdf`, `today`, `this week` as filters; your own places in the account folder (`launcher/finder-places.txt`), WSL repos, and pinned favorites at the top of the empty list.
-6. **Many at once and drag out.** Mark several (Space), act on all of them; drag a result into another app.
-7. **Into file dialogs.** When an app's Open or Save dialog is in front, choosing a folder sends the dialog there, so the finder works inside every app.
-8. **Explorer's developer defaults**, for when you do open it: extensions and hidden files shown, opens to your home folder, full path in the title, no Gallery / recommendations, dark or light following the theme; as tweaks with undo.
+What exists: fff v0.11.0's C library (`menu-app/fetch-fff.ps1:10`), one index per root, started in the background (`FileSearch.cs:44-85`); roots are Desktop, Documents (and OneDrive's), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder; `launcher/finder-skip.txt` skips folders; results ranked by own-name match, folders first, then fff's score, with opened files tracked (`fff_track_query`). Bound functions: `fff_create_instance_with`, `fff_search_mixed`, `fff_track_query` and result accessors; content indexing exists in the options (`EnableContentIndexing`) but is off, and no grep call is bound. The preview (`MainWindow.xaml.cs:743-844`) shows images, the first 22 lines of text, or a folder's first 18 entries. Keys: Tab cycles chips, Enter opens, Ctrl+Enter reveals, Esc clears or goes back.
+
+- **6.1 Actions on a result** (M, 🖥): Ctrl+K (or →) opens an action list on the selected row: open in the editor (`omawin launch editor`), a terminal there (`omawin launch terminal --dir`, Linux or Windows by the file's side), open as a project (herdr), copy path, copy the path relative to its repo, copy the file itself (`DataPackage.SetStorageItems`: pastes into Explorer, Teams, mail), rename inline, send to the Recycle Bin, properties. The common ones get keys of their own (proposed: Ctrl+E editor, Ctrl+T terminal, Ctrl+C copy path), confirmed before binding.
+- **6.2 Browse, not just search** (M, 🖥): → on a folder lists its contents (folders first), ← goes up, the preview beside it, the query filtering the current folder; yazi's model, for when you know roughly where something is.
+- **6.3 Search inside files** (M): a `#` prefix searches contents. First check fff v0.11's C API for a grep call (its upstream `fff.h`; fff.nvim has live grep); if there is one, bind it and turn on `EnableContentIndexing`; otherwise `rg --json` (ripgrep is in the core) in the chosen root, streamed into the list by file and line. Enter opens the editor at the line (`nvim +<line>`).
+- **6.4 Better previews** (M): code in the theme's colours (tree-sitter's `highlight`, or a small tokenizer per common language), Markdown drawn, a PDF's first page (`Windows.Data.Pdf`), CSV as a table, Office files and videos by Windows' own thumbnails (`IShellItemImageFactory`); all off the UI thread (the `previewToken` pattern exists).
+- **6.5 Filters and places** (S): `.pdf`, `today`, `this week`, `>10mb` as filter words; your own places in `launcher/finder-places.txt` (layered: shared, account); Linux's files (3.7); pinned favourites at the top of the empty list.
+- **6.6 Many at once and drag out** (M): Space marks rows and actions apply to all; dragging a row starts a real file drag into any app.
+- **6.7 Into file dialogs** (M, 🖥): when an app's Open or Save dialog is in front, choosing a folder sends the dialog there (UI Automation types the path into the dialog's file name box), Listary's best trick.
+- **6.8 Explorer's developer defaults** (S): extensions and hidden files shown, opens to your home folder, full path in the title, compact view, no Gallery / Home recommendations, dark or light by the theme; tweaks with undo, in the `look` step.
+
+---
+
+## Phase 7: sandboxes
+
+"Sandbox" means three useful things for omawin: a clean Windows to test the install in, a throwaway Windows to try something risky in, and a fenced-in place for coding agents to work. What's out there (web survey, 2026-10-30):
+
+- **Windows Sandbox** (built in): a disposable clean Windows in seconds, gone when closed. Windows 11 **Pro, Enterprise and Education only, not Home**; turned on as the optional feature `Containers-DisposableClientVM` (admin and a restart). Configured by a `.wsb` file (mapped folders, read-only or not; a logon command; networking; vGPU; memory). Since 24H2 it updates through the Store, folders can be shared while it runs, and a **`wsb` command line** scripts it (`start`, `list`, `exec`, `share`, `stop`, `connect`, `ip`). Limits: **no winget or Store inside** by default (it has to be bootstrapped, e.g. with the `Microsoft.WinGet.Client` module); on 24H2 the inbox Store apps (Terminal, Notepad) are missing; no nested virtualization, so **no WSL inside**. Whether `wsb exec` returns a command's output is unclear in the docs, so results go through a shared folder. ([overview](https://learn.microsoft.com/en-us/windows/security/application-security/application-isolation/windows-sandbox/windows-sandbox-overview), [CLI](https://learn.microsoft.com/en-us/windows/security/application-security/application-isolation/windows-sandbox/windows-sandbox-cli))
+- **Install testers built on it:** winget-pkgs' [`Tools/SandboxTest.ps1`](https://github.com/microsoft/winget-pkgs/blob/master/Tools/SandboxTest.ps1) (maintained: writes a `.wsb`, bootstraps winget, installs, runs a script), [bonben365/windows-sandbox](https://github.com/bonben365/windows-sandbox) (one-line winget in Sandbox), and generator gists. That's exactly the pattern omawin needs.
+- **Agent sandboxes:** Claude Code's sandbox runs on macOS, Linux and **WSL2**; on native Windows it runs commands unsandboxed ([docs](https://code.claude.com/docs/en/sandboxing)). OpenAI's Codex built its own native Windows sandbox from restricted tokens (May 2026; it rejected Windows Sandbox because Home lacks it). Microsoft's "agent workspace" (a separate Windows session for agents) is in preview behind Settings › Experimental agentic features. For omawin, **Arch in WSL is the practical agent sandbox today**, since it's already there.
+- **Try Omarchy for Windows** ([omacom/try-omarchy-windows](https://github.com/omacom/try-omarchy-windows), MIT): the real Omarchy in a QEMU VM on Windows' hypervisor, still a preview. Not a competitor: a way to run real Hyprland when you want it.
+
+### 7.1 `omawin sandbox test`: the install on a clean Windows (M, 🖥)
+
+**Why:** omawin has never been installed on a clean PC (mission.md); Windows Sandbox makes that a few-minute command on any Pro PC, and the honest counterpart to CI's preloaded runners (2.1).
+
+**Build:** `bin/sandbox-test.ps1` (a row in `bin/commands.txt`):
+- Writes a `.wsb`: the repo mapped **read-only** (or a fresh clone of a branch, to test what's pushed), a writable `out` folder, networking on, vGPU off, memory 8 GB.
+- The logon command bootstraps winget the way `SandboxTest.ps1` does, then runs `bootstrap.ps1` (or `install.ps1` from the mapped repo) with the `wsl` preset off, `OMAWIN_PLAIN=1`, and writes `install.log`, `install-times.txt`, `omawin check`'s output and a screenshot of the desktop to `out`.
+- Starts it with `wsb start --config` on 24H2 or later, `WindowsSandbox.exe <file>.wsb` before; waits for a done marker in `out`; prints the summary and the times.
+- Turning the feature on: an option in the one admin prompt (`install/admin.ps1`), offered only on Pro and up; on Home, the command explains that Windows Sandbox isn't available there and points at CI.
+
+**Done when:** `omawin sandbox test` on the PC ends with a clean `omawin check` and a screenshot of omawin's desktop inside the sandbox.
+
+**Risks:** winget's bootstrap changing (follow `SandboxTest.ps1`); the missing Store apps on 24H2; GlazeWM and the bar in a sandbox's session (screenshots will show if they draw).
+
+### 7.2 A throwaway Windows from the menu (S)
+
+System menu › Tools › Sandbox: opens Windows Sandbox with Downloads mapped read-only, for running an installer or a file you don't trust. `omawin sandbox` (no arguments). Pro and up; hidden on Home (5.8's conditions).
+
+### 7.3 Coding agents fenced in (M)
+
+`omawin agent sandbox [claude|codex|opencode]`: opens the agent inside Linux (Arch) in the current project, with its sandbox on (Claude Code's sandboxing works in WSL2; `failIfUnavailable` so it never silently runs open), the project folder the only writable place. On native Windows, Codex's own sandbox where the user picks Codex. A launcher row and a herdr tab option (`launcher/project-tabs.txt`).
+
+### 7.4 Sandbox screenshots as acceptance tests (later)
+
+Omarchy runs graphical acceptance tests in a disposable VM (`agents/skills/acceptance-tests.md`). Ours: 7.1's sandbox run, plus scripted checks inside (the menu app's `--snip-selftest` and `--qs-selftest`, the bar's preview mode), screenshots compared by eye per release.
+
+### 7.5 Real Omarchy, when you want it (S)
+
+A launcher item and a short manual page: "Try real Omarchy" installs Try Omarchy for Windows (its signed launcher) for someone who wants Hyprland itself. Omawin and Omarchy side by side, credited.
+
+---
 
 ## Always: following Omarchy
 
-`mjveilleux/omarchy` tracks upstream. At each Omarchy release, a short note in mission-todo.md of what's worth bringing over, checked against this roadmap; data we can import directly (themes, motion values, the menu's sections, the dev-env and database lists, plugin manifests) is imported by a script rather than copied by hand.
+`mjveilleux/omarchy` tracks upstream. At each Omarchy release, a short note in mission-todo.md of what's worth bringing over. Data we can import is imported by a script, not copied by hand:
+
+| From Omarchy | Into omawin | How |
+|---|---|---|
+| themes (`themes/*/colors.toml`) | `themes/colors/` | `themes/import-omarchy.ps1` (exists) |
+| terminal packages (`install/omarchy-base.packages`) | Arch in WSL | `wsl/setup.sh` minus `wsl/omarchy-skip.txt` (3.2) |
+| package repositories (stable channel) | Arch in WSL | `wsl/setup.sh` (exists) |
+| bash defaults (`default/bash/`) | Linux shells | sourced (3.2) |
+| motion values (`looknfeel.lua`, `motion.md`) | `menu-app/Motion.cs`, `glazewm/config.yaml` | by hand; rarely changes |
+| menu sections (`omarchy-menu.jsonc`) | `launcher/menu.txt` | compared per release |
+| dev envs and databases | `bin/install-dev-env.ps1` | compared per release |
+| plugin manifests | `docs/plugins.md` | the schema followed (4.1) |
+| web apps | 5.3's starting list | imported |
+
+## Testing without a PC in the loop
+
+This plan leans on what CI can check and saves the PC for what only a person can judge.
+
+| Check | Where | Covers |
+|---|---|---|
+| Release builds, AOT kind checked | `release.yml` | 1.3, every menu app change |
+| Install time and `omawin check` | new `install.yml`, Windows runner | phase 2 |
+| Window animation frame check | the fork's `animation-check.yaml`, restored | 1.5 |
+| `setup.sh` in Arch and Ubuntu containers | new `linux.yml` | phase 3 |
+| Menu app self-tests (`--snip-selftest`, `--qs-selftest`) | `release.yml` (add) | snip and Quick settings |
+| A clean Windows install | `omawin sandbox test`, the PC (Pro) | the honest fresh install (7.1) |
+| Keys, feel, visuals | the PC, by hand, with a screenshot | 🖥 items |
+
+## Risks
+
+| Risk | Effect | Mitigation |
+|---|---|---|
+| The fork drifts from upstream GlazeWM | harder merges, missed fixes | upstream the general parts (1.5); keep omawin's changes in few files |
+| Window animations judder on some GPUs | it feels worse, not better | `omawin toggle animations`, off in VMs, the frame check in CI |
+| mise or GitHub blocked on a work network | tools missing | winget fallback per tool, said in the summary |
+| Virtualization off, or WSL unavailable | no Linux | detect first; PowerShell as the shell then, with a clear message |
+| `XamlReader.Load` can't bind under AOT | XAML panels don't work as planned | a sample first; the declarative fallback |
+| Omarchy changes its package list or repos | Arch breaks on update | Omarchy's list pinned to a commit, bumped per Omarchy release after the container test |
+| Windows Sandbox missing (Home) | no local clean test | CI's install job; say so plainly |
+| Too much in one process | a crash takes the whole shell | plugins out of process (commands), crash logging, the shell restarts itself |
 
 ## How we'll know
 
-- `omawin profile menu`: under 50 ms from key to pixels, on this PC and the clean runner.
-- CI install: desktop up in under 3 minutes, everything in under 10, `omawin check` 0 / 0.
-- Window animations at full frame rate in the fork's frame check, and no judder by eye.
-- A fresh install, Enter through every question: Arch ready, and Win+Enter opens it as fast as it opened PowerShell.
+- `omawin profile menu`: under 50 ms from key to pixels; under 16 ms per keystroke.
+- The CI install: desktop up in under 3 minutes, everything in under 10, `omawin check` without failures; `omawin sandbox test` clean on the PC.
+- Window animations pass the frame check, and a week of daily use finds no stuck overlay.
+- A fresh install, Enter through every question: Arch ready with Omarchy's terminal packages, Win+Enter opens it as fast as it opened PowerShell, and a Linux terminal looks different from a PowerShell one at a glance.
 - One plugin of ours and one written from an Omarchy plugin's idea, installed with `omawin plugin add`.
+- Every row in mission-todo.md's Omarchy parity list is have, Windows-native instead, or decided against.
