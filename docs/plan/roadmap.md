@@ -280,6 +280,8 @@ The "never open Settings" list: 30 everyday changes (dark mode, file extensions,
 
 ## Phase 1C: One Search (one bar, tagged results, a bento home)
 
+**Started 2026-10-30:** step 1 of [one-search.md](one-search.md)'s order of work is in: the result model, query parser and merger (`menu-app/Search/Result.cs`, `QueryParser.cs`, `Merger.cs`; pure C#, the launcher's scoring scale) with 31 unit tests in `menu-app.Tests/` (`dotnet test menu-app.Tests`; CI: `.github/workflows/test.yml`). Not wired into the window yet; the menu app hasn't been built with it on Windows (🖥: `omawin restart menu` should still build).
+
 The launcher, the system menu, its pages and the file finder become **one window with one search bar**: every result tagged with what it is (app, setting, command, file, window, project, clipboard, theme), filters by tag in the bar (Tab, `/`, `>`, a filter's name + Tab), a bento home when nothing is typed, a ranked list with a preview when something is, Enter to act (settings switch in place, with undo), Ctrl+K for more. **Win+Space is the one key for everything; Win+Alt+Space is retired** (the maintainer's decision, 2026-10-30): for one release it opens One Search with a note, then a migration removes the binding and the key list in AGENTS.md and the manual change with it. Win+F and Win+Shift+V stay, opening the same window on Files and Clipboard. The design, its twelve guardrails, what happens to today's pieces and the open questions: **[one-search.md](one-search.md)**; clickable mockup: [omawin One Search](https://claude.ai/artifact/FCAA1kuXE7H6BjjfVzrN8z). Phase 1B's settings search becomes its Settings filter.
 
 ## Phase 2: fast install

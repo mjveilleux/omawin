@@ -23,6 +23,8 @@ zebar/tokyo-islands/theme.css
 zebar/tokyo-islands/lib/
 music/bin/
 music/obj/
+menu-app.Tests/bin/
+menu-app.Tests/obj/
 
 # Scratch output: local builds and the release tests (bin/install-binaries.ps1, docs/releases.md)
 # write here, never into the live ~/.local/bin or %LOCALAPPDATA%\system-menu.
