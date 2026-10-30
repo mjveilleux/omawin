@@ -20,7 +20,7 @@ Sources: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`, `docs/omarchy-she
 | Install | packages from pacman, 5 downloads at once | winget, 4 at once, ~150 s of packages before the desktop is up; the AOT build only where Visual Studio's C++ tools are |
 | Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | menu rows and launcher items in text files; no widgets, panels or plugins of your own |
 | Everyday dev setup | `install-dev-env` (mise), Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev environments and Docker databases (Windows side); no web apps, a hand-kept key list |
-| Linux | it *is* Linux | Arch in WSL, opt-in at install; the terminal opens PowerShell unless the window in front is in a Linux folder |
+| Linux | it *is* Linux | Linux in WSL (Arch by default, or Ubuntu), opt-in at install; the terminal opens PowerShell unless the window in front is in a Linux folder |
 | Files | Nautilus, with a preview (Sushi) and "here" keys | the Win+F finder (fff): search, preview, chips; no actions beyond open and show in folder, no browsing |
 
 ## Phase 1: snappy (now)
@@ -45,22 +45,22 @@ Goal: a clean Windows 11 PC goes from the one line to a working desktop in **und
 5. **A leaner core.** Neovide and Windows Terminal move to presets (noctty is the terminal; Terminal is the fallback a new PC already has on Windows 11).
 6. **One fetch for our own pieces.** The helpers, the menu app and the music player come from one release zip per architecture instead of three downloads.
 
-## Phase 3: Arch in WSL, first class
+## Phase 3: Linux in WSL, first class (Arch by default)
 
-Arch is already the default Linux (Omarchy's stable package repositories, no AUR, `wsl/setup.sh`), but it's an opt-in preset and Windows comes first everywhere. First class means Arch is the default terminal and where your code lives and runs, and omawin treats it as its second home: installed by default, warm when you need it, reachable from every key, kept up to date and checked like the rest. Never at the cost of a distro you already had: that one stays yours ([AGENTS.md](../AGENTS.md)).
+Linux is first class; Arch is the default Linux, not the only one. Today Arch is the default pick (Omarchy's stable package repositories, no AUR) and Ubuntu the other (`omawin default linux`, `wsl/setup.sh` handles both), but Linux is an opt-in preset and Windows comes first everywhere. First class means your Linux is the default terminal and where your code lives and runs, and omawin treats it as its second home: installed by default, warm when you need it, reachable from every key, kept up to date and checked like the rest. Everything below works for whichever Linux you picked; where a distro needs its own handling (packages, Docker), `setup.sh` does it per distro, Arch first and Ubuntu alongside. Never at the cost of a distro you already had: that one stays yours ([AGENTS.md](../AGENTS.md)).
 
-1. **On by default.** The install's Linux question starts on Arch (as now), and the `wsl` preset is in the default set: pressing Enter through the questions gives you Arch. WSL's restart stays the one reboot, resumed at the next sign-in (it is today).
+1. **On by default.** The install's Linux question starts on Arch (as now), with Ubuntu a choice, and the `wsl` preset is in the default set: pressing Enter through the questions gives you Arch. WSL's restart stays the one reboot, resumed at the next sign-in (it is today).
 2. **A good WSL VM out of the box** (`wsl/.wslconfig`, `/etc/wsl.conf`): systemd on, mirrored networking (localhost works both ways, VPNs behave) with DNS tunneling, sparse disk, memory handed back; each a setting your account folder can override.
-3. **The terminal opens in Arch.** Win+Enter (`omawin terminal here`) and `omawin launch terminal` open Arch's shell by default whenever Arch is set up; a new `omawin default shell arch|windows` (in `bin/defaults.txt`, Arch first) switches it back to PowerShell for one PC. The window in front still decides the folder: a Linux folder opens there, a Windows folder (Explorer, a PowerShell tab) opens Arch in that folder under `/mnt/c`. No Arch yet (declined, or WSL waiting on its restart): PowerShell, without an error. PowerShell is still a launcher item and `omawin launch terminal --windows`; no key changes. Projects follow the same default (`--wsl` becomes the default, `--windows` the exception), new ones going in `~/src` inside Arch, and Install › Development installs into Arch.
-4. **No cold start.** Since the terminal is Arch, Arch starts in the background at sign-in (after the desktop is up, so sign-in isn't slower), and the first Win+Enter opens as fast as PowerShell did; measured with `omawin profile terminal`. WSL's idle timeout is raised so it isn't stopped between terminals.
-5. **Omarchy's tooling in Arch.** Dev environments through mise and Omarchy's own lists, run inside Arch (`omawin install dev-env <lang> --linux`); Docker Engine in Arch (pacman, systemd) instead of Docker Desktop, so the Docker databases and lazydocker run there with no Windows-side licence or VM; Omarchy's bash defaults, as its Linux users have them.
-6. **Linux files in the finder and launcher.** Win+F searches your Arch home and repos (indexed inside Arch, where it's fast, not over the `\\wsl.localhost` share); Linux GUI apps (WSLg) appear in the launcher with their icons; Localhost already lists Linux servers.
-7. **Credentials that just work.** Git uses Windows' Git Credential Manager from Arch; the SSH agent and GPG reach Windows' (1Password or OpenSSH) through a relay, so one sign-in serves both sides.
-8. **The theme and tools match, live.** The prompt, Neovim, fastfetch, lazygit and btop in Arch follow the omawin theme on a switch, as Windows' do (they read the same repo through `/mnt/c` today; anything rendered gets its copy inside Arch too).
-9. **Kept and checked.** `omawin update` updates Arch (it does: `setup.sh update`) and runs Linux-side migrations (`migrations/linux/`, a marker file per user, Omarchy's way); `omawin check` checks the distro (running, systemd, the repos, the tools, the user); a bar indicator says Arch is running and what it uses, a click to stop it.
-10. **Safe to break.** `omawin linux backup` (`wsl --export`, a dated file) and `omawin linux reset` (a fresh Arch beside your backup, set up again); never touches a distro omawin didn't make.
+3. **The terminal opens in Linux.** Win+Enter (`omawin terminal here`) and `omawin launch terminal` open your Linux's shell by default whenever it's set up; a new `omawin default shell linux|windows` (in `bin/defaults.txt`, Linux first) switches it back to PowerShell for one PC. The window in front still decides the folder: a Linux folder opens there, a Windows folder (Explorer, a PowerShell tab) opens Linux in that folder under `/mnt/c`. No Linux yet (declined, or WSL waiting on its restart): PowerShell, without an error. PowerShell is still a launcher item and `omawin launch terminal --windows`; no key changes. Projects follow the same default (`--wsl` becomes the default, `--windows` the exception), new ones going in `~/src` inside Linux, and Install › Development installs into Linux.
+4. **No cold start.** Since the terminal is Linux, WSL starts your distro in the background at sign-in (after the desktop is up, so sign-in isn't slower), and the first Win+Enter opens as fast as PowerShell did; measured with `omawin profile terminal`. WSL's idle timeout is raised so it isn't stopped between terminals.
+5. **Omarchy's tooling in Linux.** Dev environments through mise and Omarchy's own lists, run inside Linux (`omawin install dev-env <lang> --linux`); Docker Engine inside the distro (pacman on Arch, apt on Ubuntu, under systemd) instead of Docker Desktop, so the Docker databases and lazydocker run there with no Windows-side licence or VM; Omarchy's bash defaults, as its Linux users have them.
+6. **Linux files in the finder and launcher.** Win+F searches your Linux home and repos (indexed inside the distro, where it's fast, not over the `\\wsl.localhost` share); Linux GUI apps (WSLg) appear in the launcher with their icons; Localhost already lists Linux servers.
+7. **Credentials that just work.** Git uses Windows' Git Credential Manager from Linux; the SSH agent and GPG reach Windows' (1Password or OpenSSH) through a relay, so one sign-in serves both sides.
+8. **The theme and tools match, live.** The prompt, Neovim, fastfetch, lazygit and btop in Linux follow the omawin theme on a switch, as Windows' do (they read the same repo through `/mnt/c` today; anything rendered gets its copy inside Linux too).
+9. **Kept and checked.** `omawin update` updates the distro's packages (Arch's today: `setup.sh update`; Ubuntu's too) and runs Linux-side migrations (`migrations/linux/`, a marker file per user, Omarchy's way); `omawin check` checks the distro (running, systemd, the repos, the tools, the user); a bar indicator says Linux is running and what it uses, a click to stop it.
+10. **Safe to break.** `omawin linux backup` (`wsl --export`, a dated file) and `omawin linux reset` (a fresh copy of your Linux beside your backup, set up again); never touches a distro omawin didn't make.
 
-The clean-PC CI test (phase 2) can't run WSL (GitHub's runners have no nested virtualization), so Arch gets its own test: `setup.sh` in an Arch container in CI, and a run on a real PC per release.
+The clean-PC CI test (phase 2) can't run WSL (GitHub's runners have no nested virtualization), so Linux gets its own test: `setup.sh` in Arch and Ubuntu containers in CI, and a run on a real PC per release.
 
 ## Phase 4: plugins (Omarchy's shell, on Windows)
 
@@ -80,7 +80,7 @@ Quickshell is Qt on Wayland and won't run on Windows, but its plugin model will:
 
 Borrowed as data where we can, the way the themes were.
 
-1. **Dev environments and Docker databases in Arch too** (they exist on the Windows side): see phase 3.
+1. **Dev environments and Docker databases in Linux too** (they exist on the Windows side): see phase 3.
 2. **A Docker TUI on a key** (Omarchy's Super+Shift+D: lazydocker).
 3. **Web apps and TUIs** as launcher items with their own icon and window (`omawin install webapp <name> <url>`, Edge `--app=`), launch-or-focus.
 4. **The key cheat sheet built from `glazewm/config.yaml`**: each binding gets a description (as Omarchy's `o.bind`), the Shortcuts page reads them, and `launcher/keys.txt` goes.
@@ -112,5 +112,5 @@ The finder on fff is already the file explorer you use: fuzzy search over your f
 - `omawin profile menu`: under 50 ms from key to pixels, on this PC and the clean runner.
 - CI install: desktop up in under 3 minutes, everything in under 10, `omawin check` 0 / 0.
 - Window animations at full frame rate in the fork's frame check, and no judder by eye.
-- A fresh install, Enter through every question: Arch ready, and Win+Enter opens Arch as fast as it opened PowerShell.
+- A fresh install, Enter through every question: Arch ready, and Win+Enter opens it as fast as it opened PowerShell.
 - One plugin of ours and one written from an Omarchy plugin's idea, installed with `omawin plugin add`.
