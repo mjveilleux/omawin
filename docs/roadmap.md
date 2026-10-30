@@ -322,7 +322,7 @@ What exists: the bar reads its layout from `zebar/tokyo-islands/bar.json` (`Bar/
 
 ### 4.1 The manifest (S)
 
-A plugin is a folder (a git repo) with `manifest.json` in Omarchy's schema (`shell/services/PluginRegistry.qml`): `schemaVersion` (1), `id`, `name`, `version`, `author`, `description`, `kinds` (`bar-widget`, `panel`, `menu`, `service`), `entryPoints`, `keepLoaded`, and the `barWidget` block (`displayName`, `category`, `allowMultiple`, `defaultSection`, `defaults`, settings `schema`). An `omawin` block holds what's ours (`"command": "widget.exe"`, `"xaml": "Panel.xaml"`). `docs/plugins.md` documents it, with Omarchy's names kept so an Omarchy plugin author recognizes it.
+A plugin is a folder (a git repo) with `manifest.json` in Omarchy's schema (`shell/services/PluginRegistry.qml`): `schemaVersion` (1), `id`, `name`, `version`, `author`, `description`, `kinds` (`bar-widget`, `panel`, `menu`, `service`), `entryPoints`, `keepLoaded`, and the `barWidget` block (`displayName`, `category`, `allowMultiple`, `defaultSection`, `defaults`, settings `schema`). An `omawin` block holds what's ours (`"command": "widget.exe"`, `"xaml": "Panel.xaml"`). [`plugins.md`](plugins.md) has the full design (protocol, panels, safety, commands), with Omarchy's names kept so an Omarchy plugin author recognizes it.
 
 ### 4.2 Widgets and services as commands (M, 🖥)
 
