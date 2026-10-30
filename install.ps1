@@ -148,8 +148,10 @@ try {
     # Its unpacking starts now, in the background, and runs alongside everything up to the end of
     # the software step (install/unpack-tools.ps1). "Yours" is judged by the PATH here; winget's
     # list isn't read yet.
-    if (-not $LinkOnly) { Start-ToolBundle $null }
+    if (-not $LinkOnly) { Start-ToolBundle $null; Start-EarlyHelpers }
+    Write-Log ("    bundle and helpers started at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
     $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages | Where-Object { $bundled -notcontains $_ } }) -NoPackages:$LinkOnly
+    Write-Log ("    admin plan done at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
     if ($plan.Packages.Count -or $plan.Forks.Count -or $plan.Wsl) {
         Add-InstallStep 'admin' 'what every account shares, after one prompt' -First
         # omawin update's pull came before it.

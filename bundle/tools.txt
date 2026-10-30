@@ -36,3 +36,4 @@ node        | node-lts                          | win-x64                       
 uv          | github:astral-sh/uv               | ^uv-x86_64-pc-windows-msvc\.zip$                   | .   | astral-sh.uv
 glazewm     | github:mjveilleux/glazewm         | ^glazewm-.+-windows-x64\.zip$                      | cli | glzr-io.glazewm
 noctty      | github:mjveilleux/noctty          | ^noctty-.+-windows-x64-portable\.zip$              | -   |                             | Programs\noctty
+font        | github:ryanoasis/nerd-fonts       | ^JetBrainsMono\.zip$                               | -   |                             | omawin\fonts\JetBrainsMono

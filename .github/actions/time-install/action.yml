@@ -61,7 +61,7 @@ runs:
         $env:OMAWIN_LOCAL = '1'; $env:OMAWIN_PLAIN = '1'
         $start = Get-Date
         try {
-            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\omawin\bootstrap.ps1" *> C:\ci\out\install.log
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$HOME\omawin\bootstrap.ps1" *> C:\ci\out\bootstrap.log
             "bootstrap exit $LASTEXITCODE" | Add-Content C:\ci\out\result.txt
         } catch { "bootstrap threw: $_" | Add-Content C:\ci\out\result.txt }
         "seconds $([int]((Get-Date) - $start).TotalSeconds)" | Add-Content C:\ci\out\result.txt
@@ -116,6 +116,8 @@ runs:
         }
         $lines += '', '```', $result, '```', '', 'No WSL and no desktop on a runner.'
         $lines -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+        Write-Host '--- bootstrap.log ---'
+        Get-Content C:\ci\out\bootstrap.log -Tail 40 -ErrorAction SilentlyContinue
         Write-Host '--- the last of install.log ---'
         Get-Content C:\ci\out\install.log -Tail 120 -ErrorAction SilentlyContinue
         Write-Host '--- check.log ---'

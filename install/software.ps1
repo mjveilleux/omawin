@@ -302,6 +302,18 @@ function Complete-ToolBundle {
     Write-Note "$(@($script:BundleHave).Count) of $(@($b.Tools).Count) tool(s) from the bundle, $(@($script:BundleTheirs).Count) yours already"
 }
 
+# The helpers step's downloads (omawin.exe and the bar's helpers, the menu app, the music player:
+# bin/install-binaries.ps1) start with the bundle too, in a PowerShell of their own; the helpers
+# step collects them (install/helpers.ps1).
+function Start-EarlyHelpers {
+    if ($script:EarlyHelpers) { return }
+    $log = Join-Path $env:TEMP "omawin-helpers-$Stamp.log"
+    $p = Start-Process (Join-Path $PSHOME 'pwsh.exe') -WindowStyle Hidden -PassThru -RedirectStandardOutput $log -RedirectStandardError "$log.err" `
+        -ArgumentList '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$Repo\bin\install-binaries.ps1`"", '-What', 'all'
+    $null = $p.Handle  # read now, so its ExitCode is there later
+    $script:EarlyHelpers = @{ Process = $p; Log = $log }
+}
+
 # Both halves at once (omawin pkg update).
 function Install-ToolBundle($Installed, [string[]]$Only) { Start-ToolBundle $Installed $Only; Complete-ToolBundle }
 
@@ -373,7 +385,9 @@ function Install-WingetPackages([string[]]$Ids) {
     }
     Write-OkCount
     Update-SessionPath
-    Add-ToolPaths @(Get-WantedTools)
+    # (Not the bundle's tools: they go on the PATH when it's collected, and looking for one before
+    # that searched Program Files for nothing.)
+    Add-ToolPaths @(Get-WantedTools | Where-Object { @(Read-ToolBundle | ForEach-Object Name) -notcontains $_ })
 }
 
 # The commands the core and the chosen presets are for (packages.ps1's Tools); bun is the core's.
@@ -497,10 +511,15 @@ function Install-NerdFont {
     $tmp = Join-Path $env:TEMP "nerdfont-$Stamp"
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     $zip = Join-Path $tmp "$NerdFont.zip"
+    # The tools bundle brought it (bundle/tools.txt, font): its files, no download.
+    $fromBundle = Join-Path $env:LOCALAPPDATA "omawin\fonts\$NerdFont"
+    if (Test-Path (Join-Path $fromBundle '.omawin-version')) { $tmp = $fromBundle }
+    else {
     [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 3072
     Save-Download "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/$NerdFont.zip" $zip
     & "$env:WINDIR\System32\tar.exe" -xf $zip -C $tmp
     if ($LASTEXITCODE -ne 0) { Expand-Archive $zip -DestinationPath $tmp -Force }
+    }
 
     # Per-user install: no admin needed. A new account has no per-user font key until it's made.
     $fontDir = "$env:LOCALAPPDATA\Microsoft\Windows\Fonts"
@@ -517,7 +536,7 @@ function Install-NerdFont {
         New-ItemProperty -Path $fontKey -Name "$face $style (TrueType)" -Value $dest -PropertyType String -Force | Out-Null
         $fc.Dispose()
     }
-    Remove-Item $tmp -Recurse -Force
+    if ($tmp -ne $fromBundle) { Remove-Item $tmp -Recurse -Force }   # the bundle's copy stays: it's what omawin pkg update checks
     Write-Note 'installed (restart Windows Terminal to pick it up)'
     Add-InstallItem 'Tools' 'font' $font 'done'
 }
@@ -533,9 +552,9 @@ if (-not $SoftwareFunctionsOnly) {
         Write-Step 'other tools'
         $extras = @($CoreExtras) + @(foreach ($name in $chosen) { $Presets[$name].Extras })
         Install-Extras @($extras | Where-Object { $_ } | Select-Object -Unique)
-        Install-NerdFont
-        # Last in this step: the desktop step needs GlazeWM from the bundle.
+        # Last in this step: the desktop step needs GlazeWM from the bundle, and the font comes in it.
         Complete-ToolBundle
+        Install-NerdFont
     } else {
         # An update installs nothing, but a tool a package moved off the PATH still goes back on.
         Add-ToolPaths @(Get-WantedTools)
