@@ -40,13 +40,13 @@ static class Watch
             ListenForOpen();
             new Thread(() =>
             {
-                // Quit when the Zebar that started this is gone (closed or restarted), so no copy
-                // lingers behind; a new Zebar starts its own.
-                var zebar = Parent();
+                // Quit when the bar that started this is gone (closed or restarted), so no copy
+                // lingers behind; a new bar starts its own.
+                var bar = Parent();
                 while (true)
                 {
                     Thread.Sleep(3000);
-                    if (zebar == null || zebar.HasExited) Environment.Exit(0);
+                    if (bar == null || bar.HasExited) Environment.Exit(0);
                 }
             }) { IsBackground = true }.Start();
 

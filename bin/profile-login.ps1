@@ -32,7 +32,6 @@ function Add($what, [datetime]$at, $from) { if ($at) { $rows.Add([pscustomobject
 foreach ($p in @(
         @{ Name = 'explorer'; What = 'taskbar (Explorer)' },
         @{ Name = 'glazewm'; What = 'GlazeWM' },
-        @{ Name = 'zebar'; What = 'bar (Zebar)' },
         @{ Name = 'SystemMenu'; What = 'menu app' },
         @{ Name = 'noctty'; What = 'terminal (in the background)' })) {
     # The first one this sign-in: a later restart starts a newer one, which says nothing of login.

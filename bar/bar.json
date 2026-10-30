@@ -1,5 +1,5 @@
 {
-  "//": "The bar's layout, after Omarchy 4's shell.json bar section: which widgets, in which place, in order. Each name is widgets/<name>.js. bar.html reads this; edit it and restart the bar (omawin restart zebar).",
+  "//": "The bar's layout (menu-app/Bar/Bar.cs reads it), after Omarchy 4's shell.json bar section: which widgets, in which place, in order. Edit it and restart the menu app (omawin restart menu).",
   "left": ["menu", "workspaces"],
   "centerBegin": ["indicators"],
   "center": ["clock"],

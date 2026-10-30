@@ -1,6 +1,6 @@
 # Welcome to omawin
 
-omawin is "omakase Windows": one opinionated, keyboard-first desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Windows tile themselves (GlazeWM), a floating bar and dock replace the taskbar (Zebar), and everything starts from a few keys:
+omawin is "omakase Windows": one opinionated, keyboard-first desktop, after [Omarchy](https://omarchy.org) (omakase Arch + Hyprland). Windows tile themselves (GlazeWM), a bar replaces the taskbar, and everything starts from a few keys:
 
 | Keys | Opens |
 |---|---|

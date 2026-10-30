@@ -1,5 +1,6 @@
-// voice-meter: tells the Zebar bar when dictation (Handy on Win+H, or Windows voice typing) is
-// listening, and how loud the microphone is, so the bar can animate along with your voice.
+// voice-meter: tells the bar (the menu app's, menu-app/Bar/Bar.cs) when dictation (Handy on Win+H,
+// or Windows voice typing) is listening, and how loud the microphone is, so the bar can animate
+// along with your voice. It quits when whoever reads it is gone: its next line fails to write.
 //
 // Prints one line at a time on stdout:
 //   1 0.425   listening, mic peak level 0..1   (every ~40 ms while listening)
@@ -101,12 +102,6 @@ static class VoiceMeter
         catch { return null; }
     }
 
-    // Quit when Zebar is gone (it was force-closed or restarted), so no copy lingers behind.
-    static bool ZebarRunning()
-    {
-        return System.Diagnostics.Process.GetProcessesByName("zebar").Length > 0;
-    }
-
     [STAThread]
     static void Main()
     {
@@ -120,15 +115,9 @@ static class VoiceMeter
         IAudioMeterInformation meter = null;
         bool wasListening = false;
         var idleSince = DateTime.MinValue;
-        var lastZebarCheck = DateTime.Now;
 
         while (true)
         {
-            if ((DateTime.Now - lastZebarCheck).TotalSeconds >= 3)
-            {
-                if (!ZebarRunning()) return;
-                lastZebarCheck = DateTime.Now;
-            }
             int who = Listening();
             bool listening = who != 0;
             if (listening)

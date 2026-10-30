@@ -23,7 +23,6 @@ learn.keys | 󰌌 | Shortcuts | @keys
 learn.commands | 󰆍 | omawin commands | task omawin help
 learn.readme | 󰈙 | This setup (README) | edit ~\omawin\README.md
 learn.glazewm | 󰕰 | GlazeWM | run https://github.com/glzr-io/glazewm#readme
-learn.zebar | 󰍜 | Zebar | run https://github.com/glzr-io/zebar#readme
 learn.neovim |  | LazyVim keys | run https://www.lazyvim.org/keymaps
 learn.powershell | 󰨊 | PowerShell | run https://learn.microsoft.com/powershell/scripting/learn/ps101/00-introduction
 learn.herdr | 󰚩 | herdr | run https://herdr.dev
@@ -56,7 +55,6 @@ style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme r
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\launcher\menu.ps1" -SetWallpaper
 style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
 style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\glazewm\config.yaml
-style.zebar | 󰍜 | Bar (Zebar) | edit ~\omawin\zebar\tokyo-islands
 style.terminal | 󰆍 | Terminal | edit ~\omawin\noctty\config.ghostty
 style.prompt | 󰘦 | Prompt (starship) | edit ~\omawin\starship\starship.toml
 
@@ -259,7 +257,6 @@ update.check | 󰏗 | What has updates | task winget upgrade --accept-source-agr
 update.windows | 󰍲 | Windows Update | run ms-settings:windowsupdate
 update.restart | 󰜉 | Restart
 update.restart.glazewm | 󰕰 | GlazeWM config | omawin restart glazewm
-update.restart.zebar | 󰍜 | Zebar | omawin restart zebar
 update.restart.explorer | 󰉋 | Explorer | task Stop-Process -Name explorer -Force
 
 system | 󰐥 | System

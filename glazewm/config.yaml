@@ -5,16 +5,15 @@
 # Docs: https://github.com/glzr-io/glazewm
 
 general:
-  # Zebar draws the floating top bar and the dock (pack: zebar/tokyo-islands): `omawin start
-  # zebar` starts it straight away, without a GPU process, or runs zebar/start.ps1 (`omawin
-  # restart zebar`) when an old bar is still around (bin/omawin.cs, StartZebar).
+  # The bar is the menu app's own window (menu-app/Bar); `omawin start bar` holds its place with a
+  # strip in the theme's colour until it's up (bin/omawin.cs, StartBar).
   # `omawin start` starts the native launcher / menu (menu-app/) hidden, so the first press is
   # instant; `omawin start terminal` keeps noctty running with no window, so terminals open fast too.
   # `omawin agent start -After 45` starts the agent's herdr session (OpenCode's service), headless,
   # for Ctrl+Win+H, 45 s on, so it isn't in the way while the desktop comes up (Ctrl+Win+H before
   # then starts it itself).
-  startup_commands: ['shell-exec --hide-window omawin.exe start zebar', 'shell-exec --hide-window omawin.exe start', 'shell-exec --hide-window omawin.exe start terminal', 'shell-exec --hide-window omawin.exe agent start -After 45']
-  shutdown_commands: ['shell-exec taskkill /IM zebar.exe /F']
+  startup_commands: ['shell-exec --hide-window omawin.exe start bar', 'shell-exec --hide-window omawin.exe start', 'shell-exec --hide-window omawin.exe start terminal', 'shell-exec --hide-window omawin.exe agent start -After 45']
+  shutdown_commands: []
   config_reload_commands: []
 
   focus_follows_cursor: false
@@ -160,8 +159,6 @@ window_rules:
 
   - commands: ['ignore']
     match:
-      # Zebar's own windows.
-      - window_process: { equals: 'zebar' }
       # The system menu (menu-app/) places itself.
       - window_process: { equals: 'SystemMenu' }
       # The Suno window (music/suno/): the bar places it beside the music panel.
@@ -277,7 +274,7 @@ keybindings:
 
   # Dictation with Handy (local speech-to-text) instead of Windows voice typing, whose popup
   # can't be hidden; catching Win+H here keeps that popup from ever opening. Tap to start,
-  # tap again to stop; the Zebar bar shows the listening animation. (Handy's own shortcut is
+  # tap again to stop; the bar shows the listening animation. (Handy's own shortcut is
   # parked on ctrl+alt+shift+f9 so it never collides with anything.)
   - commands: ['shell-exec handy --toggle-transcription']
     bindings: ['lwin+h']
@@ -308,9 +305,9 @@ keybindings:
   # Win+A (quick settings) gives way, as Win+M does.
   - commands: ['shell-exec --hide-window omawin.exe launcher audio']
     bindings: ['lwin+a']
-  # The music player's panel in the bar (music/, zebar/tokyo-islands/music.js): Space plays /
-  # pauses, Esc or Win+M again closes it. (Windows' own Win+M, minimize everything, means
-  # little with tiling.)
+  # The music player's panel in the bar (music/): Space plays / pauses, Esc or Win+M again closes
+  # it. It lived in Zebar's bar, removed 2026-10-31; until the native bar has it (roadmap 1.6, 4.6)
+  # this says so. (Windows' own Win+M, minimize everything, means little with tiling.)
   - commands: ['shell-exec --hide-window omawin.exe music open']
     bindings: ['lwin+m']
   # The system menu, like Omarchy's: install / remove, themes, setup, power (launcher/menu.txt,

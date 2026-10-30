@@ -1,6 +1,6 @@
 # omawin: notes for agents
 
-omawin ("omakase Windows") is a keyboard-driven Windows developer desktop, after [Omarchy](https://github.com/basecamp/omarchy): GlazeWM tiling, a Zebar bar and dock, a native launcher / system menu / screenshot tool (`menu-app/`), Omarchy's themes, LazyVim. The repo is public and its configs are live: apps read them straight from `~/omawin` through junctions, so editing a file here changes the running desktop.
+omawin ("omakase Windows") is a keyboard-driven Windows developer desktop, after [Omarchy](https://github.com/basecamp/omarchy): GlazeWM tiling, a native bar, launcher, system menu and screenshot tool (`menu-app/`), Omarchy's themes, LazyVim. The repo is public and its configs are live: apps read them straight from `~/omawin` through junctions, so editing a file here changes the running desktop.
 
 Read before working:
 
@@ -34,7 +34,7 @@ Read before working:
 - **Install changes** go in the matching step under `install/` (`install.ps1 -Step <name>` reruns one); a new step is a line in `install/steps.txt` and its file, and the install screen picks it up. Nothing in install needs admin by default; an opt-in admin feature goes in the one admin step (`install/admin.ps1`, `install/admin-batch.ps1`), run only when the user chooses it, never on its own prompt. New tools go in `packages.ps1`: the lean core only if every install needs them, else a preset (`omawin preset`). No Chocolatey for omawin's own installs (the launcher's Packages page offers it, and Scoop, as your choice). PowerShell 7 runs everything: `bootstrap.ps1` is the only script that starts in Windows PowerShell 5.1 (all a new PC has), and its job is to put PowerShell 7 in first (from the release's tools bundle) and hand over; `install.ps1` relaunches itself in 7. The one exception is the elevated admin step (`install/admin-batch.ps1`), which stays on Windows' own `powershell.exe`: an elevated run of a per-user `pwsh.exe` could be swapped by anything that can write to the user's folder. Core tools come from the tools bundle (`bundle/tools.txt`) where they have a portable build, and every package's source is recorded (`%LOCALAPPDATA%\launcher\packages.tsv`) so `omawin pkg update` updates it the same way.
 - **Languages: compiled C# first, then Rust, then Bun.** Any new tool, script or helper is **compiled C#** (.NET 9, Native AOT where it ships; built in CI and shipped in the release, so no SDK on the user's PC). **Rust** where C# isn't the right tool (the GlazeWM fork, low-level or latency-critical work). **Bun** for JavaScript and TypeScript (plugins and web-shaped work). PowerShell only where nothing compiled can run yet (the one-line `bootstrap.ps1` entry under Windows PowerShell 5.1) and in the user's PowerShell profile; existing `.ps1` scripts move to C# over time ([`docs/plan/roadmap.md`](docs/plan/roadmap.md) 2.11). Inside Linux, bash for the distro's setup and shell config (Omarchy's world). No Python.
 - **JavaScript runs on Bun.** Anything that needs a JavaScript runtime or package runner uses Bun (`bun`, `bunx`, winget `Oven-sh.Bun`), never Deno or a new Node / npm tool. Programs that need a runtime get pointed at Bun (the music player hands yt-dlp `--js-runtimes bun:<path>`).
-- **Small native helpers** (`bin/omawin.cs`, `zebar/tokyo-islands/*.cs`) are compiled by the in-box `csc.exe`: C# 5 only. The menu app (`menu-app/`) is .NET 9 / WinUI 3, built by `menu-app\build.ps1` (or `omawin restart menu`).
+- **Small native helpers** (`bin/omawin.cs`, `bin/voice-meter.cs`) are compiled by the in-box `csc.exe`: C# 5 only. The menu app (`menu-app/`) is .NET 9 / WinUI 3, built by `menu-app\build.ps1` (or `omawin restart menu`).
 - **Speed matters.** Anything on a key goes through the always-running menu app or a native exe. Starting PowerShell costs ~0.3 s, so a script only runs where that wait doesn't show.
 - **Comments** are plain English and say why; match the density of the file you're in. Markdown in `docs/` and `manual/` is not hard-wrapped.
 - User data never goes in the repo: clipboard history, launch history and indexes live in `%LOCALAPPDATA%\launcher\`.
@@ -44,7 +44,7 @@ Read before working:
 | To | Run |
 |---|---|
 | see every command | `omawin help` |
-| restart the bar after editing `zebar/` | `omawin restart zebar` |
+| restart the bar after editing `bar/bar.json` or `menu-app/` | `omawin restart menu` |
 | reload GlazeWM after editing its config | `omawin restart glazewm` |
 | rebuild the menu app after editing `menu-app/` | `omawin restart menu` |
 | relink / rebuild everything | `omawin install -LinkOnly` |

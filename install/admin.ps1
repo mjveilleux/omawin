@@ -6,8 +6,8 @@
 # It's the only prompt: after it, install.ps1 sets OMAWIN_NO_ADMIN and nothing asks again.
 # Declined, or no admin password at hand (the non-admin path): the install goes on without it,
 # installing what it can for this account alone (the whole-PC packages with winget --scope user
-# where they have such an installer) and leaving out what only admin can do (the forks: the
-# official GlazeWM and Zebar stay; WSL), each said in the summary.
+# where they have such an installer) and leaving out what only admin can do (the fork: the
+# per-user or official GlazeWM stays; WSL), each said in the summary.
 
 $AdminBatch = $null
 
@@ -20,7 +20,7 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         $installed = Get-WingetInstalled
         $packages = @($Ids | Where-Object { $WholePC -contains $_ -and -not (Test-PackageInstalled $_ $installed) } | Select-Object -Unique)
         # winget's export leaves out a package whose installed version its source no longer has
-        # (Zebar, pinned to the version the fork is built on). On a PC omawin has been on, each
+        # (a package pinned to an older version). On a PC omawin has been on, each
         # one it missed is asked about alone, so a reinstall doesn't ask for admin for nothing;
         # the software step then counts it as there.
         if ($installed -and (Test-Path "$env:LOCALAPPDATA\launcher\migrations.txt")) {
@@ -32,8 +32,8 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         }
     }
     $forks = @()
-    $programs = @{ 'glazewm-fork' = 'glzr.io\GlazeWM\glazewm.exe'; 'zebar-fork' = 'glzr.io\Zebar\zebar.exe' }
-    foreach ($fork in 'glazewm-fork', 'zebar-fork') {
+    $programs = @{ 'glazewm-fork' = 'glzr.io\GlazeWM\glazewm.exe' }
+    foreach ($fork in 'glazewm-fork') {
         # -Check says "needed" for a program that isn't installed (on an install, this batch
         # installs it first). An update installs no programs: asking for admin would end in
         # "not installed".
@@ -64,7 +64,7 @@ function Start-AdminBatch($Plan) {
         $names = @($Plan.Packages | ForEach-Object { Get-PackageName $_ })
         $what += "$($Plan.Packages.Count) program$(if ($Plan.Packages.Count -ne 1) { 's' }) for the whole PC|$(($names | Select-Object -First 5) -join ', ')$(if ($names.Count -gt 5) { ' ...' })"
     }
-    if ($Plan.Forks.Count) { $what += "omawin's $((@($Plan.Forks | ForEach-Object { if ($_ -eq 'glazewm-fork') { 'GlazeWM' } else { 'Zebar' } })) -join ' and ')|signed on this PC" }
+    if ($Plan.Forks.Count) { $what += "omawin's GlazeWM|signed on this PC" }
     if ($Plan.Wsl) { $what += "WSL, for $((Get-LinuxPick).Label)|it's ready after Windows restarts" }
     Show-AdminRequest $what
 

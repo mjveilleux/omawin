@@ -52,9 +52,15 @@ public static class Tools
 
     // An archive whose entries all sit in one top folder ("nvim-win64/bin/nvim.exe") is unpacked
     // without it, so every tool's zip has the same shape: the tool's own files at the top.
-    // keep:<pattern>: a file kept when its name matches (* and ?), wherever it is in the archive.
-    public static bool Keeps(Tool t, string entry) =>
-        t.Keep == null || System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(t.Keep, Path.GetFileName(entry.Replace('\\', '/')), ignoreCase: true);
+    // keep:<pattern>[,<pattern>...]: a file kept when its name matches one (* and ?), wherever it
+    // is in the archive.
+    public static bool Keeps(Tool t, string entry)
+    {
+        if (t.Keep == null) return true;
+        var name = Path.GetFileName(entry.Replace('\\', '/'));
+        return t.Keep.Split(',', StringSplitOptions.RemoveEmptyEntries)
+            .Any(p => System.IO.Enumeration.FileSystemName.MatchesSimpleExpression(p, name, ignoreCase: true));
+    }
 
     public static string? CommonTop(IEnumerable<string> entries)
     {

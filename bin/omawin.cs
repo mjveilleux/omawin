@@ -214,7 +214,7 @@ static class Omawin
             case "terminal-here": return TerminalHere();
             case "terminal-warm": return TerminalWarm();
             case "start-glazewm": return StartGlazeWM();
-            case "start-zebar": return StartZebar();
+            case "start-bar": return StartBar();
             case "update-terminal":
                 {
                     var t = Current("terminal");
@@ -649,35 +649,28 @@ static class Omawin
         catch (Exception) { return DateTime.MinValue; }
     }
 
-    // This account's own ports for GlazeWM and Zebar (bin/ports.ps1 says why and how), decided at
-    // every sign-in from what Program Files holds now: every account shares those files, and
-    // another one may have put the forks in, or the official programs back, since this one last
-    // looked. Set for GlazeWM (and so the bar and the menu app it starts) and saved for this
-    // account, so what starts from Explorer gets them too. The forks are in when the fork
-    // installers' kept official files are there (from omawin.7, which replaced the CLI too) and
-    // what runs isn't the official build again: an upgrade that got past the winget pin puts the
-    // official files back and leaves the kept ones behind. Never stops the desktop from starting.
+    // This account's own port for GlazeWM (bin/ports.ps1 says why and how), decided at every
+    // sign-in from what Program Files holds now: every account shares those files, and another one
+    // may have put the fork in, or the official program back, since this one last looked. Set for
+    // GlazeWM (and so the bar and the menu app it starts) and saved for this account, so what
+    // starts from Explorer gets it too. The fork is in when its installer's kept official CLI is
+    // there and what runs is signed as ours. Per-user GlazeWM (the tools bundle's) isn't the fork:
+    // the official port. Never stops the desktop from starting.
     static void SetPorts(bool fork)
     {
         try
         {
             var glzr = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "glzr.io");
-            var zebarExe = new FileInfo(Path.Combine(glzr, @"Zebar\zebar.exe"));
-            var zebarKept = new FileInfo(Path.Combine(glzr, @"Zebar\zebar.official.exe"));
-            bool ready = fork
-                && File.Exists(Path.Combine(glzr, @"GlazeWM\cli\glazewm.official.exe"))
-                && zebarExe.Exists && zebarKept.Exists && zebarExe.Length != zebarKept.Length;
-            string glazewm = null, zebar = null;
+            bool ready = fork && File.Exists(Path.Combine(glzr, @"GlazeWM\cli\glazewm.official.exe"));
+            string glazewm = null;
             if (ready)
             {
                 var sid = System.Security.Principal.WindowsIdentity.GetCurrent().User.Value;
                 long number = long.Parse(sid.Substring(sid.LastIndexOf('-') + 1));
-                long port = 22000 + 2 * (number % 4000);
-                glazewm = port.ToString();
-                zebar = (port + 1).ToString();
+                glazewm = (22000 + 2 * (number % 4000)).ToString();
             }
             SetPort("GLAZEWM_IPC_PORT", glazewm);
-            SetPort("ZEBAR_ASSET_PORT", zebar);
+            SetPort("ZEBAR_ASSET_PORT", null);   // Zebar's, from before it was removed: cleared
         }
         catch (Exception) { }
     }
@@ -764,70 +757,18 @@ static class Omawin
         return Fail("GlazeWM kept exiting at start");
     }
     // --- the bar at sign-in -----------------------------------------------------------------------
-    // GlazeWM runs this at login (omawin start zebar). zebar/start.ps1 first looks for an old bar
-    // to stop, which costs ~2 s of PowerShell and queries; at sign-in there's none, so the bar
-    // starts straight away. If one is running (GlazeWM restarted), or the theme was never
-    // rendered, or the bar's server doesn't come up, the script does it all as before.
-    static int StartZebar()
+    // GlazeWM runs this at login (omawin start bar). The bar is the menu app's own window ("omawin
+    // bar", menu-app/Bar/BarWindow.cs), which takes seconds to come up at sign-in; until it does, a
+    // plain strip in the theme's colour holds its place.
+    static int StartBar()
     {
-        // The native bar picked (omawin bar native): the menu app draws it, so no Zebar; the strip
-        // covers the wait for its window (menu-app/Bar/BarWindow.cs, "omawin bar").
-        var picked = Path.Combine(StateDir, "bar");
-        if (!File.Exists(picked) || File.ReadAllText(picked).Trim() != "zebar") // the default
-        {
-            var cover = Strip.Show(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"));
-            var waited = Stopwatch.StartNew();
-            while (FindWindow(null, "omawin bar") == IntPtr.Zero && waited.ElapsedMilliseconds < 30000) Thread.Sleep(50);
-            Trace("bar-native-up");
-            Thread.Sleep(300); // its first paint
-            cover.Close();
-            return 0;
-        }
-        var exe = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), @"glzr.io\Zebar\zebar.exe");
-        var script = "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, @"zebar\start.ps1"));
-        int port;
-        if (!int.TryParse(Environment.GetEnvironmentVariable("ZEBAR_ASSET_PORT"), out port)) port = 6124;
-        // The port taken already is a leftover too (the bar's music feed can hold it).
-        if (!File.Exists(exe) || !File.Exists(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"))
-            || InSession("zebar").Length > 0 || ZebarWebviewsLeft() || Listening(port))
-            return Start("pwsh", script);
-        var strip = Strip.Show(Path.Combine(Repo, @"zebar\tokyo-islands\theme.css"));
-        try { return StartZebar(exe, script, port); }
-        finally { strip.Close(); }
-    }
-
-    static int StartZebar(string exe, string script, int port)
-    {
-        Process zebar;
-        try
-        {
-            // As zebar/start.ps1 says: software drawing, ~100 MB less for the same look. Set here
-            // and inherited, and started as the script's Start-Process does (shell, hidden).
-            Environment.SetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "--disable-gpu");
-            zebar = Process.Start(new ProcessStartInfo(exe, "startup") { UseShellExecute = true, WindowStyle = ProcessWindowStyle.Hidden });
-        }
-        catch (Exception) { return Start("pwsh", script); }
-        Trace("zebar-started");
-        // Its widgets load from its own server; if that never listens, they'd stay blank. At
-        // sign-in, with everything else starting, it has taken from 4 s to over 6 s: 20 s here,
-        // as the script it falls back to costs far more (~40 s of PowerShell at sign-in).
+        var cover = Strip.Show(Path.Combine(StateDir, "bar-background.txt"));
         var waited = Stopwatch.StartNew();
-        while (waited.ElapsedMilliseconds < 20000)
-        {
-            if (Listening(port))
-            {
-                Trace("zebar-serving");
-                // The strip stays until Zebar's page has drawn over it: it loads from that
-                // server, all from disk, in well under this.
-                Thread.Sleep(1500);
-                return 0;
-            }
-            if (zebar.HasExited) { Trace("zebar-exited"); break; }
-            Thread.Sleep(100);
-        }
-        Trace("zebar-fallback");
-        try { zebar.Kill(); } catch (Exception) { }
-        return Start("pwsh", script);
+        while (FindWindow(null, "omawin bar") == IntPtr.Zero && waited.ElapsedMilliseconds < 30000) Thread.Sleep(50);
+        Trace("bar-native-up");
+        Thread.Sleep(300); // its first paint
+        cover.Close();
+        return 0;
     }
 
     // The bar's strip, drawn at once while the bar starts (seconds at sign-in): a plain band in
@@ -866,10 +807,10 @@ static class Omawin
         readonly ManualResetEvent shown = new ManualResetEvent(false);
         uint threadId;
 
-        public static Strip Show(string themeCss)
+        public static Strip Show(string colorFile)
         {
             var strip = new Strip();
-            int colorRef = ColorRef(ThemeBackground(themeCss));
+            int colorRef = ColorRef(ThemeBackground(colorFile));
             var thread = new Thread(() =>
             {
                 try
@@ -925,16 +866,14 @@ static class Omawin
             catch (Exception) { return 0; }
         }
 
-        // theme.css's --bg-solid, the bar's background (themes/render.ps1 writes it).
-        static string ThemeBackground(string themeCss)
+        // The bar's background, #rrggbb, the one line of %LOCALAPPDATA%\launcher\bar-background.txt
+        // (themes/render.ps1 writes it on every theme switch).
+        static string ThemeBackground(string colorFile)
         {
             try
             {
-                foreach (var line in File.ReadAllLines(themeCss))
-                {
-                    var t = line.Trim();
-                    if (t.StartsWith("--bg-solid:")) return t.Substring(11).Trim().TrimEnd(';').Trim();
-                }
+                var line = File.ReadAllText(colorFile).Trim();
+                if (line.StartsWith("#") && line.Length >= 7) return line.Substring(0, 7);
             }
             catch (Exception) { }
             return "#000000";
@@ -946,34 +885,6 @@ static class Omawin
             PostThreadMessage(threadId, 0x8001, IntPtr.Zero, IntPtr.Zero);
         }
     }
-    // A bar stopped by force (GlazeWM's shutdown) can leave its webviews running, and a new bar
-    // started beside them comes up blank. They hold their profile's lockfile open, so a lockfile
-    // that can't be opened means some are left (the script waits for them).
-    static bool ZebarWebviewsLeft()
-    {
-        var cache = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"zebar\webview-cache");
-        if (!Directory.Exists(cache)) return false;
-        foreach (var dir in Directory.GetDirectories(cache))
-        {
-            var lockfile = Path.Combine(dir, @"EBWebView\lockfile");
-            if (!File.Exists(lockfile)) continue;
-            try { using (File.Open(lockfile, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { } }
-            catch (IOException) { return true; }
-            catch (UnauthorizedAccessException) { return true; }
-        }
-        return false;
-    }
-
-    static bool Listening(int port)
-    {
-        try
-        {
-            return System.Net.NetworkInformation.IPGlobalProperties.GetIPGlobalProperties()
-                .GetActiveTcpListeners().Any(e => e.Port == port);
-        }
-        catch (Exception) { return false; }
-    }
-
     // --- the terminal, kept running ---------------------------------------------------------------
     // GlazeWM runs this at login (omawin start terminal): every terminal after it is a new window
     // of that warm process, so no start-up, and closing your last terminal doesn't shut it down.

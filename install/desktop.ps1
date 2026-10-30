@@ -1,32 +1,22 @@
-# install.ps1 step: GlazeWM + Zebar (and GlazeWM at login), Handy dictation.
+# install.ps1 step: GlazeWM (and GlazeWM at login), Handy dictation.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
-Write-Step 'GlazeWM + Zebar'
-# GlazeWM (the sign-in task looks for its exe) and Bun (Zebar's client) from the tools bundle.
-if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools glazewm, bun }
+Write-Step 'GlazeWM'
+# GlazeWM from the tools bundle: the sign-in task looks for its exe.
+if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools glazewm }
 # GlazeWM reads ~/.glzr/glazewm/config.yaml, filled in from glazewm/config.yaml (a template)
 # with the theme's colors; so is Windows Terminal's scheme (themes/render.ps1).
 & "$Repo\themes\render.ps1"
 Write-Note "ok  ~/.glzr/glazewm/config.yaml rendered from glazewm/config.yaml"
 Add-InstallItem 'Settings' 'glazewm-config' 'GlazeWM config' 'have'
-Set-Junction "$HOME\.glzr\zebar" "$Repo\zebar"
-# Zebar's client library, built here so the bar never fetches it at sign-in (zebar/build-client.ps1).
-# PowerShell 7's, as every script of omawin's outside install/ (the software step put it in).
-$pwsh = Get-Command pwsh -ErrorAction SilentlyContinue
-$pwsh = if ($pwsh) { $pwsh.Source } else { "$env:ProgramFiles\PowerShell\7\pwsh.exe" }
-if (Test-Path $pwsh) {
-    $client = & $pwsh -NoLogo -NoProfile -File "$Repo\zebar\build-client.ps1" 2>&1 | Select-Object -Last 1
-    Write-Note "$client  Zebar's client (zebar/tokyo-islands/lib)"
-} else { Write-Note "    Zebar's client: no PowerShell 7 yet (the bar loads it from esm.sh)" }
-# Start GlazeWM at sign-in (it starts Zebar itself, see glazewm/config.yaml), straight away.
+# Start GlazeWM at sign-in (it starts the bar and the menu app, glazewm/config.yaml), straight away.
 Invoke-InstallItem 'Desktop' 'GlazeWM at sign-in' { & "$Repo\install\login-start.ps1" }
-# Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1),
-# and our Zebar fork, the bar on this account's ports (install/zebar-fork.ps1). The admin step put
-# them in (install/admin.ps1); declined there, they're left out (nothing asks after that prompt),
-# and on its own (-Step desktop) each asks for admin here. Without them the official ones stay:
-# GlazeWM starts a few seconds later, one account's bar at a time.
-$forkNames = @{ 'glazewm-fork' = 'GlazeWM'; 'zebar-fork' = 'Zebar' }
-foreach ($fork in 'glazewm-fork', 'zebar-fork') {
+# Our GlazeWM fork, signed on this PC, which can start before Explorer (install/glazewm-fork.ps1).
+# The admin step put it in (install/admin.ps1); declined there, it's left out (nothing asks after
+# that prompt), and on its own (-Step desktop) it asks for admin here. Without it, the tools
+# bundle's per-user GlazeWM (or the official one) stays: it starts a few seconds later.
+$forkNames = @{ 'glazewm-fork' = 'GlazeWM' }
+foreach ($fork in 'glazewm-fork') {
     $name = $forkNames[$fork]
     if ($AdminBatch -and $AdminBatch.Plan.Forks -contains $fork) {
         if ((Get-AdminState $fork) -in 'wait', 'run') { Write-Note "omawin's $name from the admin step ..." }
@@ -54,9 +44,9 @@ foreach ($fork in 'glazewm-fork', 'zebar-fork') {
 # Window animations snapshot windows as they move: Windows' privacy switch for capturing without
 # a border, on, or each window flashes a yellow outline (install/capture-borderless.ps1).
 Invoke-InstallItem 'Desktop' 'window snapshots without a border' { & "$Repo\install\capture-borderless.ps1" }
-# This account's own ports (bin/ports.ps1), once both forks are in: other accounts signed in
-# on the PC have theirs. They take effect at the next sign-in.
-Invoke-InstallItem 'Desktop' "this account's ports" { & "$Repo\bin\ports.ps1" -Set }
+# This account's own port (bin/ports.ps1), once the fork is in: other accounts signed in on the
+# PC have theirs. It takes effect at the next sign-in.
+Invoke-InstallItem 'Desktop' "this account's port" { & "$Repo\bin\ports.ps1" -Set }
 
 Write-Step 'Handy (dictation on Win+H)'
 # GlazeWM runs `handy --toggle-transcription` on Win+H, so Handy must be on PATH.
@@ -64,7 +54,7 @@ $handyDir = "$env:LOCALAPPDATA\Handy"
 if (Test-Path "$handyDir\handy.exe") {
     if (Add-UserPath '%LOCALAPPDATA%\Handy') { Write-Note 'added %LOCALAPPDATA%\Handy to PATH' }
     else { Write-Note 'ok  Handy on PATH' }
-    # Settings: no overlay (the Zebar bar shows the listening animation), tap to toggle,
+    # Settings: no overlay (the bar shows the listening animation), tap to toggle,
     # its own shortcuts parked out of the way, start hidden at login, and the text typed
     # straight in (paste method "direct") rather than pasted through the clipboard with
     # Ctrl+V, which terminals (noctty) leave to the program inside. Handy writes its

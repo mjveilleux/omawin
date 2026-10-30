@@ -101,7 +101,7 @@ public static class YouTube
         e.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
 }
 
-// Runs yt-dlp with the PATH from the registry, since whoever started this (Zebar) may hold one
+// Runs yt-dlp with the PATH from the registry, since whoever started this (the bar) may hold one
 // from before yt-dlp was installed.
 public static class YtDlp
 {

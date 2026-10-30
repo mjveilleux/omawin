@@ -14,7 +14,7 @@
       1. the questions, all at once (which presets, on a first install; your git name, if git has
          none), so nothing waits on a person after that
       2. the one admin prompt (install/admin.ps1), when anything needs admin: the whole-PC
-         packages, omawin's GlazeWM and Zebar, and WSL for the wsl preset, done in the
+         packages, omawin's GlazeWM, and WSL for the wsl preset, done in the
          background from then on. Nothing asks for admin after it, approved or not.
       3. the steps listed in install/steps.txt, each its file in install/ (-Step runs just one)
       4. the migrations not run on this PC yet (bin/migrate.ps1: what older versions left behind)

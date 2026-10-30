@@ -5,7 +5,7 @@
 .DESCRIPTION
     Read-only; changes nothing. Checks the tools on PATH, the config links, the startup
     entries, the helper exes (omawin.exe too), that the migrations have run, that every
-    script in the repo parses, the menu and command lists, and that GlazeWM, Zebar and the
+    script in the repo parses, the menu and command lists, and that GlazeWM, the bar and the
     launcher are running. Prints one line per check and a summary; exits 1 if
     anything failed, so it can gate a test run.
 
@@ -42,8 +42,8 @@ Section 'tools on PATH'
 $UserLayer = & "$Repo\bin\user-layer.ps1"   # your account folder (docs/work.md)
 $chosen = @(Get-Content "$env:LOCALAPPDATA\launcher\presets.txt" -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
 $tools = @('pwsh', 'git', 'gh', 'wt', 'starship', 'zoxide', 'fzf', 'fd', 'rg', 'eza', 'bat', 'jq', 'lazygit',
-'glazewm', 'zebar', 'nvim', 'node', 'uv', 'herdr',
-'omawin', 'voice-meter', 'cpu-cores', 'win-keys', 'app-icons', 'theme-watch', 'omawin-music')
+'glazewm', 'nvim', 'node', 'uv', 'herdr',
+'omawin', 'voice-meter', 'omawin-music')
 foreach ($name in $chosen) {
     if ($Presets.Contains($name)) { $tools += @($Presets[$name].Tools | Where-Object { $_ }) }
     else { Warn "preset $name" "picked, but packages.ps1 has no such preset (omawin preset remove $name)" }
@@ -115,7 +115,6 @@ elseif ((Test-Path "$UserLayer\glazewm\config.yaml") -and (Get-Item $glazeLive).
 else { Pass 'GlazeWM config' "$glazeLive (rendered)" }
 if (Test-Path "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\omawin\theme.json") { Pass 'Windows Terminal scheme' 'omawin (rendered)' }
 else { Fail 'Windows Terminal scheme' 'not rendered (omawin restart glazewm)' }
-Test-Link "$HOME\.glzr\zebar" "$Repo\zebar" 'Zebar'
 Test-Link "$HOME\.config\fastfetch" "$Repo\fastfetch" 'fastfetch'
 $nocttyStub = "$env:LOCALAPPDATA\noctty\config.ghostty"
 if ((Test-Path $nocttyStub) -and (Get-Content $nocttyStub -Raw) -match [regex]::Escape("$Repo\noctty\config.ghostty")) { Pass 'noctty config' "$nocttyStub -> noctty/config.ghostty" }
@@ -188,19 +187,17 @@ $gsig = Get-AuthenticodeSignature "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe
 if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
 elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
 else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
-# This account's ports (bin/ports.ps1): its own pair once both forks are in Program Files, which
-# omawin.exe decides at every sign-in. Saved ones that don't match what's installed now mean
+# This account's port (bin/ports.ps1): its own once omawin's GlazeWM is in Program Files, which
+# omawin.exe decides at every sign-in. A saved one that doesn't match what's installed now means
 # another account changed Program Files since this one signed in.
-$zebarExe = Get-Item "$env:ProgramFiles\glzr.io\Zebar\zebar.exe" -ErrorAction SilentlyContinue
-$zebarKept = Get-Item "$env:ProgramFiles\glzr.io\Zebar\zebar.official.exe" -ErrorAction SilentlyContinue
 $portsReady = $gsig -and $gsig.SignerCertificate -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*' -and
-    (Test-Path "$env:ProgramFiles\glzr.io\GlazeWM\cli\glazewm.official.exe") -and $zebarExe -and $zebarKept -and $zebarExe.Length -ne $zebarKept.Length
+    (Test-Path "$env:ProgramFiles\glzr.io\GlazeWM\cli\glazewm.official.exe")
 $wantPorts = & "$Repo\bin\ports.ps1"
 $havePort = [Environment]::GetEnvironmentVariable('GLAZEWM_IPC_PORT', 'User')
-if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "this account's own: GlazeWM $($wantPorts.GLAZEWM_IPC_PORT), Zebar $($wantPorts.ZEBAR_ASSET_PORT)" }
-elseif ($portsReady) { Warn 'ports' "still the shared 6123 / 6124, though the forks are in: sign out and back in (or omawin install -Step desktop)" }
-elseif ($havePort) { Warn 'ports' "set to $havePort, but the official GlazeWM or Zebar is back: sign out and back in" }
-else { Pass 'ports' 'the official 6123 / 6124 (forks not both in: one account''s desktop at a time)' }
+if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "this account's own: GlazeWM $($wantPorts.GLAZEWM_IPC_PORT)" }
+elseif ($portsReady) { Warn 'ports' "still the shared 6123, though omawin's GlazeWM is in: sign out and back in (or omawin install -Step desktop)" }
+elseif ($havePort) { Warn 'ports' "set to $havePort, but the official GlazeWM is back: sign out and back in" }
+else { Pass 'ports' 'the official 6123 (omawin''s GlazeWM not in: one account''s desktop at a time)' }
 $stuck = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3' -ErrorAction SilentlyContinue).Settings
 if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn 'taskbar auto-hides' 'off; install.ps1 turns it on' }
 # No ads (no-ads.ps1): Windows' suggestions off, and the PC maker's upsells gone. The OEM ones
@@ -216,9 +213,7 @@ if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\
 else { Warn 'lock screen rotates on unlock' 'no task for this account (install.ps1 makes it)' }
 # Helper exes: present and built from the current source (the same list as install/helpers.ps1).
 $helpers = [ordered]@{
-    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'zebar\tokyo-islands\voice-meter.cs'; 'cpu-cores' = 'zebar\tokyo-islands\cpu-cores.cs'
-    'win-keys' = 'zebar\tokyo-islands\win-keys.cs'; 'app-icons' = 'zebar\tokyo-islands\app-icons.cs'
-    'theme-watch' = 'zebar\tokyo-islands\theme-watch.cs'
+    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'
 }
 # Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
 # this checkout's. A pull gives the sources new dates, so the dates decide only without a
@@ -274,7 +269,7 @@ Get-ChildItem $Repo -Recurse -Include *.ps1 -File | Where-Object FullName -notma
     if ($errors) { $bad += "$($_.FullName.Substring($Repo.Length + 1)): $($errors[0].Message)" }
 }
 if ($bad) { $bad | ForEach-Object { Fail 'PowerShell parse' $_ } } else { Pass 'PowerShell scripts parse' }
-foreach ($json in 'windows-terminal\settings.json', 'zebar\tokyo-islands\zpack.json') {
+foreach ($json in 'windows-terminal\settings.json') {
     try { $null = Get-Content "$Repo\$json" -Raw | ConvertFrom-Json -ErrorAction Stop; Pass $json 'valid JSON' }
     catch { Fail $json "invalid JSON: $($_.Exception.Message)" }
 }
@@ -307,7 +302,7 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
         else { $commandProblems += "$name runs $($Matches[1]), which is missing" }
     }
     elseif ($action -match '^builtin\s+(\S+)') {
-        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-zebar', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
+        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-bar', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
     }
     elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
 }
@@ -329,13 +324,9 @@ if ($dirty) { Warn 'git' "$($dirty.Count) uncommitted change(s)" } else { Pass '
 # --- running ------------------------------------------------------------------------------
 Section 'running now'
 if (Get-Process glazewm -ErrorAction SilentlyContinue) { Pass 'glazewm' } else { Fail 'glazewm' 'not running' }
-# The bar: Zebar, or the menu app's own (omawin bar native, docs/native-bar.md), whose window is "omawin bar".
-$barFile = "$env:LOCALAPPDATA\launcher\bar"
-if (-not (Test-Path $barFile) -or (Get-Content $barFile -Raw).Trim() -ne 'zebar') { # native: the default
-    $bar = Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'omawin bar' }
-    if ($bar) { Pass 'bar' 'native (the menu app)' } else { Fail 'bar' 'native, but not up (omawin restart menu)' }
-}
-elseif (Get-Process zebar -ErrorAction SilentlyContinue) { Pass 'zebar' } else { Fail 'zebar' 'not running' }
+# The bar: the menu app's own (docs/native-bar.md), whose window is "omawin bar".
+$bar = Get-Process SystemMenu -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq 'omawin bar' }
+if ($bar) { Pass 'bar' 'the menu app''s' } else { Fail 'bar' 'not up (omawin restart menu)' }
 # The launcher, file finder and system menu are one native app (menu-app/), running hidden.
 if ($myMenu) { Pass 'launcher / menu (Win+Space, Win+Alt+Space)' }
 else { Warn 'launcher / menu (Win+Space, Win+Alt+Space)' 'not running; the first Win+Space starts it' }

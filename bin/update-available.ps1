@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    How many omawin updates are waiting: the bar's update arrow (zebar widgets/system-update.js)
+    How many omawin updates are waiting: the bar's update arrow
     asks every 6 hours, as Omarchy's omarchy-update-available does.
 
 .DESCRIPTION

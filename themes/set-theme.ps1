@@ -9,7 +9,7 @@
                        %LOCALAPPDATA%\launcher\backgrounds)
       lock screen      the same picture (set-lockscreen.ps1), so signing in matches
       Windows          dark or light mode, to match
-      GlazeWM, noctty, Windows Terminal, Zebar
+      GlazeWM, noctty, Windows Terminal, the bar
                        their copies of the palette (render.ps1); GlazeWM reloads, noctty is told
                        to reload its config, Windows Terminal and the bar and dock notice
       Neovim, Neovide  the colorscheme, live in running ones too (themes/nvim/<name>.lua)
@@ -88,10 +88,9 @@ if (-not $NextBackground) {
     Set-ItemProperty $personalize AppsUseLightTheme $light
     Set-ItemProperty $personalize SystemUsesLightTheme $light
 
-    # GlazeWM's borders, noctty, Windows Terminal and Zebar: their copies of the palette, filled
-    # in outside what git tracks (render.ps1). Zebar's bar and dock pick theme.css up by
-    # themselves (zebar/tokyo-islands/theme.js), no restart; a running Windows Terminal is
-    # nudged to reload (render.ps1).
+    # GlazeWM's borders, noctty and Windows Terminal: their copies of the palette, filled in
+    # outside what git tracks (render.ps1); the bar reads the theme live. A running Windows
+    # Terminal is nudged to reload (render.ps1).
     & "$PSScriptRoot\render.ps1" -Name $Name
     # Then, not waited for: GlazeWM reloads its config (~0.4 s), and noctty's running instance
     # (the one that opens every new window and tab) re-reads its config, so open windows

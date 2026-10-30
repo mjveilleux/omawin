@@ -152,6 +152,8 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 ### 1.6 The native bar only (M, 🖥)
 
+**Done 2026-10-31 (Zebar removed, ahead of its last two panels):** the maintainer chose to remove Zebar now and rebuild the music and agents drop-downs later as bar plugins (4.6). Zebar is out of the core packages and the admin step (no more Zebar fork), `zebar/` is gone (the native bar's layout moved to `bar/bar.json`; `voice-meter`, the one helper the native bar uses, to `bin/`), `omawin start bar` holds the bar's place at sign-in (the colour from `%LOCALAPPDATA%\launcher\bar-background.txt`), and `migrations/2026-10-31-zebar-out.ps1` stops and uninstalls it (this account's copy at once; one installed for the whole PC is named for Install › Remove, since an update never asks for admin), removes the old link, generated files and helpers, and clears `ZEBAR_ASSET_PORT`. Win+M stays bound and says the panel is coming back. Also fixed on the way: `voice-meter` quit every 3 s when Zebar wasn't running, so the native bar kept restarting it.
+
 The bar is the menu app's own ([native-bar.md](../native-bar.md)); what's left: its media widget, and the music and agents drop-downs moved into the shell (they become the first plugins, 4.6). Then the old web bar is **uninstalled**: a migration stops it, removes what omawin set up for it, and uninstalls the program omawin installed for it (per user: at once; if an older install put it machine-wide, the uninstall waits in the pending admin list for you to say when, 2.9, never a prompt during the update). Saves ~220-350 MB and the 2 s sign-in paint.
 
 ### 1.7 Typing never waits (S, 🖥)

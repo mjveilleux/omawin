@@ -12,11 +12,11 @@
       2. WSL itself (-Wsl), for the wsl preset: `wsl --install --no-distribution`, which wants a
          restart before it works ("done restart"); the distro is the account's, installed
          without admin (wsl/install.ps1)
-      3. omawin's GlazeWM and Zebar (-Forks): install/glazewm-fork.ps1 and zebar-fork.ps1, -Machine
+      3. omawin's GlazeWM (-Forks): install/glazewm-fork.ps1 -Machine
 
     It takes nothing from the account that started it but these arguments: package ids (checked
     against the shape of one) and a file to report to. Each line there is
-    "<item>`t<state>`t<text>": a package id, "packages", "wsl", "glazewm-fork", "zebar-fork" or
+    "<item>`t<state>`t<text>": a package id, "packages", "wsl", "glazewm-fork" or
     "end"; run, done, fail or skip. install/admin.ps1 reads it as it grows.
 
     Runs under Windows PowerShell 5.1.
@@ -125,9 +125,9 @@ try {
         }
     }
 
-    # --- 3. omawin's GlazeWM and Zebar ---------------------------------------------------------
+    # --- 3. omawin's GlazeWM -----------------------------------------------------------------
     if ($Forks) {
-        foreach ($fork in 'glazewm-fork', 'zebar-fork') {
+        foreach ($fork in 'glazewm-fork') {
             Say $fork 'run'
             $out = Join-Path $env:TEMP "$fork-$PID.txt"
             try {

@@ -1,4 +1,4 @@
-# Alt+N (omawin workspace rename): name the current workspace (shown in the Zebar bar). Just a
+# Alt+N (omawin workspace rename): name the current workspace (shown in the bar). Just a
 # name box: type a name and press Enter; Enter on an empty box clears it back to the number;
 # Esc cancels. Runs in a small terminal titled 'rename', which a GlazeWM window rule floats.
 

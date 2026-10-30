@@ -10,17 +10,15 @@ using Microsoft.UI.Xaml.Media.Animation;
 
 namespace SystemMenu;
 
-// The native bar (docs/native-bar.md): Zebar's bar, drawn by the menu app itself, one window per
-// monitor. The default bar; Zebar's instead while %LOCALAPPDATA%\launcher\bar says "zebar"
-// (omawin bar zebar; omawin bar native comes back). Its layout is Zebar's bar.json; its data
-// comes straight from GlazeWM's IPC and Windows, gathered here and handed to every widget
+// The bar (docs/native-bar.md), drawn by the menu app itself, one window per monitor. It began as
+// Zebar's bar redrawn natively; Zebar itself was removed on 2026-10-31. Its layout is bar/bar.json;
+// its data comes straight from GlazeWM's IPC and Windows, gathered here and handed to every widget
 // (Widgets.cs).
 public static class Bar
 {
-    static string SettingFile => Path.Combine(MenuModel.StateDir, "bar");
-    static string LayoutFile => Path.Combine(MenuModel.Repo, @"zebar\tokyo-islands\bar.json");
-    // The default: only "zebar" in the file picks Zebar's.
-    public static bool Native => !File.Exists(SettingFile) || File.ReadAllText(SettingFile).Trim() != "zebar";
+    static string LayoutFile => Path.Combine(MenuModel.Repo, @"bar\bar.json");
+    // There's one bar now (the choice of Zebar's went with it).
+    public static bool Native => true;
     public static readonly GlazeWm Wm = new();
     public static FontFamily LogoFont { get; } = new("ms-appx:///omarchy.ttf#omarchy");
     static readonly List<BarWindow> windows = [];
@@ -70,24 +68,10 @@ public static class Bar
         catch (Exception ex) { App.Log(ex); }
     }
 
-    // `omawin bar native|zebar|toggle` (SystemMenu --bar ...): which bar, remembered.
+    // SystemMenu --bar (from an older omawin bar command): the bar shown, whatever was asked.
     public static void Set(string which)
     {
-        bool native = which == "toggle" ? !Native : which == "native";
-        try { Directory.CreateDirectory(MenuModel.StateDir); File.WriteAllText(SettingFile, native ? "native" : "zebar"); } catch (Exception ex) { App.Log(ex); }
-        if (native)
-        {
-            try { Show(); } catch (Exception ex) { App.Log(ex); Hide(); return; } // Zebar stays if it didn't come up
-            StopZebar();
-        }
-        else { Hide(); Omawin("start zebar"); }
-    }
-
-    static void StopZebar()
-    {
-        int session = Process.GetCurrentProcess().SessionId;
-        foreach (var p in Process.GetProcessesByName("zebar"))
-            using (p) try { if (p.SessionId == session) p.Kill(); } catch { }
+        try { Show(); } catch (Exception ex) { App.Log(ex); Hide(); }
     }
 
     static void Show()

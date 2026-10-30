@@ -23,7 +23,6 @@ $WingetPackages = @(
 
     # desktop
     'glzr-io.glazewm'               # tiling window manager
-    'glzr-io.zebar'                 # the top bar and the dock
     'Oven-sh.Bun'                   # omawin's JavaScript runtime
 
     # editor
@@ -65,7 +64,7 @@ $Presets = [ordered]@{
 # raise a prompt of its own; one listed that has no whole-PC installer falls back to this
 # account's. Declined, the listed ones install for this account where they can (--scope user).
 $WholePC = @(
-    'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'glzr-io.zebar', 'Neovim.Neovim',
+    'Microsoft.PowerShell', 'Git.Git', 'GitHub.cli', 'glzr-io.glazewm', 'Neovim.Neovim',
     'Neovide.Neovide', 'OpenJS.NodeJS.LTS', 'Microsoft.DotNet.DesktopRuntime.9',
     'GoLang.Go', 'Erlang.ErlangOTP', 'Elixir.Elixir', 'RProject.R', 'Posit.RStudio', 'Microsoft.Sqlcmd',
     'Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'
@@ -90,7 +89,6 @@ $WingetCommands = @{
 # A package with no command on the PATH counts as installed when its file is there (a new install
 # doesn't read winget's whole list: install/software.ps1, Get-WingetInstalled).
 $WingetFiles = @{
-    'glzr-io.zebar'                     = "$env:ProgramFiles\glzr.io\Zebar\zebar.exe"
     'glzr-io.glazewm'                   = "$env:ProgramFiles\glzr.io\GlazeWM\glazewm.exe"
     'Microsoft.DotNet.DesktopRuntime.9' = "$env:ProgramFiles\dotnet\shared\Microsoft.WindowsDesktop.App\9.*"
 }

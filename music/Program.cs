@@ -10,7 +10,7 @@ namespace OmawinMusic;
 // omawin-music: the music player in the bar. One exe, three roles:
 //   omawin-music --serve           the player: plays in the background, no window; started by
 //                                  the first command that needs it, quits after 20 idle minutes
-//   omawin-music watch             the bar's feed (zebar/tokyo-islands/bar.html): one line each
+//   omawin-music watch             the bar's feed: one line each
 //                                    S {json}   what's playing (S {"running":false} when nothing runs)
 //                                    P [json]   the playlists, again whenever they change
 //                                    L 0.42     the speakers' level, ~25 a second while playing
@@ -107,7 +107,7 @@ public static class Program
                     var done = Watch.RequestOpen();
                     // The native bar (the default, docs/native-bar.md) has no player panel yet: say so
                     // where you'll see it (Win+M runs this hidden), through the menu app's note.
-                    if (done == null) Say("The music player is in Zebar's bar for now: omawin bar zebar");
+                    if (done == null) Say("The music player's panel isn't in omawin's bar yet (it was Zebar's, removed): coming back as a bar plugin");
                     Reply(new { ok = done != null, did = done }, done ?? "No bar is running");
                     return 0;
                 }
@@ -175,7 +175,7 @@ public static class Program
         catch { pipe.Dispose(); return null; }
     }
 
-    // The player is started out of whatever job its starter runs in (Zebar's commands, a
+    // The player is started out of whatever job its starter runs in (the bar's commands, a
     // terminal), so it keeps playing when that closes.
     [StructLayout(LayoutKind.Sequential)]
     struct StartupInfo { public int cb; IntPtr a, b, c; int d, e, f, g, h, i, j, k; short l, m; IntPtr n, o, p, q; }

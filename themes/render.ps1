@@ -16,8 +16,9 @@
       themes/templates/noctty.ghostty       ->  %LOCALAPPDATA%\launcher\theme.ghostty (noctty includes it)
       themes/templates/windows-terminal.json ->  Windows Terminal's fragment folder: the scheme
                                                 "omawin", which settings.json uses
-      (themes/<name>.json)                  ->  zebar/tokyo-islands/theme.css (gitignored; the
-                                                bar and dock re-read it by themselves)
+      (themes/<name>.json)                  ->  %LOCALAPPDATA%\launcher\bar-background.txt (the
+                                                colour of the strip that holds the bar's place at
+                                                sign-in)
 
     Placeholders are Omarchy's: {{ accent }}, {{ background }}, {{ bright_red }}, ... (the keys of
     colors.toml). Edit the templates, never the copies; then run this (or omawin restart glazewm).
@@ -182,41 +183,13 @@ if (Get-Process WindowsTerminal -ErrorAction SilentlyContinue) {
     if ($wtSettings) { $wtSettings.LastWriteTime = Get-Date }
 }
 
-# Zebar (the bar and dock): theme.css in its pack, gitignored (Zebar only serves files from the
-# pack's folder). The running bar and dock are told it changed (theme-watch.exe) and recolor
-# within ~0.1 s (theme.js), so a switch doesn't restart them. From themes/<name>.json, whose surface / comment / teal /
-# gradient the bar uses and colors.toml doesn't have.
+# The bar's colour for the strip that holds its place at sign-in until the bar is up (omawin.exe
+# start bar): one line, outside the repo. The bar itself reads the theme live (menu-app).
 $json = Find-ThemeFile "$Name.json"
 if (-not (Test-Path $json)) { $json = "$PSScriptRoot\gruvbox.json" }
 $t = [IO.File]::ReadAllText($json) | ConvertFrom-Json
-$bgRgb = (1, 3, 5 | ForEach-Object { [Convert]::ToInt32($t.background.Substring($_, 2), 16) }) -join ', '
-$gradient = @($t.gradient)
-if (-not $gradient) { $gradient = @($t.accent) }
-$aurora = (1..5 | ForEach-Object { "  --aurora-${_}: $($gradient[[Math]::Min($_ - 1, $gradient.Count - 1)]);" }) -join "`n"
-$css = @"
-/* Written by themes/render.ps1 for "$($t.name)"; don't edit (it's replaced on every switch). */
-:root {
-  --bg: rgba($bgRgb, 0.92);
-  --bg-solid: $($t.background);
-  --surface: $($t.surface);
-  --bg-hover: $($t.selection);
-  --border: $($t.selection);
-  --fg: $($t.foreground);
-  --fg-dim: $($t.comment);
-  --blue: $($t.accent);
-  --cyan: $($t.cyan);
-  --teal: $($t.teal);
-  --green: $($t.green);
-  --purple: $($t.purple);
-  --orange: $($t.orange);
-  --red: $($t.red);
-  --line: $($t.border);
-$aurora
-}
-"@
-# Written whole and then swapped in, so the bar never reads half a file.
-$zebarCss = "$Repo\zebar\tokyo-islands\theme.css"
-[IO.File]::WriteAllText("$zebarCss.tmp", $css, [Text.UTF8Encoding]::new($false))
-Move-Item "$zebarCss.tmp" $zebarCss -Force
+$barColor = "$env:LOCALAPPDATA\launcher\bar-background.txt"
+New-Item -ItemType Directory -Force (Split-Path $barColor) | Out-Null
+[IO.File]::WriteAllText($barColor, "$($t.background)`n")
 
 if ($Reload -and (Get-Command glazewm -ErrorAction SilentlyContinue)) { glazewm command wm-reload-config | Out-Null }

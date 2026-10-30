@@ -23,6 +23,8 @@ public class BundleTests
         Assert.False(tools.Single(t => t.Name == "nvim").Later);
         var font = tools.Single(t => t.Name == "font");
         Assert.True(Tools.Keeps(font, "JetBrainsMonoNerdFont-Bold.ttf"));
+        Assert.True(Tools.Keeps(font, "JetBrainsMonoNerdFont-BoldItalic.ttf"));
+        Assert.False(Tools.Keeps(font, "JetBrainsMonoNerdFont-ExtraLight.ttf"));  // weights nothing uses
         Assert.False(Tools.Keeps(font, "JetBrainsMonoNerdFontMono-Bold.ttf"));   // the Mono and Propo families aren't used
         Assert.False(Tools.Keeps(font, "README.md"));
         Assert.True(Tools.Keeps(tools.Single(t => t.Name == "nvim"), "bin/nvim.exe"));   // no keep: everything

@@ -1,5 +1,5 @@
 <!--
-  omawin-music: the music player behind the bar's music pill (zebar/tokyo-islands). One copy
+  omawin-music: the music player behind the bar's music pill. One copy
   plays in the background with no window; the same exe is also the client the bar and you run
   (omawin-music add <url>, toggle, ...). Built by build.ps1 into ~/.local/bin as one file.
 -->

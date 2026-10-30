@@ -8,7 +8,7 @@
 no-ads   | Windows' ads and suggestions off                                 | 2
 software | winget packages, your presets, Neovim's config                   | 20
 shell    | PowerShell profile, terminals, prompt, git                       | 6
-desktop  | GlazeWM, Zebar, dictation                                        | 8
+desktop  | GlazeWM, dictation                                               | 8
 helpers  | omawin.exe, the menu app, the music player                       | 25
 look     | the theme, the lock screen, the taskbar                          | 5
 other    | WSL settings, Claude Code                                        | 6

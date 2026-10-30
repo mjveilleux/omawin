@@ -17,7 +17,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 - **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
 - **File finder** (`Win+F`), **clipboard history** (`Win+Shift+V`), **audio** (`Win+A`).
-- **A bar like Omarchy 4's** ([Zebar](https://github.com/glzr-io/zebar)) in the theme's colours: the menu, workspaces, the clock, your coding agents' limits, the tray and quick settings, no dock, network, battery, the tray. The Windows taskbar hides.
+- **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, no dock, network, battery. The Windows taskbar hides.
 - **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
 - **Neovim** with [LazyVim](https://lazyvim.org), themed.
 - **Opt-in presets**: language toolchains, data tools, AI agents, a music and podcast player in the bar (`Win+M`), local dictation (`Win+H`).
@@ -28,7 +28,7 @@ Run it from **Windows PowerShell**, then sign out and back in. Read [what it cha
 - Windows 11 (Home or Pro), x64. ARM64 works, but builds the launcher and music player on the PC.
 - winget (App Installer, from the Microsoft Store; every current Windows 11 has it).
 - An internet connection and a few GB of disk (the core installs about 25 packages).
-- A standard account is fine; run the install from a normal (not "as administrator") PowerShell. Expect one Windows admin prompt, at the start, for what every account shares (the programs that install for the whole PC, and the GlazeWM and Zebar forks); `omawin no-ads` asks for another.
+- A standard account is fine; run the install from a normal (not "as administrator") PowerShell. Expect one Windows admin prompt, at the start, for what every account shares (the programs that install for the whole PC, and the GlazeWM fork); `omawin no-ads` asks for another.
 
 ## Install
 
@@ -56,7 +56,7 @@ Everything it replaces is moved aside to `<path>.backup-<timestamp>`, never dele
 - **The theme** sets dark or light mode, the wallpaper and the lock screen (which changes on each unlock).
 - **At sign-in**: a scheduled task, `omawin GlazeWM (<you>)`, starts the desktop at once; Windows' start-up delay for other apps is turned off. A second task, `omawin lock screen (<you>)`, runs on unlock.
 - **The GlazeWM fork** replaces `glazewm.exe` in Program Files (the official one is kept as `glazewm.official.exe`). It's signed with a certificate made on your PC, trusted only there: it's kept in the PC's own store, where only admins can use its private key (which can't be exported), and trusted through the machine's Root and Trusted Publishers stores. Its CLI and watcher are replaced too. Decline the admin prompt and the official GlazeWM stays.
-- **The Zebar fork** replaces `zebar.exe` (the official one kept as `zebar.official.exe`; the same admin prompt). With both forks, each Windows account gets its own GlazeWM and Zebar ports (`GLAZEWM_IPC_PORT`, `ZEBAR_ASSET_PORT` in your user environment), so several accounts can be signed in at once, each with its own desktop.
+- **Several accounts at once**: with the GlazeWM fork, each Windows account gets its own GlazeWM port (`GLAZEWM_IPC_PORT` in your user environment), so several can be signed in at once, each with its own desktop.
 - **No ads** (for you, no admin): Windows' suggestions, tips, promoted apps, the advertising ID, search highlights and the Copilot button off; the PC maker's notifications off (Lenovo, McAfee, Adobe, when present). `omawin no-ads` does the admin part: Windows' consumer-features policy, uninstalling Lenovo Now and McAfee's extras. [manual/11-no-ads.md](manual/11-no-ads.md) lists everything.
 - **Your shell**: the PowerShell profile, `~/.gitconfig` (an include, plus your identity), `~/.bashrc`, `~/.wslconfig`, Windows Terminal's settings, Neovim's config; `~/.local/bin` and two variables (`STARSHIP_CONFIG`, `HERDR_CONFIG_PATH`) on your user environment; the execution policy for you set to RemoteSigned; JetBrainsMono Nerd Font installed for you.
 - **Packages** from winget ([`packages.ps1`](packages.ps1): a lean core plus the presets you pick), and a few installers run from their own sites (herdr; Claude Code and opencode with the AI preset).
@@ -108,7 +108,7 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 | `bin/` | the `omawin` command (`omawin.cs`, `commands.txt`), update, migrate, profilers |
 | `menu-app/` | the native app: launcher, file finder, system menu, screenshots, clipboard history |
 | `launcher/` | its data (`items.txt`, `menu.txt`, `keys.txt`, `sites.txt`) |
-| `glazewm/` · `zebar/` | window manager config and keys · the bar |
+| `glazewm/` · `bar/` | window manager config and keys · the bar's layout |
 | `themes/` | Omarchy's themes and `set-theme.ps1` |
 | `install.ps1` · `install/` · `packages.ps1` · `migrations/` | setup, its steps, the packages, one-time changes for existing installs |
 | `bootstrap.ps1` · `check.ps1` · `no-ads.ps1` | the one-liner · health check · ads off |
@@ -119,7 +119,7 @@ Don't edit `~/omawin`: `omawin update` replaces it. Your things go in two folder
 
 ## Credits
 
-omawin stands on [Omarchy](https://github.com/basecamp/omarchy) (its themes, and the ideas behind its menus, keys and updates), [GlazeWM and Zebar](https://github.com/glzr-io), [Ghostty](https://ghostty.org) by way of noctty, [LazyVim](https://lazyvim.org), [herdr](https://herdr.dev), [Handy](https://handy.computer), [fff](https://github.com/dmtrKovalenko/fff), [starship](https://starship.rs), [mpv](https://mpv.io) and [yt-dlp](https://github.com/yt-dlp/yt-dlp). Details in [NOTICE](NOTICE).
+omawin stands on [Omarchy](https://github.com/basecamp/omarchy) (its themes, and the ideas behind its menus, keys and updates), [GlazeWM](https://github.com/glzr-io/glazewm) (and Zebar, whose bar omawin's began as), [Ghostty](https://ghostty.org) by way of noctty, [LazyVim](https://lazyvim.org), [herdr](https://herdr.dev), [Handy](https://handy.computer), [fff](https://github.com/dmtrKovalenko/fff), [starship](https://starship.rs), [mpv](https://mpv.io) and [yt-dlp](https://github.com/yt-dlp/yt-dlp). Details in [NOTICE](NOTICE).
 
 ## License
 

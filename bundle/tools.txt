@@ -14,8 +14,9 @@
 #   home    where it goes instead of tools\<name>, under %LOCALAPPDATA% (a tool other scripts
 #           already look for in its own place)
 #   flags   later: the install doesn't wait for it, it finishes unpacking in the background (a
-#           big one nothing needs at once); keep:<pattern>: only the files whose name matches
-#           (the font: the one family omawin uses, "JetBrainsMono NF", not all 96 faces)
+#           big one nothing needs at once); keep:<pattern>[,<pattern>...]: only the files whose
+#           name matches one (the font: the four faces a terminal and an editor use, of the one
+#           family omawin names, "JetBrainsMono NF", not all 96: ~10 MB of 135)
 
 pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
 wt          | github:microsoft/terminal         | ^Microsoft\.WindowsTerminal_[0-9.]+_x64\.zip$      | .   | Microsoft.WindowsTerminal
@@ -38,4 +39,4 @@ node        | node-lts                          | win-x64                       
 uv          | github:astral-sh/uv               | ^uv-x86_64-pc-windows-msvc\.zip$                   | .   | astral-sh.uv
 glazewm     | github:mjveilleux/glazewm         | ^glazewm-.+-windows-x64\.zip$                      | cli | glzr-io.glazewm
 noctty      | github:mjveilleux/noctty          | ^noctty-.+-windows-x64-portable\.zip$              | -   |                             | Programs\noctty
-font        | github:ryanoasis/nerd-fonts       | ^JetBrainsMono\.zip$                               | -   |                             | omawin\fonts\JetBrainsMono | keep:JetBrainsMonoNerdFont-*.ttf
+font        | github:ryanoasis/nerd-fonts       | ^JetBrainsMono\.zip$                               | -   |                             | omawin\fonts\JetBrainsMono | keep:JetBrainsMonoNerdFont-Regular.ttf,JetBrainsMonoNerdFont-Bold.ttf,JetBrainsMonoNerdFont-Italic.ttf,JetBrainsMonoNerdFont-BoldItalic.ttf

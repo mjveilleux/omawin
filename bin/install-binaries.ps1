@@ -211,11 +211,7 @@ try {
         # IL, so one ZIP covers x64 and ARM64.
         $helpers = @(
             @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
-            @{ Exe = 'voice-meter'; Source = 'zebar\tokyo-islands\voice-meter.cs' }
-            @{ Exe = 'cpu-cores'; Source = 'zebar\tokyo-islands\cpu-cores.cs' }
-            @{ Exe = 'win-keys'; Source = 'zebar\tokyo-islands\win-keys.cs' }
-            @{ Exe = 'app-icons'; Source = 'zebar\tokyo-islands\app-icons.cs' }
-            @{ Exe = 'theme-watch'; Source = 'zebar\tokyo-islands\theme-watch.cs' }
+            @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
             @{ Exe = 'omawin-listen'; Source = 'agent\omawin-listen.cs' }
         )
         $paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
@@ -229,7 +225,7 @@ try {
             $zip = Get-PieceRelease 'omawin-helpers-*.zip' $paths (-not $NoBuild)
             if ($zip) {
                 # Unpacked aside, then put in one file at a time. A running helper (the bar's
-                # theme-watch, voice-meter) locks its exe: it's moved aside, and keeps running until
+                # voice-meter) locks its exe: it's moved aside, and keeps running until
                 # the bar restarts it. One that can't be moved stays as it is, for the next update;
                 # unpacking straight over the folder stopped at such a file, halfway, with
                 # omawin.exe already moved aside and no new one written.
