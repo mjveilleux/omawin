@@ -150,6 +150,26 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574). Virtualize the list (an `ItemsRepeater` with recycling) so only visible rows are built, and keep icon loading off the UI thread. Measured by 1.1's typing timeline: under 16 ms per key.
 
+### 1.8 Crisp icons everywhere (M, 🖥)
+
+**Why:** app and file icons in the launcher, its tiles, the finder and the bar's tray look soft. The cause is in the code: every icon is fetched at one fixed size and stretched to whatever it's drawn at.
+- `menu-app/AppIcons.cs` asks Windows for **48 × 48 pixels** for every app and file icon (`const int Size = 48`, through `IShellItemImageFactory::GetImage` with flags 0, *resize to fit*), whatever the monitor's scale. A list row draws it at 26 units (`MainWindow.xaml.cs:977`): 39 pixels at 150%, so roughly fine; a **tile** draws it at the tile's size (`MainWindow.Tiles.cs:303`, `MainWindow.xaml.cs:1049`), several times larger at 150-200%, so a 48-pixel image is **stretched up**: soft. And *resize to fit* lets Windows hand back a smaller icon already scaled when the app has no 48-pixel image.
+- `menu-app/Bar/Tray.cs` draws each tray icon into a **32 × 32** picture (`DrawIconEx`) from the icon the app gave Windows, which is often its 16-pixel small icon: stretched up too.
+- Theme pictures are fine (`ThemeThumbs.cs` decodes at 320 pixels wide, with good scaling); Nerd Font glyphs are vector and always sharp.
+
+**Build:**
+1. **Ask for the pixels actually drawn.** Each request carries its size in units and the window's scale (`XamlRoot.RasterizationScale`, per monitor); `AppIcons` asks for the next standard icon size at or above that (16, 20, 24, 32, 40, 48, 64, 96, 128, 256), so Windows returns an image the app actually ships at that size instead of a resized one. The cache key includes the size; a monitor change (the bar already watches) re-requests at the new scale.
+2. **Never scale up; scale down well.** Flags `SIIGBF_ICONONLY` (an app's icon, not a thumbnail) and `SIIGBF_BIGGERSIZEOK` (a larger image is fine): when the result is larger than needed, `AppIcons` scales it down with high-quality filtering (Fant, as `ThemeThumbs` does) to the exact pixel size; when only a smaller image exists, it's drawn at its own size, centred, rather than blurred up.
+3. **Show it 1:1.** The `Image` is sized so one image pixel lands on one screen pixel (its size in units = pixels ÷ scale), so the display doesn't filter it again.
+4. **Store apps at their best.** Packaged apps ship logos per size and per light / dark (`targetsize-N`, `altform-unplated`); ask the package for its logo at the needed size (`AppListEntry.DisplayInfo.GetLogo`) and prefer the unplated one, so Store apps don't arrive on a coloured plate or at the wrong size.
+5. **Tray icons from the best source.** Draw each tray icon at the bar's real pixel size (the bar is 26 units tall, so 20 units at 150% is 30 pixels): ask Windows for the icon at that size when the app registered one by resource (`LoadIconWithScaleDown` on the icon's module and id where available); otherwise draw the app's own icon at its native size, centred, not stretched. Apps that draw their state into the tray icon (unread counts, battery) keep their own pictures.
+6. **Files and thumbnails** in the finder: the same rule (thumbnails at the preview's pixel size, `big:` previews at the panel's real size rather than a fixed 256).
+7. **Future icons arrive large**: web apps (5.3) take the site's manifest icons (192 and 512 pixels) or `apple-touch-icon`, never the 16-pixel favicon; plugins (phase 4) declare an icon of at least 64 pixels or a Nerd Font glyph.
+
+**Check:** `SystemMenu --icon-selftest` lists every icon on screen with its requested, received and drawn pixel sizes, and flags any that were scaled up; screenshots of the launcher, tiles, finder and tray at 100%, 150% and 200% scale, side by side before and after (🖥).
+
+**Done when:** no icon is drawn larger than the image it came from, at any scale; the tiles and tray look as crisp as Windows' own Start menu and taskbar at 150% and 200%.
+
 ---
 
 ## Phase 1B: every Windows setting in the system menu (next)
