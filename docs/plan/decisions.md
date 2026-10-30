@@ -84,6 +84,12 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | 34 | **Windows Sandbox** for a clean-install test (`omawin sandbox test`), a throwaway Windows from the menu, coding agents fenced in WSL, Try Omarchy for Windows linked for real Hyprland | roadmap phase 7 |
 | 35 | Work that can't be tried in the cloud is marked 🖥 and tried on the PC before main; CI checks what it can (builds, install time, the frame check, `setup.sh` in containers, standard-user installs) | roadmap, README.md |
 
+## Languages
+
+| # | Decision | Where |
+|---|---|---|
+| 36 | **Compiled C# first** for every tool, script and helper (.NET 9, AOT where shipped, built in CI); **Rust** where C# isn't right; **Bun** for JavaScript / TypeScript; PowerShell only for the bootstrap entry and the profile; bash only inside Linux; **no Python**. Existing scripts port when next changed; anything on a key or elevated first. Overrides the plan files' PowerShell / Python sketches (listed in README.md) | roadmap 2.11, AGENTS.md, README.md |
+
 ## Open questions
 
 | Question | Default until decided | Where |
@@ -99,7 +105,6 @@ Everything decided while planning omawin's road to "nearly perfect" (the plannin
 | Linux: three Omarchy packages not identified (`disktree-bin`, `gliff`, `cliamp`) | in the skip list, marked check | 04-linux.md |
 | Linux as the default shell skips noctty's fast `inherit` hand-off (~70 ms on Win+Enter from a noctty window) | accept, measure | 04-linux.md |
 | `emit` fallback when the menu app isn't listening (`emit --or-exec`)? | not built; `omawin check` warns | 01-snappy.md |
-| Theme thumbnails made by a Python (Pillow) script in CI, where AGENTS.md prefers Bun for scripting runtimes | Python, CI only (decodes WebP reliably on runners); revisit if a Bun image library does the same | 01-snappy.md |
 | Marking several finder rows: Ctrl+Space (Space types a space) | Ctrl+Space | 06-dx-finder-sandbox.md |
 | A Hyper key made from injected keys can't trigger GlazeWM bindings (GlazeWM ignores simulated keys) | needs fork support before it's offered | 07-fixing-windows.md |
 | Plugin processes could inherit GlazeWM's `uiAccess` through the menu app | strip it from the child's token (check) | 05-plugins.md |

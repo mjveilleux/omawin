@@ -12,6 +12,17 @@ Everything decided and planned lives here:
 - Design docs: [one-search.md](one-search.md) (with its [mockup source](design/one-search/README.md)), [plugins.md](plugins.md), [install-speed.md](install-speed.md).
 - The per-area implementation files with code, below (01-08).
 
+## Language rule (overrides the plan files)
+
+**Compiled C# first, then Rust, then Bun** (roadmap 2.11, AGENTS.md). The per-area files below were written before this rule and sketch some tools in PowerShell or Python; **build those in C# instead**, keeping their logic:
+- 01: the theme-thumbnail CI script (Python + Pillow) → a C# CI tool with SkiaSharp; the Zebar migration → a C# migration class.
+- 02: `bin/settings-admin.ps1` → verbs in `omawin-admin.exe`; the settings commands are already C#.
+- 03: `install/first-run.ps1`, the queue worker, delta updates, the `omawin pkg` PowerShell module, `build/bundle.ps1` → the C# CLI and C# CI tools. **`bootstrap.ps1` stays PowerShell 5.1** (the `irm | iex` entry), doing only download, verify and unpack.
+- 04: `bin/linux.ps1` (backup, reset, stop) and the theme colour mixing in `render.ps1` → C#. `wsl/setup.sh` and the bash shell config stay bash (inside Linux).
+- 05: `bin/plugin.ps1` and `bin/admin-verbs.ps1` → C# (`omawin plugin`, `omawin-admin.exe`); plugin templates offer C#, TypeScript (Bun) and bash; plugin authors may still use any language.
+- 06: `bin/webapp.ps1`, `bin/update-apps.ps1`, `bin/sandbox-test.ps1`, `bin/sandbox.ps1` → C# subcommands (the sandbox's in-guest logon script stays PowerShell: it runs inside a clean Windows with nothing else).
+- 07: `profile-ram.ps1`'s extension and the admin batch scripts → C#.
+
 ## The goal
 
 **Make Windows the best development machine, with one line** ([mission.md](../mission.md)), and get there by being as good as Omarchy is on Linux:

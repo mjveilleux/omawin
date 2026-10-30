@@ -26,6 +26,7 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 | 2026-10-30 | Files means **the Win+F finder** (fff): it grows into a keyboard file manager; Explorer gets developer defaults only |
 | 2026-10-30 | **Terminals show which side they're on**: Linux and PowerShell look different at a glance |
 | 2026-10-30 | **`omawin pkg` is one package command over winget, Scoop, Chocolatey, mise, the bundle and Arch's pacman**: omawin picks the manager, remembers it, and updates each through its own; you can always choose or move |
+| 2026-10-30 | **Compiled C# first, then Rust, then Bun** for every tool and script; PowerShell only for the bootstrap entry and the profile; bash only inside Linux; no Python (2.11, AGENTS.md) |
 | 2026-10-30 | **Uninstall anything you choose** (Install › Remove for everything, `omawin remove <part>`, `omawin uninstall`); omawin uninstalls what it no longer needs in a migration, e.g. the old web bar (2.10) |
 | 2026-10-30 | **No admin by default**: install, update and everyday use never ask for admin; a feature that truly needs it is opt-in, asks once for everything at the moment you choose it, says exactly what it will do, and never asks during an update (2.9) |
 | 2026-10-30 | **Win+Space for everything; Win+Alt+Space retired** with One Search (one release as an alias, then removed by a migration) |
@@ -426,6 +427,22 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 - **No admin unless the program needs it** (2.9): per-user installs uninstall without a prompt; a machine-wide one waits in the pending admin list, and several go in one prompt.
 
 **Done when:** every installed thing shows in Remove with its source; `omawin uninstall` on a test PC (Windows Sandbox, 7.1) leaves Windows as it was before omawin, apart from what you chose to keep.
+
+### 2.11 Scripts become compiled C# (L, gradual)
+
+**The rule** (the maintainer's, 2026-10-30; now in AGENTS.md): any new tool, script or helper is **compiled C#**; **Rust** where C# isn't the right tool; **Bun** for JavaScript and TypeScript; PowerShell only for the one-line bootstrap entry and the user's profile; bash only inside Linux; no Python.
+
+**Why:** every `pwsh` command costs ~0.3 s to start (41 of `bin/commands.txt`'s commands run a PowerShell script today, and 91 `.ps1` files exist); compiled code starts in milliseconds, is typed and testable, and an elevated step as a signed exe is safer than a script in a folder the user can write to.
+
+**How:**
+1. **One `omawin` CLI in modern C#.** `bin/omawin.cs` is C# 5 today only because it's built on the PC with Windows' in-box `csc.exe`. With releases built in CI and the bundle shipping binaries (2.0, [install-speed.md](install-speed.md)), it becomes a .NET 9 Native AOT console app (`cli/Omawin.Cli.csproj`) with subcommands as classes (`Commands/Theme.cs`, `Commands/Pkg.cs`, …), the same `bin/commands.txt` routing, and `csc` kept only as the from-source fallback for the dispatcher.
+2. **What moves first:** anything on a key or a hot path (theme set and render, `terminal here`'s helpers, profile tools); anything elevated (the admin verbs become one signed `omawin-admin.exe` with its fixed verb list, 2.9, 8.0); the new tools of this plan (`omawin pkg`, `omawin plugin`, `omawin setting`, the bundle's first-run and queue worker, delta updates, `omawin linux backup|reset`, `omawin sandbox test`, web apps, `omawin uninstall`).
+3. **Install after the bootstrap:** `bootstrap.ps1` (Windows PowerShell 5.1, the `irm | iex` entry) only downloads and unpacks the bundle; everything after that (seeding configs, the queue, steps, migrations) is the C# CLI from the bundle.
+4. **Migrations** become C# classes in the CLI (`Migrations/M2026_10_30_ZebarOut.cs`), each safe on a new PC and twice, recorded in `migrations.txt` as today; existing `.ps1` migrations stay until they age out.
+5. **CI tools in C# too:** release packing, the bundle builder, theme thumbnails (SkiaSharp, which decodes WebP everywhere), the community theme index, the plugin scan.
+6. **The rest of the `.ps1` scripts** port when they're next changed; none is rewritten only for the sake of it.
+
+**Done when:** no command on a key starts PowerShell; nothing elevated is a script; new tools in the plan are C# (or Rust / Bun where stated).
 
 ## Phase 2B: `omawin pkg`, one package command over winget, Scoop and Chocolatey
 
