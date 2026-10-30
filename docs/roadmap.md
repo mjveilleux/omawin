@@ -170,6 +170,19 @@ The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574
 
 **Done when:** no icon is drawn larger than the image it came from, at any scale; the tiles and tray look as crisp as Windows' own Start menu and taskbar at 150% and 200%.
 
+### 1.9 Theme pictures ready before you look (S-M, 🖥)
+
+**Why:** the theme picker's tiles fill in slowly the first time it opens. From the code (`menu-app/ThemeThumbs.cs`): a theme's thumbnail is made **the first time the picker shows that theme**; to make it, the menu app **downloads that theme's full-size first background** (from the theme's URL, often several MB), two at a time, then scales it to 320 pixels wide and saves a PNG in `%LOCALAPPDATA%\launcher\thumbnails`. So the first open of the picker downloads ~24 full wallpapers just to show small pictures. The full backgrounds themselves are fetched only when you switch to a theme (`themes/set-theme.ps1:132`), so a first switch waits on a download too.
+
+**Build:**
+1. **Thumbnails built in CI, shipped with omawin.** The release workflow downloads each theme's backgrounds, makes the thumbnails (320 and 640 pixels wide, for 100-250% scale; WebP or PNG, ~20-60 KB each, measured), and ships them in the bundle's stage 1 (`themes/thumbs/<theme>--<picture>.webp`; [install-speed.md](install-speed.md)). Not committed to the repo (they're derived, and they change when Omarchy's themes do); `themes/import-omarchy.ps1` notes new themes so CI makes theirs. `ThemeThumbs` reads the shipped file first, makes one itself only for a theme added locally.
+2. **Preloaded in memory.** When the menu app is idle after start-up (low priority, off the UI thread), it decodes every theme's thumbnail at the picker's pixel size (1.8's rule), so opening Style › Theme shows every tile at once. ~24 small images: a few MB.
+3. **A placeholder that's never empty.** Until a picture is there (a theme added locally, offline), the tile shows the theme's own colours (its palette as a gradient and swatches, as the tile's colour row already draws) rather than a blank, so the picker is complete from the first frame.
+4. **Full backgrounds fetched in the background.** After install (the background queue, [install-speed.md](install-speed.md) G), each theme's backgrounds download quietly at low priority into `%LOCALAPPDATA%\launcher\backgrounds\<theme>`, so the first switch to any theme is instant; on a metered connection, only the current theme's and on demand.
+5. **The background picker too** (mission-todo track 5, "a grid of the theme's pictures"): thumbnails for every background of every theme, made by CI the same way, so that grid is instant.
+
+**Done when:** on a fresh install, opening the theme picker shows every theme's picture in the first frame, and switching to any theme for the first time doesn't wait on a download.
+
 ---
 
 ## Phase 1B: every Windows setting in the system menu (next)
