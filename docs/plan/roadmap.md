@@ -360,6 +360,15 @@ What install does today: `install.ps1` asks the questions, starts the one admin 
 
 **Progress:** started 2026-10-30 with today's install (no bundle yet): `.github/workflows/install.yml` makes a standard user on `windows-2025`, runs the README's bootstrap as that user through a scheduled task (a real logon; `Start-Process -Credential` can't from the runner's service session), then `omawin check`, and writes the step times to the job summary. When the bundle lands, it switches to 03 §8.1's version.
 
+**First numbers (2026-10-30, `windows-2025`, a new standard user, no admin):** its first runs found five bugs that hit a brand-new account, now fixed:
+- `bootstrap.ps1` stopped after 2 s, on the error PowerShell raises when the user's execution policy is set under a Process one.
+- winget's package list isn't registered for an account before its first desktop sign-in (`0x8a15000f` for every package). The install now registers it, or adds Microsoft's `source.msix` for the account.
+- The font step crashed on a missing `HKCU\…\Fonts` key, stopping the install.
+- `release.ps1`: a signed-out `gh` writes to stderr, which Windows PowerShell treats as fatal, so the release was skipped and everything was built on the PC.
+- The Nerd Font took 5 min 40 s through `Invoke-WebRequest`'s progress bar; now 9 s with `curl.exe`.
+
+Whole install: 11 min 26 s → **8 min 53 s**. Software 3 min 5 s (winget, four at a time), helpers 4 min 48 s (of which noctty 1 min 43 s and the menu app 2 min 53 s, built on the PC only because this branch's menu-app code is newer than the release), look 20 s, migrations 18 s. With a current release the helpers step is about a minute: the bundle (2.0) is what takes this under a minute.
+
 ### 2.2 Desktop first (M, 🖥)
 
 **Why:** today you wait for every package, then sign out. The desktop should come up while the rest installs.
