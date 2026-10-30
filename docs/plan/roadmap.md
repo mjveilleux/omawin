@@ -227,6 +227,8 @@ public static IEnumerable<(string Name, string Repo, Uri Screenshot)> Themes(str
 
 ## Phase 1B: every Windows setting in the system menu (next)
 
+**Started 2026-10-30:** the catalog and its parser are in: `launcher/settings.txt` (the first 61 settings across the nine areas; lines marked `check` stay hidden until verified on a PC) and `menu-app/Settings/Catalog.cs` (pure C#, [02-settings-and-one-search.md](02-settings-and-one-search.md) §1-2), with tests in `menu-app.Tests/Settings/`, including one that fails CI when a line in the shipped catalog doesn't parse. Next: the handlers that read and write each setting (§3-5), which need Windows.
+
 **Why:** Windows' Settings app is slow to open, deep, and changes between builds. Omarchy has one menu for everything you change; omawin's system menu (Win+Alt+Space, retired by One Search) has a few rows that open Settings pages (`launcher/menu.txt:70-76`). The goal: **you never open Settings again**. Type a few letters ("dark", "ext", "mic", "hz"), see the setting with its current state, press Space to switch it. What can't be switched from outside Windows' own app opens on its exact page, one keystroke away.
 
 What exists to build on: the system menu's search (`MenuModel.Search`, fuzzy, `MainWindow.xaml.cs:598`), the launcher's usage ranking (`Launcher.cs:173-222`), and Quick settings' working switches (`menu-app/QuickSettings.cs`: Wi-Fi, Bluetooth and other radios, brightness per monitor, power mode, battery, night light's state, notifications' state, change watching).

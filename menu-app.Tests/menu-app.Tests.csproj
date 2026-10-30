@@ -19,6 +19,7 @@
     <Compile Include="..\menu-app\Search\Result.cs" Link="Linked\Search\Result.cs" />
     <Compile Include="..\menu-app\Search\QueryParser.cs" Link="Linked\Search\QueryParser.cs" />
     <Compile Include="..\menu-app\Search\Merger.cs" Link="Linked\Search\Merger.cs" />
+    <Compile Include="..\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
   </ItemGroup>
 
   <ItemGroup>
