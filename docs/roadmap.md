@@ -68,6 +68,7 @@ Each milestone is a release (`v*` tag, built by `.github/workflows/release.yml`)
 | **"linux"** | Phase 3: Linux by default, Omarchy's terminal layer in Arch, terminals coloured by side | Win+Enter is Arch, and you always know where you are |
 | **"plugins"** | Phase 4: plugin format, `omawin plugin`, our panels as plugins, Omarchy plugins running unchanged | you add to the bar and menu without touching omawin, from omawin's gallery or Omarchy's |
 | **"parity"** | Phases 5 to 7: Omarchy's DX, the finder as file manager, sandboxes | Omarchy's habits work on Windows |
+| **"omarchy"** | Phase 9: the rest of Omarchy (drop-down console, hooks, setup git, crash watch, the theme in more apps, debug bundles, pick menus, agent accounts, config reset, display modes, recording, fonts) | nothing an Omarchy user reaches for is missing |
 | **"fixed"** | Phase 8: Windows' annoyances replaced, on Windows' own APIs | the parts of Windows you used to fight are calm |
 
 ---
@@ -916,6 +917,30 @@ Saved runs (`-Save`) give before / after for every change below.
 ### What not to do
 
 Never inject code into Explorer or other processes (no hook DLLs, no Windhawk-style patching; shell-apps.md decision 5); never disable Windows Update, Defender or SmartScreen outright; never touch the protected default-app keys; anything undocumented has a fallback and is hidden when it stops working.
+
+## Phase 9: the rest of Omarchy (from a code review)
+
+A review of Omarchy's whole codebase at commit `7f4b1dd` (2026-10-30: all 557 commands, the menu, every shell plugin, the Hyprland bindings, bash, templates, install, docs, manual), each feature marked *have*, *planned*, *new* or *n/a on Windows*: **[plan/08-omarchy-review.md](plan/08-omarchy-review.md)**, with how each new one works on Windows, its home (core, catalog, first-party plugin, script, Linux side), its size and code. The new items, in the review's order of value for a developer:
+
+1. **9.1 A drop-down console** (`omawin console`; Omarchy's Quake-style console): a terminal that slides down over everything on a key and hides again; built on the scratchpad (5.7), with Windows Terminal's quake mode as the bridge until the fork has it (M).
+2. **9.2 Hooks** (`omawin hook`): your scripts run on events (theme set, after an update, font set, …), from the account folder, as Omarchy's hooks (S).
+3. **9.3 `omawin setup git`**: name and email, `gh auth login`, `gh auth setup-git`, the same inside Linux (S).
+4. **9.4 Crash watch**: a toast when a program crashes, with a button that asks your coding agent to diagnose it from the event log (8.15's reader) (M).
+5. **9.5 The theme reaches more apps**: the browser's colour (per-user policy), Claude Code, OpenCode, lazygit, Helix, Alacritty (M).
+6. **9.6 `omawin debug` and `omawin version`**: a redacted support bundle for bug reports (S).
+7. **9.7 `omawin pick`**: menus scripts and plugins can show and get an answer from (over the reply channel of [plan/02](plan/02-settings-and-one-search.md)) (S-M).
+8. **9.8 Agent accounts**: several accounts per coding agent (`CLAUDE_CONFIG_DIR`, `CODEX_HOME`), switched near a usage limit; Codex in the usage panel (M).
+9. **9.9 `omawin reset <config>`**: one config back to omawin's version, yours kept as `.backup-<timestamp>` (S).
+10. **9.10 `omawin display internal|external|mirror|extend`** (`SetDisplayConfig`, no admin), and display scaling (S, scaling M).
+11. **Next in line:** a Tailscale panel and Taildrop; toggles for the bar and the gaps; herdr's keys on the Shortcuts page; Share through Windows' share sheet or LocalSend; and the small items in the review's N15 table.
+
+**Already on the to-do list but not yet on the roadmap** (the review found them only in [mission-todo.md](mission-todo.md); they belong here, and two would rank in the top ten):
+- **9.11 Screen recording** (Windows.Graphics.Capture or ffmpeg's `ddagrab`), and **9.12 annotation** in the snip tool (pen, arrow, box).
+- **9.13 A font switcher** (one font across the bar, the menu, the terminal and the editor, rendered like the theme) and **9.14 text size** as one knob.
+- **9.15 Claude Code follows the theme** (Omarchy 4 does) — part of 9.5.
+- **9.16 Defaults beyond terminal and editor**: browser and dictation (`omawin default`).
+- **9.17 The bar's missing widgets** (weather, calendar popup, keyboard layout, indicators, agent usage) — as plugins where they fit (phase 4).
+- **9.18 Emoji** in the launcher, falling back to Windows' Win+. picker.
 
 ## Things to explore
 

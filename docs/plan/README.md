@@ -26,6 +26,7 @@ The code in these files is a **sketch that hasn't been compiled or run**. It nam
 | [05-plugins.md](05-plugins.md) | Phase 4, 8.0 | the manifest and registry; plugin processes (Job Objects, JSON lines); command widgets; XAML panels with `omawin:Bind` / `omawin:Action`; providers; `omawin plugin`; the first-party plugin SDK and admin verbs; the Omarchy compatibility layer (stand-ins in Arch, the Qt QML host); the Omadoro port; also [plugins.md](../plugins.md) |
 | [06-dx-finder-sandbox.md](06-dx-finder-sandbox.md) | Phases 5, 6, 7 | web apps; the key cheat sheet from GlazeWM's config; toasts and the OSD; idle lock; the scratchpad (fork); menu conditions; the finder's actions, browsing, content search, previews, filters and drag-out; `omawin sandbox test`; agents in a sandbox |
 | [07-fixing-windows.md](07-fixing-windows.md) | Phase 8 (8.1-8.51, 8K) | who holds a file; whole-disk search; dev disk cleanup; Quick Look in Explorer; the window switcher and picture-in-picture; monitor profiles; per-app audio and mic mute; key remaps and snippets; the clipboard; the Health page from event logs; startup list; processes and ports; Windows Update; DNS and hosts; notifications; the tune-up catalog entries; Dev Drive, git, ports, PATH, environment variables; idle memory |
+| [08-omarchy-review.md](08-omarchy-review.md) | Phase 9 | every Omarchy feature (at commit `7f4b1dd`) marked have / planned / new / n/a, and the new ones with how they work on Windows and code: the drop-down console, hooks, `setup git`, crash watch, the theme in more apps, `debug`, `pick`, agent accounts, `reset`, display modes |
 
 ## The order of work
 
@@ -42,6 +43,7 @@ Each milestone is a release ([roadmap.md](../roadmap.md), Milestones). Within a 
 | 6 | **plugins** | the manifest, registry, plugin processes, command widgets; music and agents as plugins | XAML panels (prove `XamlReader.Load` under AOT first), providers, `omawin plugin`, the SDK; then the stand-ins and the QML host | Omadoro runs unchanged; `omawin plugin scan` over the marketplace |
 | 7 | **parity** | 5.x DX, the finder's actions and browsing, `omawin sandbox test` | content search, previews, web apps, scratchpad, notifications | Omarchy's habits work |
 | 8 | **fixed** | 8K idle memory (measure, then cut), 8.1 who-has, 8.15 Health, 8.14 clipboard, 8.11 mic mute | the rest of phase 8, most as settings catalog entries | idle < 4 GB; Windows' common complaints answered |
+| 9 | **omarchy** | 9.2 hooks, 9.3 setup git, 9.6 debug, 9.9 reset (all small) | 9.1 drop-down console (after the scratchpad), 9.4 crash watch, 9.5 theme in more apps, 9.11 screen recording, 9.13 fonts | nothing an Omarchy user reaches for is missing |
 
 **Cloud or PC?** Sessions without Windows (like the one that wrote this plan) can do: plain C# with unit tests (One Search's merger, the settings catalog parser, the plugin protocol), CI workflows, PowerShell and bash scripts, the GlazeWM fork's Rust with its tests and CI frame check, docs. Anything visual, on a key, or touching the live desktop needs the PC (🖥 in the roadmap), and AGENTS.md's rules: ask before driving the desktop, screenshot visible changes.
 
