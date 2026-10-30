@@ -1,5 +1,5 @@
-# Unit tests for the menu app's pure parts (One Search's parser and ranking; later the settings
-# catalog's parser). They need no Windows, so they run on Linux: quicker and cheaper.
+# Unit tests for the pure parts of the menu app (One Search, the settings catalog, plugins) and
+# of the omawin command (routing and actions, against the real bin/commands.txt). They need no Windows, so they run on Linux: quicker and cheaper.
 name: Test
 
 on:
@@ -18,5 +18,9 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           global-json-file: global.json
-      - name: Unit tests
+      - name: Menu app
         run: dotnet test menu-app.Tests --logger "console;verbosity=normal"
+      - name: omawin command
+        run: dotnet test cli.Tests --logger "console;verbosity=normal"
+      - name: omawin command builds with Native AOT
+        run: dotnet publish cli -c Release -r linux-x64 -o out/cli && out/cli/omawin --version

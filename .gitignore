@@ -35,3 +35,8 @@ scratch/
 
 # Agents' worktrees (Claude Code)
 .claude/worktrees/
+cli/bin/
+cli/obj/
+cli.Tests/bin/
+cli.Tests/obj/
+out/

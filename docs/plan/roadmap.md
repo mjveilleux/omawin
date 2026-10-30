@@ -462,6 +462,8 @@ Move Neovide and Windows Terminal (Windows 11 ships it) to presets; drop `OpenJS
 
 **Done when:** no command on a key starts PowerShell; nothing elevated is a script; new tools in the plan are C# (or Rust / Bun where stated).
 
+**Progress:** started 2026-10-30. `cli/` is the .NET 9 Native AOT `omawin` (3 MB): `CommandTable` (bin/commands.txt's rows, the longest-match routing, help) and `Actions` (app, pwsh, run, builtin rows turned into what to run, with `{repo}`/`{user}` and Windows quoting) are pure and tested in `cli.Tests` (34 tests, including every shipped row routing to itself, every builtin known and every repo script present); `Program.cs` sends menu-app requests and starts processes as `bin/omawin.cs` does. Next: port the builtins (launch-terminal, launch-project, launch-editor, terminal-here, terminal-warm, start-glazewm, update-terminal, default; start-zebar goes with 2.10), build `win-x64` in the release, and switch `install.ps1` to it, keeping `bin/omawin.cs` as the fallback.
+
 ## Phase 2B: `omawin pkg`, one package command over winget, Scoop and Chocolatey
 
 **Why:** Windows has three package managers, each with a different catalogue, different ids, different scopes and different update commands, and you have to remember which one installed what. Omarchy wraps pacman and the AUR in its own commands (`omarchy-pkg-add`, `omarchy-pkg-drop`, `omarchy-update`); omawin should do the same for Windows: **one command, and omawin picks and remembers the manager.** omawin is already partway there: the launcher's Packages page searches all three (`omawin pkg find`), `omawin pkg install` / `remove` are winget-only today (`bin/pkg-install.ps1`, `bin/pkg-remove.ps1`), and `%LOCALAPPDATA%\launcher\installed.txt` records what's installed.
