@@ -42,21 +42,23 @@ Sources read for this plan: this repo; Omarchy 4 (`mjveilleux/omarchy`: `shell/`
 
 **Built, not yet shipped:** window animations in the GlazeWM fork (branch `omawin`): new windows fade in where they tile, the others slide, drawn from snapshots (Windows Graphics Capture, D3D11, DirectComposition), ease-out-quint, 200 ms. Never tried on a PC, not in a release.
 
+**Built 2026-10-31, in v0.4.0, not yet seen on a PC (🖥):** most of phases 1 to 3 and 8, each section's "Built" note says what's checked and what's left: menu keys sent straight to the menu app (1.2, with the GlazeWM fork that knows `emit`), motion tokens and an exit animation (1.4), the virtualized list (1.7), community themes (1.10), every Windows setting in search (1B), One Search (1C), the desktop started during install and `omawin uninstall` (2), `omawin pkg` (2B), Linux by default with Omarchy's terminal layer (3, 3B), Phase 8's fixes (`omawin-windows`, `mic`, `path`, `tune-up`, `profile ram`), plugins on every bar and the plugin gallery (4.9.4, 4.10). The GlazeWM fork's `emit` and close animation are on its branch `claude/omawin-roadmap-devex-j1tmak`, waiting for a fork release (`scripts/omawin-release.ps1`, run on a Windows PC).
+
 **The gaps against Omarchy, by what you feel:**
 
 | You notice | Omarchy | omawin today |
 |---|---|---|
-| A key opens the menu | the key goes straight to the resident shell; no process starts | GlazeWM starts `omawin.exe` (~35 ms), which writes a request file and signals the menu app |
-| The menu opens and closes | in within 250 ms, out in ⅔ of that (ease-out-quint) | a 140 ms fade and rise in; out is instant |
-| Windows open and move | pop in and slide (Hyprland) | instant (animations unreleased) |
-| Install | pacman, 5 downloads at once, a prebuilt image | winget, 4 at once; ~150 s of packages before anything else; the desktop starts only after you sign out and in |
-| Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | rows in text files; no widgets, panels or plugins of your own |
-| Everyday dev setup | dev envs, Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev envs and Docker databases on Windows; no web apps; a hand-kept key list |
-| Linux | it *is* Linux | WSL opt-in; the terminal opens PowerShell unless the window in front is in a Linux folder |
-| Where am I? | one OS | Linux and PowerShell terminals look identical |
-| Changing a setting | one menu for every setting (Omarchy's Setup menu) | the system menu opens a few Settings pages; everything else is Windows' Settings app |
-| Files | Nautilus, Sushi previews, "here" keys | the Win+F finder: search, preview, chips; open or show in folder, nothing more |
-| Trying things safely | disposable VMs in its acceptance tests | nothing; the install has never run on a clean PC |
+| A key opens the menu | the key goes straight to the resident shell; no process starts | with the fork's next release, the same (GlazeWM `emit`s to the menu app); until then GlazeWM starts `omawin.exe` (~35 ms) |
+| The menu opens and closes | in within 250 ms, out in ⅔ of that (ease-out-quint) | in 200 ms, out 130 ms, ease-out-quint (`Motion.cs`); `omawin toggle animations` |
+| Windows open and move | pop in and slide (Hyprland) | fade in and slide, a close fade, in the fork; shipped with its next release |
+| Install | pacman, 5 downloads at once, a prebuilt image | the tools bundle: ~35-50 s to a running desktop, no admin prompt, no winget in the core |
+| Extending it | plugins: a folder with `manifest.json`, `omarchy plugin add <git-url>`, hot reload | Omarchy's QML plugins in the bar through the QML host, on every monitor; a gallery of Omarchy's marketplace with whether each runs; no hot reload yet |
+| Everyday dev setup | dev envs, Docker databases, web apps, TUIs, a key cheat sheet built from the bindings | dev envs and Docker databases; Docker in Linux; `omawin pkg` over every package manager; no web apps or key cheat sheet yet |
+| Linux | it *is* Linux | Arch with Omarchy's terminal layer, Win+Enter opens it once it's set up (`omawin default shell windows` for PowerShell); WSL itself needs the one admin prompt |
+| Where am I? | one OS | Linux terminals tinted with the theme's accent, the distro's logo in the prompt, `arch · <path>` titles |
+| Changing a setting | one menu for every setting (Omarchy's Setup menu) | 91 settings switched in place from search, with undo; every Settings page one key away |
+| Files | Nautilus, Sushi previews, "here" keys | the finder inside One Search, Linux's files too; open or show in folder, nothing more |
+| Trying things safely | disposable VMs in its acceptance tests | CI installs every release on a fresh Windows; no sandbox command yet (7.1) |
 
 ## Milestones
 

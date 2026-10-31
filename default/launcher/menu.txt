@@ -95,7 +95,6 @@ setup.windows.admin | 󰒘 | Admin changes waiting | settings admin
 setup.windows.undo | 󰕌 | Undo the last settings change | settings undo
 setup.windows.save | 󰆓 | Save my settings for a new PC | task omawin settings save
 setup.windows.app | 󰒓 | Windows' Settings app | run ms-settings:
-setup.default | 󰄬 | Defaults (terminal, editor, agent)
 setup.default | 󰄬 | Defaults (terminal, shell, editor, agent)
 setup.default.terminal | 󰆍 | Terminal
 setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty
