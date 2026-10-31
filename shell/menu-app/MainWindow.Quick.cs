@@ -167,6 +167,8 @@ public sealed partial class MainWindow
         }
         audioTimer ??= MakeAudioTimer();
         audioTimer.Start();
+        // An app that starts to play while the page is open shows at once (Audio.cs, 8.10).
+        Audio.WatchSessions(() => DispatcherQueue.TryEnqueue(() => { if (launching && page == "audio" && routing == null && appWindow.IsVisible) Render(); }));
         QuickFooter($"{outputs} outputs · {inputs} inputs · {mics} microphones");
         // Short: the footer's left side carries the device counts, and longer hints ran into them.
         if (quickSwitches) SetKeys(("space", "toggle"), ("← →", "level"), ("↵", "open"), ("esc", "back"));

@@ -349,7 +349,7 @@ public sealed partial class MainWindow
     // falling back slowly like a VU meter, and the icon swells and glows with it.
     void AudioTick()
     {
-        if (!(launching && page == "audio" && routing == null && tileMode && appWindow.IsVisible)) { audioTimer?.Stop(); return; }
+        if (!(launching && page == "audio" && routing == null && tileMode && appWindow.IsVisible)) { audioTimer?.Stop(); Audio.StopWatchingSessions(); return; }
         for (int i = 0; i < tiles.Count; i++)
         {
             var v = tiles[i];
