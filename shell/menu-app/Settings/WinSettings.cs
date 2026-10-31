@@ -233,6 +233,7 @@ public static class WinSettings
             Path.Combine(MenuModel.StateDir, "tune-up-auto.txt")),
         // Not a setting, but answered the same way: Windows' extra apps (roadmap 8.50, WindowsAppsStore.cs).
         ["--windows-apps", .. var rest] => WindowsAppsStore.Answer(rest, progress ?? (_ => { })),
+        ["--shell-extensions", .. var rest] => ShellExtensionsWin.Answer(rest),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

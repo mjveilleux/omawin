@@ -331,6 +331,7 @@ pc.updates.resume | 󰐊 | Resume updates | task omawin updates resume
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
 pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu
+pc.shellext | 󰍜 | Right-click menu add-ins (shell extensions) | task omawin shell-extensions
 trigger.clip | 󰘦 | Change the clipboard's text
 trigger.clip.json | 󰘦 | JSON, indented | omawin clip json
 trigger.clip.jsonline | 󰘦 | JSON on one line | omawin clip json-line

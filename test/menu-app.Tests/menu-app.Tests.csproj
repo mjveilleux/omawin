@@ -36,6 +36,7 @@
     <Compile Include="..\..\shell\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
     <Compile Include="..\..\shell\menu-app\TuneUp.cs" Link="Linked\TuneUp.cs" />
     <Compile Include="..\..\shell\menu-app\WindowsApps.cs" Link="Linked\WindowsApps.cs" />
+    <Compile Include="..\..\shell\menu-app\ShellExtensions.cs" Link="Linked\ShellExtensions.cs" />
     <Compile Include="..\..\shell\menu-app\ReservedPorts.cs" Link="Linked\ReservedPorts.cs" />
     <Compile Include="..\..\shell\menu-app\Bar\MediaText.cs" Link="Linked\Bar\MediaText.cs" />
     <Compile Include="..\..\shell\menu-app\Bar\IconGroup.cs" Link="Linked\Bar\IconGroup.cs" />
