@@ -65,6 +65,7 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `About.cs`, `MainWindow.About.cs` | the About page (`omawin about`): version and PC facts, read off the UI thread |
 | `StayAwake.cs` | `omawin toggle stay-awake`: `SetThreadExecutionState` held on the UI thread while on |
 | `Motion.cs`, `MotionTokens.cs` | every animation's numbers (Omarchy's: in within 200 ms, out in 130, ease-out-quint) and helpers on the compositor; `omawin toggle animations` writes `%LOCALAPPDATA%\launcher\animations`, which it watches with Windows' own Animation effects switch; off, every animation jumps to its end |
+| `Microphones.cs`, `MicMute.cs` | `omawin mic`: every microphone muted or unmuted at once (Core Audio's endpoint mute); the bar's red microphone while they're all muted |
 | `Tiling.cs` | Omarchy's window placement: on each focus change (GlazeWM's IPC socket) it sets the focused window's next split across the split it sits in, so new windows spiral like Hyprland's dwindle layout: A | B, then B over C, then C | D |
 | `Settings/` | Windows' settings (roadmap 1B): `Catalog.cs` parses `default/launcher/settings.txt`; `Store.cs` is the service (cached values, `Set` / `Toggle` / `Step` / `UndoLast`, the undo history, the admin queue), with its handlers handed in so it's tested on Linux; `Switches.cs` (reg, spi, powercfg) and `Builtins.cs` (radios, refresh rate, HDR, proxy, audio devices, …) touch Windows; `Watch.cs` follows registry keys and `WM_SETTINGCHANGE`; `Index.cs` reads Windows' own settings index and `default/launcher/settings-pages.txt`; `Search.cs` ranks them; `Commands.cs` answers `omawin setting` / `settings`; `WinSettings.cs` wires it all, and is what the window (and One Search) uses |
 | `MainWindow.Settings.cs` | settings in the system menu's search and Setup › Windows: rows with their values, Enter / Space / ← → / Ctrl+Z |
@@ -117,6 +118,23 @@ Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell
 - anything else: **a command**, sent to the player over the pipe `\\.\pipe\omawin-music` (a JSON array of words per line; one JSON line back), or done on the library files directly (`add`, `list`, `tracks`, `refresh`, `rename`, `remove`).
 
 The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `podcasts/<slug>.json` for podcasts, `radio/<slug>.json` for stations (title, source link, tracks; `Library.cs`). A station is one live stream (`Library.AddRadio`): adding one reads the stream's headers only — its content type (a web page is refused) and its `icy-name`, which names it (`NTS Radio`, `NTS Radio 2` when the address is a second channel) — and the player hands that address to mpv as it is, so `live` in the state tells the bar to show `LIVE` instead of a progress bar, and seeking does nothing. Readers: `YouTube.cs` (yt-dlp, with Bun) and `Feed.cs` (RSS, and Apple Podcasts links through Apple's lookup). Slugs are unique across every folder, so commands only need the slug.
+
+## Fixing Windows (`src/windows/`, `omawin-windows.exe`)
+
+Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `wifi share`, `clip` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
+
+| Folder | What it is |
+|---|---|
+| `Files/` | who holds a file: Restart Manager (`RmGetList`) and the wording of its answer |
+| `Health/` | the event logs through `wevtapi` (`EvtQuery`, `EvtRender` as XML) and the sentences they become |
+| `Startup/` | the Run keys, Startup folders and programs' services; Task Manager's `StartupApproved` switch |
+| `Top/` | every process in one `NtQuerySystemInformation` call (the documented `Process` list as the fallback), grouped by app |
+| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries |
+| `Wifi/` | the saved profile (`WlanGetProfile`) and the `WIFI:` QR text, drawn with ZXing in half blocks |
+| `Clip/`, `Native/` | the clipboard's transforms; the clipboard, process close / end (a pid is checked against its start time first) |
+| `Admin/` | the few changes that need admin, as a Windows PowerShell script built only from checked values, run by Windows' own `powershell.exe` after one prompt that's preceded by what will change |
+
+Each folder's parsing and wording is pure, with no Windows calls, and tested on Linux (`test/windows.Tests`); the calls sit in their own files. Run hidden (from a menu row with an `omawin` action), what it says goes to the menu app's note (`--say`) instead of a terminal.
 
 ## Scripts that remain
 
