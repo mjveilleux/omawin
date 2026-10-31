@@ -96,9 +96,13 @@ setup.windows.undo | 󰕌 | Undo the last settings change | settings undo
 setup.windows.save | 󰆓 | Save my settings for a new PC | task omawin settings save
 setup.windows.app | 󰒓 | Windows' Settings app | run ms-settings:
 setup.default | 󰄬 | Defaults (terminal, editor, agent)
+setup.default | 󰄬 | Defaults (terminal, shell, editor, agent)
 setup.default.terminal | 󰆍 | Terminal
 setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty
 setup.default.terminal.wt | 󰆍 | Windows Terminal | omawin default terminal wt
+setup.default.shell | 󰆍 | Shell (what a new terminal opens)
+setup.default.shell.linux |  | Linux (WSL) | omawin default shell linux
+setup.default.shell.windows |  | PowerShell | omawin default shell windows
 setup.default.editor | 󰏫 | Editor
 setup.default.editor.nvim |  | Neovim (in the terminal) | omawin default editor nvim
 setup.default.editor.neovide |  | Neovide | omawin default editor neovide

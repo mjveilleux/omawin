@@ -42,10 +42,13 @@ theme lockscreen | The lock screen's next background | pwsh themes/set-lockscree
 terminal here | A terminal in the focused window's folder (Win+Enter) | builtin terminal-here
 workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal --title rename -- pwsh -NoLogo -NoProfile -File "{repo}\default\launcher\rename-workspace.ps1"
 
-launch terminal | A terminal, in the default terminal: [--dir <folder>] [--title <title>] [--wsl: in your Linux] [-- <command>] | builtin launch-terminal
-launch project | A project window (default/launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
-launch editor | A file or folder in the default editor | builtin launch-editor
-default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch (or ubuntu), the Linux in WSL | builtin default
+launch terminal | A terminal, in the default terminal and shell (omawin default shell): [--dir <folder>] [--title <title>] [--wsl or --windows] [-- <command>: a Windows program unless --wsl] | builtin launch-terminal
+launch project | A project window (default/launcher/project-tabs.txt), on the side its folder is on: <folder> [--wsl or --windows] | builtin launch-project
+launch editor | A file or folder in the default editor (a Linux path opens in Linux) | builtin launch-editor
+default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch (or ubuntu), the Linux in WSL; omawin default shell windows (or linux), what a new terminal opens | builtin default
+linux stop | Stop your Linux in WSL (and its keep-warm); it starts again with the next Linux terminal | builtin linux stop
+linux backup | Your Linux in WSL exported to ~/omawin-backups/linux (wsl --export), kept until you delete it | builtin linux backup
+linux reset | Back up, then replace omawin's Linux with a fresh one set up again, and offer to bring ~/src back; never a Linux omawin didn't make | builtin linux reset
 
 restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+R) | pwsh themes/render.ps1 -Reload
 restart menu | Rebuild and restart the menu app (after editing shell/menu-app/) | pwsh shell/menu-app/build.ps1

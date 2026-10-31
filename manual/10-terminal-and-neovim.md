@@ -7,16 +7,29 @@ The terminal is [noctty](https://noctty.com): Ghostty's terminal core in a nativ
 - It runs in the background from login with no window, and keeps one PowerShell started ahead of time, so Win+Enter gives a window with its prompt in ~0.3 s, and a new tab in ~0.12 s. The first terminal after login takes ~1 s: there's no spare shell yet, and PowerShell's own start-up is half of that. `omawin profile terminal` measures it (`-Scenario window|cold|tab`).
 - Its keys: `Ctrl+Shift+V` paste, `Ctrl+Shift+\` / `Ctrl+Shift+E` split, `Alt+arrows` between panes, `Ctrl+Shift+P` command palette. Tabs are herdr's (below).
 - noctty has no tabs of its own (no tab strip; `Ctrl+Shift+T` and the other tab keys pass through): [herdr](https://herdr.dev) is the multiplexer. A **project** (Win+Space › Projects) is a herdr session named after the folder, started with tabs shell, nvim, claude and opencode (`default/launcher/project-tabs.txt`). It keeps running with no window, so agents carry on, and opening the project again reattaches. herdr's keys: `Ctrl+Space` (as in tmux) then `1..9` (tab N), `c` (new tab), `n` / `p` (next / previous). Its config is `config/herdr/config.toml` in this repo; it takes its colors from the terminal, so it follows the theme.
-- Linux terminals and projects (WSL) open as their own noctty window, with a slightly slower start.
+- Linux terminals and projects (WSL) open as their own noctty window; WSL kept warm (below) makes them as quick as PowerShell's.
 - `omawin update terminal` installs the fork's latest release (checked against its published checksums).
 
-**Win+Enter** opens a terminal in the folder you're working in:
+**Win+Enter** opens a terminal in the folder you're working in, in your default shell (below):
 - the focused noctty window's folder
 - a Windows Terminal tab's folder or Linux path
-- the folder open in File Explorer
-- otherwise ~
+- the folder open in File Explorer (a Windows folder opens in Linux as `/mnt/c/…`; a Linux one, `\\wsl.localhost\…`, as itself)
+- otherwise your home (Linux's, or Windows')
 
 **Alt+Enter** opens one in ~.
+
+### Linux or PowerShell
+
+Once your Linux in WSL is set up (`omawin preset add wsl`: Arch by default), a new terminal opens **in Linux**. `omawin default shell windows` (System menu › Setup › Defaults) makes it PowerShell again; `omawin default shell linux` goes back. Without a Linux yet, terminals are PowerShell. For one window: `omawin launch terminal --windows` or `--wsl`. A project opens on the side its folder is on (a Linux repo in Linux, a Windows one in PowerShell).
+
+You always know which side you're on:
+- **The background:** Linux windows are tinted a little toward the theme's accent, PowerShell's are the theme's own background. It follows a theme switch at the next prompt.
+- **The prompt** starts with the system's logo: Arch's or Ubuntu's in green, Windows' in blue.
+- **The title:** `arch · ~/src/app` or `pwsh · omawin`, in the bar and in Windows Terminal's tabs.
+
+**Kept warm:** a cold WSL takes ~8 s to start. While Linux is your default shell, `omawin start terminal` (at sign-in) keeps it running, so a Linux window opens at once; this costs the VM's idle memory. `omawin linux stop` stops it until the next Linux terminal; a file `%LOCALAPPDATA%\launcher\linux-warm-off` turns the keep-warm off.
+
+**Your Linux, kept:** `omawin linux backup` exports it to `~/omawin-backups/linux` (kept until you delete it). `omawin linux reset` backs it up, then replaces it with a fresh one set up again and offers to bring `~/src` back; it asks you to type the distro's name first, and only ever resets a Linux omawin made. `omawin update` updates it too (packages, its shell setup, its migrations), and `omawin check` checks it while it runs.
 
 ### Another terminal
 
@@ -36,6 +49,15 @@ PowerShell 7 with starship, zoxide, fzf, eza and bat:
 - **`fastfetch`:** this PC and omawin at a glance, Omarchy-style: omawin's logo, then hardware, software (omawin's version, GlazeWM, the theme) and age / uptime / last update, in the theme's colors. Its config is `config/fastfetch/` in this repo.
 
 Searchable shell keys are in Win+Space → Shortcuts.
+
+## Linux (WSL)
+
+Your Linux has Omarchy's terminal layer, as an Omarchy user has it: the packages from Omarchy's own list that make sense without a desktop (bat, btop, Docker, eza, fd, fzf, gum, herdr, lazygit, mise, Neovim, ripgrep, starship, tmux, tldr, zoxide and more; Arch takes them from Omarchy's repositories, Ubuntu from apt and mise), Omarchy's shell (its aliases, functions, history and keys: `ls` is `eza -lh`, `cd` uses zoxide, `n` opens Neovim, `t` tmux, `d` docker) and Omarchy's configs for btop, lazygit and tmux. On top, omawin's: the same prompt as Windows, the theme, and Windows close at hand:
+- `explorer .`, `code .`, `clip` (text into Windows' clipboard), `open <file or URL>` and `omawin <command>` work from Linux. Windows' own PATH is left out (Linux's tools win), so these are small wrappers in `~/.local/bin`.
+- **Docker** runs in Linux, started on first use; you're in the `docker` group, so no sudo. A server there is `localhost:<port>` for Windows' browser too (mirrored networking).
+- **Git and SSH** use Windows' sign-in: git pushes with Windows' credential manager, and `ssh` uses Windows' SSH agent (its OpenSSH agent, or 1Password's), so a key added on one side works on both.
+- **btop** follows the theme; everything else in the terminal takes the theme's colors already.
+- Your own WSL settings go in your account folder: `wsl/wsl.conf` (applied over omawin's `/etc/wsl.conf`) and `wsl/.wslconfig` (used instead of omawin's) ([docs/work.md](../docs/work.md)).
 
 ## Neovim
 
