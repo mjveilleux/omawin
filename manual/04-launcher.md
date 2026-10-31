@@ -1,36 +1,63 @@
-# The launcher and file finder
+# One Search and the file finder
 
-## Launcher (Win+Space)
+## One Search (Win+Space)
 
-Like Omarchy's Super+Space. It opens on tiles:
+One window and one bar for everything omawin can find or do, like Omarchy's Super+Space grown: apps, Windows settings, omawin's commands and the system menu's rows, files, open windows, projects, what you copied, themes, and sums. Every result is tagged with what it is: a colour, an icon and a word (APP, SETTING, COMMAND, FILE, WINDOW, PROJECT, CLIP, THEME).
+
+### The home
+
+With nothing typed it opens on tiles that keep their places, so you learn them by position:
 - a big tile for the first item in `default/launcher/items.txt` (`icon | name | command`), the terminal
-- Projects and Clipboard, showing your recent projects and what you last copied
+- **Projects** and **Clipboard**, showing your recent projects and what you last copied
 - your next four items, with a server count on Localhost
-- a Menu bar
-- **Frequent**: the eight apps you open most
+- **Browse** (everything the system menu had) and **Theme** (yours, its palette as one gradient; Enter opens the Themes filter)
+- **Quick**: Wi-Fi, Bluetooth, Dark mode and Microphone (apps' access to it), each saying On or Off; Enter switches it
+- **Frequent**: the four apps you open most
 
-Arrow keys move between tiles; the selected one lifts. Typing searches your items and every installed app (Start's All apps, desktop and Store apps, with their real icons). A newly installed app shows up within seconds.
+Arrow keys move between tiles; the selected one lifts. Only what's in the tiles changes, never where they are.
 
-**Typing searches** with fuzzy matching:
-- **Word starts, capitals and runs of letters count most**, so "pbi" finds Power BI and "vsc" finds VS Code.
-- **Program and package names match too** ("pwsh", "taskmgr").
-- **One typo per word is forgiven** ("termnial").
-- **Shorter names come first**, and the matched letters are highlighted.
-- **It learns:** what you open ranks higher, most of all for what you'd typed.
+### Typing
 
-Enter opens; Esc or Win+Space again hides it. **Menu** turns the window into the system menu (Esc comes back).
+Typing shows one ranked list, with the selected result's preview beside it (an app's icon, a file's first lines or picture, a theme's wallpaper, a setting's value, a command's whole description) and what Enter does in the footer.
+- **All shows each kind's best few** (apps 4, settings 4, commands 3, files 3, the rest 2); a **Show all 12 Settings** row opens that filter.
+- **Matching is fuzzy**: word starts, capitals and runs of letters count most ("pbi" finds Power BI, "vsc" VS Code); program and package names match too ("pwsh", "taskmgr"); one typo per word is forgiven ("termnial"); shorter names come first; the matched letters are highlighted.
+- **It learns:** what you pick ranks higher, most of all for what you'd typed. The same query gives the same order until your habits change.
+- **For one or two letters**, apps and commands come before files; files are searched from three letters (or with the Files filter). They arrive a moment later, below the row you're on: the selected row never moves under you.
+- **Last, two rows you pick, never searched as you type**: find it in winget, Scoop and Chocolatey (the Packages page), and search the web.
+
+### Filters
+
+The tabs under the bar narrow it to one kind: **All, Apps, Settings, Commands, Files, Windows, Projects, Clipboard, Themes**. The one you're in also shows as a token at the start of the bar.
+- **Tab / Shift+Tab** move through them, keeping what you typed. Click one too.
+- **A filter's name, then Tab**, locks it: "set" Tab is Settings.
+- **`/`** first searches files, **`>`** commands (the prefix becomes the token).
+- **Backspace** on an empty bar, or **Esc**, drops the filter.
+
+Some filters are richer views: **Files** is the file finder (below), **Clipboard** and **Projects** their pages, **Themes** the theme picker, and **Commands** with nothing typed is **Browse**: the system menu's tiles and sections ([The system menu](05-system-menu.md)). **Settings** with nothing typed lists Windows' settings by area.
+
+### Keys
+
+- **Enter** does the obvious thing: opens, runs, switches a setting, pastes a copy, applies a theme. A command that needs words (`theme set <name>`) fills the bar for them; scripts run in a terminal so you can see what they say.
+- **Ctrl+K** lists the selected result's other actions: run as administrator, show in folder, copy path, terminal here, open in the editor, run in a terminal, copy the command, close a window, delete a copy, a theme's backgrounds, a setting's previous value. Esc closes the list.
+- **Ctrl+Enter** shows a file in its folder; **Ctrl+Shift+Enter** runs one of your items as administrator (Windows asks first).
+- **Settings switch in place**: a switch says On or Off and Enter flips it; **← / →** step a choice; **Ctrl+Z** puts the last change back ([Windows settings](05-system-menu.md#windows-settings)).
+- **Esc** steps back one thing at a time: the actions, then what you typed, then a view, then the filter, then the window. Win+Space again also hides it.
+
+**Win+F** opens it on Files and **Win+Shift+V** on Clipboard. Win+Alt+Space, the system menu's key, is retired: for this release it opens One Search and says so.
+
+From a terminal or a script: `omawin search [filter] [words]` (`omawin search settings dark`), `omawin launcher [filter or page]`, `omawin files`, and `omawin menu [section]` for Browse.
 
 ### Calculator
 
-Type a sum and its value is the top row: **Enter copies it** (and closes the launcher). It knows `+ - * / ^` (or `**`), `x × ÷`, parentheses, `%` (`200*15%` is 30; `10 % 3` is the remainder), `pi` and `e`, and `sqrt abs round floor ceil ln log sin cos tan` (radians): `12*4.5`, `2^10`, `sqrt(2)*pi`, `(1+2`. A bare number or an app's name is still a search.
+Type a sum and its value is the top row: **Enter copies it** (and closes the window). It knows `+ - * / ^` (or `**`), `x × ÷`, parentheses, `%` (`200*15%` is 30; `10 % 3` is the remainder), `pi` and `e`, and `sqrt abs round floor ceil ln log sin cos tan` (radians): `12*4.5`, `2^10`, `sqrt(2)*pi`, `(1+2`. A bare number or an app's name is still a search.
 
 ### Pages
 
-Projects, Localhost, Clipboard, Audio, Quick settings, Packages, Reports, Shortcuts and About open in the same window: type to search, Esc to go back.
+Localhost, Audio, Quick settings, Packages, Reports, Shortcuts and About open in the same window from their tiles or results: type to search, Esc to go back. Projects and Clipboard are filters with the same pages.
 
 ### Packages
 
-Like Omarchy's package picker, in the launcher (System menu › Install › Package, the Packages item, or `omawin pkg find`): pick a package manager, type to find a package, Enter installs it.
+Like Omarchy's package picker, in One Search (Browse › Install › Package, the Packages item, the last row of a search, or `omawin pkg find`): pick a package manager, type to find a package, Enter installs it.
 - **Tab switches between winget, Chocolatey and Scoop** (or click their chips). winget's ~16,000 packages and Scoop's buckets are searched on the PC as you type, with the launcher's fuzzy matching; Chocolatey has no catalog on the PC, so its community site is asked once you stop typing.
 - **Beside the list:** what the package is, its version, its homepage and license (winget's take a second or two), and whether it's already here (also ✓ in the list).
 - **Ctrl+Space picks several**, from any of the three; Enter installs them one after another.
@@ -46,7 +73,7 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 - **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. When Windows has reserved a common dev port at start-up (Hyper-V and WSL take random ranges, so a server on 3000 or 8080 fails though nothing is listening there), a yellow line says which and what to do. Under them are your favorite sites from `default/launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.
-- **Clipboard** (or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
+- **Clipboard** (the filter, or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
   - Enter pastes it into the window you were in; **Ctrl+X** deletes an entry.
   - The newest 200 copies are kept. Copies that password managers mark private are skipped.
 - **Audio** (or **Win+A**): every speaker and headset, with what's playing on each inside it (the music player, Chrome, Teams…), then every microphone, each with its volume as a bar; the one Windows is using says "in use". It opens on the first speaker.
@@ -67,10 +94,10 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 
 ## File finder (Win+F)
 
-Also the launcher's **Files** item. A wider window:
+One Search's **Files** filter (also the **Files** item, `/` typed first, or Tab to it):
 - results on the left: the name with matched letters, the folders it's in, and when it changed or its git status
 - a preview on the right: the picture itself for pictures (and how big it is), the first lines of text and code, a folder's contents
-- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), then each place it searches; **Tab** moves between them. Ending what you type with `/` also shows only folders.
+- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), then each place it searches; **Ctrl+Tab** moves between them (Tab moves between One Search's filters). Ending what you type with `/` also shows only folders.
 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 

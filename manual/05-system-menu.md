@@ -1,4 +1,6 @@
-# The system menu (Win+Alt+Space)
+# The system menu (Browse, in One Search)
+
+The system menu is part of [One Search](04-launcher.md) now: its rows are results under the **Commands** filter (type "update", "lock" or "rust" and they're there), and **Browse** (the Browse tile on the home, the Commands filter with nothing typed, or `omawin menu [section]`) shows it as it was, tiles and sections. Its key, **Win+Alt+Space, is retired**: for this release it still opens One Search and the note at the bottom says Win+Space does this now; a later update frees the key.
 
 After Omarchy's menu, with these sections:
 - **Learn**: shortcuts, omawin commands, docs
@@ -12,15 +14,15 @@ After Omarchy's menu, with these sections:
 - **About**: omawin's version and this PC, fastfetch-style (the launcher's About page)
 - **System**: lock, sleep, sign out, restart, shut down
 
-It's translucent and rounded, in the current theme. It opens on tiles:
+Browse opens on tiles:
 - a big **Theme** tile with the current theme's colors
 - **Install** and **Update**, with a peek at what's in them
 - the other sections, plus **Lock**
 - a **System** bar
 
-The window keeps that height. Submenus slide in as lists, colored by kind: submenus purple, pages and the pickers cyan, actions yellow, ones that ask first red, what's installed gray. Where you are shows as chips before the search (Install › Development). Type to search every row. Arrow keys move; Enter opens; Esc or ← goes back; clicking outside closes it.
+Sections slide in as lists, colored by kind: submenus purple, pages and the pickers cyan, actions yellow, ones that ask first red, what's installed gray. Where you are shows after the Commands token (Install › Development). Typing searches every row and every omawin command. Arrow keys move; Enter opens; Esc or ← goes back a section, then out of Browse; clicking outside closes it.
 
-**Theme** opens the picker: a tile per theme with its first wallpaper and its colors, your current one checked. **Backgrounds** opens the background picker: every wallpaper of your theme as a grid of pictures, the one on your desktop checked; Enter sets one, Tab shows the next theme's (picking one of those switches to that theme too). See [Themes](08-themes.md).
+**Theme** opens the picker (also One Search's **Themes** filter): a tile per theme with its first wallpaper and its colors, your current one checked; Ctrl+Tab there shows the community's. **Backgrounds** opens the background picker: every wallpaper of your theme as a grid of pictures, the one on your desktop checked; Enter sets one, Tab shows the next theme's (picking one of those switches to that theme too). See [Themes](08-themes.md).
 
 **Quick** rows work the machine's switches without opening anything: **Wi-Fi on / off** (`omawin wifi toggle`), **Bluetooth on / off** (`omawin bluetooth toggle`), **Brighter** / **Dimmer** (`omawin brightness up|down`), **Power mode: next** (`omawin power cycle`). **Night light** and **Do not disturb** open the Settings page that owns them: Windows lets no program set either, so that is the whole of it. **All of it** opens the Quick settings page itself: the switches, with the sound of Win+A below them (see [Keys](03-keys.md)). Each row says what it did in a small note at the bottom when it's done.
 
@@ -29,7 +31,7 @@ The window keeps that height. Submenus slide in as lists, colored by kind: subme
 **Style › Animations** (`omawin toggle animations`, or `on`, `off`, `status`) turns every animation off or back on: the menu and launcher fading in and out, rows arriving, the bar's widgets, and GlazeWM's windows sliding. Off, everything is simply there at once; the row says **On** while they're on. They start off in a virtual machine, where frames are drawn without a GPU. Windows' own switch (Settings › Accessibility › Visual effects › Animation effects) turns the menu's off too.
 ## Windows settings
 
-You shouldn't need Windows' Settings app. Type a few letters in the system menu ("dark", "ext", "hidden", "mic", "hz", "accel") and the Windows settings that match show under the menu's own rows, with their current value: a switch says **On** or **Off**, a choice or a slider shows its value between ‹ and ›. The launcher (Win+Space) shows the top three under its apps.
+You shouldn't need Windows' Settings app. Type a few letters in One Search ("dark", "ext", "hidden", "mic", "hz", "accel") and the Windows settings that match are among the results (all of them under the **Settings** filter: "set" Tab), with their current value: a switch says **On** or **Off**, a choice or a slider shows its value between ‹ and ›.
 
 - **Enter** flips a switch or moves a choice to its next value, right there; the row shows the new value and the footer says what happened. **Space** does the same while nothing is typed (once you type, Space is a space).
 - **← / →** on a choice or a slider: the previous or next value.
@@ -38,7 +40,7 @@ You shouldn't need Windows' Settings app. Type a few letters in the system menu 
 - A setting that applies to the whole PC (developer mode, long paths, hibernation, WSL, Hyper-V, Windows Sandbox) needs admin. Choosing one doesn't ask: it waits, and a row at the top says **Apply 2 admin changes**. Choosing that lists exactly what will change, then Windows asks for an administrator once, for all of them. Say no and nothing changes; they stay waiting until you choose.
 - A row says when a change takes effect if it isn't at once: after a restart, after you sign out, or once Explorer restarts (a **Restart Explorer to apply** row does that: the taskbar blinks once).
 
-**Setup › Windows settings** lists them by area, for browsing: Look, File Explorer and taskbar, Privacy, Mouse and keyboard, System, Display, Connections, Sound, Developer. There's an **Undo** row there too, **Admin changes waiting**, and **Save my settings for a new PC**.
+The **Settings** filter with nothing typed, and **Setup › Windows settings** in Browse, list them by area: Look, File Explorer and taskbar, Privacy, Mouse and keyboard, System, Display, Connections, Sound, Developer. There's an **Undo** row there too, **Admin changes waiting**, and **Save my settings for a new PC**.
 
 Every change is also a command (`omawin setting set explorer.hidden on`, `omawin setting toggle look.dark-apps`, `omawin setting undo`; `omawin setting list` shows each id with its value), so a key, a script or an agent can change one and read it back.
 

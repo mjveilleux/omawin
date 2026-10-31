@@ -13,8 +13,8 @@ Run it from **Windows PowerShell**; the desktop starts as it ends, no sign-out. 
 ## What you get
 
 - **Tiling**: [GlazeWM](https://github.com/glzr-io/glazewm) (our [fork](https://github.com/mjveilleux/glazewm), which starts the moment you sign in). Win+1..9 workspaces, Alt+H J K L focus.
-- **Launcher** (`Win+Space`): your items and every app, projects, clipboard, servers on localhost, the key cheat sheet. A native app that's always running, so it opens instantly.
-- **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
+- **One Search** (`Win+Space`): one bar for apps, Windows settings (switched in place), omawin's commands, files, open windows, projects, clipboard and themes, each result tagged, filters by tag, a bento home. A native app that's always running, so it opens instantly.
+- **System menu**: themes, install or remove apps and presets, update, settings, power, as One Search's Browse view (`Win+Alt+Space`, its old key, is retired).
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
 - **File finder** (`Win+F`), **clipboard history** (`Win+Shift+V`), **audio** (`Win+A`).
 - **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, network, battery. The Windows taskbar hides.
@@ -68,8 +68,8 @@ There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) list
 
 | Keys | Does |
 |---|---|
-| `Win+Space` | launcher |
-| `Win+Alt+Space` | system menu |
+| `Win+Space` | One Search: everything (Tab: filters; Browse: the system menu) |
+| `Win+Alt+Space` | retired: opens One Search, for this release |
 | `Win+Enter` / `Alt+Enter` | terminal in the focused window's folder / in ~ |
 | `Win+F` · `Win+Shift+V` · `Win+A` | files · clipboard history · audio |
 | `Win+Shift+S` · `Win+Shift+T` | screenshot · text from the screen |
