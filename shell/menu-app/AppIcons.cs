@@ -30,7 +30,7 @@ public static unsafe class AppIcons
     // an app's icon rather than a thumbnail of it.
     const int BiggerSizeOk = 0x1, IconOnly = 0x4;
     // Icons are small and few, but files ("path:") have no end, so the cache is bounded: when
-    // it's full the oldest half goes. Previews ("big:", 256 px) aren't cached at all.
+    // it's full the oldest half goes. Previews ("big:", at the pane's pixels) aren't cached at all.
     const int MaxCached = 2000;
     // An icon, with its size in pixels (it's drawn at Pixels / scale units: one image pixel on one
     // screen pixel).
@@ -51,9 +51,13 @@ public static unsafe class AppIcons
         Request($"{pixels}|{id}", id, pixels, icon => done(icon.Image, icon.Pixels / Math.Max(scale, 0.5)));
     }
 
-    // A file's preview ("big:C:\..."), 256 pixels, not cached: the preview pane fits it itself.
-    public static void GetPreview(string path, Action<ImageSource> done) =>
-        Request("big:" + path, "big:" + path, 256, icon => done(icon.Image));
+    // A file's preview ("big:C:\..."), not cached: a thumbnail (or its icon) for the preview pane,
+    // at the pixels its `units` cover at this scale (the pane fits it in, never stretched up).
+    public static void GetPreview(string path, double units, double scale, Action<ImageSource> done)
+    {
+        int pixels = IconScale.Pixels(units, scale);
+        Request($"big:{pixels}|{path}", "big:" + path, pixels, icon => done(icon.Image));
+    }
 
     static void Request(string key, string id, int pixels, Action<Icon> done)
     {
@@ -107,6 +111,42 @@ public static unsafe class AppIcons
                 if (waiting.Remove(key, out var callbacks) && icon != null) foreach (var c in callbacks) c(icon);
             });
         }
+    }
+
+    // `SystemMenu --icon-selftest` (roadmap 1.8): for the first apps in the Apps folder, at 100%,
+    // 150% and 200% scale, a launcher row's icon (26 units) and a tile's (46): the pixels it's drawn
+    // at, the size asked of Windows, what came back, and what's drawn. An icon that came back
+    // smaller than wanted is drawn at its own size (never stretched): counted, so a regression to
+    // scaling up shows. Runs on an STA thread of its own, as the icon worker does.
+    public static string SelfTest()
+    {
+        var report = new System.Text.StringBuilder();
+        var t = new Thread(() =>
+        {
+            report.AppendLine("omawin icons: self test (read only)");
+            int ok = 0, smaller = 0, failed = 0;
+            foreach (var (name, id) in AppsFolder.Items().Take(25))
+                foreach (var scale in new[] { 1.0, 1.5, 2.0 })
+                    foreach (var units in new[] { 26.0, 46.0 })
+                    {
+                        int want = IconScale.Pixels(units, scale), ask = IconScale.Request(want);
+                        try
+                        {
+                            var (raw, w, h) = Pixels(@"shell:AppsFolder\" + id, ask, BiggerSizeOk | IconOnly);
+                            var (_, dw, dh) = IconScale.Fit(raw, w, h, want);
+                            bool small = Math.Max(w, h) < want;
+                            if (small) smaller++; else ok++;
+                            report.AppendLine($"  {(small ? "small" : "ok   ")} {name,-32} {units,3} units at {scale * 100,3}%: want {want,3}, asked {ask,3}, got {w}x{h}, drawn {dw}x{dh}");
+                        }
+                        catch (Exception ex) { failed++; report.AppendLine($"  FAIL  {name,-32} {ex.Message}"); }
+                    }
+            report.AppendLine();
+            report.AppendLine($"{ok} at or above the drawn size (shrunk to it), {smaller} smaller (drawn at their own size, not stretched), {failed} failed");
+        });
+        t.SetApartmentState(ApartmentState.STA);
+        t.Start();
+        t.Join();
+        return report.ToString();
     }
 
     // Top-down BGRA, premultiplied: what WriteableBitmap wants.

@@ -43,6 +43,15 @@ public static class QuickSettingsSelfTest
         catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
     }
 
+    // `SystemMenu.exe --icon-selftest`: the icons' sizes (AppIcons.SelfTest), printed the same way.
+    public static int RunIcons()
+    {
+        if (!AttachConsole(-1)) AllocConsole();
+        var output = new StreamWriter(Console.OpenStandardOutput(), Encoding.UTF8) { AutoFlush = true };
+        try { output.Write(AppIcons.SelfTest()); return 0; }
+        catch (Exception ex) { output.WriteLine($"self test failed: {ex}"); return 1; }
+    }
+
     static void Report(TextWriter w)
     {
         w.WriteLine("omawin quick settings — self test (read only)");

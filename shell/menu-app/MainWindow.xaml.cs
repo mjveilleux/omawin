@@ -795,7 +795,7 @@ public sealed partial class MainWindow : Window
             catch (Exception ex) { App.Log(ex); }
         }
         else if (!hit.IsDir)
-            AppIcons.GetPreview(hit.Path, image =>
+            AppIcons.GetPreview(hit.Path, 140, IconScaleNow, image =>
             {
                 if (token != previewToken) return;
                 PreviewArt.Child = new Image { Source = image, Stretch = Stretch.Uniform, MaxHeight = 140, Margin = new Thickness(6) };
