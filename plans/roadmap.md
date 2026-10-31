@@ -94,6 +94,8 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 **Risks:** GlazeWM ignores simulated keys (AGENTS.md), so the driver calls `omawin.exe launcher` directly and measures from there, plus one hand-pressed run for the keyboard hook's share.
 
+**Built 2026-10-31 (not yet run on a PC, 🖥):** the marks: `omawin send` / `omawin signalled` (`bin/omawin.cs`'s `Send`), `menu request` (the signal thread), `menu handle <what>` (`HandleRequest`), `menu shown` and `menu painted` (the next `CompositionTarget.Rendering` after `appWindow.Show()`), and for typing `menu typed` / `menu rendered` / `menu list-painted`; `SystemMenu --hide` hides it at once between runs. `omawin profile menu` (`bin/profile-menu.ps1`) runs each surface's key the way GlazeWM does (`shell-exec … omawin.exe <surface>`, or `emit omawin <surface>` once the rendered config uses 1.2's emit), 10 runs each, and prints a timeline per surface and a key → first frame summary; `-Typing` types "visual studio code" into the launcher and prints a row per prefix (woke, text changed, list rebuilt, on screen, worst) against the 16 ms budget; `-Hand` waits for you to press the keys (those runs start at the first mark after the prompt). The arithmetic (runs split at each key, steps matched by whole words, the lower median, the tables) is `src/cli/Profile/MenuProfile.cs`, tested in `cli.Tests` (`MenuProfileTests`) and compiled by the script with `Add-Type` until the C# `omawin` ships (2.11). Left for the PC: run it at 100% and 150% and write the baseline here.
+
 ### 1.2 Keys straight to the shell (M, 🖥; fork + menu app)
 
 **Why:** each menu key now starts a process (`shell-exec --hide-window omawin.exe launcher`, `config/glazewm/config.yaml:300`), writes `%LOCALAPPDATA%\launcher\system-menu-request` and sets `Local\dotfiles-system-menu-signal`. Omarchy's Super+Space starts nothing: the shell registered a global shortcut. We can do the same, because the menu app already holds a websocket to GlazeWM (`Bar/GlazeWm.cs:29-58`, `Tiling.cs:28-45`).
@@ -121,6 +123,8 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 
 **Done when:** every release's `SystemMenu-*.zip` has `build-kind.txt` = `native`, checked by CI.
 
+**Built 2026-10-31 (first proof is the next Release run):** `build.ps1 -Aot` now means the native build or a failure: it throws when vswhere finds no C++ tools for the architecture being built (`VC.Tools.x86.x64`, or `VC.Tools.ARM64` for `-Arch arm64`) instead of quietly building the JIT one, and refuses `-Aot -Jit` together. `release.yml`'s menu job passes `-Aot` and then fails unless `build-kind.txt` says `native` and no `coreclr.dll` sits beside the exe; `build/release.ps1` refuses to pack a menu app that isn't native unless `-AllowJit` (which `build/test-release.ps1` passes, since a PC may lack the C++ tools).
+
 ### 1.4 Motion from one place (M, 🖥)
 
 **Why:** Omarchy's motion rules make it feel calm and quick: entrances within 250 ms, exits about ⅔ of that, ease-out-quint (`cubic-bezier(0.23, 1, 0.32, 1)`), never linear or ease-in (`agents/skills/motion.md`, `default/hypr/looknfeel.lua:69-93`). Ours are scattered: the menu's 140 ms fade and 180 ms rise (`MainWindow.xaml.cs:291-305`), staggered rows (`:350-376`), the bar's 280 ms widget fade (`Bar/Bar.cs:317-345`), the drawer's 200 ms (`Bar/Widgets.cs:310-315`), and no exit animation (`HideMenu` is `appWindow.Hide()`, `:249`).
@@ -132,6 +136,8 @@ Every key answers in one frame, and everything moves the way Omarchy moves.
 - `omawin toggle animations` (`bin/commands.txt`): writes the file the shell watches and sets GlazeWM's `animations.enabled` (1.5). Off by default in a VM (`Win32_ComputerSystem.Model`), as Omarchy's `vm-no-animations.sh` does.
 
 **Done when:** every surface uses `Motion.cs`; the menu fades out; animations off makes every duration 0.
+
+**Built 2026-10-31 (the menu app's side; not yet seen on screen, 🖥):** `shell/menu-app/MotionTokens.cs` (pure, tested in `menu-app.Tests`: the rules hold, the setting parses, VMs are recognised) and `Motion.cs` (the helpers, on the compositor). Everything that moved now takes its numbers from there: the menu's arrival, the cascade (18 ms apart, the first screenful only), slides, the scroll glide, row and tile transitions, the hairline's light, the bar's widgets (moved from XAML storyboards to Composition), the tray drawer and the listening light; the only animation numbers left elsewhere are timeouts. **The exit:** the menu fades and sinks out in 130 ms; Esc hands focus back first, so your next key goes to that window; a menu key during the fade cuts it short and shows afresh; keys during it do nothing (no double Enter); anything that captures the screen (`capture …`, `--snip`) hides it at once. **`omawin toggle animations [on|off|status]`** (a row in Style, which says On while on) is handled by the menu app (`app --toggle animations`, no PowerShell): it writes `%LOCALAPPDATA%\launcher\animations`, which the menu app watches together with Windows' own Animation effects switch; off, every animation jumps to its end. The first start with no setting writes the default: `off` in a virtual machine (`Win32_ComputerSystem`'s maker and model, as Omarchy's `vm-no-animations.sh`), `on` elsewhere. **GlazeWM's part** is 1.5's: every change (and an `off` default) runs `themes/render.ps1 -Reload`, so once the template fills `animations.enabled` from that file, GlazeWM follows with nothing more here. The menu app's sources compile against the Windows App SDK (checked off Windows with stand-ins for the XAML fields); left for the PC: see it, and Esc then Win+Space during the fade.
 
 ### 1.5 Ship window animations (L, 🖥; fork)
 
@@ -160,6 +166,8 @@ The bar is the menu app's own ([native-bar.md](../docs/native-bar.md)); what's l
 ### 1.7 Typing never waits (S, 🖥)
 
 The launcher builds up to 150 rows on each keystroke (`MainWindow.xaml.cs` ~:574). Virtualize the list (an `ItemsRepeater` with recycling) so only visible rows are built, and keep icon loading off the UI thread. Measured by 1.1's typing timeline: under 16 ms per key.
+
+**Built 2026-10-31 (not yet measured, 🖥):** the existing row pool is windowed instead of an `ItemsRepeater` (which would have replaced the Composition scrolling): every match is still a row (the 150 cap is gone), but only the rows in view and six either side are bound to pooled views, and the list's padding stands for the rest at the rows' own pitch, so each row keeps its place and the glide, the cascade and the lift work as before. A scroll binds every row it will pass before it moves; further than three screens it jumps. The arithmetic is `shell/menu-app/RowWindow.cs` (tested in `menu-app.Tests`), the binding `MainWindow.Virtual.cs`. Icons were already decoded on `AppIcons`' worker thread (only the bitmap is made on the UI thread, as it must be); now a key asks for ~26 of them instead of 150. Left for the PC: `omawin profile menu -Typing` under 16 ms per prefix at 150%, and a held ↓ through the whole list never showing an empty row.
 
 ### 1.8 Crisp icons everywhere (M, 🖥)
 
