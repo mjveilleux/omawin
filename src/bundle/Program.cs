@@ -25,36 +25,17 @@ try
     // Several at once: each is a download and an unzip, mostly waiting on the network.
     await Parallel.ForEachAsync(Enumerable.Range(0, tools.Count), new ParallelOptions { MaxDegreeOfParallelism = 6 }, async (i, ct) =>
     {
-        var t = tools[i];
-        var (url, version, name) = await Resolve(t, ct);
-        var dir = Path.Combine(work, t.Name);
-        Directory.CreateDirectory(dir);
-        var download = Path.Combine(dir, name);
-        using (var res = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
+        // Up to three tries, 5 then 15 seconds apart: a server's passing 500 or a dropped
+        // connection shouldn't fail the release (it did, once, on a GitHub 500).
+        for (int attempt = 1; ; attempt++)
         {
-            res.EnsureSuccessStatusCode();
-            await using var f = File.Create(download);
-            await res.Content.CopyToAsync(f, ct);
+            try { await Build(i, ct); return; }
+            catch (Exception ex) when (attempt < 3 && ex is HttpRequestException or IOException or TaskCanceledException && !ct.IsCancellationRequested)
+            {
+                Console.WriteLine($"  {tools[i].Name}: {ex.Message} (try {attempt} of 3; again in {(attempt == 1 ? 5 : 15)} s)");
+                await Task.Delay(TimeSpan.FromSeconds(attempt == 1 ? 5 : 15), ct);
+            }
         }
-        var zip = Path.Combine(outDir, Tools.FileName(t.Name, t.Sfx));
-        File.Delete(zip);
-        if (t.Sfx)
-        {
-            // A self-extractor goes out as it is: its LZMA is far smaller than a zip of what's
-            // inside (Git for Windows: ~60 MB against ~160), and the PC runs it to unpack.
-            File.Copy(download, zip);
-        }
-        else
-        {
-            var stage = Path.Combine(dir, "stage");
-            Directory.CreateDirectory(stage);
-            Unpack(t, download, stage);
-            ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
-        }
-        await using var z = File.OpenRead(zip);
-        var sha = Convert.ToHexStringLower(await SHA256.HashDataAsync(z, ct));
-        built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later, t.Sfx);
-        Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}");
     });
 }
 finally { Directory.Delete(work, recursive: true); }
@@ -63,6 +44,41 @@ var manifest = Path.Combine(outDir, Tools.Manifest);
 File.WriteAllLines(manifest, built.Select(b => b!.Line));
 Console.WriteLine($"  {Path.GetFileName(manifest)}: {tools.Count} tools, {built.Sum(b => new FileInfo(Path.Combine(outDir, b!.File)).Length) / 1048576.0:0} MB");
 return 0;
+
+// One tool: found, downloaded, repacked into the output folder, its manifest row noted.
+async Task Build(int i, CancellationToken ct)
+{
+    var t = tools[i];
+    var (url, version, name) = await Resolve(t, ct);
+    var dir = Path.Combine(work, t.Name);
+    Directory.CreateDirectory(dir);
+    var download = Path.Combine(dir, name);
+    using (var res = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct))
+    {
+        res.EnsureSuccessStatusCode();
+        await using var f = File.Create(download);
+        await res.Content.CopyToAsync(f, ct);
+    }
+    var zip = Path.Combine(outDir, Tools.FileName(t.Name, t.Sfx));
+    File.Delete(zip);
+    if (t.Sfx)
+    {
+        // A self-extractor goes out as it is: its LZMA is far smaller than a zip of what's
+        // inside (Git for Windows: ~60 MB against ~160), and the PC runs it to unpack.
+        File.Copy(download, zip);
+    }
+    else
+    {
+        var stage = Path.Combine(dir, "stage");
+        Directory.CreateDirectory(stage);
+        Unpack(t, download, stage);
+        ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
+    }
+    await using var z = File.OpenRead(zip);
+    var sha = Convert.ToHexStringLower(await SHA256.HashDataAsync(z, ct));
+    built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later, t.Sfx);
+    Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}");
+}
 
 // Where a tool's build is: (url, version, file name).
 async Task<(string, string, string)> Resolve(Tool t, CancellationToken ct)
