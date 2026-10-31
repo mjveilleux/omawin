@@ -67,6 +67,7 @@
     <Compile Include="..\..\shell\menu-app\Community.cs" Link="Linked\Community.cs" />
     <Compile Include="..\..\shell\menu-app\Emit.cs" Link="Linked\Emit.cs" />
     <Compile Include="..\..\shell\menu-app\MicMute.cs" Link="Linked\MicMute.cs" />
+    <Compile Include="..\..\shell\menu-app\KeyRules.cs" Link="Linked\KeyRules.cs" />
   </ItemGroup>
 
   <ItemGroup>

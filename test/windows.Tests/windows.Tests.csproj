@@ -26,6 +26,7 @@
     <Compile Include="../../src/windows/Updates/UpdatePlan.cs" Link="windows/UpdatePlan.cs" />
     <Compile Include="../../src/windows/Net/ProxySettings.cs" Link="windows/ProxySettings.cs" />
     <Compile Include="../../src/windows/Disk/DevCaches.cs" Link="windows/DevCaches.cs" />
+    <Compile Include="../../src/windows/Keys/ScancodeMap.cs" Link="windows/ScancodeMap.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

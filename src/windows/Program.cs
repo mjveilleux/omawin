@@ -22,6 +22,7 @@ namespace Omawin.Windows;
 //   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
 //   proxy [set|on|off|script]  this account's system proxy (8.19)
 //   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
+//   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
 //   --version
 public static partial class Program
 {
@@ -51,6 +52,7 @@ public static partial class Program
                 "updates" => UpdatesCommand.Run(rest),
                 "proxy" => ProxyCommand.Run(rest),
                 "disk" => DiskCommand.Run(rest),
+                "keyboard" => KeyboardCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -77,6 +79,7 @@ public static partial class Program
               omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
               omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
               omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
+              omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
             """);
         return 0;
     }

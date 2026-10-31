@@ -202,6 +202,8 @@ public partial class App : Application
             Background.Start(); // clipboard history, installed apps, reports (Background.cs)
             WinSettings.Start(); // the settings history trimmed, Windows' settings index read if it changed (Settings/)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
+            // The keyboard hook, only while Caps Lock's remap, the Copilot key or snippets are on (KeyHook.cs).
+            try { KeyHook.Start(() => ui.TryEnqueue(() => HandleRequest(["--launcher"]))); } catch (Exception ex) { Log(ex); }
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
             Program.Trace("ready");

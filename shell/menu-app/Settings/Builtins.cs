@@ -33,6 +33,9 @@ public sealed class BuiltinHandler : ISettingHandler
         ["audio-input"] = new AudioDefault(input: true),
         ["restart-explorer"] = new RestartExplorer(),
         ["classic-menu"] = new ClassicMenu(),
+        // The shell's keyboard hook (KeyHook.cs): values it reads from launcher\keys\.
+        ["caps-lock"] = new HookValue("caps-lock", "caps", CapsLockRemap.Modes),
+        ["copilot-key"] = new HookValue("copilot-key", "windows", ["windows", "launcher"]),
         // Admin ones: read here without admin; written only by bin/settings-admin.ps1, in the one
         // prompt (the store queues them, so their Write is never reached).
         ["hibernate"] = new ReadOnly(_ => RegInt(@"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled") switch
@@ -358,6 +361,20 @@ public sealed class BuiltinHandler : ISettingHandler
             using (var clsid = hkcu.OpenSubKey(Clsid))
                 if (clsid == null || clsid.SubKeyCount > 0 || clsid.ValueCount > 0) return null;
             hkcu.DeleteSubKey(Clsid, throwOnMissingSubKey: false);
+            return null;
+        }
+    }
+
+    // A choice the keyboard hook reads (KeyHook.Read): one word in a file of omawin's own, so
+    // nothing of Windows' changes and the hook follows at once (it watches the folder).
+    sealed class HookValue(string name, string otherwise, string[] allowed) : IBuiltin
+    {
+        public bool Fast => true;
+        public string? Read(SettingEntry e) => KeyHook.Read(name, otherwise) is var v && allowed.Contains(v) ? v : otherwise;
+        public string? Write(SettingEntry e, string value)
+        {
+            if (!allowed.Contains(value)) return $"not one of: {string.Join(", ", allowed)}";
+            KeyHook.Write(name, value);
             return null;
         }
     }

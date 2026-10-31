@@ -12,7 +12,8 @@
 #   powercfg <name> <ac|dc|both>   the active power plan (Switches.cs): screen-off sleep hibernate-after
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
-#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu, and the
+#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu
+#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs), and the
 #                     admin ones hibernate sudo windows-feature <feature>
 #   link <uri or program>   opens a page; omawin <command>   one of omawin's commands
 # notes: admin (one prompt for all of them, roadmap 2.9), signout, restart, minBuild=, maxBuild=, check.
@@ -174,6 +175,11 @@ developer.utf8 | - | Use UTF-8 for programs that aren't Unicode (beta) | utf8 co
 developer.firewall-dev | - | Dev servers may listen on private networks | firewall node bun python dotnet go prompt allow | action | builtin firewall-dev | admin check
 developer.ssh-agent | - | SSH agent starts with Windows | ssh agent openssh keys | switch | builtin ssh-agent | admin check
 developer.case-sensitive | - | Make a folder case-sensitive (for Linux tools) | case sensitive folder fsutil wsl | action | builtin case-sensitive | check
+
+# 8.12 / 8.23 the shell's keyboard hook: live, no restart, no admin (Windows' own Scancode Map for the
+# sign-in screen is omawin keyboard signin)
+input.caps-lock | - | Caps Lock key | caps lock escape control remap vim hyper | choice | builtin caps-lock values="caps:Caps Lock,escape:Escape,control:Control,escape-control:Escape tapped / Control held" default=caps |
+input.copilot-key | - | The Copilot key opens | copilot key launcher remap | choice | builtin copilot-key values="windows:Copilot,launcher:omawin's launcher" default=windows |
 
 # 8.18 Windows Update: active hours (the pause and the restart are omawin updates: a time, not a value)
 system.update-active-auto | - | Windows Update picks active hours by itself | update active hours restart automatic | switch | reg HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\SmartActiveHoursState dword on=1 off=0 | admin check

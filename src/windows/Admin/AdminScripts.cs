@@ -123,6 +123,26 @@ public static partial class AdminScripts
         return Wrap(status, body.ToString());
     }
 
+    // Windows' own key remap (8.12), read at the next start. A map that was there before omawin's
+    // first is kept beside it ("Scancode Map (before omawin)"), and off puts that one back.
+    public const string ScancodeBackup = "Scancode Map (before omawin)";
+
+    public static string ScancodeMapWrite(byte[]? map, string status)
+    {
+        if (map != null && ScancodeMap.Read(map) == null) throw new ArgumentException("not a Scancode Map", nameof(map));
+        var body = new StringBuilder($"$k = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey({Quote(ScancodeMap.Key)})\ntry {{\n")
+            .Append($"$old = $k.GetValue({Quote(ScancodeMap.Value)})\n")
+            .Append($"$kept = $k.GetValue({Quote(ScancodeBackup)})\n");
+        if (map != null)
+            body.Append($"if ($old -ne $null -and $kept -eq $null) {{ $k.SetValue({Quote(ScancodeBackup)}, [byte[]]$old, [Microsoft.Win32.RegistryValueKind]::Binary) }}\n")
+                .Append($"$k.SetValue({Quote(ScancodeMap.Value)}, [byte[]]@({string.Join(",", map.Select(x => $"0x{x:X2}"))}), [Microsoft.Win32.RegistryValueKind]::Binary)\n");
+        else
+            body.Append($"if ($kept -ne $null) {{ $k.SetValue({Quote(ScancodeMap.Value)}, [byte[]]$kept, [Microsoft.Win32.RegistryValueKind]::Binary); $k.DeleteValue({Quote(ScancodeBackup)}, $false) }}\n")
+                .Append($"else {{ $k.DeleteValue({Quote(ScancodeMap.Value)}, $false) }}\n");
+        body.Append("} finally { $k.Close() }");
+        return Wrap(status, body.ToString());
+    }
+
     // Windows Update's pause (8.18): the values Settings writes, each a UTC time checked here; or,
     // with none given, the pause removed (resume). The service reads them at its next check, and
     // Settings shows "Resume updates" as for its own pause.

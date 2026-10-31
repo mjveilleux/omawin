@@ -32,3 +32,22 @@ Workspaces are plain numbers you use per project; chat apps (Teams, Slack, Disco
 New windows go where Omarchy puts them: each takes half of the focused window, turning 90 degrees each time. Four terminals in a row give A on the left, B top right, and C beside D below B.
 
 The keys live in `config/glazewm/config.yaml`. Each one runs an omawin command (see [The omawin command](02-omawin-command.md)). If you change a key, update `default/launcher/keys.txt` too.
+
+## Caps Lock, the Copilot key and snippets
+
+`omawin keyboard` (**System menu › This PC › Keyboard**) says what your keys do differently, all off until you choose:
+
+- **Caps Lock** (search *Caps Lock key* in the launcher, or `omawin setting set input.caps-lock escape`): Escape, Control, or *Escape tapped / Control held* (tap it alone for Escape; hold it with another key and it's Control). Live, no restart, no admin. omawin sends the new key, so GlazeWM's own bindings don't see it as Control; for that, and for the sign-in screen and windows running as admin, use Windows' own remap: `omawin keyboard signin caps-escape` (or `caps-control`, `swap-caps-control`, `caps-off`), which needs admin once and a restart; `omawin keyboard signin off` puts back whatever was there before.
+- **The Copilot key** (*The Copilot key opens*, `omawin setting set input.copilot-key launcher`): opens the launcher instead of Copilot. A plain F23 from a macro keyboard is left alone.
+- **Text snippets**: lines in `~/omawin-account/snippets.txt` (and the shared folder's `snippets.txt`, for every account): a trigger, ` | `, then the text. Type the trigger anywhere and it's replaced:
+
+  ```
+  ;sig | Best,\nYour Name
+  ;date | {date}
+  ;ts | {date} {time}
+  ;cb | > {clipboard}
+  ```
+
+  `\n` is a new line, `\t` a tab; `{date}`, `{time}` and `{clipboard}` (the newest copied text) are filled in. A trigger needs two characters at least; one that starts with a character you never type otherwise (`;`) never fires by accident. The file is read again when you save it. `omawin keyboard` lists them and warns about a trigger that can never fire because a shorter one fires first (`;d` before `;date`). Snippets can't type into a window running as admin (Windows doesn't let a normal program).
+
+Nothing listens to your keys unless one of these is on; with all three off, omawin has no keyboard hook at all.
