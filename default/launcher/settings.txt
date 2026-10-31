@@ -14,7 +14,7 @@
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
 #                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu
-#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs), keyboard-lights,
+#                     caps-lock copilot-key quick-look (the keyboard hook's, KeyHook.cs), keyboard-lights,
 #                     disabled-hotkeys startup-item <app> layout-hotkey folder-type-general case-sensitive,
 #                     and the admin ones (read here, set in the one prompt by bin/settings-admin.ps1)
 #                     hibernate sudo windows-feature <feature> service <name> on=<mode> off=<mode>
@@ -55,6 +55,7 @@ explorer.checkboxes | - | Item check boxes | checkbox select | switch | reg HKCU
 explorer.empty-drives | - | Empty drives | drives card reader removable | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\HideDrivesWithNoMedia dword on=0 off=1 default=1 refresh-explorer |
 explorer.sync-ads | - | Sync provider notifications (ads in File Explorer) | ads onedrive notifications sync | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowSyncProviderNotifications dword on=1 off=0 default=1 refresh-explorer |
 explorer.classic-menu | - | The full right-click menu (no "Show more options") | context menu right click classic show more options windows 10 | switch | builtin classic-menu restart-explorer | minBuild=22000 check
+explorer.quick-look | - | Quick Look: Space previews the selected file | space preview peek quick look mac finder | switch | builtin quick-look |
 
 # --- privacy ----------------------------------------------------------------------------------
 privacy.camera | - | Camera for apps | webcam camera permission | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\Value sz on=Allow off=Deny |

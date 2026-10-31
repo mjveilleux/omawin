@@ -39,6 +39,7 @@ public sealed class BuiltinHandler : ISettingHandler
         // The shell's keyboard hook (KeyHook.cs): values it reads from launcher\keys\.
         ["caps-lock"] = new HookValue("caps-lock", "caps", CapsLockRemap.Modes),
         ["copilot-key"] = new HookValue("copilot-key", "windows", ["windows", "launcher"]),
+        ["quick-look"] = new HookValue("quick-look", "on", ["on", "off"]),
         // RGB keyboards and mice in the theme's accent (KeyboardLights.cs, roadmap 8.9).
         ["keyboard-lights"] = new KeyboardLightsSwitch(),
         // Phase 8 (roadmap 8G-8J; their rules are BuiltinRules.cs, tested).

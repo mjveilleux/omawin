@@ -43,6 +43,8 @@ static class KeyboardCommand
         } + "  (omawin setting set input.caps-lock escape | control | escape-control | caps)");
         Console.WriteLine("Copilot key: " + (Value("copilot-key", "windows") == "launcher" ? "opens the launcher" : "Copilot") +
             "  (omawin setting set input.copilot-key launcher | windows)");
+        Console.WriteLine("Space in File Explorer: " + (Value("quick-look", "on") == "off" ? "Explorer's" : "Quick Look on the selected file") +
+            "  (omawin setting set explorer.quick-look on | off)");
 
         string[] files = [Path.Combine(Shared, "snippets.txt"), Path.Combine(Account, "snippets.txt")];
         var snippets = Snippets.Parse(files.Where(File.Exists).Select(File.ReadAllLines));

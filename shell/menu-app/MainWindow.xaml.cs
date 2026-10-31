@@ -62,8 +62,9 @@ public sealed partial class MainWindow : Window
     const string ImagesOnly = "*images*";   // not a path either: pictures, in all the folders
 
     // What the Images chip finds (fff's *.ext constraints, any of them) and shows as pictures.
-    static readonly string[] ImageExtensions = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "ico", "tif", "tiff", "heic", "avif", "svg"];
-    static bool IsImage(string name) => ImageExtensions.Contains(Path.GetExtension(name).TrimStart('.').ToLowerInvariant());
+    // (FilePreview.cs: Quick Look in Explorer draws the same ones as pictures.)
+    static readonly string[] ImageExtensions = FilePreview.PictureExtensions;
+    static bool IsImage(string name) => FilePreview.IsPicture(name);
     List<FileSearch.Hit> findHits = [];
     int previewToken;              // drops a slow preview that's no longer the selected one
     IntPtr previous;               // the window that had focus before it opened (Dismiss returns there)
@@ -978,7 +979,7 @@ public sealed partial class MainWindow : Window
                 text = isDir
                     ? string.Join("\n", Directory.EnumerateFileSystemEntries(path).Take(18)
                         .Select(e => Directory.Exists(e) ? Path.GetFileName(e) + "\\" : Path.GetFileName(e)))
-                    : string.Join("\n", File.ReadLines(path).Take(22).Select(l => l.Replace("\t", "    ") is var s && s.Length > 90 ? s[..90] + "…" : s));
+                    : string.Join("\n", FilePreview.Lines(File.ReadLines(path), 22, 90));
             }
             catch { text = ""; }
             DispatcherQueue.TryEnqueue(() =>

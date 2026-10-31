@@ -1,5 +1,6 @@
 // What the shell's one keyboard hook (KeyHook.cs) does with a key, decided without Win32 so it can
-// be tested: Caps Lock remapped (roadmap 8.12), text snippets (8.13) and the Copilot key (8.23).
+// be tested: Caps Lock remapped (roadmap 8.12), text snippets (8.13), the Copilot key (8.23) and
+// Space for Quick Look in Explorer (8.4).
 // Each answers "swallow this key?" and lists the keys to send instead; KeyHook sends them, tagged
 // as omawin's so the hook lets them through.
 
@@ -174,4 +175,55 @@ public sealed class SnippetTyping
 
     // Keys that move the caret or leave the field: what was typed before them no longer counts.
     public static bool Breaks(uint vk) => vk is 0x0D or 0x09 or 0x1B or (>= 0x21 and <= 0x28) or 0x2E;
+}
+
+// Where the keyboard's focus is when Space is pressed: the classes of the window in front, of
+// the control with the focus inside it, and of that control's parent.
+public readonly record struct KeyFocus(string Foreground, string Focus, string FocusParent);
+
+// Quick Look in Explorer (roadmap 8.4): Space on a file in Explorer's file list previews it.
+// Space is taken only when it's plainly meant for that: Explorer in front, the focus in its file
+// list (DirectUIHWND inside SHELLDLL_DefView; renaming, the address bar, the search box and the
+// folder tree are other controls), no modifier (Ctrl+Space selects), and not right after a
+// letter or digit (Explorer's type-to-find takes spaces in names: "my file"). Its key-up and
+// auto-repeats are swallowed with it, and it fires once. The focus is only asked for on a Space
+// that could be one, so other keys cost nothing.
+public sealed class QuickLookKey
+{
+    public const ushort VkSpace = 0x20;
+    public const uint TypeAheadMs = 1000;
+    public const string Explorer = "CabinetWClass", FileList = "DirectUIHWND", FileView = "SHELLDLL_DefView";
+
+    uint typedAt;
+    bool typed, held;
+
+    public bool On { get; set; }
+
+    public static bool InFileList(KeyFocus f) => f.Foreground == Explorer && f.Focus == FileList && f.FocusParent == FileView;
+
+    // What was typed in another window doesn't count (KeyHook calls it when the window in front changes).
+    public void Reset() { typed = held = false; }
+
+    public bool OnKey(uint vk, bool down, bool modified, uint time, Func<KeyFocus> focus, out bool fire)
+    {
+        fire = false;
+        if (!On) return false;
+        if (vk != VkSpace)
+        {
+            // Letters and digits start (or go on with) type-to-find.
+            if (down && vk is (>= 0x30 and <= 0x39) or (>= 0x41 and <= 0x5A) or (>= 0x60 and <= 0x69)) { typed = true; typedAt = time; }
+            return false;
+        }
+        if (!down)
+        {
+            bool mine = held;
+            held = false;
+            return mine;
+        }
+        if (held) return true; // auto-repeat of the Space that opened it
+        if (modified || typed && unchecked(time - typedAt) < TypeAheadMs) return false;
+        if (!InFileList(focus())) return false;
+        held = fire = true;
+        return true;
+    }
 }

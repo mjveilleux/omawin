@@ -50,4 +50,14 @@ The keys live in `config/glazewm/config.yaml`. Each one runs an omawin command (
 
   `\n` is a new line, `\t` a tab; `{date}`, `{time}` and `{clipboard}` (the newest copied text) are filled in. A trigger needs two characters at least; one that starts with a character you never type otherwise (`;`) never fires by accident. The file is read again when you save it. `omawin keyboard` lists them and warns about a trigger that can never fire because a shorter one fires first (`;d` before `;date`). Snippets can't type into a window running as admin (Windows doesn't let a normal program).
 
-Nothing listens to your keys unless one of these is on; with all three off, omawin has no keyboard hook at all.
+Nothing listens to your keys unless one of these is on, or Quick Look (below) while File Explorer is in front; with all of them off, omawin has no keyboard hook at all.
+
+## Quick Look in File Explorer
+
+Select a file in File Explorer and press **Space**: it opens in front, as on a Mac. Pictures, text and code are drawn by omawin, in your theme; a folder shows what's in it; Word, Excel, PowerPoint, PDFs and anything else your programs can preview in Explorer's own preview pane are drawn by that same preview (it runs in a process of its own, so a bad one can't take the bar down); anything else shows its thumbnail. The name, kind, size and date are on top.
+
+- **Space** again or **Esc** closes it, and File Explorer has your keys again. Clicking elsewhere closes it too.
+- **← / →** step through the other selected files.
+- **Enter** opens the file in its app.
+
+Space is only taken in Explorer's file list: renaming a file, the address bar, the search box and the folder tree get their Space as always, and so does Space while you're typing a name to jump to it (`my file`). With nothing selected, Space does what Explorer does. omawin listens only while File Explorer is the window in front. To turn it off: the setting **Quick Look: Space previews the selected file** (search *Quick Look*), or `omawin setting set explorer.quick-look off`.

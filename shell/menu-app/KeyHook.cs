@@ -1,11 +1,16 @@
 // The shell's one low-level keyboard hook (roadmap 8.0: on a key, so core; one hook, never two
-// fighting): Caps Lock remapped (8.12), text snippets (8.13) and the Copilot key (8.23). What each
-// does with a key is KeyRules.cs (pure, tested); this file is the Win32 around it.
+// fighting): Caps Lock remapped (8.12), text snippets (8.13), the Copilot key (8.23) and Space
+// for Quick Look in Explorer (8.4, QuickLook.cs). What each does with a key is KeyRules.cs (pure,
+// tested); this file is the Win32 around it.
 //
 // Installed only while one of them is on (input.caps-lock, input.copilot-key in the settings
 // catalog; a snippets.txt with lines), on a thread of its own with a message loop, as low-level
-// hooks need. Windows drops a hook that's too slow (LowLevelHooksTimeout), and keys wait on it, so
-// the callback only looks at the key: files are read when they change, never per key.
+// hooks need. Quick Look alone (explorer.quick-look, on by default) needs it only while Explorer
+// is in front: the thread then watches which window is in front (an event, no polling) and puts
+// the hook in when Explorer comes forward and takes it out when it goes, so every other app's
+// keys never pass through here. Windows drops a hook that's too slow (LowLevelHooksTimeout), and
+// keys wait on it, so the callback only looks at the key: files are read when they change, never
+// per key, and Explorer's selection is read on QuickLook's own thread.
 //
 // Keys omawin sends carry a tag in dwExtraInfo; the hook passes those through untouched. They are
 // injected keys, which GlazeWM ignores, so a remap never triggers a GlazeWM binding (why there's
@@ -51,11 +56,23 @@ public static unsafe partial class KeyHook
     [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool UnhookWinEvent(nint hook);
     [LibraryImport("kernel32.dll")] private static partial uint GetCurrentThreadId();
     [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial nint GetModuleHandleW(string? name);
+    [LibraryImport("user32.dll")] private static partial int GetClassNameW(nint hwnd, char* name, int size);
+    [LibraryImport("user32.dll")] private static partial nint GetParent(nint hwnd);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool GetGUIThreadInfo(uint thread, GUITHREADINFO* info);
+
+    [StructLayout(LayoutKind.Sequential)] struct RECT { public int Left, Top, Right, Bottom; }
+    // 72 bytes on 64-bit: the focus, caret and friends of one thread's windows.
+    [StructLayout(LayoutKind.Sequential)]
+    struct GUITHREADINFO { public uint cbSize, flags; public nint hwndActive, hwndFocus, hwndCapture, hwndMenuOwner, hwndMoveSize, hwndCaret; public RECT rcCaret; }
+
+    const uint WM_REHOOK = 0x8000 + 0x6B; // WM_APP + 'k': posted to the hook's thread
 
     static readonly CapsLockRemap caps = new();
     static readonly CopilotKey copilot = new();
     static readonly SnippetTyping typing = new();
+    static readonly QuickLookKey quickLook = new();
     static volatile Snippet[] snippets = [];
+    static volatile bool alwaysHooked;
     static readonly List<SentKey> pending = new(8);
     static nint hook;
     static uint thread;
@@ -95,7 +112,7 @@ public static unsafe partial class KeyHook
         catch (Exception ex) when (ex is IOException or ArgumentException) { App.Log(ex); }
     }
 
-    // A setting the hook reads ("caps-lock", "copilot-key"): one word in launcher\keys\<name>.
+    // A setting the hook reads ("caps-lock", "copilot-key", "quick-look"): one word in launcher\keys\<name>.
     public static string Read(string name, string otherwise)
     {
         try { return File.Exists(ValueFile(name)) ? File.ReadAllText(ValueFile(name)).Trim() : otherwise; }
@@ -119,9 +136,12 @@ public static unsafe partial class KeyHook
             try { snippets = [.. Snippets.Parse(SnippetFiles.Where(File.Exists).Select(File.ReadAllLines))]; }
             catch (IOException) { } // being saved: the next change event reads it
             typing.Reset();
-            bool needed = caps.Active || copilot.On || snippets.Length > 0;
+            quickLook.On = Read("quick-look", "on") == "on";
+            alwaysHooked = caps.Active || copilot.On || snippets.Length > 0;
+            bool needed = alwaysHooked || quickLook.On;
             if (needed && thread == 0) Install();
             else if (!needed && thread != 0) Remove();
+            else if (thread != 0) PostThreadMessageW(thread, WM_REHOOK, 0, 0); // the hook itself in or out
         }
     }
 
@@ -131,14 +151,15 @@ public static unsafe partial class KeyHook
         var t = new Thread(() =>
         {
             thread = GetCurrentThreadId();
-            hook = SetWindowsHookExW(WH_KEYBOARD_LL, (nint)(delegate* unmanaged<int, nint, nint, nint>)&Proc, GetModuleHandleW(null), 0);
-            // The window in front changing: what was typed before belongs to another window.
+            // The window in front changing: what was typed before belongs to another window, and
+            // Quick Look's hook goes in or out with Explorer.
             var foreground = SetWinEventHook(EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND, 0,
                 (nint)(delegate* unmanaged<nint, uint, nint, int, int, uint, uint, void>)&ForegroundChanged, 0, 0, WINEVENT_OUTOFCONTEXT);
-            if (hook == 0) App.Log(new Exception($"keyboard hook: SetWindowsHookEx failed ({Marshal.GetLastPInvokeError()})"));
+            Rehook();
             ready.Set();
             MSG msg;
-            while (GetMessageW(&msg, 0, 0, 0) > 0) { }
+            while (GetMessageW(&msg, 0, 0, 0) > 0)
+                if (msg.hwnd == 0 && msg.message == WM_REHOOK) Rehook();
             if (hook != 0) UnhookWindowsHookEx(hook);
             if (foreground != 0) UnhookWinEvent(foreground);
             hook = 0;
@@ -153,8 +174,58 @@ public static unsafe partial class KeyHook
         thread = 0;
     }
 
+    // On the hook's thread: the hook in while something needs every key (a remap, snippets, the
+    // Copilot key), or Quick Look's Space while Explorer is in front; out otherwise.
+    static void Rehook()
+    {
+        bool want = alwaysHooked || quickLook.On && ClassOf(GetForegroundWindow()) == QuickLookKey.Explorer;
+        if (want && hook == 0)
+        {
+            hook = SetWindowsHookExW(WH_KEYBOARD_LL, (nint)(delegate* unmanaged<int, nint, nint, nint>)&Proc, GetModuleHandleW(null), 0);
+            if (hook == 0) App.Log(new Exception($"keyboard hook: SetWindowsHookEx failed ({Marshal.GetLastPInvokeError()})"));
+        }
+        else if (!want && hook != 0)
+        {
+            UnhookWindowsHookEx(hook);
+            hook = 0;
+        }
+    }
+
     [UnmanagedCallersOnly]
-    static void ForegroundChanged(nint winEvent, uint ev, nint hwnd, int obj, int child, uint eventThread, uint time) => typing.Reset();
+    static void ForegroundChanged(nint winEvent, uint ev, nint hwnd, int obj, int child, uint eventThread, uint time)
+    {
+        typing.Reset();
+        quickLook.Reset();
+        try { Rehook(); }
+        catch (Exception ex) { App.Log(ex); }
+    }
+
+    static string ClassOf(nint hwnd)
+    {
+        if (hwnd == 0) return "";
+        var name = stackalloc char[64];
+        int n = GetClassNameW(hwnd, name, 64);
+        return n > 0 ? new string(name, 0, n) : "";
+    }
+
+    // Where the focus is in the window in front, for Quick Look's Space (asked only for a Space
+    // that could be one); Explorer's window and its file view are kept for QuickLook.Request.
+    static nint focusedExplorer, focusedView;
+    static KeyFocus Focus()
+    {
+        var front = GetForegroundWindow();
+        var gui = new GUITHREADINFO { cbSize = (uint)sizeof(GUITHREADINFO) };
+        uint owner = GetWindowThreadProcessId(front, 0);
+        if (owner == 0 || !GetGUIThreadInfo(owner, &gui)) return new(ClassOf(front), "", "");
+        var parent = GetParent(gui.hwndFocus);
+        focusedExplorer = front;
+        focusedView = parent;
+        return new(ClassOf(front), ClassOf(gui.hwndFocus), ClassOf(parent));
+    }
+
+    // A key pressed for you, tagged so the hook lets it through (Quick Look's Space when nothing
+    // was selected after all).
+    public static void Press(ushort vk) => Send([new(vk, true), new(vk, false)]);
 
     [UnmanagedCallersOnly]
     static nint Proc(int code, nint w, nint l)
@@ -181,6 +252,13 @@ public static unsafe partial class KeyHook
             if (fire && openLauncher is { } open) ThreadPool.QueueUserWorkItem(_ => open());
         }
         if (pending.Count > 0) Send(pending);
+        if (!swallow && (k->flags & LLKHF_INJECTED) == 0 && quickLook.On)
+        {
+            bool modified = GetAsyncKeyState(0x10) < 0 || GetAsyncKeyState(0x11) < 0 || GetAsyncKeyState(0x12) < 0
+                || GetAsyncKeyState(0x5B) < 0 || GetAsyncKeyState(0x5C) < 0;
+            swallow = quickLook.OnKey(k->vkCode, down, modified, k->time, Focus, out bool look);
+            if (look) QuickLook.Request(focusedExplorer, focusedView); // read on QuickLook's thread, never here
+        }
         if (!swallow && down && (k->flags & LLKHF_INJECTED) == 0 && snippets.Length > 0) swallow = Snippet(k);
         return swallow;
     }

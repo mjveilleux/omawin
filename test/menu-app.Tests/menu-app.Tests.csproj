@@ -76,6 +76,7 @@
     <Compile Include="..\..\shell\menu-app\ClipEntries.cs" Link="Linked\ClipEntries.cs" />
     <Compile Include="..\..\shell\menu-app\WindowPicture.cs" Link="Linked\WindowPicture.cs" />
     <Compile Include="..\..\shell\menu-app\LightColor.cs" Link="Linked\LightColor.cs" />
+    <Compile Include="..\..\shell\menu-app\FilePreview.cs" Link="Linked\FilePreview.cs" />
   </ItemGroup>
 
   <ItemGroup>

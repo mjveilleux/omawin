@@ -203,6 +203,7 @@ public partial class App : Application
             WinSettings.Start(); // the settings history trimmed, Windows' settings index read if it changed (Settings/)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
             // The keyboard hook, only while Caps Lock's remap, the Copilot key or snippets are on (KeyHook.cs).
+            QuickLook.Ui = ui; // Space in Explorer opens Quick Look on this thread (QuickLook.cs)
             try { KeyHook.Start(() => ui.TryEnqueue(() => HandleRequest(["--launcher"]))); } catch (Exception ex) { Log(ex); }
             DisplayWatch.Start(); // a saved monitor layout put back when its monitors are plugged in (DisplayWatch.cs)
             KeyboardLights.Start(); // RGB keyboards in the theme's accent, when there is one (KeyboardLights.cs)
