@@ -169,6 +169,7 @@ public static class Bar
             while (true)
             {
                 speaker = Audio.DefaultSpeaker();
+                Audio.ReadMicsMuted(); // the red mic while every microphone is muted (omawin mic)
                 ui?.TryEnqueue(Push);
                 Thread.Sleep(1000 - DateTime.Now.Millisecond); // on the second, so the minute turns on time
             }

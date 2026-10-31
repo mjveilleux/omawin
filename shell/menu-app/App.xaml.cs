@@ -26,6 +26,7 @@ namespace SystemMenu;
 //                              comparison with netsh / Get-PnpDevice / powercfg; handled before
 //                              the single-copy check, so it works while the menu app runs
 //   SystemMenu --about         About omawin and this PC, in its own window (AboutWindow.xaml.cs)
+//   SystemMenu --mic [toggle|mute|unmute|status]  every microphone at once (Microphones.cs)
 //   SystemMenu --page <name>   the launcher on one of its pages: projects, clipboard (Win+Shift+V),
 //                              localhost, reports, keys, packages, vpn <connection>
 //   SystemMenu --open <id>     show it on a submenu, e.g. --open install
@@ -248,6 +249,12 @@ public partial class App : Application
             var section = args[1];
             var rest = args[2..];
             Task.Run(() => QuickSettings.Command(section, rest)).ContinueWith(t => Snip.Say(t.Result));
+        }
+        // Every microphone muted or not (Microphones.cs), answered with the note; the bar's red mic follows.
+        else if (args.Length > 0 && args[0] == "--mic")
+        {
+            var action = args.Length > 1 ? args[1] : "toggle";
+            Task.Run(() => Audio.SetMics(action)).ContinueWith(t => { Snip.Say(t.Result); Bar.Refresh(); });
         }
         else if (args.Contains("--about")) (about ??= new AboutWindow()).ShowAbout();
         else if (args.Contains("--launcher")) window.ToggleLauncher();

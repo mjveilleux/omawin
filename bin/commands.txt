@@ -133,3 +133,4 @@ hosts | The hosts file as entries: omawin hosts lists it; add <address> <name>, 
 connections | Which apps are talking to the internet now, and to whom: omawin connections [app] | run omawin-windows connections
 wifi share | The Wi-Fi you're on as a QR code a phone joins from; a saved one: omawin wifi share <network>; --show prints the password | run omawin-windows wifi-qr
 clip | The clipboard's text changed in place: json, json-line, base64, unbase64, url, unurl, date, timestamp, trim, lower, upper, path (omawin clip lists them) | run omawin-windows clip
+mic | Every microphone at once: toggle (the default), mute, unmute, status; a red microphone in the bar while they're all muted (click it to unmute). No key until you choose one | app --mic
