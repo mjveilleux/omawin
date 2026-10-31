@@ -721,6 +721,7 @@ static class Omawin
             a.Add("-e");
             a.AddRange(l.Command);
         }
+        Trace("noctty-own-process"); // omawin profile terminal -Wsl: from here to noctty's first frame
         return Detach(exe, a);
     }
 

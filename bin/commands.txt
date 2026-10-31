@@ -73,7 +73,7 @@ update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 uninstall | All of omawin out of this account: shows everything first, lets you keep programs, asks once (--dry-run shows only; --yes asks nothing). No admin | run omawin-uninstall.exe
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
-profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
+profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4; -Wsl: a Linux window, warm or -Scenario cold) | pwsh bin/profile-terminal.ps1
 profile linux | Your Linux in WSL's cold start against a warm one, and what keeping it warm costs in memory (stops WSL: it asks first; -Runs 3, -Settle 60, -Yes) | builtin profile-linux
 profile menu | Measure a menu key to its first frame, per surface (-Surface launcher, menu or files; -Runs 10), or typing in the launcher to the list on screen (-Typing); -Hand for runs pressed by you | pwsh bin/profile-menu.ps1
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
