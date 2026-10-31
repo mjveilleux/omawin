@@ -172,6 +172,8 @@ jobs:
           Copy-Item src\qs-host\target\release\omawin-qs.exe $out
           windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --qmldir src\qs-host\qml --qmldir shell\plugins\omawin.music "$out\omawin-qs.exe"
           Copy-Item -Recurse -Force src\qs-host\qml\* "$out\qml\"
+          # Qt logs to the debugger, not stderr, when there's no console window (as here).
+          $env:QT_FORCE_STDERR_LOGGING = '1'
           & "$out\omawin-qs.exe" --plugin-dir shell\plugins\omawin.music --check 2>&1 | Tee-Object -Variable log
           if ($LASTEXITCODE -ne 0 -or -not ($log -match 'omawin.music loaded')) { throw "the music plugin didn't load in the host" }
           $size = (Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum
