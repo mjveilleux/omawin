@@ -145,7 +145,12 @@ function Assert-Winget {
 # A tool from the bundle: checked against the release's list, unpacked where the install's tools
 # go (install/software.ps1 then sees it's there), and its folder on the PATH (this account's, and
 # this session's). Returns the folder.
-function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
+# A tool from the bundle in two halves, so two can unpack at once (git's and PowerShell 7's):
+# Start-BundleTool waits for its download, checks it against the release's list and starts
+# unpacking it where the install's tools go (install/software.ps1 then sees it's there);
+# Complete-BundleTool waits for that, and puts its folder on the PATH (this account's, and this
+# session's). Returns the folder.
+function Start-BundleTool($Fetch, [string]$What) {
     $row = $Fetch.Row
     $clock = [Diagnostics.Stopwatch]::StartNew()
     # Its one file, or its parts (each with its row's SHA-256), downloading since the start.
@@ -155,30 +160,33 @@ function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
     foreach ($f in $files) {
         if (-not (Test-Path $f.File.Path) -or (Get-FileHash $f.File.Path -Algorithm SHA256).Hash -ne $f.Sha.ToUpper()) { throw "$What from the release doesn't match its published SHA-256" }
     }
-    $zip = $Fetch.File.Path
     $dir = Join-Path $env:LOCALAPPDATA "omawin\tools\$($row[0])"
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
     New-Item -ItemType Directory -Force $dir | Out-Null
-    if ($Fetch.Parts) {
+    $procs = if ($Fetch.Parts) {
         # The parts at once, a tar each: writing the files is what takes the time (Windows
         # Defender looks at each one), and each tar writes its share on its own core.
-        $tars = @(foreach ($f in $files) { Start-Process -FilePath "$env:WINDIR\System32\tar.exe" -ArgumentList '-xf', "`"$($f.File.Path)`"", '-C', "`"$dir`"" -WindowStyle Hidden -PassThru })
-        foreach ($t in $tars) { $null = $t.Handle; $t.WaitForExit() }
-        if ($bad = @($tars | Where-Object { $_.ExitCode -ne 0 })) { throw "couldn't unpack $What ($($bad[0].ExitCode))" }
+        @(foreach ($f in $files) { Start-Process -FilePath "$env:WINDIR\System32\tar.exe" -ArgumentList '-xf', "`"$($f.File.Path)`"", '-C', "`"$dir`"" -WindowStyle Hidden -PassThru })
     } elseif ($row.Count -gt 7 -and ($row[7] -split ' ') -contains 'sfx') {
         # 7-Zip's self-extractor (Git for Windows' portable build): -o the folder, -y no questions.
-        $p = Start-Process -FilePath $zip -ArgumentList "-o`"$dir`"", '-y' -WindowStyle Hidden -Wait -PassThru
-        if ($p.ExitCode -ne 0) { throw "couldn't unpack $What ($($p.ExitCode))" }
+        @(Start-Process -FilePath $Fetch.File.Path -ArgumentList "-o`"$dir`"", '-y' -WindowStyle Hidden -PassThru)
     } else {
-        & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
-        if ($LASTEXITCODE -ne 0) { throw "couldn't unpack $What ($LASTEXITCODE)" }
+        @(Start-Process -FilePath "$env:WINDIR\System32\tar.exe" -ArgumentList '-xf', "`"$($Fetch.File.Path)`"", '-C', "`"$dir`"" -WindowStyle Hidden -PassThru)
     }
+    foreach ($p in $procs) { $null = $p.Handle }  # read now, or Windows PowerShell has no ExitCode later
+    @{ Row = $row; Dir = $dir; Procs = $procs; Clock = $clock; Waited = $waited; What = $What }
+}
+
+function Complete-BundleTool($Job, [string]$Bin) {
+    foreach ($p in $Job.Procs) { $p.WaitForExit() }
+    if ($bad = @($Job.Procs | Where-Object { $_.ExitCode -ne 0 })) { throw "couldn't unpack $($Job.What) ($($bad[0].ExitCode))" }
+    $row = $Job.Row; $dir = $Job.Dir
     Set-Content (Join-Path $dir '.omawin-version') "$($row[1]) $($row[3])"
     $onPath = if ($Bin -and $Bin -ne '.') { Join-Path $dir $Bin } else { $dir }
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (($userPath -split ';') -notcontains $onPath) { [Environment]::SetEnvironmentVariable('Path', (@($userPath.TrimEnd(';'), $onPath) | Where-Object { $_ }) -join ';', 'User') }
     if (($env:Path -split ';') -notcontains $onPath) { $env:Path = "$onPath;$env:Path" }
-    Write-Note ("$What $($row[1]) -> $dir (waited {0:0.0} s for the download, unpacked in {1:0.0} s)" -f $waited, ($clock.Elapsed.TotalSeconds - $waited))
+    Write-Note ("$($Job.What) $($row[1]) -> $dir (waited {0:0.0} s for the download, unpacked in {1:0.0} s)" -f $Job.Waited, ($Job.Clock.Elapsed.TotalSeconds - $Job.Waited))
     $dir
 }
 
@@ -192,6 +200,7 @@ $Pwsh = $null
 $pwshFound = if ($env:OMAWIN_PWSH -ne 'bundle') { Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 }
 if ($pwshFound -and $pwshFound.Version.Major -ge 7) { $Pwsh = $pwshFound.Source; Write-Note "ok  $Pwsh" }
 $PwshFetch = $null
+$PwshJob = $null
 $GitFetch = $null
 # OMAWIN_GIT=bundle takes the release's git even when the PC has one (the install test: a runner
 # comes with git, a new PC doesn't).
@@ -239,7 +248,11 @@ if (-not $Pwsh -or $needGit) {
 Write-Step 'git'
 if (-not $needGit) { Write-Note 'ok  git' }
 elseif ($GitFetch) {
-    $gitDir = Install-BundleTool $GitFetch $GitFetch.Row[4] 'git'
+    # git's unpack and PowerShell 7's run at once: git's starts, then PowerShell 7's (once its
+    # download is in), and only git is waited for here (the clone needs it).
+    $gitJob = Start-BundleTool $GitFetch 'git'
+    if (-not $Pwsh -and $PwshFetch) { $PwshJob = Start-BundleTool $PwshFetch 'PowerShell' }
+    $gitDir = Complete-BundleTool $gitJob $GitFetch.Row[4]
     # Git for Windows' portable build finishes its setup (Git Bash's /etc and /dev) with
     # post-install.bat, which removes itself: in the background, git works without it meanwhile.
     if (Test-Path "$gitDir\post-install.bat") {
@@ -309,7 +322,8 @@ if ($Local) {
 # PowerShell 7, now that its download has had the clone's time: checked, unpacked where the
 # install's tools go (install/software.ps1 then sees it's there), and put on the PATH.
 if (-not $Pwsh -and $PwshFetch) {
-    $Pwsh = Join-Path (Install-BundleTool $PwshFetch '.' 'PowerShell') 'pwsh.exe'
+    if (-not $PwshJob) { $PwshJob = Start-BundleTool $PwshFetch 'PowerShell' }
+    $Pwsh = Join-Path (Complete-BundleTool $PwshJob '.') 'pwsh.exe'
 }
 if ($work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 if (-not $Pwsh) {

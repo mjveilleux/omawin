@@ -148,7 +148,17 @@ try {
     # Its unpacking starts now, in the background, and runs alongside everything up to the end of
     # the software step (install/unpack-tools.ps1). "Yours" is judged by the PATH here; winget's
     # list isn't read yet.
-    if (-not $LinkOnly) { Start-ToolBundle $null; Start-EarlyHelpers }
+    if (-not $LinkOnly) { Start-ToolBundle $null; Start-EarlyHelpers; Start-EarlyExtras @($CoreExtras) }
+    # Windows' ads off, from the first second, in a PowerShell of its own: its step (later in the
+    # order) only collects what it said. It only changes this account's settings and stops the PC
+    # maker's background extras, so it runs alongside the other steps safely.
+    $NoAdsEarly = $null
+    if ($Steps.Name -contains 'no-ads') {
+        $noAdsLog = Join-Path $env:TEMP "omawin-no-ads-$Stamp"
+        $NoAdsEarly = @{ Out = "$noAdsLog.log"; Err = "$noAdsLog.err.log"
+            Process = Start-Process (Join-Path $PSHOME 'pwsh.exe') -ArgumentList '-NoLogo', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$Repo\bin\no-ads.ps1`"", '-UserOnly' -RedirectStandardOutput "$noAdsLog.log" -RedirectStandardError "$noAdsLog.err.log" -WindowStyle Hidden -PassThru }
+        $null = $NoAdsEarly.Process.Handle  # read now, so its ExitCode is there later
+    }
     Write-Log ("    bundle and helpers started at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
     $plan = Get-AdminPlan @(if (-not $LinkOnly) { Get-WantedPackages | Where-Object { $bundled -notcontains $_ } }) -NoPackages:$LinkOnly
     Write-Log ("    admin plan done at {0:0.0} s" -f ((Get-Date) - $Started).TotalSeconds)
