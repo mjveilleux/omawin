@@ -19,7 +19,8 @@ The groups:
 - `theme`: set, next-background, import, lockscreen
 - `terminal here`, `workspace rename`
 - `launch`: terminal, project, editor (in your default terminal and editor)
-- `default`: what omawin opens things with (`omawin default terminal wt`, `omawin default editor code`)
+- `default`: what omawin opens things with (`omawin default terminal wt`, `omawin default editor code`, `omawin default shell windows`)
+- `linux`: your Linux in WSL: `stop`, `backup`, `reset`
 - `music`: the music, podcast and radio player in the bar: open, add, list, toggle, next, prev
 - `restart`: glazewm, menu, music
 - `setting`: Windows' own settings, read and changed without opening Settings: `omawin setting list [area]`, `get <id>`, `set <id> <value>`, `toggle <id>`, `undo` ([the system menu](05-system-menu.md#windows-settings) has them too); `settings save` / `settings apply` carry them to a new PC, `settings admin` applies the ones that need admin in one prompt

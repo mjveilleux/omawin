@@ -60,6 +60,7 @@ Read from this account's folder, and for the rows marked **shared** from the sha
 | `claude/settings.json`, `claude/skills/`, `claude/CLAUDE.md` | **shared.** Claude Code (`omawin claude sync`, `bin/claude-sync.ps1`; install's `other` step and every sign-in): each folder's `CLAUDE.md` (your rules) is imported by `~/.claude/CLAUDE.md`, its `skills/<name>/` are linked into `~/.claude/skills`, its `settings.json` is merged into `~/.claude/settings.json` (the account's over the shared one's over what's there; `{home}` becomes the account's home folder), and the plugins those settings list are installed. Not carried: sign-ins and memory (Claude Code keeps it per project folder). |
 | `claude/skills-off.txt` | account only: shared skills this account goes without, one name a line |
 | `wsl/.wslconfig` | copied to `~/.wslconfig` instead of omawin's (install, `other` step), e.g. to cap WSL's memory |
+| `wsl/wsl.conf` | applied over omawin's `/etc/wsl.conf` in your Linux (`wsl/setup.sh`, at set-up and `omawin update`; the same ini format), e.g. `[interop]` `appendWindowsPath=true` to have Windows' PATH back |
 | `launcher/items.txt` | **shared.** adds its items to the launcher, after omawin's own (same format as omawin's `default/launcher/items.txt`) |
 | `launcher/sites.txt` | **shared.** adds its sites to launcher > Localhost, after omawin's (same format as omawin's `default/launcher/sites.txt`) |
 | `launcher/keys.txt` | **shared.** adds its lines to the Shortcuts page |

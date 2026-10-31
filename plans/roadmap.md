@@ -577,6 +577,8 @@ The `wsl` preset joins the default set (`install/packages.ps1`, `Initialize-Pres
 
 **Risks:** virtualization off in the firmware. Detect it before offering (Try Omarchy does: [inspiration.md](../docs/inspiration.md)) and say "turn on virtualization" rather than looping; PowerShell stays the shell until then.
 
+**Built 2026-10-31 (the install question):** `Test-Virtualization` (`install/lib.ps1`, WMI, no admin: the hypervisor present, or the processor's firmware flag) keeps Linux off the first install's question when virtualization is off, with a warning that says to turn it on and then `omawin preset add wsl`. To keep 2.9's rule (Enter through every question, no admin prompt), Enter picks Arch only when WSL is already on the PC; without it the question says WSL takes admin once and a restart, and Enter means none (typing `arch` opts into the one admin prompt). Checked: parsed under PowerShell 7. Left (🖥): the first install on a PC with and without WSL, and one with virtualization off.
+
 ### 3.2 Omarchy's terminal layer in Arch (M)
 
 **Why:** "all of Omarchy's decisions": the same packages an Omarchy user has in their terminal, chosen and kept current by Omarchy.
@@ -594,11 +596,15 @@ The `wsl` preset joins the default set (`install/packages.ps1`, `Initialize-Pres
 
 **Risks:** a package pulling a desktop in as a dependency (check what `pacman -S --needed` brought); Omarchy's bash files assuming `$OMARCHY_PATH` (source the files directly, or set it to a folder with just them).
 
+**Built 2026-10-31 (all of it but the "omawin update with no change in omawin" part, which is the pin's bump):** `wsl/setup.sh` fetches Omarchy's files at a pinned commit of the fork (`omarchy_commit`; a sparse, blob-less checkout in `/usr/share/omawin/omarchy`: the base list, `default/bash/`, `config/btop|lazygit|tmux`), installs Omarchy's base list less `wsl/omarchy-skip.txt` plus omawin's few extras, and leaves out (and says) a name the repositories don't have (`pacman_wanted` retries without it), so one renamed upstream package never stops the rest; what went in is `/usr/share/omawin/packages.txt`, which `wsl/check.sh` compares with `pacman -T` (provided names count). A desktop package pulled in as a dependency is said, never removed. The shell: the `~/.bashrc` block exports `OMARCHY_PATH` and sources Omarchy's `default/bash/rc`, then `config/bash/bashrc`, whose own tool setup, aliases, keys and history now run only without Omarchy (Git Bash); Omarchy's configs for btop, lazygit and tmux are copied once (btop with `theme_background = false`, the Windows reason written next to it). Ubuntu: apt for what 24.04 has, mise (from its apt repository) for fzf, starship, lazygit, fastfetch, gum and usage, Docker from Docker's repository. Also fixed: the shell blocks named `$OMAWIN/bash/bashrc` and `$OMAWIN/starship/…`, paths from before the repo's configs moved to `config/`, so a Linux set up before then had lost omawin's prompt; the blocks are now rewritten by every `setup.sh refresh`, which `omawin update` runs. Checked: Arch and Ubuntu 24.04 containers set up from scratch, twice, then updated, with `wsl/check.sh --ci` all ok (65 of Omarchy's packages on Arch, no desktop packages; `ls` is Omarchy's `eza -lh`, `EDITOR=nvim`); `test/linux/setup-test.sh` (the list, skip-list and retry logic, the blocks, migrations, configs) and ShellCheck. Left: a real WSL Arch (🖥), and the "following Omarchy" job that bumps the pin.
+
 ### 3.3 A good WSL VM out of the box (S)
 
 `wsl/.wslconfig` today only sets `autoMemoryReclaim`. Add `networkingMode=mirrored` (localhost both ways, VPNs behave), `dnsTunneling=true`, `firewall=true`, `sparseVhd=true`, and a longer `vmIdleTimeout` (3.5). `setup.sh root` writes `/etc/wsl.conf`: `[boot] systemd=true` (Docker, timers), `[interop] appendWindowsPath=false` (Linux tools win in Linux), `[user] default=<user>` (as now). Each overridable by the account folder ([work.md](../docs/work.md)).
 
 **Risks:** mirrored networking trips some VPN clients; `appendWindowsPath=false` breaks `code .` and `explorer.exe .`: small wrappers in `~/.local/bin` for `code`, `explorer`, `clip` and `omawin` (calling `omawin.exe` through interop).
+
+**Built 2026-10-31:** `wsl/.wslconfig` has mirrored networking, DNS tunneling, the Hyper-V firewall, autoProxy, `vmIdleTimeout=600000` and (experimental) `sparseVhd` and `hostAddressLoopback`. `setup.sh root` writes `/etc/wsl.conf` with `ini_set` (`systemd=true`, `appendWindowsPath=false`, the default user), then the account folder's `wsl/wsl.conf` over it (`OMAWIN_ACCOUNT`, passed with the other Windows folders through `WSLENV` by `wsl/env.ps1`); `wsl/install.ps1` stops the distro only when the file changed. `~/.local/bin` gets `explorer`, `code`, `clip` (UTF-16 with a byte-order mark), `browser` and `omawin` wrappers, rewritten on each refresh. Checked: the ini merging and wrappers in `test/linux/setup-test.sh`; the rest in the containers. Left (🖥): the VPN behaviour with mirrored networking, `clip`'s accents, `code .` over the WSL extension.
 
 ### 3.4 The terminal opens in Linux (M, 🖥)
 
@@ -617,13 +623,19 @@ The `wsl` preset joins the default set (`install/packages.ps1`, `Initialize-Pres
 
 **Risks:** git over `/mnt/c` is slow in big repos; projects go in Linux's own disk (`~/src`), and the finder and launcher show them (3.7).
 
+**Built 2026-10-31 (not yet run on a PC, 🖥):** `bin/defaults.txt` has `shell | linux` (first) and `shell | windows`; `omawin default shell windows` brings PowerShell back, and `omawin default` says when Linux is picked but not there yet. `bin/omawin.cs`: `--windows`, `LinuxIsDefault` (the picked distro registered), `OnLinux` (a plain terminal follows the default, a `-- <command>` is a Windows program unless `--wsl`, a Linux path is Linux), `LinuxPath`, `StripSide`. Linux windows open `wsl.exe -d <distro> --cd <dir or ~>` in their own noctty process (no spare shell). `TerminalHere` uses the fork's `inherit` only while PowerShell is the default, otherwise asks noctty for the folder; Explorer on `\\wsl.localhost\…` opens Linux there; nothing in front opens Linux's home. `LaunchEditor` opens a Linux path in Linux (VS Code through the wrapper, else Neovim in a Linux terminal). `omawin default shell linux` sets the Linux up first when it isn't there. System menu › Setup › Defaults › Shell. The OSC 7 the plan asked for is in `config/bash/bashrc` (3B). One change from the sketch: a project opens on the side its folder is on, not always in Linux (git over `/mnt/c` is slow), recorded in [open-questions/linux-default-shell.md](../open-questions/linux-default-shell.md) with the question of flipping existing PCs. Checked: `bin/omawin.cs` compiles as C# 5 (Roslyn `LangVersion 5`), `dotnet test test/cli.Tests` (the new rows and the `linux` builtin route). Left: Windows Terminal profiles per distro, Install › Development asking the side, `profile-terminal -Wsl`, `~/src` for new projects.
+
 ### 3.5 No cold start (S, 🖥)
 
 A cold WSL start takes ~8 s (`manual/04-launcher.md`). When Linux is the default shell, `omawin start` (at sign-in, after the desktop is up) runs `wsl.exe -d <distro> --exec /bin/true` hidden, and `vmIdleTimeout` keeps the VM alive between terminals. `omawin profile terminal` gains `--wsl`; `omawin profile ram` shows WSL's VM as its own line with a budget.
 
+**Built 2026-10-31 (not yet measured, 🖥):** `omawin start terminal` first calls `WarmLinux`: while Linux is the default shell, a hidden `wsl.exe -d <distro> --exec /bin/sleep infinity` holds the distro up, its pid in `%LOCALAPPDATA%\launcher\linux-warm.pid` (not started twice); `linux-warm-off` there turns it off; `omawin linux stop` ends it with the distro. Left: the RAM and cold-versus-warm numbers (plans/04-linux.md's table), `omawin profile ram`'s WSL line.
+
 ### 3.6 Docker the Omarchy way, in Linux (M)
 
 Omarchy runs Docker Engine (docker, buildx, compose) under systemd, its databases with `docker run --restart unless-stopped` bound to 127.0.0.1 (`omarchy-install-docker-dbs`), and lazydocker on Super+Shift+D. In Linux: Docker Engine from Omarchy's list (3.2), systemd on (3.3), the user in the `docker` group; Install › Development › Docker DB runs inside Linux; mirrored networking makes `localhost:5432` reachable from Windows apps too. Docker Desktop stays a choice, never installed by default.
+
+**Built 2026-10-31:** Docker Engine comes with Omarchy's list (Arch) or Docker's repository (Ubuntu); `docker_root` makes the user a `docker` group member (the reason to differ from Omarchy written next to it) and enables `docker.socket`. Checked in the containers (`wsl/check.sh`: docker on the user's PATH, the group). Left: Install › Development › Docker DB inside Linux, and seeing `localhost:5432` from Windows (🖥).
 
 ### 3.7 Linux files in the finder and launcher (M, 🖥)
 
@@ -631,13 +643,19 @@ Omarchy runs Docker Engine (docker, buildx, compose) under systemd, its database
 - **Linux GUI apps** (WSLg) in the launcher: WSL makes Start menu shortcuts for them, which `AppsFolder.cs` may already pick up; check, then give them the distro's logo.
 - Projects: `Pages.cs:131-152` asks WSL only while it runs; kept warm (3.5), it always does.
 
+**Built 2026-10-31 (the finder half; not yet seen on screen, 🖥):** `wsl/bin/omawin-index-files` (fd over home: .gitignore honoured, no hidden folders or node_modules) writes `~/.cache/omawin/files.tsv` and a copy with a `# <distro>\t<home>` header to `%LOCALAPPDATA%\launcher\linux-files.tsv`; user units run it 30 s after start, every 10 minutes and when `~/src` changes, the user's manager kept up by linger. `shell/menu-app/LinuxFiles.cs` (pure, tests in `test/menu-app.Tests/Search/LinuxFilesTests.cs`) reads it, reloading only when it changes, and searches it (letters in order, then fzy's score); `FileSearch` adds it as one more scope (`\\wsl.localhost\<distro>`, chip "Arch" or "Ubuntu"), and a Linux hit opens with `omawin launch editor <linux path>` (Explorer through `\\wsl.localhost` for "show in folder"). Left: the distro's logo on the chip, WSLg apps in the launcher, a measurement on a big home.
+
 ### 3.8 The theme in Linux, live (S)
 
 Starship, fzf, bat and herdr use the terminal's ANSI colours, so they follow already; Neovim follows live. Missing: btop (`themes/set-theme.ps1:209-226` writes btop4win only) and lazygit. `set-theme.ps1` also writes the Linux copies (through `\\wsl.localhost` while the distro runs; at its next start otherwise, from the bashrc block), using Omarchy's own per-theme files where its themes have them (`btop.theme`).
 
+**Built 2026-10-31:** `wsl/bin/omawin-theme-sync` copies the theme's btop file (an installed theme's first, then omawin's) to `~/.config/btop/themes/current.theme` (Omarchy's btop.conf picks `current`) and signals running btops; the bashrc runs it at the first prompt after a switch, and `themes/set-theme.ps1` runs it in a Linux that's running (never starting one). Lazygit has no theme file in Omarchy either, so it follows the terminal's colours. Checked: `test/linux/setup-test.sh`.
+
 ### 3.9 Credentials that just work (S)
 
 Git already uses Windows' credential manager from Linux. Add SSH: Windows' OpenSSH agent (or 1Password's) reached from Linux through `npiperelay` and `socat` (in Omarchy's list), `SSH_AUTH_SOCK` set in the bashrc block; GPG likewise when there are keys. One sign-in, both sides.
+
+**Built 2026-10-31 (not yet run on a PC, 🖥):** `setup.sh refresh` downloads npiperelay (per user, `%LOCALAPPDATA%\Programs\npiperelay`, from its fork's latest release) and writes `omawin-ssh-agent` (socat on a socket, npiperelay to Windows' agent pipe); the bashrc starts it when its socket is missing and sets `SSH_AUTH_SOCK`. Started from a shell rather than a systemd unit, since interop is reliably there in a session wsl.exe started. Turning on Windows' own ssh-agent service needs admin: [open-questions/windows-ssh-agent-admin.md](../open-questions/windows-ssh-agent-admin.md). Left: GPG.
 
 ### 3.10 Kept, checked, recoverable (M)
 
@@ -646,9 +664,13 @@ Git already uses Windows' credential manager from Linux. Add SSH: Windows' OpenS
 - The bar: a Linux indicator (running, memory) with a click to stop it.
 - `omawin linux backup` (`wsl --export` to a dated file) and `omawin linux reset` (export, then unregister only a distro omawin made — the `/etc/omawin` marker — install fresh, set up again, offer to restore `~/src`). Never on a distro omawin didn't make.
 
+**Built 2026-10-31 (all but the bar's indicator):** `omawin update` runs `setup.sh update` for Ubuntu too (apt, then the releases), then `setup.sh refresh` as the user, which runs Linux's migrations (`wsl/migrations/<date>-<what>.sh`, a marker each in `~/.local/state/omawin/migrations`). `wsl/check.sh` (systemd, wsl.conf, the user, Omarchy's repositories and packages, no desktop packages, the tools on the user's PATH, the docker group and socket, the blocks, the file index, the SSH bridge, migrations not yet run) runs from `omawin check` while Linux is running (`bin/check.ps1`'s Linux section; it never starts WSL). `omawin linux stop | backup | reset` are builtins of `bin/omawin.cs` (compiled C#, not a new script): backup is `wsl --export` to `~/omawin-backups/linux`; reset refuses a distro without `/etc/omawin`, asks you to type its name, backs up, unregisters, runs `wsl/install.ps1` again and offers to bring `~/src` back from the backup. Left: the bar's Linux indicator (with the native bar, 1.6); reset tried on a PC (🖥).
+
 ### 3.11 Tests for Linux (M)
 
 CI can't run WSL, but it can run `setup.sh` in containers: a workflow with `archlinux:latest` and `ubuntu:24.04` jobs runs `setup.sh root ci` and `setup.sh user` with the repo mounted, then checks the tools and the bashrc block. Plus one run on a real PC per release (🖥).
+
+**Built 2026-10-31:** `.github/workflows/linux.yml`: ShellCheck and `test/linux/setup-test.sh` on the runner (with Omarchy's list at the pin, so a typo in the skip list fails), then `archlinux:latest` and `ubuntu:24.04` containers run `setup.sh root ci`, `setup.sh user`, the shell's checks (Omarchy's defaults loaded; Linux's side mark in starship's prompt), both again, `setup.sh update` and `wsl/check.sh ci --ci`. The same steps passed locally in both images. Left: the run on a real PC per release (🖥).
 
 ### 3B. Always know which side you're on (M, 🖥)
 
@@ -668,6 +690,8 @@ Four signals, cheapest first; the first two alone solve most of it.
 **Done when:** a screenshot of a Linux and a PowerShell terminal side by side is obvious at a glance, in a dark, a light and a high-contrast theme.
 
 **Risks:** light themes need the tint to go darker (mix toward the accent, then keep contrast); some TUIs reset the background on exit, so it's re-applied on each prompt.
+
+**Built 2026-10-31 (signals 1-3; not yet seen on screen, 🖥):** `themes/render.ps1` computes `linux_background` (the background mixed 8% toward the accent, less if the text would keep under 90% of its contrast counted up to 7:1, toward the foreground when the accent is too close to the background) and writes `%LOCALAPPDATA%\launcher\theme-linux.sh` (LF). In Linux the bashrc reads it again when it's newer, and each prompt sends OSC 7 (the folder), OSC 11 (the tint) and the title `arch · <path>`. The prompt's first mark is the system's logo (`env_var.OMAWIN_LINUX` green, `env_var.OMAWIN_WINDOWS` blue in `config/starship/starship.toml`); the PowerShell profile sets `OMAWIN_SIDE` and titles tabs `pwsh · <folder>`, which `TerminalHere` takes off (`StripSide`). Checked: the tint for all 23 themes (e.g. tokyo-night `#1a1b26` → `#222637`, catppuccin-latte `#eff1f5` → `#dee6f5`, vantablack `#000000` → `#0b0b0b`); the bashrc's escapes, the theme re-read at the next prompt and both sides' marks in `test/linux/setup-test.sh`; starship's Linux mark in the containers. Left: the screenshot pair in a dark, a light and a high-contrast theme; whether herdr passes OSC 11 through and Ghostty accepts OSC 7 with WSL's host name; signal 4 (the border, fork work).
 
 ---
 
