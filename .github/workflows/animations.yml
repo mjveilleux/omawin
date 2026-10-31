@@ -1,0 +1,206 @@
+# Animations, checked on a real Windows desktop (GitHub's Windows runners have one, which can be
+# recorded): docs/releases.md "Animation checks" is the reader's version of this file.
+#
+#   windows    GlazeWM's window animations with omawin's own config: the fork (install/glazewm-fork.ps1)
+#              built at a pinned ref, config/glazewm/config.yaml rendered by themes/render.ps1 as on a
+#              PC, and the fork's scripts/animation-check.ps1 run against it (Notepads open, one
+#              closes through GlazeWM, one moves), at omawin's real timings and again with
+#              `omawin toggle animations` off. Fails on a leftover overlay, a window not fully
+#              opaque, or not where GlazeWM placed it (and, off, on any overlay at all).
+#   menu       The menu app's motion (roadmap 1.4): src/motion-check opens the launcher the way
+#              Win+Space does, closes it with Esc, records it at ~60 frames a second and checks it
+#              arrives within Motion.Enter (plus its cascade) and leaves within Motion.Exit, and
+#              with animations off, appears and goes in one jump.
+#   analysis   src/motion-check's frame analysis, unit-tested on Linux with made-up frames.
+#
+# Frames, contact sheets and each check's summary are uploaded as artifacts; the summaries also go
+# to the run's page. Actions are pinned by commit SHA, as in release.yml.
+name: Animations
+
+on:
+  pull_request:
+    paths:
+      - 'shell/menu-app/**'
+      - 'config/glazewm/**'
+      - 'themes/render.ps1'
+      - 'src/motion-check/**'
+      - 'test/motion-check.Tests/**'
+      - '.github/workflows/animations.yml'
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'shell/menu-app/**'
+      - 'config/glazewm/**'
+      - 'themes/render.ps1'
+      - 'src/motion-check/**'
+      - 'test/motion-check.Tests/**'
+      - '.github/workflows/animations.yml'
+  workflow_dispatch:
+    inputs:
+      glazewm_ref:
+        description: The GlazeWM fork's branch, tag or commit to check (a release tag once there is one)
+        default: claude/omawin-roadmap-devex-j1tmak
+
+concurrency:
+  group: animations-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # The fork's ref (a push or pull request has no inputs: the default).
+  GLAZEWM_REF: ${{ inputs.glazewm_ref || 'claude/omawin-roadmap-devex-j1tmak' }}
+
+jobs:
+  analysis:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Frame analysis tests
+        run: dotnet test test/motion-check.Tests --logger "console;verbosity=normal"
+      - name: The tool builds
+        run: dotnet build src/motion-check -c Release
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: The GlazeWM fork
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: mjveilleux/glazewm
+          ref: ${{ env.GLAZEWM_REF }}
+          path: glazewm
+      - uses: dtolnay/rust-toolchain@21dc36fb71dd22e3317045c0c31a3f4249868b17
+        with:
+          toolchain: nightly
+      - uses: swatinem/rust-cache@f0deed1e0edfc6a9be95417288c0e1099b1eeec3
+        with:
+          workspaces: glazewm -> target
+          shared-key: omawin-animations-${{ hashFiles('glazewm/Cargo.lock') }}
+      - name: Build the fork
+        shell: bash
+        working-directory: glazewm
+        run: cargo build --locked --release -p wm -p wm-cli
+      - name: Check the fork's animation check takes -Config
+        shell: pwsh
+        run: |
+          $script = Get-Command .\glazewm\scripts\animation-check.ps1
+          if (-not $script.Parameters.ContainsKey('Config')) { throw "the fork at $env:GLAZEWM_REF has no -Config in scripts/animation-check.ps1: push that change, or pick a newer ref" }
+
+      # Where omawin finds the fork on a PC without it in Program Files (bin/glazewm-features.ps1):
+      # the tools bundle's copy, with the features list a fork release ships beside it
+      # (scripts/omawin-release.ps1 writes it; read from there, so the two never drift).
+      # render.ps1 then writes the config for what this GlazeWM can do, as on a PC.
+      - name: Render omawin's GlazeWM config (animations on, then off)
+        id: render
+        shell: pwsh
+        run: |
+          $tools = Join-Path $env:LOCALAPPDATA 'omawin\tools\glazewm'
+          New-Item -ItemType Directory -Force $tools | Out-Null
+          Copy-Item glazewm\target\release\glazewm.exe $tools
+          $features = @(Select-String -Path glazewm\scripts\omawin-release.ps1 -Pattern "^\s*'([a-z_.]+)'\s*#" | ForEach-Object { $_.Matches[0].Groups[1].Value })
+          if (-not $features) { throw "no features found in the fork's scripts/omawin-release.ps1" }
+          $features | Set-Content (Join-Path $tools 'omawin-features.txt') -Encoding ascii
+          Write-Host "fork features: $($features -join ', ')"
+          New-Item -ItemType Directory -Force out | Out-Null
+          $state = Join-Path $env:LOCALAPPDATA 'launcher'
+          New-Item -ItemType Directory -Force $state | Out-Null
+          foreach ($mode in 'on', 'off') {
+            Set-Content (Join-Path $state 'animations') $mode -NoNewline
+            & .\themes\render.ps1
+            $text = [IO.File]::ReadAllText((Join-Path $HOME '.glzr\glazewm\config.yaml'))
+            # Its startup commands start omawin.exe (the bar, the menu app), which isn't here.
+            $text = $text -replace '(?m)^(\s*startup_commands:).*$', '$1 []'
+            $enabled = [regex]::Match($text, '(?m)^animations:[\s\S]*?^\s+enabled:\s*(\w+)').Groups[1].Value
+            $want = if ($mode -eq 'on') { 'true' } else { 'false' }
+            if ($enabled -ne $want) { throw "animations $mode rendered animations.enabled '$enabled', not '$want'" }
+            [IO.File]::WriteAllText((Join-Path (Resolve-Path out) "glazewm-config-$mode.yaml"), $text)
+            Write-Host "animations ${mode}: animations.enabled: $enabled"
+          }
+
+      - name: Window animations, omawin's timings
+        id: on
+        shell: pwsh
+        run: .\glazewm\scripts\animation-check.ps1 -Bin glazewm\target\release -Out out\glazewm-on -Config out\glazewm-config-on.yaml -DurationMs 200
+      - name: Window animations, toggled off
+        id: off
+        if: always() && steps.render.outcome == 'success'
+        shell: pwsh
+        run: .\glazewm\scripts\animation-check.ps1 -Bin glazewm\target\release -Out out\glazewm-off -Config out\glazewm-config-off.yaml -DurationMs 200 -Disabled
+      - name: Summary
+        if: always()
+        shell: pwsh
+        env:
+          ON: ${{ steps.on.outcome }}
+          OFF: ${{ steps.off.outcome }}
+        run: |
+          $md = @("### GlazeWM window animations, omawin's config (fork at ``$env:GLAZEWM_REF``)", '')
+          foreach ($run in @(@{ Name = 'on'; Outcome = $env:ON }, @{ Name = 'off'; Outcome = $env:OFF })) {
+            $md += "**Animations $($run.Name): $($run.Outcome)**", ''
+            $checks = "out\glazewm-$($run.Name)\checks.txt"
+            $md += if (Test-Path $checks) { @('```') + (Get-Content $checks) + @('```') } else { '(no checks.txt: it stopped before the checks; see the step''s log)' }
+            $md += ''
+          }
+          $md | Add-Content $env:GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: window-animations
+          path: out/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  menu:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      # The ordinary .NET build (-Jit): minutes quicker than the native one release.yml makes, and
+      # motion runs on the compositor either way; the check opens it twice before measuring, so
+      # loading and compiling aren't counted.
+      - name: Build the menu app
+        shell: pwsh
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu -BuildOnly -Jit
+      - name: Build the motion check
+        shell: pwsh
+        run: dotnet build src\motion-check -c Release -o out\motion-check
+      - name: Menu motion, animations on
+        id: on
+        shell: pwsh
+        run: out\motion-check\motion-check.exe --menu out\menu\SystemMenu.exe --repo . --out results\menu-on --animations on
+      - name: Menu motion, animations off
+        id: off
+        if: always() && steps.on.outcome != 'skipped'
+        shell: pwsh
+        run: out\motion-check\motion-check.exe --menu out\menu\SystemMenu.exe --repo . --out results\menu-off --animations off
+      - name: Summary
+        if: always()
+        shell: pwsh
+        run: |
+          foreach ($mode in 'on', 'off') {
+            $summary = "results\menu-$mode\summary.md"
+            if (Test-Path $summary) { Get-Content $summary | Add-Content $env:GITHUB_STEP_SUMMARY }
+            else { "### Menu motion, animations ${mode}: didn't run to the end (see its step's log)" | Add-Content $env:GITHUB_STEP_SUMMARY }
+            '' | Add-Content $env:GITHUB_STEP_SUMMARY
+          }
+          $log = Join-Path $env:LOCALAPPDATA 'launcher\system-menu.log'
+          if (Test-Path $log) { Copy-Item $log results\ }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: menu-motion
+          path: results/
+          retention-days: 7
+          if-no-files-found: ignore
