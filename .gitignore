@@ -48,3 +48,8 @@ src/plugin-gallery/obj/
 # The plugins' QML host's Rust build.
 src/qs-host/target/
 src/qs-host/.qmlls.ini
+# omawin-windows (Phase 8's fixes) and its tests, built.
+src/windows/bin/
+src/windows/obj/
+test/windows.Tests/bin/
+test/windows.Tests/obj/

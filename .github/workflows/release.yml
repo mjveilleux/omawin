@@ -351,6 +351,15 @@ jobs:
           name: music-${{ matrix.arch }}
           path: out/music-${{ matrix.arch }}
           if-no-files-found: error
+      # Phase 8's fixes (src/windows): the same SDK, so the same job.
+      - name: Build omawin-windows (the same script this PC runs)
+        shell: pwsh
+        run: .\src\windows\build.ps1 -OutDir out\windows-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: windows-${{ matrix.arch }}
+          path: out/windows-${{ matrix.arch }}
+          if-no-files-found: error
 
   # The compiled omawin (src/cli, Native AOT: the runner has Visual Studio's C++ tools), shipped
   # as omawin-cli.exe beside omawin.exe, which hands it omawin pkg (roadmap 2.11).

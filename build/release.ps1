@@ -7,6 +7,7 @@
 #   SystemMenu-<tag>-win-<arch>.zip          the menu app, unpacked into %LOCALAPPDATA%\system-menu
 #   omawin-cli-<tag>-win-<arch>.exe          the compiled omawin (src/cli), into ~/.local/bin
 #   omawin-music-<tag>-win-<arch>.exe        the music player, into ~/.local/bin
+#   omawin-windows-<tag>-win-<arch>.exe      Phase 8's fixes (who-has, health, …), into ~/.local/bin
 #   omawin-tools.txt, omawin-tool-<name>.zip the tools bundle (build/bundle), as built
 #   SHA256SUMS.txt                           `<sha256>  <file>` per asset
 #
@@ -15,6 +16,7 @@
 #   <InDir>\menu-<arch>\           shell/menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
 #   <InDir>\cli-<arch>\omawin-cli.exe       src/cli/build.ps1 -OutDir <InDir>\cli-<arch>
 #   <InDir>\music-<arch>\omawin-music.exe   src/music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
+#   <InDir>\windows-<arch>\omawin-windows.exe   src/windows/build.ps1 -BuildOnly -OutDir <InDir>\windows-<arch>
 #
 #   .\build\release.ps1 -Tag v0.1.0 -InDir scratch\built -OutDir scratch\release
 #   .\build\release.ps1 -Tag v0.1.0 -InDir out -OutDir dist -Arch x64   (one architecture)
@@ -73,6 +75,10 @@ if (-not $OnlyManifest) {
         $music = Join-Path $InDir "music-$a\omawin-music.exe"
         if (Test-Path $music) { Add-File $music "omawin-music-$Tag-win-$a.exe" }
         else { Write-Warning "no music player for win-$a ($music): left out of this release" }
+
+        $fixes = Join-Path $InDir "windows-$a\omawin-windows.exe"
+        if (Test-Path $fixes) { Add-File $fixes "omawin-windows-$Tag-win-$a.exe" }
+        else { Write-Warning "no omawin-windows for win-$a ($fixes): left out of this release" }
     }
 
     # The tools bundle (build/bundle): its zips and list, published as they are.

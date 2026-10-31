@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    omawin.exe and the bar's helpers, omawin-cli.exe, the menu app and omawin-music: a release's prebuilt files
+    omawin.exe and the bar's helpers, omawin-cli.exe, the menu app, omawin-music and omawin-windows: a release's prebuilt files
     when there is one for this PC, otherwise built here.
 
 .DESCRIPTION
@@ -16,7 +16,7 @@
          the menu app and the player when the .NET SDK is already here (else the release, and
          the checkout's changes come with the next one);
       3. else built here from this checkout (build/helpers.ps1, shell\menu-app\build.ps1,
-         src\music\build.ps1) - a dev checkout, offline, no release, no GitHub sign-in, no .NET SDK.
+         src\music\build.ps1, src\windows\build.ps1) - a dev checkout, offline, no release, no GitHub sign-in, no .NET SDK.
 
     Step 2 is the point: a new PC gets omawin.exe, the helpers, the menu app and the music player
     without the .NET SDK (a 1 GB dependency) or a compile. The SDK is installed only
@@ -41,7 +41,7 @@ param(
     [string]$BaseUrl,               # a mirror / a locally built fake release (bin/release.ps1)
     [string]$StateFile = "$env:LOCALAPPDATA\launcher\release.txt",  # the release this PC is on
     # Which piece: install/helpers.ps1 keeps its step headings and calls this once per piece.
-    [ValidateSet('all', 'helpers', 'menu', 'music')][string]$What = 'all',
+    [ValidateSet('all', 'helpers', 'menu', 'music', 'windows')][string]$What = 'all',
     [switch]$NoDownload,            # always build
     [switch]$NoBuild,               # never build: a release or nothing (tests, building with no SDK)
     [switch]$NoStart                # don't stop or start the menu app / the music player (CI, tests)
@@ -82,6 +82,7 @@ function Install-DotNetSdk {
 $WantHelpers = $What -in 'all', 'helpers'
 $WantMenu = $What -in 'all', 'menu'
 $WantMusic = $What -in 'all', 'music'
+$WantWindows = $What -in 'all', 'windows'
 foreach ($d in $BinDir, $MenuDir) { New-Item -ItemType Directory -Force $d | Out-Null }
 $work = Join-Path ([IO.Path]::GetTempPath()) "omawin-binaries-$PID"
 New-Item -ItemType Directory -Force $work | Out-Null
@@ -389,6 +390,34 @@ try {
                 if (Install-DotNetSdk) {
                     try { & "$Repo\src\music\build.ps1" -OutDir $BinDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'music' $key }
                     catch { Write-Warn "music player build failed: $_" }
+                } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
+            }
+        }
+    }
+
+    # --- omawin-windows (Phase 8's fixes: one exe in ~/.local/bin) -----------------------------
+    # Nothing keeps it running (it lives for one command), so the new file simply replaces the old;
+    # one open in a terminal is renamed aside, as the music player is.
+    if ($WantWindows) {
+        $key = Get-SourceKey @('src/windows')
+        if (Test-Installed 'windows' $key { Test-Current (Join-Path $BinDir 'omawin-windows.exe') (Join-Path $Repo 'src\windows') }) { Write-Note 'ok  omawin-windows.exe' }
+        else {
+            $fromRelease = Get-PieceRelease "omawin-windows-*-win-$Arch.exe" @('src/windows') (-not $NoBuild -and (Test-DotNetSdk))
+            if ($fromRelease) {
+                $dest = Join-Path $BinDir 'omawin-windows.exe'
+                Get-ChildItem $BinDir -Filter 'omawin-windows.exe.old-*' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
+                if (Test-Path $dest) { Move-Item $dest "$dest.old-$(Get-Date -Format yyyyMMddHHmmss)" -Force }
+                Copy-Item -LiteralPath $fromRelease -Destination "$dest.part" -Force
+                Move-Item -LiteralPath "$dest.part" -Destination $dest -Force
+                Write-Note 'omawin-windows.exe from the release'
+                Save-Installed 'windows' (Get-ReleaseKey $key)
+            }
+            elseif ($NoBuild) { Write-Warn "no omawin-windows in a release ($reason) and -NoBuild: left as it is" }
+            else {
+                if ($reason -and $reason -ne '-NoDownload') { Write-Note "building here: $reason" }
+                if (Install-DotNetSdk) {
+                    try { & "$Repo\src\windows\build.ps1" -OutDir $BinDir -BuildOnly:([bool]$NoStart) -Arch $Arch; Save-Installed 'windows' $key }
+                    catch { Write-Warn "omawin-windows build failed: $_" }
                 } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }
         }

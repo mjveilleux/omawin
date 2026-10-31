@@ -123,3 +123,13 @@ setting undo | Put back the last Windows setting changed through omawin (Ctrl+Z 
 settings save | The Windows settings you've changed, into your account folder's settings.txt (-Shared: the PC's shared folder's), for a new PC | ask --settings save
 settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting) | ask --settings apply
 settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin
+# Fixing Windows (roadmap Phase 8): the answers Windows has and doesn't show. omawin-windows (src/windows/)
+# does them in your terminal; the system menu's "This PC" rows open them in one.
+who-has | Which programs hold a file or folder open, then close or end them: omawin who-has <path> (no path: the one on the clipboard, from Explorer's Copy as path) | run omawin-windows who-has
+health | Why the PC restarted, crashed or woke up, and which apps crashed, from Windows' event logs: omawin health [days] (30 unless said) | run omawin-windows health
+startup | Everything that starts with Windows (your Run key and Startup folder, the PC's, programs' services): omawin startup off <name>, on <name> (Task Manager's own switch; nothing is deleted) | run omawin-windows startup
+top | Processes by app, the busiest first (CPU, memory as Task Manager counts it): omawin top <name> lists its processes and ports; omawin top end <pid> | run omawin-windows top
+hosts | The hosts file as entries: omawin hosts lists it; add <address> <name>, off <name>, on <name> (shows the change, then one admin prompt; the old file is kept) | run omawin-windows hosts
+connections | Which apps are talking to the internet now, and to whom: omawin connections [app] | run omawin-windows connections
+wifi share | The Wi-Fi you're on as a QR code a phone joins from; a saved one: omawin wifi share <network>; --show prints the password | run omawin-windows wifi-qr
+clip | The clipboard's text changed in place: json, json-line, base64, unbase64, url, unurl, date, timestamp, trim, lower, upper, path (omawin clip lists them) | run omawin-windows clip

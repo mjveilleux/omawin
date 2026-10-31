@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for omawin-windows' pure parts (src/windows: Phase 8's fixes): the hosts file's rules,
+       the event log's sentences, the startup switch's bytes, the socket tables, the clipboard's
+       transforms, the Wi-Fi code. No Windows calls, so they run on Linux (.github/workflows/test.yml).
+       The files are linked, not referenced: the exe itself only runs on Windows. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Omawin.Windows.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/windows/Files/Holders.cs" Link="windows/Holders.cs" />
+    <Compile Include="../../src/windows/Health/HealthEvents.cs" Link="windows/HealthEvents.cs" />
+    <Compile Include="../../src/windows/Startup/StartupItems.cs" Link="windows/StartupItems.cs" />
+    <Compile Include="../../src/windows/Admin/AdminScripts.cs" Link="windows/AdminScripts.cs" />
+    <Compile Include="../../src/windows/Net/HostsFile.cs" Link="windows/HostsFile.cs" />
+    <Compile Include="../../src/windows/Net/SocketTable.cs" Link="windows/SocketTable.cs" />
+    <Compile Include="../../src/windows/Net/Connections.cs" Link="windows/Connections.cs" />
+    <Compile Include="../../src/windows/Top/ProcessGroups.cs" Link="windows/ProcessGroups.cs" />
+    <Compile Include="../../src/windows/Clip/Transforms.cs" Link="windows/Transforms.cs" />
+    <Compile Include="../../src/windows/Wifi/WifiShare.cs" Link="windows/WifiShare.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

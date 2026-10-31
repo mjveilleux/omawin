@@ -13,12 +13,12 @@ if (Add-UserPath $bin -Prepend) { Write-Note "added $bin to PATH" }
 # Start-EarlyHelpers): its downloads are done or nearly, and only collected here.
 $early = $script:EarlyHelpers
 if ($early) {
-    foreach ($piece in 'omawin.exe', 'system menu', 'music player') { Add-InstallItem 'Tools' $piece $piece 'run' }
+    foreach ($piece in 'omawin.exe', 'system menu', 'music player', 'Windows fixes') { Add-InstallItem 'Tools' $piece $piece 'run' }
     $early.Process.WaitForExit()
     Get-Content $early.Log, "$($early.Log).err" -ErrorAction SilentlyContinue | ForEach-Object { if ("$_".Trim()) { Write-Note "$_".Trim() } }
     Remove-Item $early.Log, "$($early.Log).err" -Force -ErrorAction SilentlyContinue
     $state = if ($early.Process.ExitCode -eq 0) { 'done' } else { Write-Warn "the helpers' install stopped (exit $($early.Process.ExitCode)): run install.ps1 -Step helpers"; 'fail' }
-    foreach ($piece in 'omawin.exe', 'system menu', 'music player') { Add-InstallItem 'Tools' $piece $piece $state }
+    foreach ($piece in 'omawin.exe', 'system menu', 'music player', 'Windows fixes') { Add-InstallItem 'Tools' $piece $piece $state }
 }
 else { Invoke-InstallItem 'Tools' 'omawin.exe' { & "$Repo\bin\install-binaries.ps1" -What helpers } }
 
@@ -36,4 +36,8 @@ if (-not $early) {
     Write-Step 'Music player (the bar)'
     # omawin-music (src/music/): one exe in ~/.local/bin, the release's, or built here.
     Invoke-InstallItem 'Tools' 'music player' { & "$Repo\bin\install-binaries.ps1" -What music }
+
+    Write-Step 'Windows fixes (omawin who-has, health, startup, ...)'
+    # omawin-windows (src/windows/): one exe in ~/.local/bin, the release's, or built here.
+    Invoke-InstallItem 'Tools' 'Windows fixes' { & "$Repo\bin\install-binaries.ps1" -What windows }
 }

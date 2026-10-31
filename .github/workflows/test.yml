@@ -22,6 +22,8 @@ jobs:
         run: dotnet test test/menu-app.Tests --logger "console;verbosity=normal"
       - name: omawin command
         run: dotnet test test/cli.Tests --logger "console;verbosity=normal"
+      - name: Windows fixes (src/windows)
+        run: dotnet test test/windows.Tests --logger "console;verbosity=normal" && dotnet build src/windows -c Release
       - name: omawin command builds with Native AOT
         run: dotnet publish src/cli -c Release -r linux-x64 -o out/cli && out/cli/omawin --version
       # Weekly by community-themes.yml; built here too, as it shares Community.cs with the menu app.
