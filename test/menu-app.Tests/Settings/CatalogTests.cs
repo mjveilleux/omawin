@@ -73,6 +73,17 @@ public class CatalogTests
         Assert.Equal(ids.Count, ids.Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
 
+    // An spi or powercfg line names one of its handler's table: a typo would otherwise only show
+    // as a "?" in someone's menu.
+    [Fact]
+    public void ShippedCatalogNamesOnlyKnownSpiAndPowerSettings()
+    {
+        var file = Path.Combine(RepoRoot(), "default", "launcher", "settings.txt");
+        var (entries, _) = Catalog.Parse([(file, File.ReadAllLines(file))]);
+        Assert.Empty(entries.Where(e => e.How.Verb == "spi" && !SpiHandler.Names.Contains(e.How.Target)).Select(e => e.Id));
+        Assert.Empty(entries.Where(e => e.How.Verb == "powercfg" && (!PowerHandler.Names.ContainsKey(e.How.Target) || e.How.Args is not ["ac" or "dc" or "both"])).Select(e => e.Id));
+    }
+
     // The repo's root, from this file's place in it (test/menu-app.Tests/Settings/).
     internal static string RepoRoot([System.Runtime.CompilerServices.CallerFilePath] string here = "") =>
         Path.GetFullPath(Path.Combine(Path.GetDirectoryName(here)!, "..", "..", ".."));
