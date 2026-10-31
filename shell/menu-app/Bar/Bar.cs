@@ -87,6 +87,7 @@ public static class Bar
             Wm.Start();
             StartLoops();
             WatchTheme();
+            WatchPlugins();
         }
         // The widgets fade in once GlazeWM has said where things are, or after 0.6 s anyway.
         Task.Delay(600).ContinueWith(_ => ui?.TryEnqueue(Arrive));
@@ -95,6 +96,9 @@ public static class Bar
 
     static void Hide()
     {
+        // The plugins' hosts end with their cells (not left drawing over a bar that's gone).
+        foreach (var w in windows)
+            foreach (var slot in w.Widgets.OfType<PluginSlot>()) slot.Close();
         foreach (var w in windows) w.Close();
         windows.Clear();
         arrived = false;
@@ -125,15 +129,14 @@ public static class Bar
                     bar.Widgets.Add(widget);
                 }
         }
-        // The plugins that are on (Bar/PluginSlot.cs), on the primary monitor's bar: each a cell its
-        // QML host draws over. (Screens() lists the primary first; one host each for now.)
-        if (windows.Count == 0)
-            foreach (var (place, slot) in PluginSlot.On())
-            {
-                slot.Attach(bar);
-                bar.Place(place).Children.Insert(0, slot.Element);
-                bar.Widgets.Add(slot);
-            }
+        // The plugins that are on (Bar/PluginSlot.cs), on every monitor's bar: each a cell its own
+        // QML host draws over.
+        foreach (var (place, slot) in PluginSlot.On())
+        {
+            slot.Attach(bar);
+            bar.Place(place).Children.Insert(0, slot.Element);
+            bar.Widgets.Add(slot);
+        }
         bar.Paint(theme);
         bar.PlaceOn(screen, Scale(screen));
         bar.ShowBar();
@@ -341,6 +344,47 @@ public static class Bar
             themeWatcher.Created += (_, _) => ui?.TryEnqueue(() => ApplyTheme(force: false));
         }
         catch (Exception ex) { App.Log(ex); }
+    }
+
+    // plugins.txt changed (omawin plugin add|remove, the gallery's Enter): the bars made again
+    // with the plugins now on, once the writing has settled, and only when what they'd draw
+    // really moved (`omawin plugin add` writes the file again once the host is installed).
+    static FileSystemWatcher? pluginsWatcher;
+    static string pluginsOn = "";
+    static CancellationTokenSource? pluginsSettle;
+    static void WatchPlugins()
+    {
+        pluginsOn = PluginSlot.State();
+        try
+        {
+            Directory.CreateDirectory(MenuModel.StateDir);
+            pluginsWatcher = new FileSystemWatcher(MenuModel.StateDir, Path.GetFileName(PluginSlot.OnFile))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                EnableRaisingEvents = true,
+            };
+            FileSystemEventHandler changed = (_, _) =>
+            {
+                pluginsSettle?.Cancel();
+                var settle = pluginsSettle = new CancellationTokenSource();
+                Task.Delay(300, settle.Token).ContinueWith(t => { if (!t.IsCanceled) ui?.TryEnqueue(ReloadPlugins); }, TaskScheduler.Default);
+            };
+            pluginsWatcher.Changed += changed;
+            pluginsWatcher.Created += changed;
+            pluginsWatcher.Deleted += changed;
+            pluginsWatcher.Renamed += (s, e) => changed(s, e);
+        }
+        catch (Exception ex) { App.Log(ex); }
+    }
+
+    static void ReloadPlugins()
+    {
+        var now = PluginSlot.State();
+        if (now == pluginsOn) return;
+        pluginsOn = now;
+        if (windows.Count == 0) return;
+        Hide();
+        try { Show(); } catch (Exception ex) { App.Log(ex); }
     }
 
     static void ApplyTheme(bool force)
