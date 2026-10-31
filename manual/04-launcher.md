@@ -43,7 +43,7 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`default/launcher/project-tabs.txt`).
   - The session keeps running when the window closes, agents and all; opening the project again reattaches to it.
   - Linux repos open inside WSL, marked with your distro's logo (Arch or Ubuntu). WSL is only asked when it's already running (a cold start takes ~8 s); otherwise the last list is reused.
-- **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. Under them are your favorite sites from `default/launcher/sites.txt`.
+- **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. When Windows has reserved a common dev port at start-up (Hyper-V and WSL take random ranges, so a server on 3000 or 8080 fails though nothing is listening there), a yellow line says which and what to do. Under them are your favorite sites from `default/launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.
 - **Clipboard** (or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
