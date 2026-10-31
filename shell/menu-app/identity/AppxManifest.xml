@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  omawin's package identity (roadmap 8.22; docs/shell-apps.md decision 7): a sparse package, only
+  this manifest and its logos, pointing at the menu app's own folder, so SystemMenu.exe gets an
+  identity without becoming an MSIX app. Windows' notification listener needs one. Registered for
+  this account by `omawin notifications identity on` (NotificationHistory.cs), which copies this
+  file to %LOCALAPPDATA%\launcher\identity\, draws the logos beside it and registers it with the
+  menu app's folder as its external location; app.manifest's <msix> element ties the exe to it.
+  Publisher must match app.manifest's (and, once releases sign it, the certificate's subject).
+-->
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
+         xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
+         xmlns:uap3="http://schemas.microsoft.com/appx/manifest/uap/windows10/3"
+         xmlns:uap10="http://schemas.microsoft.com/appx/manifest/uap/windows10/10"
+         xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
+         IgnorableNamespaces="uap uap3 uap10 rescap">
+  <Identity Name="omawin.Shell" Publisher="CN=omawin" Version="1.0.0.0" ProcessorArchitecture="neutral" />
+  <Properties>
+    <DisplayName>omawin</DisplayName>
+    <PublisherDisplayName>omawin</PublisherDisplayName>
+    <Logo>Assets\StoreLogo.png</Logo>
+    <uap10:AllowExternalContent>true</uap10:AllowExternalContent>
+  </Properties>
+  <Resources>
+    <Resource Language="en-us" />
+  </Resources>
+  <Dependencies>
+    <TargetDeviceFamily Name="Windows.Desktop" MinVersion="10.0.19041.0" MaxVersionTested="10.0.26100.0" />
+  </Dependencies>
+  <Capabilities>
+    <rescap:Capability Name="runFullTrust" />
+    <rescap:Capability Name="unvirtualizedResources" />
+    <uap3:Capability Name="userNotificationListener" />
+  </Capabilities>
+  <Applications>
+    <Application Id="Shell" Executable="SystemMenu.exe" uap10:TrustLevel="mediumIL" uap10:RuntimeBehavior="win32App">
+      <uap:VisualElements DisplayName="omawin" Description="omawin's shell: the launcher, the bar, the menus"
+                          BackgroundColor="transparent" Square150x150Logo="Assets\Square150x150Logo.png"
+                          Square44x44Logo="Assets\Square44x44Logo.png" AppListEntry="none" />
+    </Application>
+  </Applications>
+</Package>

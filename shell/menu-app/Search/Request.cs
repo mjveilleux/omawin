@@ -6,13 +6,13 @@ namespace SystemMenu.Search;
 //   --search                         One Search, on All (Win+Space)
 //   --search <filter> [text…]        on a filter: files (Win+F), clipboard (Win+Shift+V), settings, …
 //   --search <page> [arg]            a view that isn't a filter: audio, quick, packages, localhost,
-//                                    reports, keys, vpn <connection>; about is its own window
+//                                    reports, keys, notifications, vpn <connection>; about is its own window
 //   --search command --browse [id]   Commands, browsing the menu's sections (omawin menu [id])
 //   --retired-key                    asked by Win+Alt+Space, retired: the note says Win+Space does this now
 public sealed record SearchRequest(Tag? Filter, string? Page, string PageArg, bool Browse, string? Section, bool RetiredKey, string Text)
 {
     // The launcher's pages that aren't filters: views of the same window, opened as they were.
-    public static readonly string[] Pages = ["audio", "quick", "packages", "localhost", "reports", "keys", "vpn", "about"];
+    public static readonly string[] Pages = ["audio", "quick", "packages", "localhost", "reports", "keys", "notifications", "vpn", "about"];
 
     public static SearchRequest Parse(IReadOnlyList<string> args)
     {

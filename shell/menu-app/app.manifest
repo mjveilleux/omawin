@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <assembly manifestVersion="1.0" xmlns="urn:schemas-microsoft-com:asm.v1">
   <assemblyIdentity version="1.0.0.0" name="SystemMenu.app"/>
+  <!-- omawin's package identity (identity/AppxManifest.xml, roadmap 8.22): once that sparse package
+       is registered for this account (omawin notifications identity on), Windows gives this exe its
+       identity when it starts; until then this does nothing. -->
+  <msix xmlns="urn:schemas-microsoft-com:msix.v1" publisher="CN=omawin" packageName="omawin.Shell" applicationId="Shell" />
   <application xmlns="urn:schemas-microsoft-com:asm.v3">
     <windowsSettings>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true/PM</dpiAware>

@@ -236,6 +236,7 @@ public static class WinSettings
         ["--shell-extensions", .. var rest] => ShellExtensionsWin.Answer(rest),
         ["--env", .. var rest] => await EnvVars.Answer(EnvVarsWin.Instance, EnvVarsWin.History, rest),
         ["--everywhere", .. var rest] => Everywhere.Answer(rest),
+        ["--notifications", .. var rest] => await NotificationHistory.Answer(rest),
         ["--dev-drive", .. var rest] => await DevDrive.Answer(DevDriveWin.Instance, EnvVarsWin.Instance, EnvVarsWin.History, rest),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };

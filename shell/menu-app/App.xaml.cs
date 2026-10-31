@@ -201,6 +201,7 @@ public partial class App : Application
             Bar.Wm.Start(); // already started when the bar is up; once either way
             FileSearch.Start(); // the launcher's file indexes (fff), built in the background
             Everywhere.Start(); // whole-disk search, when it's on: its drives watched, walked at idle (Everywhere.cs)
+            NotificationHistory.Start(); // Windows' notifications kept and searchable, with identity (NotificationHistory.cs)
             Background.Start(); // clipboard history, installed apps, reports (Background.cs)
             WinSettings.Start(); // the settings history trimmed, Windows' settings index read if it changed (Settings/)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)

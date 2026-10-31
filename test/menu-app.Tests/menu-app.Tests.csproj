@@ -79,6 +79,7 @@
     <Compile Include="..\..\shell\menu-app\FilePreview.cs" Link="Linked\FilePreview.cs" />
     <Compile Include="..\..\shell\menu-app\DiskIndex.cs" Link="Linked\DiskIndex.cs" />
     <Compile Include="..\..\shell\menu-app\ViewerFile.cs" Link="Linked\ViewerFile.cs" />
+    <Compile Include="..\..\shell\menu-app\NoticeLog.cs" Link="Linked\NoticeLog.cs" />
   </ItemGroup>
 
   <ItemGroup>

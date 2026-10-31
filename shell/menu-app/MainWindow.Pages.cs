@@ -108,7 +108,7 @@ public sealed partial class MainWindow
     // Lists, except Audio's tiles (returned to be drawn as tiles).
     TileLayout? RenderPage(string query)
     {
-        string title = page switch { "projects" => "Projects", "clipboard" => "Clipboard", "localhost" => "Localhost", "reports" => "Reports", "keys" => "Shortcuts", "audio" => quickSwitches ? "Quick settings" : "Audio", "packages" => "Packages", _ => "VPN" };
+        string title = page switch { "projects" => "Projects", "clipboard" => "Clipboard", "localhost" => "Localhost", "reports" => "Reports", "keys" => "Shortcuts", "notifications" => "Notifications", "audio" => quickSwitches ? "Quick settings" : "Audio", "packages" => "Packages", _ => "VPN" };
         SetCrumbs("", title);
         switch (page)
         {
@@ -208,6 +208,10 @@ public sealed partial class MainWindow
                 SetKeys(("↑↓", "move"), ("esc", "back"));
                 break;
 
+            case "notifications":
+                RenderNotifications(query);
+                break;
+
             case "audio":
                 return QuickPage(query);
 
@@ -224,6 +228,42 @@ public sealed partial class MainWindow
                 break;
         }
         return null;
+    }
+
+    // --- notifications (roadmap 8.22, NotificationHistory.cs) ---------------------------------
+    // Newest first, or what's typed (app, title, text); Enter copies a code, else opens the first
+    // link, else copies the text. Each row says its app, so the groups read down the list.
+    void RenderNotifications(string query)
+    {
+        Placeholder.Text = "Search notifications…";
+        var all = NotificationHistory.Recent();
+        if (NotificationHistory.Why is { } why)
+            AddRow(Glyph(0xF009B), "Not reading Windows' notifications", Hex(theme.Yellow), () => { }, dim: true, sub: why); // bell-off
+        var shown = NoticeLog.Search(all, query).Take(200).ToList();
+        foreach (var n in shown)
+        {
+            var notice = n;
+            string? code = NoticeLog.Code(n.Text);
+            string? link = code == null ? NoticeLog.Links(n.Text).FirstOrDefault() : null;
+            string label = n.Title.Length > 0 ? n.Title : n.Body;
+            string body = System.Text.RegularExpressions.Regex.Replace(n.Title.Length > 0 ? n.Body : "", @"\s+", " ");
+            AddRow(Glyph(code != null ? 0xF0306 : link != null ? 0xF0337 : 0xF009A), label.ReplaceLineEndings(" "),  // key, link, bell
+                Hex(code != null ? theme.Green : theme.Accent), () =>
+                {
+                    HideMenu();
+                    if (code != null) { ClipboardHistory.SetText(code); Snip.Say($"Code {code} copied"); }
+                    else if (link != null) { try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(link) { UseShellExecute = true }); } catch (Exception ex) { App.Log(ex); } } // your default browser
+                    else ClipboardHistory.SetText(notice.Text);
+                },
+                Tag.Text, Ago(n.When.LocalDateTime), sub: body.Length > 0 ? $"{n.App} · {body}" : n.App);
+        }
+        if (all.Count == 0 && NotificationHistory.Why == null)
+            AddRow(Glyph(0xF009A), "No notifications yet: they're kept here as Windows shows them", Hex(theme.Comment), () => { }, dim: true);
+        else if (shown.Count == 0 && all.Count > 0)
+            AddRow(Glyph(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
+        var apps = NoticeLog.Apps(all);
+        FooterLeft.Text = all.Count == 0 ? "" : $"{all.Count} from {apps.Count} apps · most from {apps[0].App}";
+        SetKeys(("↵", "copy code · open link · copy"), ("esc", "back"));
     }
 
     static string Program(Server s) => s.Program == "wslrelay" ? "wsl" : s.Program;
