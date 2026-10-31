@@ -27,3 +27,7 @@ jobs:
       # Weekly by community-themes.yml; built here too, as it shares Community.cs with the menu app.
       - name: The community theme index builds
         run: dotnet build src/community-themes -c Release
+      # The plugin gallery's index builder (src/plugin-gallery): its whole program, not only the
+      # parts the tests link; the release job runs it.
+      - name: Plugin gallery builder builds
+        run: dotnet build src/plugin-gallery -c Release
