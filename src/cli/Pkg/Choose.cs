@@ -10,21 +10,24 @@ public static class Choose
 {
     // In order: --from; your pin for this name (omawin pkg move); omawin's own pick for it
     // (names.txt's prefer); your order (omawin pkg prefer); then every manager. The first one on
-    // this PC that has the name wins. "manager:id" (as omawin pkg list shows a second copy) is --from.
+    // this PC that has the name wins. "manager:id" (as omawin pkg list shows a second copy, and
+    // the launcher's Packages page hands over) is that manager's own id, used as it is.
     public static Choice Manager(string typed, string? from, string? pin, IReadOnlyList<string> prefer, NameTable names, Func<string, bool> present)
     {
         var name = typed;
+        var direct = false;
         if (from == null && typed.IndexOf(':') is > 0 and var colon && Managers.IsInstallable(typed[..colon]))
         {
             from = typed[..colon];
             name = typed[(colon + 1)..];
+            direct = true;
         }
         var known = names[name];
         if (from != null)
         {
             if (!Managers.IsInstallable(from)) return new CantChoose($"no package manager \"{from}\" ({string.Join(", ", Managers.Installable)})");
             if (!present(from)) return new CantChoose($"{Managers.Label(from)} isn't on this PC (omawin pkg install {from} --from winget, or the launcher's Packages page)");
-            if (known == null) return new SearchIn([from], name);
+            if (known == null) return direct ? new UseManager(from, name) : new SearchIn([from], name);
             return known.IdIn(from) is { } id ? new UseManager(from, id)
                 : new CantChoose($"omawin doesn't know {name} in {Managers.Label(from)}: omawin pkg install <its {Managers.Label(from)} id> --from {from}");
         }

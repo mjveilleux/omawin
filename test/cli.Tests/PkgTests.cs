@@ -86,11 +86,12 @@ public class PkgTests
     }
 
     [Fact]
-    public void ManagerColonIdIsFrom()
+    public void ManagerColonIdIsThatManagersOwnId()
     {
-        var s = Assert.IsType<SearchIn>(Choose.Manager("scoop:fd", null, null, [], Names, All));
-        Assert.Equal(["scoop"], s.Managers);
-        Assert.Equal("fd", s.Query);
+        Assert.Equal(new UseManager("scoop", "extras/lazysql"), Choose.Manager("scoop:extras/lazysql", null, null, [], Names, All));
+        // A name omawin knows still means its id there.
+        Assert.Equal(new UseManager("winget", "BurntSushi.ripgrep.MSVC"), Choose.Manager("winget:ripgrep", null, null, [], Names, All));
+        Assert.IsType<CantChoose>(Choose.Manager("choco:fd", null, null, [], Names, m => m != "choco"));
     }
 
     [Fact]

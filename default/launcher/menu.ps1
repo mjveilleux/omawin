@@ -142,39 +142,18 @@ Write-Host "``n  done · press any key to close" -ForegroundColor DarkGray
 # What each manager's ids look like (the app checks the same): nothing else reaches a command.
 $SafeId = '^[A-Za-z0-9][A-Za-z0-9._+-]*(/[A-Za-z0-9][A-Za-z0-9._+-]*)?$'
 
-function Get-InstallScript([string]$Source, [string]$Id) {
-    $installed = $InstalledFile.Replace("'", "''")
-    switch ($Source) {
-        'winget' { @"
-Write-Host '  winget  $Id' -ForegroundColor Cyan
-winget install --id $Id --exact --accept-source-agreements --accept-package-agreements
-if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'winget:$($Id.ToLower())' }
-"@ }
-        # Chocolatey needs admin: Windows asks first.
-        'choco' { @"
-Write-Host '  Chocolatey  $Id' -ForegroundColor Cyan
-Start-Process choco -Verb RunAs -Wait -ArgumentList 'install', '$Id', '-y'
-if (choco list --limit-output --exact '$Id') { Add-Content '$installed' 'choco:$($Id.ToLower())' }
-"@ }
-        # Scoop: <bucket>/<app>, into your user folder, no admin.
-        'scoop' {
-            $app = ($Id -split '/')[-1]
-            @"
-Write-Host '  Scoop  $Id' -ForegroundColor Cyan
-scoop install $Id
-if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'scoop:$($app.ToLower())' }
-"@ }
-    }
-}
-
+# One `omawin pkg install <source>:<id> ...` for them all (src/cli/Pkg): each through its manager,
+# recorded in packages.tsv (so pkg remove and update know where it came from) and marked in
+# installed.txt; Chocolatey's together after one admin prompt; Scoop's into your user folder.
 if ($Install) {
-    $scripts = foreach ($key in $Install -split ';') {
+    $keys = @(foreach ($key in $Install -split ';') {
         $source, $id = $key -split ':', 2
         if ($source -notin 'winget', 'choco', 'scoop' -or $id -notmatch $SafeId) { Write-Warning "skipped $key"; continue }
-        Get-InstallScript $source $id
+        "$source`:$id"
+    })
+    if ($keys.Count) {
+        Start-MenuTask $(if ($keys.Count -eq 1) { "Install $(($keys[0] -split ':', 2)[1])" } else { "Install $($keys.Count) packages" }) "omawin-cli.exe pkg install $($keys -join ' ')"
     }
-    $count = @($scripts).Count
-    if ($count) { Start-MenuTask $(if ($count -eq 1) { "Install $(($Install -split ':', 2)[1])" } else { "Install $count packages" }) ($scripts -join "`n") }
 }
 
 # The plugin gallery (shell/menu-app/MainWindow.Plugins.cs): "add <id>" or "remove <id>". The id
