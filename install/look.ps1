@@ -1,4 +1,4 @@
-# install.ps1 step: the theme, a clean desktop, no ads, the lock screen, the auto-hiding taskbar, your Windows settings.
+# install.ps1 step: the theme, a clean desktop, no ads, the lock screen, the auto-hiding taskbar, omawin's recommended and your own Windows settings.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
 Write-Step 'Windows look'
@@ -52,6 +52,18 @@ else {
 # applied (-Changed), so a setting you've changed on this PC since isn't put back.
 $settingsFiles = @((Join-Path (& "$Repo\bin\user-layer.ps1" -Shared) 'settings.txt'), (Join-Path $UserLayer 'settings.txt')) | Where-Object { Test-Path $_ }
 $omawinExe = "$HOME\.local\bin\omawin.exe"
+# First omawin's recommended Windows settings (default/launcher/tune-up.txt, roadmap 8G): only the
+# ones marked auto (this account, no admin, no restart), each once on this PC, so one you turned
+# back stays yours and an update sets only what's new to it, and says so here. Never asks: the
+# rest wait for `omawin tune-up apply`. Then your own settings.txt, which wins over them.
+# (Answered by the menu app, built in the helpers step: without it, this waits for the next update.)
+if ((Test-Path $omawinExe) -and (Test-Path "$env:LOCALAPPDATA\system-menu\SystemMenu.exe")) {
+    Invoke-InstallItem 'Desktop' 'recommended Windows settings' {
+        $said = & $omawinExe tune-up apply -Auto 2>&1
+        if ($LASTEXITCODE) { throw ($said -join '; ') }
+        $said
+    }
+}
 if ($settingsFiles -and (Test-Path $omawinExe)) {
     Invoke-InstallItem 'Desktop' 'your Windows settings' {
         $applyArgs = @('settings', 'apply', '-NoAdmin') + @(if ($LinkOnly) { '-Changed' })

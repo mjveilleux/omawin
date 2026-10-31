@@ -149,20 +149,21 @@ public static class SettingCommands
     // only the visible ones are read or set. apply first lists what it will change and asks
     // (code 3), then sets each through the store (undoable, admin ones queued) and, on that same
     // yes, applies the admin ones in the one prompt. -Auto (install, an update): only the 'auto'
-    // ones, never admin, nothing asked.
+    // ones, never admin, nothing asked, each only once (seenFile remembers which; TuneUp.AutoOnce),
+    // and silent when there's nothing new, so an update says only what it changed.
     public static async Task<Answer> TuneUp(SettingStore store, string[] a, IReadOnlyList<Recommendation> recs,
-        IReadOnlyList<SettingEntry> catalog, int build, bool unverified = false)
+        IReadOnlyList<SettingEntry> catalog, int build, bool unverified = false, string? seenFile = null)
     {
         bool apply = a.FirstOrDefault() == "apply";
         if (a.Length > 0 && !apply && a[0] != "list") return new(2, TuneUpUsage);
         bool autoOnly = a.Any(x => x.Equals("-Auto", StringComparison.OrdinalIgnoreCase));
         var rows = SystemMenu.TuneUp.Report(recs, catalog, Reader(store, recs, catalog, build, unverified), build, unverified);
         if (!apply) return new(0, SystemMenu.TuneUp.Format(rows).TrimEnd());
+        if (autoOnly) return Auto(store, rows, seenFile);
 
-        var todo = SystemMenu.TuneUp.ToApply(rows, autoOnly);
-        if (autoOnly) todo = todo.Where(r => !r.Entry.Admin).ToList(); // auto never prompts (TuneUp.Check holds the file to it)
+        var todo = SystemMenu.TuneUp.ToApply(rows, autoOnly: false);
         if (todo.Count == 0) return new(0, "Every recommended setting is already applied (omawin tune-up lists them)");
-        if (!autoOnly && !a.Contains("--yes"))
+        if (!a.Contains("--yes"))
         {
             int admin = todo.Count(r => r.Entry.Admin);
             return new(3, $"omawin tune-up apply sets {todo.Count} Windows setting{(todo.Count == 1 ? "" : "s")}"
@@ -180,13 +181,39 @@ public static class SettingCommands
             report.Add(o.Message);
         }
         // You said yes to the list, admin ones included: this is the one prompt.
-        if (!autoOnly && todo.Any(r => r.Entry.Admin) && store.AdminQueue.Count > 0)
+        if (todo.Any(r => r.Entry.Admin) && store.AdminQueue.Count > 0)
         {
             var o = await store.ApplyAdminAsync();
             if (!o.Ok) failed++;
             report.Add(o.Message);
         }
         report.Add("Each is undone like any setting: omawin setting undo, or in the system menu.");
+        return new(failed == 0 ? 0 : 1, string.Join('\n', report));
+    }
+
+    // -Auto: the 'auto' ones not seen before, set without asking; nothing printed when there's
+    // nothing new (install and every update run this, and say what it prints).
+    static Answer Auto(SettingStore store, List<TuneUpRow> rows, string? seenFile)
+    {
+        var seenBefore = seenFile != null && File.Exists(seenFile)
+            ? File.ReadAllLines(seenFile).Select(l => l.Trim()).Where(l => l.Length > 0).ToList() : [];
+        var todo = SystemMenu.TuneUp.AutoOnce(rows, new HashSet<string>(seenBefore, StringComparer.OrdinalIgnoreCase));
+        var report = new List<string>();
+        var set = new List<string>();
+        int failed = 0;
+        foreach (var r in todo)
+        {
+            var o = store.Set(r.Entry, r.Rec.Value, "tune-up");
+            if (o.Ok) set.Add(r.Rec.Id); else failed++;
+            report.Add(o.Message);
+        }
+        if (seenFile != null)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(seenFile)!);
+            File.WriteAllLines(seenFile, SystemMenu.TuneUp.Seen(seenBefore, rows, set));
+        }
+        if (report.Count == 0) return new(0, "");
+        report.Insert(0, "omawin's recommended Windows settings (omawin tune-up says why; each undone like any setting):");
         return new(failed == 0 ? 0 : 1, string.Join('\n', report));
     }
 

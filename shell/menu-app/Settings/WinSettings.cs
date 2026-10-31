@@ -229,7 +229,8 @@ public static class WinSettings
         ["--settings", .. var rest] => await SettingCommands.Settings(Store, rest,
             Path.Combine(MenuModel.Work, "settings.txt"), Path.Combine(MenuModel.Shared, "settings.txt"),
             Path.Combine(MenuModel.StateDir, "settings-applied.txt")),
-        ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified),
+        ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified,
+            Path.Combine(MenuModel.StateDir, "tune-up-auto.txt")),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

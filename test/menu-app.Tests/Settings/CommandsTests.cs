@@ -167,6 +167,31 @@ public class TuneUpCommandTests
         Assert.Equal(0, store.AdminQueue.Count);
     }
 
+    // Install and every update run -Auto: a recommendation you turned back is yours, so it's set
+    // once; one new to this PC (an update adds it, or it's verified since) is set then, and said.
+    [Fact]
+    public async Task AutoSetsEachOnceAndIsQuietWithNothingNew()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        var seen = dir.File("tune-up-auto.txt");
+        var first = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, Catalog_(), 26100, seenFile: seen);
+        Assert.Contains("Dark mode for apps: On", first.Text);
+        Assert.Equal(["explorer.open-to", "look.dark-apps"], File.ReadAllLines(seen)); // set, and found applied
+
+        windows.Values["look.dark-apps"] = "off"; // you turned it back
+        var again = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, Catalog_(), 26100, seenFile: seen);
+        Assert.Equal((0, ""), (again.Code, again.Text));
+        Assert.Single(windows.Writes);
+
+        // Verified since (no longer "check"): set at the next update.
+        var verified = Catalog_().Select(e => e.Id == "look.unverified" ? e with { Unverified = false } : e).ToList();
+        windows.Values["look.unverified"] = "on";
+        var next = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, verified, 26100, seenFile: seen);
+        Assert.Equal("look.unverified=off", windows.Writes[^1]);
+        Assert.Contains("look.unverified", File.ReadAllLines(seen));
+    }
+
     [Fact]
     public async Task NothingLeftAndMistakes()
     {
