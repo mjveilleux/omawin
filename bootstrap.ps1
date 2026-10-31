@@ -248,11 +248,12 @@ if (-not $Pwsh -or $needGit) {
 Write-Step 'git'
 if (-not $needGit) { Write-Note 'ok  git' }
 elseif ($GitFetch) {
-    # git's unpack and PowerShell 7's run at once: git's starts, then PowerShell 7's (once its
-    # download is in), and only git is waited for here (the clone needs it).
-    $gitJob = Start-BundleTool $GitFetch 'git'
+    # git alone first: the clone waits for it. Unpacking PowerShell 7 at the same time (tried in
+    # v0.3.1) made git's take 17 s instead of 10 on a 4-core PC: git's four tars and its one
+    # fought over the disk and Defender's scan. PowerShell 7's starts once git is in, and
+    # unpacks while git clones.
+    $gitDir = Complete-BundleTool (Start-BundleTool $GitFetch 'git') $GitFetch.Row[4]
     if (-not $Pwsh -and $PwshFetch) { $PwshJob = Start-BundleTool $PwshFetch 'PowerShell' }
-    $gitDir = Complete-BundleTool $gitJob $GitFetch.Row[4]
     # Git for Windows' portable build finishes its setup (Git Bash's /etc and /dev) with
     # post-install.bat, which removes itself: in the background, git works without it meanwhile.
     if (Test-Path "$gitDir\post-install.bat") {
