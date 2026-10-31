@@ -17,6 +17,8 @@
 
 Install runs this part first, before anything else is installed or started.
 
+Each of Windows' switches here is also a Windows setting in [the system menu](05-system-menu.md#windows-settings) (type "suggestions", "promoted", "lock screen tips", "advertising"): want one back, turn it on there (or `omawin setting set privacy.start-suggestions on`), and undo it like any other. One you turned back on that way stays on: install, an update and `omawin no-ads` leave it alone.
+
 **With admin** (one Windows prompt, only when something's left to do):
 - Sets Windows' "no consumer features" policy.
 

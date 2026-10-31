@@ -157,7 +157,43 @@ public class BuiltinRulesTests
             SettingKind.Action when e.How.Target == "firewall-dev" => @"node=C:\nodejs\node.exe",
             _ => "",
         };
-        Assert.Empty(entries.Where(e => e.Admin && SettingAdminQueue.PlanLine(e, sample(e)) == null).Select(e => e.Id));
+        Assert.Empty(entries.Where(e => e.Admin && SettingAdminQueue.PlanLines(e, sample(e)).Count == 0).Select(e => e.Id));
+    }
+
+    // bin/no-ads.ps1 sets what the catalog lines it names say (roadmap 1B.5). Each id it names must
+    // be a switch made only of registry DWORDs with an off value, the one shape its small reader
+    // takes: a renamed id or a line changed to a builtin would otherwise fail on someone's install.
+    [Fact]
+    public void EveryIdNoAdsNamesIsADwordSwitch()
+    {
+        var root = CatalogTests.RepoRoot();
+        var script = File.ReadAllText(Path.Combine(root, "bin", "no-ads.ps1"));
+        var ids = System.Text.RegularExpressions.Regex.Matches(script, @"'((?:look|explorer|privacy|input|system|display|connections|sound|developer)\.[a-z0-9-]+)'")
+            .Select(m => m.Groups[1].Value).Distinct().ToList();
+        Assert.True(ids.Count >= 16, $"found only {ids.Count} ids in no-ads.ps1");
+        var file = Path.Combine(root, "default", "launcher", "settings.txt");
+        var byId = Catalog.Parse([(file, File.ReadAllLines(file))]).Entries.ToDictionary(e => e.Id);
+        foreach (var id in ids)
+        {
+            Assert.True(byId.TryGetValue(id, out var e), $"{id}: not in settings.txt");
+            Assert.Equal(SettingKind.Switch, e!.Kind);
+            Assert.All(e.Parts, p => Assert.True(p.How.Verb == "reg" && p.How.Args[0] == "dword" && int.TryParse(p.How.Off, out _), $"{id}: {p.How.Target}"));
+        }
+    }
+
+    // A joined line: every value written, read as one switch, and each its own admin plan line.
+    [Fact]
+    public void JoinedValuesAreOneSwitch()
+    {
+        var e = Catalog.ParseLine(@"privacy.tips | - | Tips | tips | switch | reg HKCU\A\One dword on=1 off=0 default=1 + reg HKCU\A\Two dword on=1 off=0 default=1 |", "t:1");
+        Assert.Equal([@"HKCU\A\One", @"HKCU\A\Two"], e.Parts.Select(p => p.How.Target));
+        Assert.Equal("1", e.Also[0].Default);
+        Assert.Contains("only reg switches", Assert.Throws<FormatException>(() =>
+            Catalog.ParseLine(@"look.x | - | X | x | choice | reg HKCU\A\B dword values=""1,2"" + reg HKCU\A\C dword values=""1,2"" |", "t:2")).Message);
+        Assert.Contains("HKLM", Assert.Throws<FormatException>(() =>
+            Catalog.ParseLine(@"look.x | - | X | x | switch | reg HKCU\A\B dword on=1 off=0 + reg HKLM\SOFTWARE\C dword on=1 off=0 |", "t:3")).Message);
+        var policy = Catalog.ParseLine(@"privacy.p | - | P | p | switch | reg HKLM\SOFTWARE\P\A dword on=- off=1 + reg HKLM\SOFTWARE\P\B dword on=- off=1 | admin", "t:4");
+        Assert.Equal(["privacy.p\treg\tHKLM\\SOFTWARE\\P\\A\tdword\t1", "privacy.p\treg\tHKLM\\SOFTWARE\\P\\B\tdword\t1"], SettingAdminQueue.PlanLines(policy, "off"));
     }
 
     [Fact]

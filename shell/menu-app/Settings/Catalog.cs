@@ -35,6 +35,13 @@ public sealed record SettingEntry(
     public string Area => Id[..Id.IndexOf('.')];
     // Shown on this Windows? (§4: Catalog.Visible does the filtering.)
     public bool FitsBuild(int build) => build >= MinBuild && (MaxBuild == 0 || build <= MaxBuild);
+
+    // "reg A … + reg B …": the values a switch sets together besides its own How, each an entry
+    // like this one with that value's How. Empty for a line with one target.
+    public IReadOnlyList<SettingEntry> Also { get; init; } = [];
+
+    // Every value the line sets: itself (its How), then Also.
+    public IEnumerable<SettingEntry> Parts => Also.Count == 0 ? [this] : [this, .. Also];
 }
 
 public static class Catalog
@@ -112,7 +119,12 @@ public static class Catalog
             "action" => SettingKind.Action, "link" => SettingKind.Link,
             var k => throw new FormatException($"kind '{k}'"),
         };
-        var how = ParseHow(f[5]);
+        // "reg A … + reg B …": a switch that sets several values together, all on or all off
+        // (the no-ads tweaks, which Windows spreads over a few values per thing you'd switch).
+        var hows = f[5].Split(" + ").Select(ParseHow).ToList();
+        if (hows.Count > 1 && (kind != SettingKind.Switch || hows.Any(h => h.Verb != "reg")))
+            throw new FormatException("only reg switches join values with +");
+        var how = hows[0];
         var notes = f.Length > 6 ? Tokens(f[6]) : [];
 
         bool admin = false, unverified = false; var takes = Takes.Now; int min = 0, max = 0;
@@ -127,18 +139,23 @@ public static class Catalog
             else throw new FormatException($"note '{n}'");
         }
 
-        // A machine-wide registry value is admin whether or not the line says so: never let an
-        // HKLM write reach the non-elevated path (it would fail, or worse, half apply).
-        if (how.Verb == "reg" && how.Target.StartsWith("HKLM", StringComparison.OrdinalIgnoreCase) && !admin)
-            throw new FormatException("an HKLM value needs the 'admin' note");
+        foreach (var h in hows)
+        {
+            // A machine-wide registry value is admin whether or not the line says so: never let an
+            // HKLM write reach the non-elevated path (it would fail, or worse, half apply).
+            if (h.Verb == "reg" && h.Target.StartsWith("HKLM", StringComparison.OrdinalIgnoreCase) && !admin)
+                throw new FormatException("an HKLM value needs the 'admin' note");
+            if (kind == SettingKind.Switch && h.Verb == "reg" && (h.On is null || h.Off is null))
+                throw new FormatException("a reg switch needs on= and off=");
+            if (h.Verb == "reg" && (h.Args.Count == 0 || h.Args[0] is not ("dword" or "qword" or "sz" or "expand_sz")))
+                throw new FormatException("reg needs a type after the path: dword | qword | sz | expand_sz");
+        }
 
         var choices = how.Options.TryGetValue("values", out var vs) ? ParseChoices(vs) : [];
         (int, int)? range = how.Options.TryGetValue("range", out var r) ? ParseRange(r) : null;
 
         switch (kind)
         {
-            case SettingKind.Switch when how.Verb == "reg" && (how.On is null || how.Off is null):
-                throw new FormatException("a reg switch needs on= and off=");
             case SettingKind.Choice when how.Verb is "reg" or "spi" or "powercfg" && choices.Count == 0:
                 throw new FormatException("a choice needs values=");
             case SettingKind.Slider when range is null:
@@ -146,11 +163,11 @@ public static class Catalog
             case SettingKind.Link when how.Verb != "link":
                 throw new FormatException("a link row's how is 'link <uri>'");
         }
-        if (how.Verb == "reg" && (how.Args.Count == 0 || how.Args[0] is not ("dword" or "qword" or "sz" or "expand_sz")))
-            throw new FormatException("reg needs a type after the path: dword | qword | sz | expand_sz");
 
-        return new SettingEntry(id, f[1], f[2], f[3], kind, how, admin, takes, min, max, unverified,
+        var entry = new SettingEntry(id, f[1], f[2], f[3], kind, how, admin, takes, min, max, unverified,
             choices, range, how.Options.GetValueOrDefault("default"), origin);
+        return hows.Count == 1 ? entry
+            : entry with { Also = hows.Skip(1).Select(h => entry with { How = h, Default = h.Options.GetValueOrDefault("default") }).ToList() };
     }
 
     public static How ParseHow(string text)

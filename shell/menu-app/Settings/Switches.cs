@@ -9,9 +9,18 @@ using Microsoft.Win32;
 namespace SystemMenu;
 
 // --- reg ---------------------------------------------------------------------------------------
+// A line can join several values with " + " (Catalog.ParseLine): each is one of e.Parts, written
+// together and read as one switch, off only when every one is off.
 public sealed class RegHandler : ISettingHandler
 {
     public string? Read(SettingEntry e)
+    {
+        if (e.Also.Count == 0) return ReadOne(e);
+        var words = e.Parts.Select(ReadOne).ToList();
+        return words.All(w => w == "off") ? "off" : words.Any(w => w == "on") ? "on" : null;
+    }
+
+    static string? ReadOne(SettingEntry e)
     {
         var (hive, path, name) = Catalog.SplitReg(e.How.Target);
         using var key = Root(hive).OpenSubKey(path);
@@ -22,12 +31,13 @@ public sealed class RegHandler : ISettingHandler
     {
         // Never here: the store queues admin entries for the one elevated run (§8).
         if (e.Admin) return "needs admin";
-        var (hive, path, name) = Catalog.SplitReg(e.How.Target);
-        var raw = SettingValues.FromWords(e, value);
-        using (var key = Root(hive).CreateSubKey(path, writable: true))
+        foreach (var part in e.Parts)
         {
+            var (hive, path, name) = Catalog.SplitReg(part.How.Target);
+            var raw = SettingValues.FromWords(part, value);
+            using var key = Root(hive).CreateSubKey(path, writable: true);
             if (raw == "-") key.DeleteValue(name, throwOnMissingValue: false);
-            else switch (e.How.Args[0])
+            else switch (part.How.Args[0])
             {
                 case "dword": key.SetValue(name, SettingValues.Dword(raw), RegistryValueKind.DWord); break;
                 case "qword": key.SetValue(name, SettingValues.Qword(raw), RegistryValueKind.QWord); break;
@@ -41,22 +51,28 @@ public sealed class RegHandler : ISettingHandler
 
     public static RegistryKey Root(string hive) => hive == "HKLM" ? Registry.LocalMachine : Registry.CurrentUser;
 
-    // The value exactly as it was (or that it wasn't there), for putting back what a test changed:
-    // a value that didn't exist must not exist afterwards either.
-    public sealed record Snapshot(object? Value, RegistryValueKind Kind, bool KeyExisted);
+    // The values exactly as they were (or that they weren't there), for putting back what a test
+    // changed: a value that didn't exist must not exist afterwards either.
+    public sealed record Saved(string Target, object? Value, RegistryValueKind Kind, bool KeyExisted);
+    public sealed record Snapshot(IReadOnlyList<Saved> Values);
 
-    public static Snapshot Take(SettingEntry e)
+    public static Snapshot Take(SettingEntry e) => new(e.Parts.Select(part =>
     {
-        var (hive, path, name) = Catalog.SplitReg(e.How.Target);
+        var (hive, path, name) = Catalog.SplitReg(part.How.Target);
         using var key = Root(hive).OpenSubKey(path);
-        if (key == null) return new(null, RegistryValueKind.Unknown, false);
+        if (key == null) return new Saved(part.How.Target, null, RegistryValueKind.Unknown, false);
         var value = key.GetValue(name, null, RegistryValueOptions.DoNotExpandEnvironmentNames);
-        return new(value, value == null ? RegistryValueKind.Unknown : key.GetValueKind(name), true);
+        return new Saved(part.How.Target, value, value == null ? RegistryValueKind.Unknown : key.GetValueKind(name), true);
+    }).ToList());
+
+    public static void Restore(SettingEntry e, Snapshot snapshot)
+    {
+        foreach (var s in snapshot.Values) Restore(s);
     }
 
-    public static void Restore(SettingEntry e, Snapshot s)
+    static void Restore(Saved s)
     {
-        var (hive, path, name) = Catalog.SplitReg(e.How.Target);
+        var (hive, path, name) = Catalog.SplitReg(s.Target);
         if (!s.KeyExisted)
         {
             // The key was made by the write: it goes again, if nothing else got into it since.

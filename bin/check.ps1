@@ -227,7 +227,11 @@ if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn '
 $adware = Get-ItemProperty 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*', 'HKLM:\Software\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
     Where-Object DisplayName -In 'McAfee Security Scan Plus', 'WebAdvisor by McAfee', 'Lenovo Now' | ForEach-Object DisplayName
 if ($adware) { Warn 'no ads' "installed: $($adware -join ', ') (run bin/no-ads.ps1)" } else { Pass 'no ads' 'no OEM upsells installed' }
-if ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -ErrorAction SilentlyContinue).SilentInstalledAppsEnabled -ne 0) {
+# Turned back on through omawin (privacy.promoted-apps in the settings history): your choice, not a warning.
+$history = Join-Path $env:LOCALAPPDATA 'launcher\settings-history.tsv'
+$promotedYours = (Test-Path $history) -and (@(Get-Content $history | Where-Object { ($_ -split "`t")[1] -eq 'privacy.promoted-apps' }) | Select-Object -Last 1) -match "`ton`t[^`t]*$"
+if ($promotedYours) { Pass 'Windows suggestions' 'promoted apps on, as you chose (omawin setting)' }
+elseif ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager' -ErrorAction SilentlyContinue).SilentInstalledAppsEnabled -ne 0) {
     Warn 'Windows suggestions' 'on (run bin/no-ads.ps1 -UserOnly)'
 } else { Pass 'Windows suggestions' 'off' }
 $lockTask = Get-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -ErrorAction SilentlyContinue

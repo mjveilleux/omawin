@@ -220,7 +220,8 @@ public sealed class SettingStore(
         if (items.Count == 0) return new(true, "No admin changes waiting");
         if (RunAdmin == null) return new(false, "Admin changes can't be applied from here: omawin settings admin");
         var known = items.Select(i => (i.Id, i.Value, Entry: Find(i.Id))).Where(x => x.Entry is { Admin: true }).ToList();
-        var plan = known.Select(x => SettingAdminQueue.PlanLine(x.Entry!, x.Value)).OfType<string>().ToList();
+        var plan = known.SelectMany(x => SettingAdminQueue.PlanLines(x.Entry!, x.Value)).ToList();
+        int changes = known.Count(x => SettingAdminQueue.PlanLines(x.Entry!, x.Value).Count > 0);
         if (plan.Count == 0) { AdminQueue.Clear(); return new(false, "Nothing queued has an admin path; queue cleared"); }
         var before = known.ToDictionary(x => x.Id, x => ReadNow(x.Entry!), StringComparer.OrdinalIgnoreCase);
         AdminRun run;
@@ -233,7 +234,7 @@ public sealed class SettingStore(
         AdminQueue.Clear();
         bool restart = known.Any(x => x.Entry!.Takes.HasFlag(Takes.Restart));
         return run.Failures.Count == 0
-            ? new(true, $"Applied {plan.Count} admin change{(plan.Count == 1 ? "" : "s")}" + (restart ? "; restart Windows to finish" : ""), Changed: changed > 0)
+            ? new(true, $"Applied {changes} admin change{(changes == 1 ? "" : "s")}" + (restart ? "; restart Windows to finish" : ""), Changed: changed > 0)
             : new(false, string.Join("; ", run.Failures), Changed: changed > 0);
     }
 }

@@ -83,6 +83,13 @@ public sealed class SettingAdminQueue(string path)
         };
     }
 
+    // Every line one change needs: one per value a joined line (reg A + reg B) sets, all or none.
+    public static List<string> PlanLines(SettingEntry e, string value)
+    {
+        var lines = e.Parts.Select(p => PlanLine(p, value)).ToList();
+        return lines.All(l => l != null) ? lines.OfType<string>().ToList() : [];
+    }
+
     // How a queued value reads in the list before the prompt: an action's resolved value (the
     // dev runtimes a firewall rule is for) by name, not as the paths it carries.
     public static string? DescribeValue(SettingEntry e, string value) =>
