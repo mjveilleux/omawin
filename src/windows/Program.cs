@@ -1,4 +1,5 @@
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 using System.Text;
 
@@ -17,7 +18,7 @@ namespace Omawin.Windows;
 //   wifi-qr [network]      the Wi-Fi as a QR code a phone joins from (8.21)
 //   clip [transform]       the clipboard's text converted in place (8.14)
 //   --version
-public static class Program
+public static partial class Program
 {
     public static readonly string Version =
         typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion ?? "(dev)";
@@ -43,7 +44,7 @@ public static class Program
                 _ => Help(),
             };
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or System.ComponentModel.Win32Exception)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception)
         {
             return Fail(ex.Message);
         }
@@ -65,19 +66,49 @@ public static class Program
         return 0;
     }
 
-    public static int Say(string text) { Console.WriteLine(text); return 0; }
+    // From a key or a menu row run hidden (omawin.exe starts it with no window), nothing can be
+    // printed or answered: what it says goes to the note at the bottom of the screen instead.
+    static readonly bool InTerminal = GetConsoleWindow() != 0 || Console.IsOutputRedirected;
+
+    [LibraryImport("kernel32.dll")] private static partial nint GetConsoleWindow();
+
+    public static int Say(string text)
+    {
+        if (InTerminal) Console.WriteLine(text);
+        else Note(text);
+        return 0;
+    }
 
     public static int Fail(string message)
     {
-        Console.Error.WriteLine("omawin: " + message);
+        if (InTerminal) Console.Error.WriteLine("omawin: " + message);
+        else Note(message);
         return 1;
     }
 
-    // Asked only where someone can answer: from a menu row's terminal or yours. With input
-    // redirected (a script), the answer is no.
+    // The menu app's note (its --say request, handed over as omawin.exe hands requests: the request
+    // file, then its event). Nothing when the menu app isn't running.
+    static void Note(string text)
+    {
+        try
+        {
+            if (!EventWaitHandle.TryOpenExisting(@"Local\dotfiles-system-menu-signal", out var signal)) return;
+            using (signal)
+            {
+                var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "launcher");
+                Directory.CreateDirectory(dir);
+                File.WriteAllText(Path.Combine(dir, "system-menu-request"), "--say " + text.ReplaceLineEndings(" "));
+                signal.Set();
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    // Asked only where someone can answer: in a terminal (a menu row's or yours). With no terminal,
+    // or input redirected (a script), the answer is no.
     public static bool Ask(string question)
     {
-        if (Console.IsInputRedirected) return false;
+        if (!InTerminal || Console.IsInputRedirected) return false;
         Console.Write(question + " [y/N] ");
         var answer = Console.ReadLine();
         return answer != null && answer.Trim().StartsWith('y');
@@ -86,7 +117,7 @@ public static class Program
     // A line for a choice among several, or null when none is typed (Enter, or no terminal).
     public static string? Prompt(string question)
     {
-        if (Console.IsInputRedirected) return null;
+        if (!InTerminal || Console.IsInputRedirected) return null;
         Console.Write(question + " ");
         var answer = Console.ReadLine()?.Trim();
         return string.IsNullOrEmpty(answer) ? null : answer;
