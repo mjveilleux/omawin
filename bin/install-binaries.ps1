@@ -107,11 +107,14 @@ function Test-UseRelease {
     return $script:useRelease
 }
 
+# Files already fetched with the others (Start-Prefetch): pattern -> path.
+$prefetched = @{}
 function Get-ReleaseFile([string]$Pattern) {
     # One file out of the release, or $null with the reason in $script:reason (offline, no release
     # for this architecture, a hash that doesn't match, no GitHub sign-in, this checkout ahead of
     # the release, -NoDownload).
     if (-not (Test-UseRelease)) { return $null }
+    if ($prefetched[$Pattern]) { return $prefetched[$Pattern] }
     try {
         return (& "$PSScriptRoot\release.ps1" -Asset $Pattern -OutDir $work -Tag $script:releaseTag -BaseUrl $BaseUrl -TagFile $StateFile |
             Select-Object -Last 1)
@@ -204,26 +207,63 @@ function Test-DotNetSdk { [bool]((Get-Command dotnet -ErrorAction SilentlyContin
 function Get-ReleaseKey([string]$Key) { if ($script:sameAsRelease) { $Key } elseif ($Key) { "$Key|$script:releaseTag" } }
 $sameAsRelease = $true
 
+# The helpers' C# 5 sources (build/helpers.ps1 has the same list). Architecture-neutral IL, so one
+# ZIP covers x64 and ARM64.
+$helpers = @(
+    @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
+    @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
+    @{ Exe = 'omawin-listen'; Source = 'src\agent\omawin-listen.cs' }
+    @{ Exe = 'omawin-path'; Source = 'bin\path-doctor.cs' }
+)
+# Each piece: its release file, the sources it's built from, whether it could be built here
+# instead (csc.exe is in Windows; the menu app and the player need the .NET SDK already here),
+# and whether what's here is current by date (before there's a record).
+$Pieces = [ordered]@{
+    helpers = @{ Want = $WantHelpers; Pattern = 'omawin-helpers-*.zip'; Paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
+        CanBuild = { -not $NoBuild }
+        ByDate = { -not @($helpers | Where-Object { -not (Test-Current (Join-Path $BinDir "$($_.Exe).exe") (Join-Path $Repo $_.Source)) }) } }
+    menu = @{ Want = $WantMenu; Pattern = "SystemMenu-*-win-$Arch.zip"; Paths = @('shell/menu-app')
+        CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
+        ByDate = { Test-Current (Join-Path $MenuDir 'SystemMenu.exe') (Join-Path $Repo 'shell\menu-app') } }
+    music = @{ Want = $WantMusic; Pattern = "omawin-music-*-win-$Arch.exe"; Paths = @('src/music')
+        CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
+        ByDate = { Test-Current (Join-Path $BinDir 'omawin-music.exe') (Join-Path $Repo 'src\music') } }
+}
+
+# One trip to the release for every piece that will come from it (roadmap 2.5): the tag, the
+# manifest and the files together (release.ps1 fetches them at once), not a trip per piece. The
+# pieces below then find their file here; one this guessed wrong still fetches its own.
+function Start-Prefetch {
+    $patterns = @(foreach ($name in $Pieces.Keys) {
+            $p = $Pieces[$name]
+            if (-not $p.Want) { continue }
+            if (Test-Installed $name (Get-SourceKey $p.Paths) $p.ByDate) { continue }
+            if (-not (Test-UseRelease)) { return }
+            if ((Test-ReleaseHas $p.Paths) -or -not (& $p.CanBuild)) { $p.Pattern }
+        })
+    if ($patterns.Count -lt 2) { return }   # one piece: it fetches its own, the same trip
+    try {
+        $files = @(& "$PSScriptRoot\release.ps1" -Asset $patterns -OutDir $work -Tag $script:releaseTag -BaseUrl $BaseUrl -TagFile $StateFile)
+        foreach ($pattern in $patterns) {
+            $file = $files | Where-Object { (Split-Path $_ -Leaf) -like $pattern } | Select-Object -First 1
+            if ($file) { $script:prefetched[$pattern] = $file }
+        }
+    } catch { Write-Log "    prefetch: $($_.Exception.Message) (each piece tries its own)" }
+}
+if (-not (Get-Command Write-Log -ErrorAction SilentlyContinue)) { function Write-Log([string]$Text) { } }
+
 try {
+    Start-Prefetch
+
     # --- omawin.exe and the bar's helpers (~/.local/bin) ----------------------------------------
     if ($WantHelpers) {
-        # The helpers' C# 5 sources (build/helpers.ps1 has the same list). Architecture-neutral
-        # IL, so one ZIP covers x64 and ARM64.
-        $helpers = @(
-            @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
-            @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
-            @{ Exe = 'omawin-listen'; Source = 'src\agent\omawin-listen.cs' }
-            @{ Exe = 'omawin-path'; Source = 'bin\path-doctor.cs' }
-        )
-        $paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
+        $paths = $Pieces.helpers.Paths
         $key = Get-SourceKey $paths
-        $current = Test-Installed 'helpers' $key {
-            -not @($helpers | Where-Object { -not (Test-Current (Join-Path $BinDir "$($_.Exe).exe") (Join-Path $Repo $_.Source)) })
-        }
+        $current = Test-Installed 'helpers' $key $Pieces.helpers.ByDate
         if ($current) { Write-Note 'ok  omawin.exe and the helpers' }
         else {
             # csc.exe is in Windows, so a checkout ahead of the release is always built here.
-            $zip = Get-PieceRelease 'omawin-helpers-*.zip' $paths (-not $NoBuild)
+            $zip = Get-PieceRelease $Pieces.helpers.Pattern $paths (& $Pieces.helpers.CanBuild)
             if ($zip) {
                 # Unpacked aside, then put in one file at a time. A running helper (the bar's
                 # voice-meter) locks its exe: it's moved aside, and keeps running until
@@ -264,11 +304,11 @@ try {
     # --- the menu app (%LOCALAPPDATA%\system-menu; the WinUI app on Win+Space) -------------------
     if ($WantMenu) {
         $key = Get-SourceKey @('shell/menu-app')
-        if (Test-Installed 'menu' $key { Test-Current (Join-Path $MenuDir 'SystemMenu.exe') (Join-Path $Repo 'shell\menu-app') }) { Write-Note 'ok  the system menu' }
+        if (Test-Installed 'menu' $key $Pieces.menu.ByDate) { Write-Note 'ok  the system menu' }
         else {
             # Built here only when the .NET SDK (1 GB) is already on the PC; else the release, and
             # this checkout's changes come with the next one.
-            $zip = Get-PieceRelease "SystemMenu-*-win-$Arch.zip" @('shell/menu-app') (-not $NoBuild -and (Test-DotNetSdk))
+            $zip = Get-PieceRelease $Pieces.menu.Pattern $Pieces.menu.Paths (& $Pieces.menu.CanBuild)
             if ($zip) {
                 if (-not $NoStart) { & "$Repo\shell\menu-app\stop-menu.ps1" -Dir $MenuDir }
                 Expand-Zip $zip $MenuDir
@@ -295,10 +335,10 @@ try {
     # --- omawin-music (one exe in ~/.local/bin) -------------------------------------------------
     if ($WantMusic) {
         $key = Get-SourceKey @('src/music')
-        if (Test-Installed 'music' $key { Test-Current (Join-Path $BinDir 'omawin-music.exe') (Join-Path $Repo 'src\music') }) { Write-Note 'ok  omawin-music.exe' }
+        if (Test-Installed 'music' $key $Pieces.music.ByDate) { Write-Note 'ok  omawin-music.exe' }
         else {
             # As the menu: built here only with the .NET SDK already on the PC.
-            $fromRelease = Get-PieceRelease "omawin-music-*-win-$Arch.exe" @('src/music') (-not $NoBuild -and (Test-DotNetSdk))
+            $fromRelease = Get-PieceRelease $Pieces.music.Pattern $Pieces.music.Paths (& $Pieces.music.CanBuild)
             if ($fromRelease) {
                 $dest = Join-Path $BinDir 'omawin-music.exe'
                 if (-not $NoStart) {
