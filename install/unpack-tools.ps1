@@ -5,7 +5,8 @@
 # as it lands, and leave the ones marked later (zig) to finish after it.
 #
 #   -Plan    a JSON list: Name, Url (or none: Zip is already a file), Zip, Sha, Dir, Version, Merge,
-#            Sfx (Zip is a 7-Zip self-extractor: run to unpack, not tar)
+#            Sfx (Zip is a 7-Zip self-extractor: run to unpack, not tar), Parts (a list of Url, Zip,
+#            Sha: the tool's tar.zst parts, taken instead of Zip and unpacked at once, a tar each)
 #   -Done    the folder for the done files; this script removes its own work files when it ends
 param([Parameter(Mandatory)][string]$Plan, [Parameter(Mandatory)][string]$Done)
 $ErrorActionPreference = 'Stop'
@@ -14,7 +15,8 @@ $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $work = Split-Path $Plan
 
 try {
-    $remote = @($tools | Where-Object Url)
+    # Each file to fetch: a tool's parts when it has them, else its one file.
+    $remote = @($tools | ForEach-Object { if ($_.Parts) { $_.Parts } else { $_ } } | Where-Object Url)
     if ($remote) {
         # Forward slashes: a backslash in a curl config's quotes is an escape.
         $config = "$Plan.curl.txt"
@@ -29,8 +31,10 @@ try {
         $clock = [Diagnostics.Stopwatch]::StartNew()
         $out = [ordered]@{ Name = $t.Name; Ok = $false; Error = $null; Seconds = 0 }
         try {
-            if (-not (Test-Path -LiteralPath $t.Zip)) { throw 'not downloaded' }
-            if ((Get-FileHash -LiteralPath $t.Zip -Algorithm SHA256).Hash.ToLower() -ne $t.Sha) { throw "doesn't match the release's list" }
+            foreach ($file in $(if ($t.Parts) { $t.Parts } else { $t })) {
+                if (-not (Test-Path -LiteralPath $file.Zip)) { throw 'not downloaded' }
+                if ((Get-FileHash -LiteralPath $file.Zip -Algorithm SHA256).Hash.ToLower() -ne $file.Sha) { throw "doesn't match the release's list" }
+            }
             # merge: unpacked into a folder that has things of yours in it (Neovim's data folder):
             # added to it, never moved aside.
             if (-not $t.Merge -and (Test-Path -LiteralPath $t.Dir)) {
@@ -39,7 +43,14 @@ try {
                 catch { throw 'in use: close it and run install.ps1 again' }
             }
             New-Item -ItemType Directory -Force $t.Dir | Out-Null
-            if ($t.Sfx) {
+            if ($t.Parts) {
+                # The parts at once, a tar each: writing files is what takes the time (Windows
+                # Defender looks at each one), and each tar writes its own share on its own core.
+                $tarExe = $using:tar
+                $tars = @($t.Parts | ForEach-Object { Start-Process -FilePath $tarExe -ArgumentList '-xf', "`"$($_.Zip)`"", '-C', "`"$($t.Dir)`"" -WindowStyle Hidden -PassThru })
+                $tars | ForEach-Object { $_.WaitForExit() }
+                if ($bad = $tars | Where-Object ExitCode) { throw "unpacking failed ($(@($bad)[0].ExitCode))" }
+            } elseif ($t.Sfx) {
                 # 7-Zip's self-extractor: -o the folder, -y no questions.
                 $p = Start-Process -FilePath $t.Zip -ArgumentList "-o`"$($t.Dir)`"", '-y' -WindowStyle Hidden -Wait -PassThru
                 if ($p.ExitCode) { throw "unpacking failed ($($p.ExitCode))" }

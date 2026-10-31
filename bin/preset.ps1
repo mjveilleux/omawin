@@ -11,9 +11,17 @@
         omawin preset add data        pick it and install it now
         omawin preset add data -NoInstall
         omawin preset remove data
+
+    Plugins (shell/plugins/<id>, Omarchy's format) are picked the same way: a plugin's programs
+    are a preset tagged with it (Plugin in install/packages.ps1), so picking the plugin picks that
+    preset, and what's on is in presets.txt too.
+
+        omawin plugin list            every plugin, the ones on marked
+        omawin plugin add music       (or omawin.music) turn it on and install its programs
+        omawin plugin remove music
 #>
 param(
-    [Parameter(Position = 0)][ValidateSet('list', 'add', 'remove')][string]$Verb = 'list',
+    [Parameter(Position = 0)][ValidateSet('list', 'add', 'remove', 'plugins', 'plugin-add', 'plugin-remove')][string]$Verb = 'list',
     [Parameter(Position = 1)][string]$Name,
     [switch]$NoInstall
 )
@@ -24,17 +32,37 @@ $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 . "$Repo\install\lib.ps1"
 
 $chosen = @(Get-Presets)
+
+# --- plugins: the presets tagged with one, by the plugin's id or its last part ---
+if ($Verb -eq 'plugins') {
+    foreach ($dir in Get-ChildItem "$Repo\shell\plugins" -Directory -ErrorAction SilentlyContinue) {
+        $m = Get-Content (Join-Path $dir.FullName 'manifest.json') -Raw -ErrorAction SilentlyContinue | ConvertFrom-Json -ErrorAction SilentlyContinue
+        if (-not $m) { continue }
+        $preset = @($Presets.Keys | Where-Object { $Presets[$_].Plugin -eq $m.id }) | Select-Object -First 1
+        $mark = if ($preset -and $chosen -contains $preset) { '*' } else { ' ' }
+        Write-Host ("  {0} {1,-15} {2}" -f $mark, $m.id, $m.description)
+    }
+    Write-Host "`n  * on: its programs are installed. omawin plugin add|remove <id>. It shows in the bar once omawin's QML host runs plugins (roadmap 4.9)." -ForegroundColor DarkGray
+    return
+}
+if ($Verb -in 'plugin-add', 'plugin-remove') {
+    $wanted = if ($Name -and $Name -notlike '*.*') { "omawin.$Name" } else { $Name }
+    $preset = @($Presets.Keys | Where-Object { $Presets[$_].Plugin -and $Presets[$_].Plugin -eq $wanted }) | Select-Object -First 1
+    if (-not $preset) { throw "no plugin '$Name'; the plugins: $((@($Presets.Keys | Where-Object { $Presets[$_].Plugin } | ForEach-Object { $Presets[$_].Plugin })) -join ', ') (omawin plugin list)" }
+    $Verb = $Verb -replace '^plugin-'
+    $Name = $preset
+}
 function Save-Presets([string[]]$Names) {
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
     Set-Content $PresetsFile (@('# omawin presets on this PC (install/packages.ps1); omawin preset add|remove <name>') + $Names) -Encoding utf8
 }
 
 if ($Verb -eq 'list') {
-    foreach ($preset in $Presets.Keys) {
+    foreach ($preset in @($Presets.Keys | Where-Object { -not $Presets[$_].Plugin })) {
         $mark = if ($chosen -contains $preset) { '*' } else { ' ' }
         Write-Host ("  {0} {1,-15} {2}" -f $mark, $preset, $Presets[$preset].Summary)
     }
-    Write-Host "`n  * picked on this PC ($PresetsFile). omawin preset add|remove <name>" -ForegroundColor DarkGray
+    Write-Host "`n  * picked on this PC ($PresetsFile). omawin preset add|remove <name>; plugins: omawin plugin list" -ForegroundColor DarkGray
     return
 }
 

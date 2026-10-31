@@ -66,6 +66,35 @@ runs:
             "bootstrap exit $LASTEXITCODE" | Add-Content C:\ci\out\result.txt
         } catch { "bootstrap threw: $_" | Add-Content C:\ci\out\result.txt }
         "seconds $([int]((Get-Date) - $start).TotalSeconds)" | Add-Content C:\ci\out\result.txt
+        # Neovim and git as you'd use them, in a new shell's PATH (this account's first, as a new
+        # sign-in has it): git makes a commit, Git Bash runs, Neovim loads a parser from the
+        # bundle, and LazyVim fetches its plugins (with that git) and starts with them.
+        $env:Path = [Environment]::GetEnvironmentVariable('Path', 'User') + ';' + [Environment]::GetEnvironmentVariable('Path', 'Machine')
+        function Smoke([string]$What, [scriptblock]$Do) {
+          try { $out = (& $Do 2>&1 | Out-String).Trim(); "smoke ok   $What  $($out -replace '\s+', ' ')" } catch { "smoke FAIL $What  $_" }
+        }
+        @(
+          Smoke 'git' {
+            $git = (Get-Command git -CommandType Application | Select-Object -First 1).Source
+            $r = Join-Path $env:TEMP "smoke-$PID"; git init -q $r; Set-Content "$r\a.txt" 'hi'
+            git -C $r -c user.name=ci -c user.email=ci@example.com add a.txt; git -C $r -c user.name=ci -c user.email=ci@example.com commit -qm one
+            if ($LASTEXITCODE) { throw "commit failed ($LASTEXITCODE)" }
+            "$(git --version) at $git, $(git -C $r rev-list --count HEAD) commit"
+          }
+          Smoke 'Git Bash' {
+            $bash = Join-Path (Split-Path (Split-Path (Get-Command git -CommandType Application | Select-Object -First 1).Source)) 'bin\bash.exe'
+            $o = & $bash -lc 'echo bash $BASH_VERSION'; if ($LASTEXITCODE) { throw "exit $LASTEXITCODE" }; $o
+          }
+          Smoke 'Neovim parsers' {
+            $o = nvim --headless -u NONE "+lua local ok = pcall(vim.treesitter.language.add, 'python'); io.stdout:write(('%d parsers, python %s'):format(#vim.api.nvim_get_runtime_file('parser/*', true), ok and 'loads' or 'MISSING'))" +qa
+            if ("$o" -notmatch 'python loads') { throw "$o" }; $o
+          }
+          Smoke 'LazyVim' {
+            $null = nvim --headless "+Lazy! restore" +qa 2>&1
+            $o = nvim --headless "+lua io.stdout:write(('lazy.nvim: %d plugins'):format(require('lazy').stats().count))" +qa
+            if ("$o" -notmatch 'lazy.nvim: [1-9]') { throw "$o" }; $o
+          }
+        ) | Add-Content C:\ci\out\result.txt
         Copy-Item "$env:LOCALAPPDATA\launcher\install-times.txt" C:\ci\out -ErrorAction SilentlyContinue
         Copy-Item "$env:LOCALAPPDATA\launcher\install*.log" C:\ci\out -ErrorAction SilentlyContinue
         # Its own process writing to a file, with a time limit: piped through this script, a
@@ -130,6 +159,7 @@ runs:
         Write-Host '--- check.log ---'
         Get-Content C:\ci\out\check.log -Tail 60 -ErrorAction SilentlyContinue
         if (-not ($result -contains 'bootstrap exit 0')) { Write-Host '::error::the install did not finish cleanly'; exit 1 }
+        if ($bad = @($result | Where-Object { $_ -like 'smoke FAIL*' })) { $bad | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
 
     - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       if: always()

@@ -148,14 +148,24 @@ function Assert-Winget {
 function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
     $row = $Fetch.Row
     $clock = [Diagnostics.Stopwatch]::StartNew()
-    if ($Fetch.File.Process) { $Fetch.File.Process.WaitForExit() }
+    # Its one file, or its parts (each with its row's SHA-256), downloading since the start.
+    $files = if ($Fetch.Parts) { $Fetch.Parts } else { @(@{ File = $Fetch.File; Sha = $row[3] }) }
+    foreach ($f in $files) { if ($f.File.Process) { $f.File.Process.WaitForExit() } }
     $waited = $clock.Elapsed.TotalSeconds
+    foreach ($f in $files) {
+        if (-not (Test-Path $f.File.Path) -or (Get-FileHash $f.File.Path -Algorithm SHA256).Hash -ne $f.Sha.ToUpper()) { throw "$What from the release doesn't match its published SHA-256" }
+    }
     $zip = $Fetch.File.Path
-    if (-not (Test-Path $zip) -or (Get-FileHash $zip -Algorithm SHA256).Hash -ne $row[3].ToUpper()) { throw "$What from the release doesn't match its published SHA-256" }
     $dir = Join-Path $env:LOCALAPPDATA "omawin\tools\$($row[0])"
     if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
     New-Item -ItemType Directory -Force $dir | Out-Null
-    if ($row.Count -gt 7 -and ($row[7] -split ' ') -contains 'sfx') {
+    if ($Fetch.Parts) {
+        # The parts at once, a tar each: writing the files is what takes the time (Windows
+        # Defender looks at each one), and each tar writes its share on its own core.
+        $tars = @(foreach ($f in $files) { Start-Process -FilePath "$env:WINDIR\System32\tar.exe" -ArgumentList '-xf', "`"$($f.File.Path)`"", '-C', "`"$dir`"" -WindowStyle Hidden -PassThru })
+        foreach ($t in $tars) { $null = $t.Handle; $t.WaitForExit() }
+        if ($bad = @($tars | Where-Object { $_.ExitCode -ne 0 })) { throw "couldn't unpack $What ($($bad[0].ExitCode))" }
+    } elseif ($row.Count -gt 7 -and ($row[7] -split ' ') -contains 'sfx') {
         # 7-Zip's self-extractor (Git for Windows' portable build): -o the folder, -y no questions.
         $p = Start-Process -FilePath $zip -ArgumentList "-o`"$dir`"", '-y' -WindowStyle Hidden -Wait -PassThru
         if ($p.ExitCode -ne 0) { throw "couldn't unpack $What ($($p.ExitCode))" }
@@ -210,7 +220,18 @@ if (-not $Pwsh -or $needGit) {
             foreach ($line in Get-Content $list.Path) { $f = $line -split "`t"; if ($f[0] -in 'pwsh', 'git' -and $f.Count -ge 5) { $rows[$f[0]] = $f } }
         }
     }
-    if ($needGit -and $rows['git']) { $GitFetch = @{ Row = $rows['git']; File = Get-ReleaseFile $rows['git'][2] -Background } }
+    if ($needGit -and $rows['git']) {
+        $row = $rows['git']
+        # In parts, when this Windows' tar reads zstd (Windows 11 23H2 on): unpacked at once, a
+        # tar each. Else the one file (Git for Windows' own self-extractor).
+        $zstd = [bool](& "$env:WINDIR\System32\tar.exe" --version 2>$null | Select-String 'libzstd' -Quiet)
+        $partFiles = if ($zstd -and $row.Count -gt 9 -and $row[8]) { @($row[8] -split ',') }
+        $partShas = if ($partFiles) { @($row[9] -split ',') }
+        if ($partFiles -and $partFiles.Count -eq $partShas.Count) {
+            $GitFetch = @{ Row = $row; File = @{ Path = $null; Process = $null }
+                Parts = @(for ($k = 0; $k -lt $partFiles.Count; $k++) { @{ File = Get-ReleaseFile $partFiles[$k] -Background; Sha = $partShas[$k] } }) }
+        } else { $GitFetch = @{ Row = $row; File = Get-ReleaseFile $row[2] -Background } }
+    }
     if (-not $Pwsh -and $rows['pwsh']) { $PwshFetch = @{ Row = $rows['pwsh']; File = Get-ReleaseFile $rows['pwsh'][2] -Background } }
     if (-not $rows.Count) { Write-Note 'this release has no tools bundle: git and PowerShell 7 come through winget' }
 }

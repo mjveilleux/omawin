@@ -101,9 +101,11 @@ install.preset.typst | 󰏓 | Typst | task omawin preset add typst
 install.preset.docker | 󰡨 | Docker: lazydocker | task omawin preset add docker
 install.preset.cliextras | 󰏓 | CLI extras: make, cloc, wget | task omawin preset add cli-extras
 install.preset.aiagents | 󱚤 | AI agents: Claude Code, opencode | task omawin preset add ai-agents
-install.preset.music | 󰓇 | Music: yt-dlp and mpv for the bar player | task omawin preset add music
 install.preset.dictation | 󰕾 | Dictation: Handy | task omawin preset add dictation
 install.preset.powerbi | 󰄨 | Power BI + Fabric | task omawin preset add powerbi-fabric
+install.plugin | 󰏗 | Plugins
+install.plugin.list | 󰆍 | Which are on | task omawin plugin list
+install.plugin.music | 󰓇 | Music: the music, podcast and radio player | task omawin plugin add music
 install.development | 󰵮 | Development
 install.development.rails | 󰫏 | Ruby on Rails | task omawin dev install ruby
 install.development.docker-dbs |  | Docker DB | task omawin dev install docker-db

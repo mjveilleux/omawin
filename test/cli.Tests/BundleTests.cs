@@ -71,4 +71,32 @@ public class BundleTests
         Assert.EndsWith("\tsfx", new Built("git", "v2", "omawin-tool-git.exe", "abc", "cmd", "Git.Git", null, Sfx: true).Line);
         Assert.EndsWith("\tlater sfx", new Built("x", "v1", "f", "abc", ".", null, null, Later: true, Sfx: true).Line);
     }
+
+    // git also goes out in four tar.zst parts, unpacked at once (9,616 files took 20 s through one
+    // writer). Every file lands in exactly one part, the parts are even, every folder is in the first.
+    [Fact]
+    public void PartsCarryEveryFileOnceAndEvenly()
+    {
+        var git = Tools.Parse(File.ReadAllLines(Path.Combine(Repo(), "install", "tools.txt"))).Single(t => t.Name == "git");
+        Assert.Equal(4, git.Parts);
+        var files = Enumerable.Range(0, 9616).Select(i => $"usr/bin/f{i}.exe").ToList();
+        var parts = Tools.Split(files, 4);
+        Assert.Equal(files.Order(StringComparer.Ordinal), parts.SelectMany(p => p).Order(StringComparer.Ordinal));
+        Assert.All(parts, p => Assert.InRange(p.Count, 2403, 2405));
+        Assert.Equal("omawin-tool-git.3.tar.zst", Tools.PartName("git", 3));
+    }
+
+    [Fact]
+    public void APartedToolsRowEndsWithItsPartsAndTheirHashes()
+    {
+        var line = new Built("git", "v2", "omawin-tool-git.exe", "abc", "cmd", "Git.Git", null, Sfx: true,
+            Parts: [("omawin-tool-git.1.tar.zst", "s1"), ("omawin-tool-git.2.tar.zst", "s2")]).Line;
+        Assert.EndsWith("\tsfx\tomawin-tool-git.1.tar.zst,omawin-tool-git.2.tar.zst\ts1,s2", line);
+        Assert.Equal(10, line.Split('\t').Length);
+    }
+
+    [Theory]
+    [InlineData("a | github:o/r | ^x$ | . | X | | parts:1")]
+    [InlineData("a | github:o/r | ^x$ | . | X | | parts:99")]
+    public void PartsAreBetweenTwoAndSixteen(string row) => Assert.Throws<FormatException>(() => Tools.Parse([row]));
 }

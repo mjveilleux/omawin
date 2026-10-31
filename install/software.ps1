@@ -193,6 +193,15 @@ function Get-ReleaseText([string]$Base, [string]$Name) {
 
 # The bundle's list (omawin-tools.txt), checked against the release's SHA256SUMS.txt; $null when
 # the release has none (an older one), or it doesn't match (then nothing in it is trusted).
+# Whether Windows' own tar reads zstd (Windows 11 23H2 on): then a tool split into parts is
+# unpacked from them, all at once; otherwise from its single file.
+function Test-TarZstd {
+    if ($null -eq $script:TarZstd) {
+        $script:TarZstd = [bool](& "$env:WINDIR\System32\tar.exe" --version 2>$null | Select-String 'libzstd' -Quiet)
+    }
+    $script:TarZstd
+}
+
 function Read-ToolBundle {
     if ($script:ToolBundleRead) { return $script:ToolBundle }
     $script:ToolBundleRead = $true
@@ -208,7 +217,13 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx') }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx')
+                Parts = $(if ($f.Count -gt 9 -and $f[8] -and $f[9]) {
+                        $files = $f[8] -split ','; $shas = $f[9] -split ','
+                        if ($files.Count -eq $shas.Count -and -not ($shas | Where-Object { $_ -notmatch '^[0-9a-f]{64}$' })) {
+                            @(for ($k = 0; $k -lt $files.Count; $k++) { [pscustomobject]@{ File = $files[$k]; Sha = $shas[$k] } })
+                        }
+                    }) }
         })
     $script:ToolBundle
 }
@@ -263,13 +278,24 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
     New-Item -ItemType Directory -Force $work | Out-Null
     $plan = foreach ($t in $todo) {
         $remote = $t.Base -match '^[a-z]+://'
+        # Split into parts, and this tar reads zstd: the parts, unpacked at once (one tar each).
+        $parts = if ($t.Parts -and (Test-TarZstd)) {
+            @($t.Parts | ForEach-Object {
+                    [pscustomobject]@{
+                        Sha = $_.Sha
+                        Url = $(if ($remote) { "$($t.Base)/$($_.File)" } else { $null })
+                        Zip = $(if ($remote) { Join-Path $work $_.File } else { Join-Path $t.Base $_.File })
+                    }
+                })
+        }
         [pscustomobject]@{
             Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge; Sfx = [bool]$t.Sfx
             Url = $(if ($remote) { "$($t.Base)/$($t.File)" } else { $null })
             Zip = $(if ($remote) { Join-Path $work $t.File } else { Join-Path $t.Base $t.File })
+            Parts = $parts
         }
     }
-    @($plan) | ConvertTo-Json -AsArray | Set-Content (Join-Path $work 'plan.json') -Encoding utf8
+    @($plan) | ConvertTo-Json -AsArray -Depth 6 | Set-Content (Join-Path $work 'plan.json') -Encoding utf8
     # Not under $work: a tool marked later may still be unpacking when this install has finished.
     $done = Join-Path $env:TEMP "omawin-tools-done-$Stamp"
     New-Item -ItemType Directory -Force $done | Out-Null

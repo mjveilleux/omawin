@@ -206,6 +206,6 @@ sealed class Mpv
             if (found != null) return exe = found;
         }
         catch { }
-        throw new Exception("mpv isn't installed (omawin preset add music)");
+        throw new Exception("mpv isn't installed (omawin plugin add music)");
     }
 }

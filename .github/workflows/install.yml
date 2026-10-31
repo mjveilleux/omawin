@@ -94,6 +94,15 @@ jobs:
             $disk = Time { Start-Process $sfx -ArgumentList '-oC:\bench\git', '-y' -Wait -WindowStyle Hidden }
             $lines += "| git | 7z self-extractor | $([math]::Round((Get-Item $sfx).Length / 1MB)) | $(@(Get-ChildItem $dir -Recurse -File).Count) | | $disk |"
           }
+          $parts = @(Get-ChildItem 'C:\mirror\omawin-tool-git.*.tar.zst' -ErrorAction SilentlyContinue)
+          if ($parts) {
+            $dir = 'C:\bench\git-parts'; New-Item -ItemType Directory -Force $dir | Out-Null
+            $disk = Time {
+              $tars = @($parts | ForEach-Object { Start-Process $tar -ArgumentList '-xf', "`"$($_.FullName)`"", '-C', $dir -WindowStyle Hidden -PassThru })
+              $tars | ForEach-Object { $_.WaitForExit() }
+            }
+            $lines += "| git | $($parts.Count) tar.zst parts, at once | $([math]::Round(($parts | Measure-Object Length -Sum).Sum / 1MB)) | $(@(Get-ChildItem $dir -Recurse -File).Count) | | $disk |"
+          }
           $lines += '', "Cores: $([Environment]::ProcessorCount). Defender's real-time scan is on, as on a PC."
           $lines -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
           $lines -join "`n"

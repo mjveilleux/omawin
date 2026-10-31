@@ -18,10 +18,13 @@
 #           name matches one (the font: the four faces a terminal and an editor use, of the one
 #           family omawin names, "JetBrainsMono NF", not all 96: ~10 MB of 135); sfx: a 7-Zip
 #           self-extractor shipped as it is, which the PC runs to unpack (Git for Windows' portable
-#           build: its LZMA is ~60 MB where a zip of what's inside is ~160)
+#           build: its LZMA is ~60 MB where a zip of what's inside is ~160); parts:<n>: also as n
+#           tar.zst parts that n tars unpack at once, each writing its share of the files (a tool of
+#           many files: writing them, not decompressing, is what takes the time on Windows), when
+#           the PC's tar reads zstd (Windows 11 23H2 on); the single file otherwise
 
 pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
-git         | github:git-for-windows/git        | ^PortableGit-[0-9.]+-64-bit\.7z\.exe$             | cmd | Git.Git                     |                            | sfx
+git         | github:git-for-windows/git        | ^PortableGit-[0-9.]+-64-bit\.7z\.exe$             | cmd | Git.Git                     |                            | sfx parts:4
 wt          | github:microsoft/terminal         | ^Microsoft\.WindowsTerminal_[0-9.]+_x64\.zip$      | .   | Microsoft.WindowsTerminal
 gh          | github:cli/cli                    | ^gh_[0-9.]+_windows_amd64\.zip$                    | bin | GitHub.cli
 starship    | github:starship/starship          | ^starship-x86_64-pc-windows-msvc\.zip$             | .   | Starship.Starship
