@@ -135,7 +135,7 @@ Never in the repo:
 | `fff\` | the file finder's indexes |
 | `dirs\` | PowerShell tab title → folder, for Win+Enter |
 | `theme`, `background`, `nvim-theme`, `lockscreen*` | the current theme, its background, and the lock screen |
-| `backgrounds\`, `thumbnails\` | themes' wallpapers, downloaded once; the theme picker's small copies of each theme's first |
+| `backgrounds\`, `thumbnails\` | themes' wallpapers, downloaded once; small copies of every theme's backgrounds, for the theme and background pickers (the release brings them) |
 | `tasks\` | menu-task scripts |
 | `migrations.txt` | migrations already run on this PC |
 | `music.log` | the music player's errors (its playlists and podcasts are in `~/Music/omawin`) |

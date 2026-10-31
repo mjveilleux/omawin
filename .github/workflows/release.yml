@@ -115,9 +115,9 @@ jobs:
           path: out/tools
           if-no-files-found: error
 
-  # The theme picker's pictures (roadmap 1.9): each theme's first background, 320 pixels wide, made
+  # The theme pictures (roadmap 1.9): every background of every theme, 320 pixels wide (~6 MB), made
   # here (src/thumbs) and published as one more tools bundle entry (build/release.ps1), unpacked
-  # into %LOCALAPPDATA%\launcher\thumbnails, so the picker's first open has them all at once.
+  # into %LOCALAPPDATA%\launcher\thumbnails, so the theme and background pickers have them all at once.
   thumbs:
     needs: meta
     runs-on: ubuntu-latest

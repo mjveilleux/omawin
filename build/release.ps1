@@ -78,7 +78,7 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "nvim-parsers`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no prebuilt Neovim parsers ($parsers): left out of this release" }
-    # The theme picker's pictures (release.yml's thumbs job): merged into the folder the menu app
+    # The theme pickers' pictures (release.yml's thumbs job): merged into the folder the menu app
     # keeps them in, not waited for (later).
     $thumbs = Join-Path $InDir 'thumbs\omawin-tool-theme-thumbs.zip'
     if ((Test-Path $thumbs) -and (Test-Path $list)) {
