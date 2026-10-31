@@ -1,0 +1,91 @@
+# omawin's recommended Windows settings (roadmap 8G "faster and calmer by default"): each is a line
+# of the settings catalog (settings.txt beside this file), the value omawin recommends, and why.
+# `omawin tune-up` lists them, applied or not; every one is a setting like any other, so it's
+# undone the same way (omawin setting undo, or set it back in the system menu).
+#
+#   id | value | when | why
+#
+# when: auto  set for you (install, and an update that adds one, says so in its summary): this
+#             account only, no admin, nothing Windows needs for updates or security
+#       ask   recommended, set only when you say so (omawin tune-up apply), because it has a
+#             trade-off, needs admin (all of them then go in one prompt), or touches your files
+#
+# Only what shows a difference goes here: each was picked for a cost you can see (memory in
+# omawin profile ram, time at sign-in in omawin profile login, a prompt or a key that gets in the
+# way). No placebo tweaks, and nothing that weakens Windows Update, Defender or the Store.
+# Layered like settings.txt: the shared folder's and this account's tune-up.txt replace a line by id.
+
+# --- Windows stops fighting the tiling manager (8.26): GlazeWM tiles, Windows shouldn't also try
+system.snap-flyout | off | auto | The snap layouts grid pops up whenever the mouse rests on a maximize button; GlazeWM already places every window.
+system.snap-drag | off | auto | Dragging a window to an edge snaps it to half the screen, fighting GlazeWM's layout for the same window.
+system.snap-assist | off | auto | After a snap Windows offers to fill the rest of the screen, which GlazeWM has already done.
+system.snap-bar | off | auto | The snap bar drops in at the top of the screen whenever a window is dragged.
+system.shake | off | auto | Shaking a title bar minimizes every other window, easy to do by accident while dragging.
+input.win-hotkeys | off | auto | Windows' own Win+key shortcuts (Win+A, Win+F, Win+H, Win+M, …) fire beside omawin's on the same keys; this turns off only the ones omawin uses.
+
+# --- snappier menus and switching (8.27)
+look.menu-delay | 100 | auto | Classic menus (right-click submenus, old apps) wait 400 ms before opening a submenu; 100 still forgives a mouse passing over.
+system.alt-tab-tabs | 3 | auto | Alt+Tab lists Edge's tabs as if they were windows, pushing real windows off the list.
+look.min-max-animation | off | ask | Windows animates every minimize and maximize, which GlazeWM does its own way; some like the motion.
+
+# --- less running in the background (8.28): each shows its saving in omawin profile ram
+system.edge-startup-boost | off | ask | Edge starts at sign-in and stays in memory so it opens faster later, whether or not you use it (100-300 MB). Needs admin.
+system.edge-background | off | ask | Edge keeps running, with its extensions, after its last window closes. Needs admin.
+system.widgets | off | ask | The Widgets board is a web view kept running for news and weather (Widgets, WebView2: 100-200 MB). Needs admin.
+system.game-dvr | off | auto | The Game Bar records the last few minutes of games in the background, costing processor and memory for clips most people never save.
+system.delivery-optimization | off | ask | Your PC uploads Windows updates to other PCs on the internet, using your upload bandwidth; downloads stay as fast. Needs admin.
+system.maintenance-wake | off | ask | Windows wakes the PC at night to run maintenance, draining a laptop's battery in a bag. Needs admin.
+system.startup-onedrive | off | ask | OneDrive starts at sign-in and syncs in the background; leave it on if it holds files you need on this PC.
+system.startup-teams | off | ask | Teams starts at sign-in and stays resident (a web view, 200-400 MB); it still opens when you start it.
+
+# --- accidents that don't happen (8.29)
+input.layout-hotkey | off | ask | Alt+Shift switches the keyboard layout mid-sentence, and omawin's keys use Alt+Shift; leave it on if you type in more than one layout and use it.
+input.narrator-shortcut | off | auto | Win+Ctrl+Enter starts Narrator, easy to hit beside omawin's Win+Enter; Narrator stays in Settings › Accessibility.
+input.filter-shortcut | off | auto | Holding Right Shift for eight seconds asks about Filter Keys; the feature itself stays in Settings.
+input.toggle-shortcut | off | auto | Holding Num Lock for five seconds asks about Toggle Keys; the feature itself stays in Settings.
+privacy.finish-setup | off | auto | After big updates Windows shows a full-screen "Let's finish setting up your device" page selling Microsoft's services.
+look.spotlight-icon | off | auto | Windows Spotlight backgrounds put a "Learn about this picture" icon on the desktop.
+
+# --- sleep that doesn't drain the battery (8.30)
+system.hibernate-after | 180 | ask | Modern Standby can drain a laptop overnight; after three hours asleep on battery it hibernates and drains nothing. Needs hibernation on.
+system.wake-timers | off | ask | On battery, programs' scheduled tasks can wake the PC from sleep in a bag.
+system.fast-startup | off | ask | "Shut down" with fast startup is half a hibernate: drivers keep their state and uptime keeps counting, which confuses drivers and dual boot. Turning it off makes shut down a real one. Needs admin.
+
+# --- Windows' file indexer (8.31)
+system.search-indexer | off | ask | The launcher and the file finder search without it; the indexer reads every new file (busy after a big git checkout). Needs admin.
+
+# --- developers (8.40)
+developer.long-paths | on | ask | Paths longer than 260 characters (deep node_modules, some repos) work in every program that supports them. Needs admin.
+developer.dev-mode | on | ask | Developer Mode lets you make symlinks without admin, which many dev tools need. Needs admin.
+
+# --- drivers on your terms (8.43)
+system.update-no-drivers | on | ask | Windows Update sometimes replaces a working driver from your PC's maker with an older or generic one; with this, drivers come only from the maker's tool or Device Manager, so you update them yourself. Needs admin.
+
+# --- every AI feature in one place (8.45): off in the recommended set, one key to turn back on
+look.ai-copilot-button | off | auto | The Copilot button on Windows' taskbar (omawin's bar replaces the taskbar).
+look.ai-copilot | off | ask | Windows Copilot's app and its key, turned off by Windows' own policy. Needs admin.
+look.ai-recall | off | ask | Recall takes snapshots of your screen every few seconds and keeps them on the PC to search (Copilot+ PCs). Needs admin.
+look.ai-click-to-do | off | ask | Click to Do reads what's on screen to suggest actions (Copilot+ PCs). Needs admin.
+look.ai-paint | off | ask | Image Creator, Cocreator and generative fill in Paint send your prompts and pictures to Microsoft's servers. Needs admin.
+look.ai-edge | off | ask | Edge's Copilot sidebar runs beside every page. Needs admin.
+
+# --- Explorer's known slow paths (8.46)
+explorer.folder-type | off | ask | Explorer samples the files of every folder it opens to guess its type, which makes big folders like Downloads slow; this treats every folder as general items, and resets each folder's saved view once.
+explorer.home-recent | off | auto | Home lists recent files, read on every open; the launcher (recent files) and the finder do this faster.
+explorer.home-cloud | off | auto | Home fetches your recent Office.com files from Microsoft 365 on every open, a network wait before the folder shows.
+explorer.gallery | off | auto | The Gallery in the side pane indexes every picture folder to show a timeline.
+explorer.separate-process | on | auto | Each folder window runs in its own process, so one hung folder (a network drive, a slow shell extension) doesn't freeze the taskbar and the desktop.
+explorer.open-to | 1 | auto | Explorer opens to This PC instead of Home, which waits on recent and cloud files.
+
+# --- web results out of Windows search (8.48)
+system.search-web | off | auto | Typing in Windows' search box sends it to Bing and waits for web results before showing your files.
+system.search-suggestions | off | ask | The same, by Windows' own policy, for versions that ignore the setting above. Needs admin.
+system.search-highlights | off | auto | The search box shows Bing's daily promos and pictures.
+
+# --- diagnostic data at the minimum (8.51): Windows Update and Defender untouched
+privacy.diagnostic-data | off | ask | Windows sends optional diagnostic data (apps used, browsing in Edge, inking) on top of the required minimum. Needs admin.
+privacy.tailored | off | auto | Microsoft uses your diagnostic data to pick tips, ads and recommendations for you.
+privacy.feedback | off | auto | Windows asks how it's doing in pop-ups.
+privacy.activity-history | off | ask | Windows keeps a history of what you did in apps, files and sites. Needs admin.
+privacy.inking-typing | off | auto | Windows sends samples of what you type and write to improve its dictionaries.
+privacy.ad-id | off | auto | Apps get an advertising ID to follow you across apps for ads (omawin no-ads turns it off too).
