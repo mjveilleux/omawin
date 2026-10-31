@@ -57,14 +57,24 @@ $omawinExe = "$HOME\.local\bin\omawin.exe"
 # back stays yours and an update sets only what's new to it, and says so here. Never asks: the
 # rest wait for `omawin tune-up apply`. Then your own settings.txt, which wins over them.
 # (Answered by the menu app, built in the helpers step: without it, this waits for the next update.)
-if ((Test-Path $omawinExe) -and (Test-Path "$env:LOCALAPPDATA\system-menu\SystemMenu.exe")) {
+# The menu app needs a Windows desktop in this session to run on. Without one (a CI runner's
+# install, a remote shell, a scheduled run; start.ps1 asks the same) omawin.exe would start it,
+# hear nothing and give up after 20 s, having applied nothing: that was most of v0.5.0's timed
+# install (58 s, from 36 s). Both applies then wait for the next update, on the desktop; nothing
+# is lost: it applies the auto ones this PC hasn't had yet, and settings.txt as never applied.
+$session = (Get-Process -Id $PID).SessionId
+$desktop = [bool](Get-Process explorer -ErrorAction SilentlyContinue | Where-Object SessionId -eq $session)
+if (-not $desktop) {
+    Write-Note 'Windows settings (recommended and yours): no Windows desktop in this session; the next omawin update applies them'
+}
+elseif ((Test-Path $omawinExe) -and (Test-Path "$env:LOCALAPPDATA\system-menu\SystemMenu.exe")) {
     Invoke-InstallItem 'Desktop' 'recommended Windows settings' {
         $said = & $omawinExe tune-up apply -Auto 2>&1
         if ($LASTEXITCODE) { throw ($said -join '; ') }
         $said
     }
 }
-if ($settingsFiles -and (Test-Path $omawinExe)) {
+if ($desktop -and $settingsFiles -and (Test-Path $omawinExe)) {
     Invoke-InstallItem 'Desktop' 'your Windows settings' {
         $applyArgs = @('settings', 'apply', '-NoAdmin') + @(if ($LinkOnly) { '-Changed' })
         $said = & $omawinExe @applyArgs 2>&1
