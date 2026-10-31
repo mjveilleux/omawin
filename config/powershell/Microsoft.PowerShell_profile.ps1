@@ -122,6 +122,10 @@ Set-PSReadLineKeyHandler -Chord Ctrl+t -BriefDescription FzfFile -ScriptBlock {
 # recorded here.
 $TermDirs = Join-Path $env:LOCALAPPDATA 'launcher\dirs'
 if (-not (Test-Path $TermDirs)) { New-Item -ItemType Directory -Path $TermDirs -Force | Out-Null }
+# Which side you're on (roadmap 3B): starship's side mark (env_var.OMAWIN_WINDOWS: Windows' logo,
+# coloured apart from Linux's) and the "pwsh · " title prefix below.
+$env:OMAWIN_SIDE = 'windows'
+$env:OMAWIN_WINDOWS = [string][char]0xf17a
 function Invoke-Starship-PreCommand {
     # (Checked now, not at start-up: a spare shell started long before the profiling did.)
     if (-not $script:OmawinPrompted) {
@@ -129,7 +133,9 @@ function Invoke-Starship-PreCommand {
         if (Test-Path "$env:LOCALAPPDATA\launcher\trace-on") { [IO.File]::AppendAllText("$env:LOCALAPPDATA\launcher\trace.log", "pwsh first-prompt`t$([Diagnostics.Stopwatch]::GetTimestamp())`n") }
     }
     $leaf = Split-Path -Leaf $PWD
-    $host.UI.RawUI.WindowTitle = $leaf  # tab title = current folder
+    # Tab title "pwsh · <folder>", as Linux's are "arch · <path>"; omawin's terminal-here takes
+    # the prefix off before looking the folder name up in dirs\ (bin/omawin.cs StripSide).
+    $host.UI.RawUI.WindowTitle = "pwsh $([char]0xb7) $leaf"
     if ($PWD.Provider.Name -ne 'FileSystem') { return }
     if ($env:TERM_PROGRAM -eq 'ghostty') {
         $uri = 'file://' + $env:COMPUTERNAME + '/' + ($PWD.ProviderPath -replace '\\', '/')

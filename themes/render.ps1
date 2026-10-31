@@ -69,6 +69,49 @@ $animationsFile = Join-Path $State 'animations'
 $animationsOn = -not ((Test-Path $animationsFile) -and (Get-Content $animationsFile -Raw).Trim() -eq 'off')
 $c['animations'] = if ($animationsOn) { 'true' } else { 'false' }
 
+# --- which side you're on (roadmap 3B): Linux's background -----------------------------------------
+# The theme's background mixed a little toward its accent, so Linux and PowerShell windows look
+# different in every theme, and stay of the theme. Mixed less where the text would lose contrast;
+# toward the foreground when the accent is too close to the background to show.
+function ConvertFrom-HexColor([string]$Hex) {
+    $h = $Hex.Trim().TrimStart('#')
+    if ($h.Length -eq 3) { $h = -join ($h.ToCharArray() | ForEach-Object { "$_$_" }) }
+    if ($h.Length -lt 6) { throw "not a colour: $Hex" }
+    , @(0, 2, 4 | ForEach-Object { [Convert]::ToInt32($h.Substring($_, 2), 16) })
+}
+function ConvertTo-HexColor([double[]]$Rgb) {
+    '#' + (($Rgb | ForEach-Object { '{0:x2}' -f [int][Math]::Round([Math]::Max(0, [Math]::Min(255, $_))) }) -join '')
+}
+function Get-MixedColor([string]$From, [string]$To, [double]$Amount) {
+    $a = ConvertFrom-HexColor $From
+    $b = ConvertFrom-HexColor $To
+    ConvertTo-HexColor @(0, 1, 2 | ForEach-Object { $a[$_] + ($b[$_] - $a[$_]) * $Amount })
+}
+# WCAG's relative luminance and contrast ratio.
+function Get-Luminance([string]$Hex) {
+    $rgb = ConvertFrom-HexColor $Hex   # (one array: piped straight on, it would go as one item)
+    $l = @($rgb | ForEach-Object { $v = $_ / 255; if ($v -le 0.03928) { $v / 12.92 } else { [Math]::Pow(($v + 0.055) / 1.055, 2.4) } })
+    0.2126 * $l[0] + 0.7152 * $l[1] + 0.0722 * $l[2]
+}
+function Get-Contrast([string]$A, [string]$B) {
+    $x = Get-Luminance $A
+    $y = Get-Luminance $B
+    ([Math]::Max($x, $y) + 0.05) / ([Math]::Min($x, $y) + 0.05)
+}
+function Get-LinuxBackground([string]$Background, [string]$Accent, [string]$Foreground) {
+    $toward = if ((Get-Contrast $Background $Accent) -lt 1.5) { $Foreground } else { $Accent }
+    # The text keeps at least 90% of its contrast (counted up to 7:1, WCAG's AAA, so a
+    # high-contrast theme still gets a tint you can see).
+    $floor = [Math]::Min((Get-Contrast $Foreground $Background), 7.0) * 0.9
+    foreach ($amount in 0.08, 0.07, 0.06, 0.05, 0.04) {
+        $tint = Get-MixedColor $Background $toward $amount
+        if ((Get-Contrast $Foreground $tint) -ge $floor) { return $tint }
+    }
+    Get-MixedColor $Background $toward 0.03
+}
+# A palette without those colours (or not as #rrggbb) leaves Linux on the plain background.
+$c['linux_background'] = try { Get-LinuxBackground $c['background'] $c['accent'] $c['foreground'] } catch { $c['background'] }
+
 function Expand-Template([string]$Text, [string]$Source) {
     [regex]::Replace($Text, '\{\{\s*(\w+)\s*\}\}', {
             param($m)
@@ -208,6 +251,17 @@ if (Get-Process WindowsTerminal -ErrorAction SilentlyContinue) {
     $wtSettings = Get-Item "$env:LOCALAPPDATA\Packages\Microsoft.WindowsTerminal_*\LocalState\settings.json", "$env:LOCALAPPDATA\Microsoft\Windows Terminal\settings.json" -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($wtSettings) { $wtSettings.LastWriteTime = Get-Date }
 }
+
+# Linux in WSL: its shell reads this (config/bash/bashrc, through /mnt/c) at the next prompt and
+# sets its terminal's background to Linux's tint (OSC 11); its own copies (btop) follow from it
+# (wsl/bin/omawin-theme-sync). LF line endings: bash would keep a CR in every value.
+$linuxSh = @(
+    "# Written by themes/render.ps1 for the theme '$Name'; replaced on every switch. Read by Linux in WSL (config/bash/bashrc).",
+    "OMAWIN_THEME='$($Name -replace "'", '')'",
+    "OMAWIN_LINUX_BG='$($c['linux_background'])'",
+    "OMAWIN_WINDOWS_BG='$($c['background'])'"
+) -join "`n"
+Write-Text "$State\theme-linux.sh" ($linuxSh + "`n")
 
 # The bar's colour for the strip that holds its place at sign-in until the bar is up (omawin.exe
 # start bar): one line, outside the repo. The bar itself reads the theme live (menu-app).
