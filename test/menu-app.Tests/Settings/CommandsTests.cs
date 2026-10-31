@@ -72,6 +72,80 @@ public class CommandsTests
     }
 }
 
+// omawin tune-up: the recommended settings against the fixture's Windows, through the same store.
+public class TuneUpCommandTests
+{
+    static readonly List<Recommendation> Recs = new[]
+    {
+        "look.dark-apps | on | auto | dark",
+        "explorer.open-to | 2 | auto | already so",
+        "developer.long-paths | on | ask | needs admin",
+        "input.pointer-speed | 15 | ask | faster",
+        "look.unverified | off | auto | not checked yet",
+    }.Select((l, i) => TuneUp.ParseLine(l, $"tune-up.txt:{i + 1}")).ToList();
+
+    // The fixture's catalog plus a "check" line, hidden from the report and never read.
+    static List<SettingEntry> Catalog_() =>
+        [.. Fixture.Entries(), Catalog.ParseLine(@"look.unverified | - | Unverified | x | switch | reg HKCU\A\X dword on=1 off=0 | check", "t:1")];
+
+    [Fact]
+    public async Task ReportSaysWhatsAppliedAndWhatsWaiting()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        var r = await SettingCommands.TuneUp(store, [], Recs, Catalog_(), 26100);
+        Assert.Equal(0, r.Code);
+        Assert.Contains("1 of 4 applied", r.Text);
+        Assert.Contains("--  Dark mode for apps: on (now off)", r.Text);
+        Assert.Contains("1 more wait to be checked", r.Text);
+        Assert.Empty(windows.Writes);
+    }
+
+    [Fact]
+    public async Task ApplyListsFirstThenSetsAndRunsTheOnePrompt()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        List<string>? plan = null;
+        store.RunAdmin = p => { plan = [.. p]; return Task.FromResult(new AdminRun(true, [])); };
+
+        var ask = await SettingCommands.TuneUp(store, ["apply"], Recs, Catalog_(), 26100);
+        Assert.Equal(3, ask.Code);
+        Assert.Contains("sets 3 Windows settings (1 in one admin prompt)", ask.Text);
+        Assert.Contains("Long paths: On [admin]", ask.Text);
+        Assert.Empty(windows.Writes); // nothing before the yes
+
+        var yes = await SettingCommands.TuneUp(store, ["apply", "--yes"], Recs, Catalog_(), 26100);
+        Assert.Equal(0, yes.Code);
+        Assert.Equal(["look.dark-apps=on", "input.pointer-speed=15"], windows.Writes);
+        Assert.Equal("developer.long-paths", Assert.Single(plan!).Split('\t')[0]);
+        Assert.All(store.History.Changes(), c => Assert.Equal("tune-up", c.Source));
+        Assert.Equal(0, store.AdminQueue.Count);
+    }
+
+    [Fact]
+    public async Task AutoSetsOnlyTheAutoOnesWithoutAsking()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        var r = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, Catalog_(), 26100);
+        Assert.Equal(0, r.Code);
+        Assert.Equal(["look.dark-apps=on"], windows.Writes);
+        Assert.Equal(0, store.AdminQueue.Count);
+    }
+
+    [Fact]
+    public async Task NothingLeftAndMistakes()
+    {
+        using var dir = new TempDir();
+        var (store, _) = Fixture.Store(dir);
+        var done = await SettingCommands.TuneUp(store, ["apply"], [Recs[1]], Catalog_(), 26100);
+        Assert.Equal(0, done.Code);
+        Assert.Contains("already applied", done.Text);
+        Assert.Equal(2, (await SettingCommands.TuneUp(store, ["frobnicate"], Recs, Catalog_(), 26100)).Code);
+    }
+}
+
 public class ValueFileTests
 {
     [Theory]

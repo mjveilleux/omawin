@@ -126,6 +126,8 @@ setting undo | Put back the last Windows setting changed through omawin (Ctrl+Z 
 settings save | The Windows settings you've changed, into your account folder's settings.txt (-Shared: the PC's shared folder's), for a new PC | ask --settings save
 settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting) | ask --settings apply
 settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin
+tune-up | omawin's recommended Windows settings (default/launcher/tune-up.txt): each one, applied or not, and why | ask --tune-up
+tune-up apply | Set the recommended Windows settings not yet applied: listed first, then set (each undoable), admin ones in one prompt; -Auto: only the ones that need no asking | ask --tune-up apply
 # Fixing Windows (roadmap Phase 8): the answers Windows has and doesn't show. omawin-windows (src/windows/)
 # does them in your terminal; the system menu's "This PC" rows open them in one.
 who-has | Which programs hold a file or folder open, then close or end them: omawin who-has <path> (no path: the one on the clipboard, from Explorer's Copy as path) | run omawin-windows who-has

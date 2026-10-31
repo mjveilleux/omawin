@@ -8,7 +8,7 @@
 //   WinSettings.Search(query, limit)  ranked switches and pages for what was typed
 //   WinSettings.Open(page)            open a page from the index
 //   WinSettings.Remember(hit, query)  you picked it after typing this: it ranks first next time
-//   WinSettings.Answer(request)       `omawin setting …` / `omawin settings …` (Reply.cs)
+//   WinSettings.Answer(request)       `omawin setting …` / `omawin settings …` / `omawin tune-up` (Reply.cs)
 
 using System.Diagnostics;
 
@@ -30,8 +30,17 @@ public static class WinSettings
 
     // --- the catalog, read again when one of its files changes ---------------------------------
     static readonly object gate = new();
-    static List<SettingEntry> entries = [];
+    static List<SettingEntry> entries = [], all = [];
     static string stamps = "";
+    static readonly bool Unverified = Environment.GetEnvironmentVariable("OMAWIN_SETTINGS_UNVERIFIED") == "1";
+
+    // Every entry of the catalog, those hidden on this PC too ("check", another Windows build):
+    // for `omawin tune-up`, which says how many wait to be verified.
+    public static IReadOnlyList<SettingEntry> AllEntries()
+    {
+        Entries();
+        lock (gate) return all;
+    }
 
     public static IReadOnlyList<SettingEntry> Entries()
     {
@@ -40,10 +49,10 @@ public static class WinSettings
         lock (gate)
         {
             if (now == stamps) return entries;
-            var (all, problems) = Catalog.Parse(files.Where(File.Exists).Select(f => (f, File.ReadAllLines(f))));
+            var (parsed, problems) = Catalog.Parse(files.Where(File.Exists).Select(f => (f, File.ReadAllLines(f))));
             foreach (var p in problems) App.Log(new FormatException($"{p.Origin}: {p.Message}"));
-            bool unverified = Environment.GetEnvironmentVariable("OMAWIN_SETTINGS_UNVERIFIED") == "1";
-            entries = Catalog.Visible(all, Build, unverified);
+            all = parsed;
+            entries = Catalog.Visible(all, Build, Unverified);
             stamps = now;
             return entries;
         }
@@ -193,12 +202,29 @@ public static class WinSettings
         return new(true, failures);
     }
 
-    // --- `omawin setting …` / `omawin settings …` --------------------------------------------
+    // --- omawin's recommended settings (default/launcher/tune-up.txt, roadmap 8G) ----------------
+    // Read on each `omawin tune-up`: a terminal command, rare, and the file is small. A line that
+    // names no setting, or a value it doesn't take, goes to the log and is left out.
+    static List<Recommendation> Recommendations()
+    {
+        var (recs, problems) = TuneUp.Parse(MenuModel.Layered("tune-up.txt").Where(File.Exists).Select(f => (f, File.ReadAllLines(f))));
+        foreach (var p in problems) App.Log(new FormatException($"{p.Origin}: {p.Message}"));
+        var catalog = AllEntries();
+        return recs.Where(r =>
+        {
+            var bad = TuneUp.Check([r], catalog);
+            foreach (var p in bad) App.Log(new FormatException($"{p.Origin}: {p.Message}"));
+            return bad.Count == 0;
+        }).ToList();
+    }
+
+    // --- `omawin setting …` / `omawin settings …` / `omawin tune-up` -----------------------------
     public static async Task<SettingCommands.Answer> Answer(string[] request) => request switch
     {
         ["--setting", .. var rest] => SettingCommands.Setting(Store, rest, ExplorerRestart.Now),
         ["--settings", .. var rest] => await SettingCommands.Settings(Store, rest,
             Path.Combine(MenuModel.Work, "settings.txt"), Path.Combine(MenuModel.Shared, "settings.txt")),
+        ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

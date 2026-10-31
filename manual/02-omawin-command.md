@@ -23,7 +23,7 @@ The groups:
 - `linux`: your Linux in WSL: `stop`, `backup`, `reset`
 - `music`: the music, podcast and radio player in the bar: open, add, list, toggle, next, prev
 - `restart`: glazewm, menu, music
-- `setting`: Windows' own settings, read and changed without opening Settings: `omawin setting list [area]`, `get <id>`, `set <id> <value>`, `toggle <id>`, `undo` ([the system menu](05-system-menu.md#windows-settings) has them too); `settings save` / `settings apply` carry them to a new PC, `settings admin` applies the ones that need admin in one prompt
+- `setting`: Windows' own settings, read and changed without opening Settings: `omawin setting list [area]`, `get <id>`, `set <id> <value>`, `toggle <id>`, `undo` ([the system menu](05-system-menu.md#windows-settings) has them too); `settings save` / `settings apply` carry them to a new PC, `settings admin` applies the ones that need admin in one prompt; `tune-up` lists omawin's recommended settings, applied or not, and `tune-up apply` sets the rest ([the system menu](05-system-menu.md#windows-settings))
 - what Windows knows and doesn't show ([This PC](13-this-pc.md)): `who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `wifi share`, `clip`, `mic`, `classic-menu`
 - `reports index` (needs a reports script in `~/omawin-account`, see [docs/work.md](../docs/work.md))
 - your own settings ([docs/work.md](../docs/work.md)): `shared` (the PC's shared folder: where, who can change it, its backup), `shared backup`, `account new`, `claude sync`

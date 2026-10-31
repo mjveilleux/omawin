@@ -36,7 +36,7 @@ namespace SystemMenu;
 //   SystemMenu --key <key>     down / up / tab / shift-tab / pick, as if pressed; walkthroughs too
 //   SystemMenu --hide          hide it at once, no animation (omawin profile menu, between runs)
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
-//   SystemMenu --reply <pid> --setting|--settings …  `omawin setting` / `omawin settings`: the
+//   SystemMenu --reply <pid> --setting|--settings|--tune-up …  `omawin setting` / `settings` / `tune-up`: the
 //                              answer is written for the waiting omawin.exe (Reply.cs)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a

@@ -1,4 +1,4 @@
-// `omawin setting …` and `omawin settings …` (roadmap 1B.4, 1B.5): answered by the menu app,
+// `omawin setting …`, `omawin settings …` (roadmap 1B.4, 1B.5) and `omawin tune-up` (8G): answered by the menu app,
 // which already has the catalog and its handlers loaded, so a command costs no PowerShell start.
 // bin/omawin.cs's `ask` action sends the request and prints the answer (Reply.cs). Pure C#
 // over a SettingStore: tested in menu-app.Tests.
@@ -13,6 +13,7 @@ public static class SettingCommands
 
     public const string SettingUsage = "omawin setting list [area] | get <id> | set <id> <value> [--now] | toggle <id> | undo";
     public const string SettingsUsage = "omawin settings save [-Shared] | apply [-NoAdmin] | admin";
+    public const string TuneUpUsage = "omawin tune-up [apply [-Auto]]";
 
     // omawin setting list [area] | get <id> | set <id> <value> [--now] | toggle <id> | undo
     // restartExplorer: done after a change that needs it, when --now is given (otherwise the row
@@ -122,6 +123,68 @@ public static class SettingCommands
         }
         else if (waiting > 0) report.Add($"{waiting} admin change{(waiting == 1 ? "" : "s")} waiting: omawin settings admin");
         return new(failed == 0 ? 0 : 1, report.Count == 0 ? "Everything is already as settings.txt says" : string.Join('\n', report));
+    }
+
+    // omawin tune-up | tune-up apply [-Auto] [--yes] (default/launcher/tune-up.txt, TuneUp.cs).
+    // catalog: every entry, "check" ones too, so the report can say how many wait to be verified;
+    // only the visible ones are read or set. apply first lists what it will change and asks
+    // (code 3), then sets each through the store (undoable, admin ones queued) and, on that same
+    // yes, applies the admin ones in the one prompt. -Auto (install, an update): only the 'auto'
+    // ones, never admin, nothing asked.
+    public static async Task<Answer> TuneUp(SettingStore store, string[] a, IReadOnlyList<Recommendation> recs,
+        IReadOnlyList<SettingEntry> catalog, int build, bool unverified = false)
+    {
+        bool apply = a.FirstOrDefault() == "apply";
+        if (a.Length > 0 && !apply && a[0] != "list") return new(2, TuneUpUsage);
+        bool autoOnly = a.Any(x => x.Equals("-Auto", StringComparison.OrdinalIgnoreCase));
+        var rows = SystemMenu.TuneUp.Report(recs, catalog, Reader(store, recs, catalog, build, unverified), build, unverified);
+        if (!apply) return new(0, SystemMenu.TuneUp.Format(rows).TrimEnd());
+
+        var todo = SystemMenu.TuneUp.ToApply(rows, autoOnly);
+        if (autoOnly) todo = todo.Where(r => !r.Entry.Admin).ToList(); // auto never prompts (TuneUp.Check holds the file to it)
+        if (todo.Count == 0) return new(0, "Every recommended setting is already applied (omawin tune-up lists them)");
+        if (!autoOnly && !a.Contains("--yes"))
+        {
+            int admin = todo.Count(r => r.Entry.Admin);
+            return new(3, $"omawin tune-up apply sets {todo.Count} Windows setting{(todo.Count == 1 ? "" : "s")}"
+                + (admin > 0 ? $" ({admin} in one admin prompt)" : "") + ":\n  "
+                + string.Join("\n  ", todo.Select(r => $"{r.Entry.Name}: {store.Label(r.Entry, r.Rec.Value)}" + (r.Entry.Admin ? " [admin]" : "")))
+                // The prompt applies the whole queue: what was already waiting is named too.
+                + (admin > 0 && OtherAdmin(store, todo) is { Count: > 0 } other ? "\nAlready waiting for admin, in the same prompt:\n  " + string.Join("\n  ", other) : ""));
+        }
+        var report = new List<string>();
+        int failed = 0;
+        foreach (var r in todo)
+        {
+            var o = store.Set(r.Entry, r.Rec.Value, "tune-up");
+            if (!o.Ok) failed++;
+            report.Add(o.Message);
+        }
+        // You said yes to the list, admin ones included: this is the one prompt.
+        if (!autoOnly && todo.Any(r => r.Entry.Admin) && store.AdminQueue.Count > 0)
+        {
+            var o = await store.ApplyAdminAsync();
+            if (!o.Ok) failed++;
+            report.Add(o.Message);
+        }
+        report.Add("Each is undone like any setting: omawin setting undo, or in the system menu.");
+        return new(failed == 0 ? 0 : 1, string.Join('\n', report));
+    }
+
+    static List<string> OtherAdmin(SettingStore store, List<TuneUpRow> todo) => store.AdminQueue.Items()
+        .Where(i => !todo.Any(r => r.Entry.Id.Equals(i.Id, StringComparison.OrdinalIgnoreCase)))
+        .Select(i => store.Find(i.Id) is { } e ? $"{e.Name}: {store.Label(e, i.Value)}" : $"{i.Id}: not in this omawin's catalog, skipped").ToList();
+
+    // The visible recommended settings, read side by side (builtins can take a moment), then
+    // looked up as the report asks for each.
+    static Func<SettingEntry, string?> Reader(SettingStore store, IReadOnlyList<Recommendation> recs,
+        IReadOnlyList<SettingEntry> catalog, int build, bool unverified)
+    {
+        var wanted = new HashSet<string>(recs.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
+        var read = catalog.Where(e => wanted.Contains(e.Id) && (!e.Unverified || unverified) && e.FitsBuild(build)).ToList();
+        var values = new System.Collections.Concurrent.ConcurrentDictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        Parallel.ForEach(read, e => values[e.Id] = store.ReadNow(e));
+        return e => values.TryGetValue(e.Id, out var v) ? v : store.ReadNow(e);
     }
 
     static Answer Result(SettingOutcome o) => new(o.Ok ? 0 : 1, o.Message);

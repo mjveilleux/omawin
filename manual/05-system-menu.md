@@ -44,6 +44,8 @@ Every change is also a command (`omawin setting set explorer.hidden on`, `omawin
 
 **Your settings on a new PC.** `omawin settings save` writes the settings you've changed through omawin (`id = value`) to `settings.txt` in your account folder (`-Shared`: the PC's shared folder, [docs/work.md](../docs/work.md)); it keeps what's already in the file, so you can edit it by hand. Install sets what it says on a new PC (`omawin settings apply`), leaving the admin ones for `omawin settings admin`.
 
+**omawin's recommended settings.** `omawin tune-up` lists the Windows settings omawin recommends for a tiling desktop (snap off, menus without the wait, less running in the background, no accidental Filter Keys, …; `default/launcher/tune-up.txt`), each with why and whether it's applied. `omawin tune-up apply` first lists what it will change, then, on yes, sets them: each like any other setting (undoable with `omawin setting undo`), the admin ones in one prompt. `-Auto` sets only the ones that need no asking. Your account folder's and the shared folder's `launcher/tune-up.txt` can add or replace one by id.
+
 What omawin can switch is a list, `default/launcher/settings.txt` (about 90 settings; your account folder's and the shared folder's `launcher/settings.txt` can add their own or replace one). Only settings that are documented or long stable are on it, never the ones Windows protects (default apps), and every change is recorded in `%LOCALAPPDATA%\launcher\settings-history.tsv` with the value before it, which is what undo puts back.
 
 ## Install, update and the rest
