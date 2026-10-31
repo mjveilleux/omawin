@@ -233,9 +233,10 @@ if ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDe
 $lockTask = Get-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -ErrorAction SilentlyContinue
 if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\themes\set-lockscreen.ps1")) { Pass 'lock screen rotates on unlock' }
 else { Warn 'lock screen rotates on unlock' 'no task for this account (install.ps1 makes it)' }
-# Helper exes: present and built from the current source (the same list as install/helpers.ps1).
+# Helper exes: present and built from the current source (the same list as build/helpers.ps1).
 $helpers = [ordered]@{
-    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'; 'omawin-path' = 'bin\path-doctor.cs'
+    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'; 'omawin-listen' = 'src\agent\omawin-listen.cs'
+    'omawin-path' = 'bin\path-doctor.cs'; 'omawin-uninstall' = 'bin\uninstall.cs'
 }
 # Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
 # this checkout's. A pull gives the sources new dates, so the dates decide only without a
