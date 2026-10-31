@@ -254,7 +254,7 @@ install.gaming | 󰊗 | Gaming
 install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
 
 remove | 󰭌 | Remove
-remove.package | 󰏓 | Package | task omawin pkg remove
+remove.package | 󰏓 | Packages | @packages remove
 remove.development | 󰵮 | Development
 remove.development.rails | 󰫏 | Ruby on Rails | task omawin dev remove ruby
 remove.development.docker-dbs |  | Docker DB | task omawin dev remove docker-db

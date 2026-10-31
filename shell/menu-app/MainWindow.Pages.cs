@@ -54,6 +54,7 @@ public sealed partial class MainWindow
         }
         page = name;
         pageArg = arg;
+        pkgMode = ""; // the Packages page starts afresh (MainWindow.Remove.cs reads what's installed again)
         selected = 0;
         stopping = null;
         routing = null;

@@ -29,6 +29,9 @@ public sealed partial class MainWindow
 
     void RenderPackages(string query)
     {
+        // `@packages remove` (Install › Remove › Packages): what's installed, to remove (MainWindow.Remove.cs).
+        EnterPackageMode(pageArg == "remove" ? "remove" : "install");
+        if (pkgMode == "remove") { RenderRemovals(query); return; }
         SetCrumbs("", "Packages");
         Placeholder.Text = $"Search {Packages.Label(pkgSource)}…";
         PackageChips();
@@ -204,6 +207,7 @@ public sealed partial class MainWindow
     // Tab / Shift+Tab: the next / previous source.
     void CyclePackageSource(int by)
     {
+        if (pkgMode == "remove") { CycleRemoveFilter(by); return; }
         int at = Array.IndexOf(Packages.Sources, pkgSource);
         SetPackageSource(Packages.Sources[(at + by + Packages.Sources.Length) % Packages.Sources.Length]);
     }

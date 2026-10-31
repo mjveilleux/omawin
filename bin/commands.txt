@@ -12,7 +12,7 @@
 #   run <program> [args]   start a program
 #   builtin <name> [args]  done by omawin.exe itself: launch-terminal, launch-project,
 #                          launch-editor, terminal-here, terminal-warm, update-terminal, default;
-#                          pkg by the compiled omawin-cli.exe beside it (src/cli/)
+#                          pkg and remove by the compiled omawin-cli.exe beside it (src/cli/)
 # {repo} in an action is this repo's folder; a pwsh script's path may start with {user}/, this
 # account's own folder (docs/work.md: ~/omawin-account, or OMAWIN_USER_LAYER).
 # Words typed after the command are added to the end.
@@ -71,6 +71,7 @@ reports index | Refresh the Reports list now (this account's reports script; doc
 
 update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 uninstall | All of omawin out of this account: shows everything first, lets you keep programs, asks once (--dry-run shows only; --yes asks nothing). No admin | run omawin-uninstall.exe
+remove | One optional part out again: a preset (dictation, music, agents, data, …), plugin <id> or theme <name>; what omawin put in for it goes, yours stays; shown first, asked once (--dry-run, --yes) | builtin remove
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4; -Wsl: a Linux window, warm or -Scenario cold) | pwsh bin/profile-terminal.ps1
@@ -89,7 +90,7 @@ pkg install | Install by name with whichever manager omawin picks (default/packa
 pkg remove | Remove through the manager that installed it: omawin pkg remove <name>; no name: what winget installed here, fuzzy found | builtin pkg remove
 pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path; --force reads it again | builtin pkg index
 pkg update | Update what omawin put in, each through where it came from (the tools bundle, winget, Scoop, mise, its installer): [name], --all (every manager's everything), --from choco (Chocolatey's, one admin prompt) | builtin pkg update
-pkg list | What's installed and where from (%LOCALAPPDATA%\launcher\packages.tsv): --refresh asks each manager, --updates shows what's waiting, --linux your Linux's | builtin pkg list
+pkg list | What's installed and where from (%LOCALAPPDATA%\launcher\packages.tsv): --refresh asks each manager, --updates shows what's waiting, --linux your Linux's, --tsv a row a line (name, source, id, version, by) for scripts | builtin pkg list
 pkg info | Which managers have a package, at what version, which copy is here and which runs (PATH order) | builtin pkg info
 pkg move | Take a package from another manager: installs it there, removes the old copy, remembers: omawin pkg move fd --to scoop | builtin pkg move
 pkg prefer | Your order of package managers for omawin pkg install: omawin pkg prefer scoop winget (no names: the order now) | builtin pkg prefer

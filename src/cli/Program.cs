@@ -57,6 +57,7 @@ static partial class Program
         // beside it as omawin-cli.exe) the ones it doesn't have, and still runs the rest itself.
         RunBuiltin { Name: "pkg" } b => new Omawin.Cli.Pkg.PkgCommand(new Omawin.Cli.Pkg.WindowsHost(Repo, StateDir)).Run(b.Args),
         RunBuiltin { Name: "profile-linux" } b => ProfileLinux(b.Args),
+        RunBuiltin { Name: "remove" } b => new Omawin.Cli.Remove.RemoveCommand(new Omawin.Cli.Remove.WindowsRemoveHost(Repo, StateDir), Omawin.Cli.Remove.RemoveCommand.Read(Repo, StateDir)).Run(b.Args),
         RunBuiltin b => Fail($"builtin {b.Name} isn't in this omawin yet; bin/omawin.cs runs it"),
         BadAction bad => Fail(bad.Message),
         _ => Fail("unreachable"),

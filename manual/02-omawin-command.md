@@ -27,7 +27,7 @@ The groups:
 - what Windows knows and doesn't show ([This PC](13-this-pc.md)): `who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `wifi share`, `clip`, `mic`, `classic-menu`
 - `reports index` (needs a reports script in `~/omawin-account`, see [docs/work.md](../docs/work.md))
 - your own settings ([docs/work.md](../docs/work.md)): `shared` (the PC's shared folder: where, who can change it, its backup), `shared backup`, `account new`, `claude sync`
-- the setup itself: `update` (and `update terminal`), `uninstall` (all of omawin out of this account: it shows what it will do first), `migrate`, `profile terminal`, `profile menu`, `profile login`, `profile ram`, `check`, `path` (your PATH: what's broken in it, and which `node` / `python` / `git` runs), `install`, `no-ads`, `start` (and `start terminal`, `start bar`, `start glazewm`)
+- the setup itself: `update` (and `update terminal`), `uninstall` (all of omawin out of this account: it shows what it will do first), `remove <part>` (one optional part: a preset, a plugin, a theme; [the system menu](05-system-menu.md#install-update-and-the-rest)), `migrate`, `profile terminal`, `profile menu`, `profile login`, `profile ram`, `check`, `path` (your PATH: what's broken in it, and which `node` / `python` / `git` runs), `install`, `no-ads`, `start` (and `start terminal`, `start bar`, `start glazewm`)
 
 The list is `bin/commands.txt`, one line per command. To add your own, add a line there: no rebuild needed.
 

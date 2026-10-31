@@ -297,6 +297,8 @@ foreach ($json in 'config\windows-terminal\settings.json') {
     catch { Fail $json "invalid JSON: $($_.Exception.Message)" }
 }
 # Menu rows: every row's parent exists, actions are known kinds.
+# The builtins omawin knows: src/cli/Actions.cs's list (one place, so a new one can't be missed here).
+$builtins = @(if ((Get-Content "$Repo\src\cli\Actions.cs" -Raw) -match '(?s)Builtins\s*=\s*\[(.*?)\]') { [regex]::Matches($Matches[1], '"([^"]+)"') | ForEach-Object { $_.Groups[1].Value } })
 $ids = @{}
 $menuProblems = @()
 foreach ($line in Get-Content "$Repo\default\launcher\menu.txt" -Encoding utf8) {
@@ -325,7 +327,7 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
         else { $commandProblems += "$name runs $($Matches[1]), which is missing" }
     }
     elseif ($action -match '^builtin\s+(\S+)') {
-        if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-bar', 'update-terminal', 'default', 'pkg', 'linux') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
+        if ($Matches[1] -notin $builtins) { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
     }
     elseif ($action -notmatch '^(app|ask|run)\s') { $commandProblems += "$name has an unknown action" }
 }
