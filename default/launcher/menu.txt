@@ -303,6 +303,7 @@ trigger.toggle.stayawake | 󰅶 | Stay awake | omawin toggle stay-awake
 
 pc | 󰌢 | This PC
 pc.health | 󰗶 | Why it restarted, crashed or woke up | task omawin health
+pc.hardware | 󰋊 | Disk, battery and device health | task omawin health hardware
 pc.startup | 󱓞 | What starts with Windows | task omawin startup
 pc.top | 󰊚 | Processes by app | task omawin top
 pc.connections | 󰖟 | Apps on the internet | task omawin connections
@@ -327,6 +328,7 @@ pc.updates.tonight | 󰜉 | Restart tonight at 03:00 | omawin updates restart to
 pc.updates.cancel | 󰜺 | Call off the restart | omawin updates restart cancel
 pc.updates.pause | 󰏤 | Pause updates for a week | task omawin updates pause
 pc.updates.resume | 󰐊 | Resume updates | task omawin updates resume
+pc.updates.uninstall | 󰚰 | Uninstall an update that broke something | task omawin updates uninstall
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
 pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu

@@ -5,7 +5,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | Command | What it answers |
 |---|---|
 | `omawin who-has <path>` | which programs hold a file or folder open |
-| `omawin health [days]` | why the PC restarted, crashed or woke up, and which apps crashed |
+| `omawin health [days]` | why the PC restarted, crashed or woke up, and which apps crashed; the update it started after; disks, battery and devices |
 | `omawin startup` | everything that starts with Windows, with a switch each |
 | `omawin top [name]` | processes by app, the busiest first |
 | `omawin connections [app]` | which apps are talking to the internet, and to whom |
@@ -39,6 +39,17 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 - **What woke it from sleep**: a device (often the mouse or the network card) or a timer (often Windows Update).
 - Whether Windows is **waiting for a restart** to finish installing updates (said first, when it is).
 - **Slow starts**, and what slowed them, when Windows lets this account read that log (else it says so: it needs admin or the Event Log Readers group).
+- **Started after an update**, first, when it applies: blue screens, restarts without a shutdown or an app's crashes that began within days of an update installing, at least three of them and far more than in the two weeks before (`Blue screens started after KB5031234, installed Tue 14:05: 4 since, none in the two weeks before.`). The daily Defender definitions are never blamed. Each update it names comes with the command that takes it off.
+- **Disks, battery and devices** (`omawin health hardware` for these alone; **System menu › This PC › Disk, battery and device health**): each disk's health as Windows judges it (Healthy, Warning, Unhealthy), and, when Windows gives them to your account (often only to admin), how worn it is, its temperature, its hours and errors it couldn't correct; the battery's wear (how much of its first capacity it still holds, and its charge cycles); devices with a driver problem (no driver, can't start, stopped after a problem…; ones you turned off or that are unplugged aren't problems). Anything not well is marked `!` with what to do: back up a failing disk, install a missing driver, and so on.
+
+## Undo the update that broke it
+
+`omawin updates uninstall KB5031234` takes an update off (**System menu › This PC › Windows Update › Uninstall an update that broke something**; with no number it lists what was installed lately, marking the ones `omawin health` suspects, and asks which). It says what will happen, then Windows asks for an administrator once, and in that one run:
+- a restore point is made first (when System Protection is on; it's never turned on for you), so System Restore can go back to now;
+- Windows' own uninstaller takes the update off (it shows its own window and asks too); a cumulative update that came with its servicing stack, which that uninstaller can't remove, comes off through DISM, and only the package that names that KB;
+- Windows Update is paused for a week, so it isn't put straight back (`omawin updates resume` ends the pause once a fixed update is out).
+
+A restart finishes it: it asks, or `omawin updates restart tonight`. If the update can't come off, it offers System Restore, which can take the PC back to before the update (your files stay).
 
 ## What starts with Windows
 
