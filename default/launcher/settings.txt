@@ -12,7 +12,7 @@
 #   powercfg <name> <ac|dc|both>   the active power plan (Switches.cs): screen-off sleep hibernate-after
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
-#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer, and the
+#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu, and the
 #                     admin ones hibernate sudo windows-feature <feature>
 #   link <uri or program>   opens a page; omawin <command>   one of omawin's commands
 # notes: admin (one prompt for all of them, roadmap 2.9), signout, restart, minBuild=, maxBuild=, check.

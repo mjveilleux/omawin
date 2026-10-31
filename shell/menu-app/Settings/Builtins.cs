@@ -32,6 +32,7 @@ public sealed class BuiltinHandler : ISettingHandler
         ["audio-output"] = new AudioDefault(input: false),
         ["audio-input"] = new AudioDefault(input: true),
         ["restart-explorer"] = new RestartExplorer(),
+        ["classic-menu"] = new ClassicMenu(),
         // Admin ones: read here without admin; written only by bin/settings-admin.ps1, in the one
         // prompt (the store queues them, so their Write is never reached).
         ["hibernate"] = new ReadOnly(_ => RegInt(@"SYSTEM\CurrentControlSet\Control\Power", "HibernateEnabled") switch
@@ -47,7 +48,14 @@ public sealed class BuiltinHandler : ISettingHandler
         All.TryGetValue(e.How.Target, out var b) ? b : throw new InvalidOperationException($"no builtin '{e.How.Target}'");
 
     public string? Read(SettingEntry e) => Get(e).Read(e);
-    public string? Write(SettingEntry e, string value) => Get(e).Write(e, value);
+    // After a write, the line's flags as for reg (restart-explorer: the row says so, never a
+    // surprise restart).
+    public string? Write(SettingEntry e, string value)
+    {
+        var error = Get(e).Write(e, value);
+        if (error == null) SettingApply.After(e);
+        return error;
+    }
     public IReadOnlyList<Choice> Choices(SettingEntry e) => Get(e).Choices(e) ?? e.Choices;
     public bool Fast(SettingEntry e) => Get(e).Fast;
 
@@ -317,6 +325,41 @@ public sealed class BuiltinHandler : ISettingHandler
         public bool Fast => true;
         public string? Read(SettingEntry e) => null;
         public string? Write(SettingEntry e, string value) { ExplorerRestart.Now(); return null; }
+    }
+
+    // The full right-click menu (roadmap 8.24), the same registration `omawin classic-menu`
+    // (src/windows/Explorer/ClassicMenu.cs) makes: an empty per-account InprocServer32 for the
+    // Windows 11 menu's COM class sends Explorer back to the full one. On: that key with an empty
+    // default value. Off: only that key goes, then the class key if it's left empty, so a class
+    // key something else put there stays. Explorer reads it when it starts (restart-explorer).
+    sealed class ClassicMenu : IBuiltin
+    {
+        const string Clsid = @"Software\Classes\CLSID\{86ca1aa0-34aa-4e8b-a509-50c905bae2a2}";
+        const string Server = Clsid + @"\InprocServer32";
+
+        public bool Fast => true;
+
+        public string? Read(SettingEntry e)
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(Server);
+            return key != null && key.GetValue("") is string { Length: 0 } ? "on" : "off";
+        }
+
+        public string? Write(SettingEntry e, string value)
+        {
+            var hkcu = Microsoft.Win32.Registry.CurrentUser;
+            if (value == "on")
+            {
+                using var key = hkcu.CreateSubKey(Server);
+                key.SetValue("", "", Microsoft.Win32.RegistryValueKind.String);
+                return null;
+            }
+            hkcu.DeleteSubKey(Server, throwOnMissingSubKey: false);
+            using (var clsid = hkcu.OpenSubKey(Clsid))
+                if (clsid == null || clsid.SubKeyCount > 0 || clsid.ValueCount > 0) return null;
+            hkcu.DeleteSubKey(Clsid, throwOnMissingSubKey: false);
+            return null;
+        }
     }
 
     // An optional feature's state, read without admin through WMI (Win32_OptionalFeature:
