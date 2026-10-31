@@ -21,6 +21,7 @@ launcher | One Search (Win+Space): apps, settings, commands, files, windows, pro
 files | One Search on Files (Win+F): files and folders, with a preview | app --search file
 menu | One Search on Commands, browsing what the system menu had (Win+Alt+Space was it); with a section's id, that section: omawin menu install | app --search command --browse
 search | One Search; a filter and words to start with: omawin search settings dark | app --search
+windows | The window switcher: One Search on Windows, every open window typed to filter, the selected one live beside the list, Enter goes there (its workspace too), Ctrl+K closes it; no key yet | app --search windows
 
 capture screenshot | Screenshot (Win+Shift+S): drag a region, click a window, Enter for everything | app --snip
 capture text | Text from the screen (Win+Shift+T): drag over it, its text is copied | app --snip text

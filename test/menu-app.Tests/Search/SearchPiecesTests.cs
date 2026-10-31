@@ -26,6 +26,20 @@ public class SearchPiecesTests
     }
 
     [Fact]
+    public void EachWindowKeepsItsHandleForItsLivePicture()
+    {
+        using var doc = JsonDocument.Parse("""
+            {"windows":[
+              {"type":"window","id":"a1","title":"Terminal","processName":"noctty","handle":4523180},
+              {"type":"window","id":"b2","title":"Mail","processName":"olk","handle":"not a number"},
+              {"type":"window","id":"c3","title":"Notes","processName":"notepad"}
+            ]}
+            """);
+        var list = WindowList.Read(doc.RootElement);
+        Assert.Equal([4523180L, 0L, 0L], list.Select(w => w.Handle));
+    }
+
+    [Fact]
     public void AnAnswerWithoutWindowsIsNone()
     {
         using var doc = JsonDocument.Parse("""{"monitors":[]}""");

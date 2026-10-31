@@ -354,6 +354,7 @@ public sealed partial class MainWindow : Window
         leaving = null;
         exit?.Cancel();
         Root.IsHitTestVisible = true;
+        HideWindowPicture();
         appWindow.Hide();
     }
 
@@ -1272,6 +1273,14 @@ public sealed partial class MainWindow : Window
     // sight with a row's room around it.
     // jump: new results, so no gliding from where the old ones were.
     void Highlight(bool jump = false)
+    {
+        // A window's live picture (MainWindow.WindowPicture.cs) stays only while one is selected.
+        windowPictureWanted = false;
+        try { HighlightNow(jump); }
+        finally { if (!windowPictureWanted) HideWindowPicture(); }
+    }
+
+    void HighlightNow(bool jump)
     {
         // New rows or tiles: let them be measured first, or the scroll would stop at the old length.
         if (jump) ListLayer.UpdateLayout();

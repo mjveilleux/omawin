@@ -74,6 +74,7 @@
     <Compile Include="..\..\shell\menu-app\MicMute.cs" Link="Linked\MicMute.cs" />
     <Compile Include="..\..\shell\menu-app\KeyRules.cs" Link="Linked\KeyRules.cs" />
     <Compile Include="..\..\shell\menu-app\ClipEntries.cs" Link="Linked\ClipEntries.cs" />
+    <Compile Include="..\..\shell\menu-app\WindowPicture.cs" Link="Linked\WindowPicture.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -68,6 +68,7 @@ Like Omarchy's package picker, in One Search (Browse › Install › Package, th
 
 `omawin pkg install` with no name is the same for winget in a terminal, with fzf; with a name it installs by name with whichever manager suits it ([The omawin command](02-omawin-command.md#packages)).
 
+- **Windows** (the filter, or `omawin windows`): the window switcher. Every window GlazeWM manages, on every workspace, the one you were in last; type a few letters of its title or program. The selected one shows **live** beside the list (Windows draws it there, as Alt+Tab does; a minimized window shows its icon). **Enter** goes to it, switching workspace if it's on another; **Ctrl+K** › Close closes it. It has no key yet (one is being decided).
 - **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in your Linux in WSL (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`default/launcher/project-tabs.txt`).
   - The session keeps running when the window closes, agents and all; opening the project again reattaches to it.

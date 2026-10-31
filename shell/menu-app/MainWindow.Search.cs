@@ -917,6 +917,7 @@ public sealed partial class MainWindow
         PreviewTextBox.Background = Brush(Hex(theme.Background), 0x90);
         PreviewText.Text = PreviewWords(r);
         PreviewTextBox.Visibility = PreviewText.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (r.Data is OpenWindow open) ShowWindowPicture(open); // live, over the icon (roadmap 8.5)
     }
 
     // What the preview says under the facts: what Enter and Ctrl+K do, and for a command its
@@ -946,6 +947,9 @@ public sealed partial class MainWindow
                 break;
             case IndexedSetting:
                 lines.Add("Opens Windows' own page for it.");
+                break;
+            case OpenWindow:
+                lines.Add("Enter goes to it, on its workspace.");
                 break;
         }
         if (r.Tag is not (STag.More or STag.Package or STag.Web or STag.Calculator))
