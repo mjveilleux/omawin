@@ -118,7 +118,7 @@ DownloadUser = alpm
 SigLevel = Required DatabaseOptional
 LocalFileSigLevel = Optional
 
-$machine[omarchy]
+${machine}[omarchy]
 Server = https://pkgs.omarchy.org/stable/\$arch
 
 [core]
@@ -394,6 +394,11 @@ update_part() {
   local user
   user="$(wsl_user /etc/wsl.conf)"
   [[ -n $user ]] && id "$user" > /dev/null 2>&1 || return 0
+  # What a newer omawin sets up as root, for a Linux set up before it (wsl.conf applies from the
+  # distro's next start).
+  docker_root "$user"
+  linger "$user"
+  wsl_conf "$user"
   # Windows' folders, passed on (runuser -l starts from a clean environment).
   runuser -l "$user" -c "$(printf 'OMAWIN_STATE=%q OMAWIN_ACCOUNT=%q USERPROFILE=%q LOCALAPPDATA=%q bash %q refresh' \
     "${OMAWIN_STATE:-}" "${OMAWIN_ACCOUNT:-}" "${USERPROFILE:-}" "${LOCALAPPDATA:-}" "$repo/wsl/setup.sh")"
