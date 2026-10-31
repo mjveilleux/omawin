@@ -9,26 +9,26 @@ Write-Step 'PowerShell profile'
 $docs = [Environment]::GetFolderPath('MyDocuments')
 $psDir = "$docs\PowerShell"
 $psItem = Get-Item -LiteralPath $psDir -Force -ErrorAction SilentlyContinue
-if ($psItem -and $psItem.LinkType -and (@($psItem.Target)[0].TrimEnd('\') -eq "$Repo\powershell")) {
+if ($psItem -and $psItem.LinkType -and (@($psItem.Target)[0].TrimEnd('\') -eq "$Repo\config\powershell")) {
     # An older install linked the folder into the repo; the migration (writable-files-out) makes it a folder of its own.
     Write-Note "$psDir still links into the repo; the migrations below move it out"
 } else {
     if ($psItem -and $psItem.LinkType) { [IO.Directory]::Delete($psDir); Write-Note "removed stale link $psDir" }  # the link only
     New-Item -ItemType Directory -Force -Path $psDir | Out-Null
     foreach ($name in 'profile.ps1', 'Microsoft.PowerShell_profile.ps1') {
-        $profilePath = ("$Repo\powershell\$name") -replace "'", "''"
-        Set-FileContent "$psDir\$name" "# Managed by omawin: loads $Repo\powershell\$name. Your own lines go in your account folder's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n"
+        $profilePath = ("$Repo\config\powershell\$name") -replace "'", "''"
+        Set-FileContent "$psDir\$name" "# Managed by omawin: loads $Repo\config\powershell\$name. Your own lines go in your account folder's powershell\ (omawin docs/work.md).`nif (Test-Path '$profilePath') { . '$profilePath' }`n"
     }
     # The execution policy (RemoteSigned), seeded once; pwsh rewrites it (Set-ExecutionPolicy).
-    if (-not (Test-Path "$psDir\powershell.config.json")) { Copy-Item "$Repo\powershell\powershell.config.json" $psDir; Write-Note "seeded $psDir\powershell.config.json" }
+    if (-not (Test-Path "$psDir\powershell.config.json")) { Copy-Item "$Repo\config\powershell\powershell.config.json" $psDir; Write-Note "seeded $psDir\powershell.config.json" }
 }
 $cache = "$HOME\.cache\pwsh"
-if (Test-Path $cache) { Remove-Item $cache -Recurse -Force; Write-Note 'cleared starship/zoxide init cache (rebuilt on next start)' }
+if (Test-Path $cache) { Remove-Item $cache -Recurse -Force; Write-Note 'cleared config/starship/zoxide init cache (rebuilt on next start)' }
 
 Write-Step 'Windows Terminal'
 if (Get-Command Wait-BundleTools -ErrorAction SilentlyContinue) { Wait-BundleTools wt }   # the tools bundle's Terminal, if it brings one
 # Terminal writes its own settings.json (its settings UI), so it lives in Terminal's LocalState, not
-# in the repo: omawin's windows-terminal/settings.json seeds it once (Terminal's generated one is
+# in the repo: omawin's config/windows-terminal/settings.json seeds it once (Terminal's generated one is
 # backed up), and after that it's yours. The colors come from a fragment (themes/render.ps1).
 # Seeded again only if the file is gone; %LOCALAPPDATA%\launcher\seeded-windows-terminal says it was.
 function Set-TerminalSettings([string]$LocalState) {
@@ -43,9 +43,15 @@ function Set-TerminalSettings([string]$LocalState) {
     if ((Test-Path $settings) -and (Test-Path $marker)) { Write-Note "ok  $settings (yours)"; Add-InstallItem 'Settings' 'wt' 'Windows Terminal' 'have'; return }
     New-Item -ItemType Directory -Force -Path $LocalState, (Split-Path $marker) | Out-Null
     Move-Aside $settings
-    Copy-Item "$Repo\windows-terminal\settings.json" $settings
+    Copy-Item "$Repo\config\windows-terminal\settings.json" $settings
+    # Its Git Bash profile names Git for Windows' usual folder; the bundle's copy is this account's.
+    $gitHome = Get-GitHome
+    if ($gitHome -and $gitHome -ne "$env:ProgramFiles\Git") {
+        $json = [IO.File]::ReadAllText($settings).Replace('C:\\Program Files\\Git\\', ($gitHome -replace '\\', '\\') + '\\')
+        [IO.File]::WriteAllText($settings, $json)
+    }
     [IO.File]::WriteAllText($marker, "$settings`n")
-    Write-Note "seeded $settings from windows-terminal/settings.json"
+    Write-Note "seeded $settings from config/windows-terminal/settings.json"
     Add-InstallItem 'Settings' 'wt' 'Windows Terminal' 'done'
 }
 $wtPackage = Get-ChildItem "$env:LOCALAPPDATA\Packages" -Filter 'Microsoft.WindowsTerminal_*' -Directory -ErrorAction SilentlyContinue |
@@ -77,10 +83,10 @@ if ($wtPackage) {
 Write-Step 'noctty'
 # The default terminal (omawin default terminal). Its config is in this repo; noctty reads a stub
 # that includes it, then the current theme's colors (rendered by themes/render.ps1).
-Set-FileContent "$env:LOCALAPPDATA\noctty\config.ghostty" "# omawin: the config is in the repo; the colors are the current theme's (themes/render.ps1).`nconfig-file = $Repo\noctty\config.ghostty`nconfig-file = ?$env:LOCALAPPDATA\launcher\theme.ghostty`n"
+Set-FileContent "$env:LOCALAPPDATA\noctty\config.ghostty" "# omawin: the config is in the repo; the colors are the current theme's (themes/render.ps1).`nconfig-file = $Repo\config\noctty\config.ghostty`nconfig-file = ?$env:LOCALAPPDATA\launcher\theme.ghostty`n"
 
 Write-Step 'starship'
-$starship = "$Repo\starship\starship.toml"
+$starship = "$Repo\config\starship\starship.toml"
 if ([Environment]::GetEnvironmentVariable('STARSHIP_CONFIG', 'User') -ne $starship) {
     [Environment]::SetEnvironmentVariable('STARSHIP_CONFIG', $starship, 'User')
     Write-Note "set STARSHIP_CONFIG=$starship"
@@ -91,13 +97,13 @@ $env:STARSHIP_CONFIG = $starship
 Move-Aside "$HOME\.config\starship.toml"
 
 Write-Step 'fastfetch'
-Set-Junction "$HOME\.config\fastfetch" "$Repo\fastfetch"
+Set-Junction "$HOME\.config\fastfetch" "$Repo\config\fastfetch"
 
 Write-Step 'herdr'
 # herdr (project windows are herdr sessions) reads its config from this repo: HERDR_CONFIG_PATH.
 # %APPDATA%\herdr also holds its sessions and logs, so it isn't linked; its own config.toml there
 # is no longer read.
-$herdr = "$Repo\herdr\config.toml"
+$herdr = "$Repo\config\herdr\config.toml"
 if ([Environment]::GetEnvironmentVariable('HERDR_CONFIG_PATH', 'User') -ne $herdr) {
     [Environment]::SetEnvironmentVariable('HERDR_CONFIG_PATH', $herdr, 'User')
     Write-Note "set HERDR_CONFIG_PATH=$herdr"
@@ -106,8 +112,8 @@ if ([Environment]::GetEnvironmentVariable('HERDR_CONFIG_PATH', 'User') -ne $herd
 $env:HERDR_CONFIG_PATH = $herdr
 
 Write-Step 'git'
-$gitRepoConfig = "$Repo\git\gitconfig" -replace '\\', '/'
-$gitIgnore = "$Repo\git\ignore" -replace '\\', '/'
+$gitRepoConfig = "$Repo\config\git\gitconfig" -replace '\\', '/'
+$gitIgnore = "$Repo\config\git\ignore" -replace '\\', '/'
 if (Get-Command git -ErrorAction SilentlyContinue) {
     $includes = @(git config --global --get-all include.path)
     Add-InstallItem 'Settings' 'git' 'git config' $(if ($includes -contains $gitRepoConfig) { 'have' } else { 'done' })
@@ -132,7 +138,7 @@ if (Get-Command git -ErrorAction SilentlyContinue) {
 } else { Write-Warn 'git not found; re-run after installing it' }
 
 Write-Step 'Git Bash'
-$bashrc = "$Repo\bash\bashrc" -replace '\\', '/'
+$bashrc = "$Repo\config\bash\bashrc" -replace '\\', '/'
 Set-FileContent "$HOME\.bashrc" "# Managed by omawin: edit $bashrc instead.`nsource '$bashrc'`n"
-# Login shells (Git Bash opens one) load ~/.bashrc too: bash/bash_profile, copied.
-Set-FileContent "$HOME\.bash_profile" ([IO.File]::ReadAllText("$Repo\bash\bash_profile"))
+# Login shells (Git Bash opens one) load ~/.bashrc too: config/bash/bash_profile, copied.
+Set-FileContent "$HOME\.bash_profile" ([IO.File]::ReadAllText("$Repo\config\bash\bash_profile"))

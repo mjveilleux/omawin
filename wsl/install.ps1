@@ -1,4 +1,4 @@
-# The wsl preset's installer (packages.ps1): this account's Linux in WSL, Arch (the default) or
+# The wsl preset's installer (install/packages.ps1): this account's Linux in WSL, Arch (the default) or
 # Ubuntu (`omawin default linux`, bin/defaults.txt), set up by wsl/setup.sh (the tools, omawin's
 # Neovim config, herdr, the agents this account has on Windows). A distro is per account, so each
 # account that picks the preset gets its own.

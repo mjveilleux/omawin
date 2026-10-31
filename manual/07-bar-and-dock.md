@@ -17,7 +17,7 @@ The bar is drawn by the menu app itself, with no web engine, so it's up within s
   - **Agents**: a little robot, red when you've used 90% of a Claude limit. Click it for your Claude Code limits (the 5-hour session, the week, and any per-model week), each with a meter and when it resets, and a line that turns through this week's numbers (tokens, today, the model you use most, your busiest day, prompts and sessions). It reads your Claude Code sign-in on this PC and asks Anthropic every 15 minutes; middle-click to check now, right-click to start Claude Code. `omawin` runs `bin/agent-usage.ps1 -Print` for the same in a terminal.
   - **Bluetooth**, **network** (wifi by strength, or ethernet), **sound** (the wheel changes the volume, right-click mutes, click for the sound page), **monitor** (the wheel changes the brightness), and **power** (the battery; right-click shows its percentage, click for sleep, restart and the rest). Bluetooth, network and monitor open Quick settings (Win+A).
 
-The layout is `bar/bar.json`: which widgets sit where, as Omarchy's `shell.json` does (edit it, then `omawin restart menu`).
+The layout is `default/bar/bar.json`: which widgets sit where, as Omarchy's `shell.json` does (edit it, then `omawin restart menu`).
 
 ## Music, podcasts and radio
 

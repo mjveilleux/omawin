@@ -1,6 +1,6 @@
 # Keys
 
-The full, searchable list is in the launcher: **Win+Space → Shortcuts** (`launcher/keys.txt`). The ones to remember:
+The full, searchable list is in the launcher: **Win+Space → Shortcuts** (`default/launcher/keys.txt`). The ones to remember:
 
 | Keys | Does |
 |---|---|
@@ -31,4 +31,4 @@ Workspaces are plain numbers you use per project; chat apps (Teams, Slack, Disco
 
 New windows go where Omarchy puts them: each takes half of the focused window, turning 90 degrees each time. Four terminals in a row give A on the left, B top right, and C beside D below B.
 
-The keys live in `glazewm/config.yaml`. Each one runs an omawin command (see [The omawin command](02-omawin-command.md)). If you change a key, update `launcher/keys.txt` too.
+The keys live in `config/glazewm/config.yaml`. Each one runs an omawin command (see [The omawin command](02-omawin-command.md)). If you change a key, update `default/launcher/keys.txt` too.

@@ -10,7 +10,7 @@
     a copy filled in from a template, outside what git tracks, and nothing tracked ever changes
     on a theme switch:
 
-      glazewm/config.yaml                   ->  ~/.glzr/glazewm/config.yaml (what GlazeWM reads)
+      config/glazewm/config.yaml                   ->  ~/.glzr/glazewm/config.yaml (what GlazeWM reads)
                                                 plus your account folder's glazewm/config.yaml
                                                 (keybindings, window_rules: Merge-GlazeUser)
       themes/templates/noctty.ghostty       ->  %LOCALAPPDATA%\launcher\theme.ghostty (noctty includes it)
@@ -160,7 +160,7 @@ $glazeDir = Join-Path $HOME '.glzr\glazewm'
 $glazeItem = Get-Item $glazeDir -Force -ErrorAction SilentlyContinue
 # The old link to this repo: removed as a link only (Remove-Item could follow it into the repo).
 if ($glazeItem -and $glazeItem.LinkType) { [IO.Directory]::Delete($glazeDir, $false) }
-$glazeText = Expand-Template ([IO.File]::ReadAllText("$Repo\glazewm\config.yaml")) "$Repo\glazewm\config.yaml"
+$glazeText = Expand-Template ([IO.File]::ReadAllText("$Repo\config\glazewm\config.yaml")) "$Repo\config\glazewm\config.yaml"
 # Plus your account folder's keybindings and window rules (Merge-GlazeUser above). A mistake there
 # never costs you the desktop: it's reported, and omawin's config is written without them.
 $glazeUser = Join-Path (& "$Repo\bin\user-layer.ps1") 'glazewm\config.yaml'

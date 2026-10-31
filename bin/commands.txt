@@ -1,11 +1,11 @@
 # omawin's commands: `omawin <group> <name> [arguments]`, like Omarchy's `omarchy`. The keys
-# (glazewm/config.yaml), the system menu (launcher/menu.txt: `omawin <command>` actions), the
+# (config/glazewm/config.yaml), the system menu (default/launcher/menu.txt: `omawin <command>` actions), the
 # dock and you in a terminal all use these names. `omawin help` lists them; bin/omawin.cs runs them.
 #
 #   <command> | <what it does, one line> | <action>
 #
 # Actions:
-#   app <request>          hand the menu app (menu-app/, always running) a request: instant
+#   app <request>          hand the menu app (shell/menu-app/, always running) a request: instant
 #   pwsh <script> [args]   a PowerShell script of this repo, path from the repo root; in your
 #                          terminal when typed, hidden when run from a key
 #   run <program> [args]   start a program
@@ -33,23 +33,23 @@ theme import | Remake this repo's themes from Omarchy's own (for omawin's mainta
 theme lockscreen | The lock screen's next background | pwsh themes/set-lockscreen.ps1 -Next
 
 terminal here | A terminal in the focused window's folder (Win+Enter) | builtin terminal-here
-workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal --title rename -- pwsh -NoLogo -NoProfile -File "{repo}\launcher\rename-workspace.ps1"
+workspace rename | Name the current workspace (Alt+N) | builtin launch-terminal --title rename -- pwsh -NoLogo -NoProfile -File "{repo}\default\launcher\rename-workspace.ps1"
 
 launch terminal | A terminal, in the default terminal: [--dir <folder>] [--title <title>] [--wsl: in your Linux] [-- <command>] | builtin launch-terminal
-launch project | A project window (launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
+launch project | A project window (default/launcher/project-tabs.txt): <folder> [--wsl] | builtin launch-project
 launch editor | A file or folder in the default editor | builtin launch-editor
 default | What omawin opens things with (bin/defaults.txt): omawin default terminal wt picks one; omawin default linux arch (or ubuntu), the Linux in WSL | builtin default
 
 restart glazewm | Fill the theme into GlazeWM's config and reload it (Alt+Shift+R) | pwsh themes/render.ps1 -Reload
-restart menu | Rebuild and restart the menu app (after editing menu-app/) | pwsh menu-app/build.ps1
-restart music | Rebuild the music player (after editing music/); the bar picks it up by itself | pwsh music/build.ps1
+restart menu | Rebuild and restart the menu app (after editing shell/menu-app/) | pwsh shell/menu-app/build.ps1
+restart music | Rebuild the music player (after editing src/music/); the bar picks it up by itself | pwsh src/music/build.ps1
 
-music | The music, podcast and radio player in the bar: open (Win+M), add <url>, add podcasts <url>, add radio <url> [name], add suno <url>, suno-create (Suno's create page, to make a song), list, toggle, next, prev, rate <1-5>, station [songs or jams] (music/) | run omawin-music
+music | The music, podcast and radio player in the bar: open (Win+M), add <url>, add podcasts <url>, add radio <url> [name], add suno <url>, suno-create (Suno's create page, to make a song), list, toggle, next, prev, rate <1-5>, station [songs or jams] (src/music/) | run omawin-music
 agent listen | Talk to omawin's agent (Ctrl+Win+H): it listens; a second press sends what you said to a herdr session on workspace 9, where it does it live (quick changes to omawin, music, issues) | run omawin-listen.exe
-agent open | Show omawin's agent: its herdr session on workspace 9, with OpenCode's service in the first tab and a tab per request | pwsh agent/open.ps1
-agent start | Start omawin's agent's herdr session in the background, with OpenCode's service in it, so requests only attach (GlazeWM does this at login) | pwsh agent/start.ps1
+agent open | Show omawin's agent: its herdr session on workspace 9, with OpenCode's service in the first tab and a tab per request | pwsh src/agent/open.ps1
+agent start | Start omawin's agent's herdr session in the background, with OpenCode's service in it, so requests only attach (GlazeWM does this at login) | pwsh src/agent/start.ps1
 agent cancel | Stop listening for the agent and drop what was said | run omawin-listen.exe cancel
-agent ask | Ask omawin's agent, typed: it does it in the background (OpenCode or Claude Code, agent/config.json) it adds music and podcasts, opens issues, starts work in a worktree (docs/agent.md) | pwsh agent/ask.ps1
+agent ask | Ask omawin's agent, typed: it does it in the background (OpenCode or Claude Code, src/agent/config.json) it adds music and podcasts, opens issues, starts work in a worktree (docs/agent.md) | pwsh src/agent/ask.ps1
 
 account new | Start this Windows account's own folder, ~/omawin-account (docs/work.md): git identity, empty launcher / shell files, a git repo; -Repo <name> keeps it in a private GitHub repo | pwsh bin/account-new.ps1
 shared | The PC's shared folder (docs/work.md): yours in every account, which every account reads and only its owner changes; -From owner/name starts it from a backup | pwsh bin/shared.ps1
@@ -64,9 +64,9 @@ migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
 profile ram | What's using the memory and the processor, by app, omawin's parts against their budgets (-Save keeps a history and shows what changed, -Json for agents) | pwsh bin/profile-ram.ps1
-check | Health check: is everything in place and running | pwsh check.ps1
+check | Health check: is everything in place and running | pwsh bin/check.ps1
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
-no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh no-ads.ps1
+no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh bin/no-ads.ps1
 dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
 dev remove | Take a development environment away again: omawin dev remove node | pwsh bin/remove-dev-env.ps1
 pkg find | The package picker, in the launcher: winget, Chocolatey or Scoop (Tab), fuzzy found, Enter installs; Ctrl+Space picks several | app --launcher packages
@@ -74,7 +74,7 @@ pkg install |Any of winget's ~16,000 packages, fuzzy found (fzf, with a preview)
 pkg remove | What winget installed here, fuzzy found and uninstalled; Tab picks several | pwsh bin/pkg-remove.ps1
 pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path | pwsh bin/pkg-index.ps1
 pkg update | Update packages each through where it came from (the tools bundle, winget, Scoop, Chocolatey, mise, npm, its installer): omawin pkg update [name], -List shows them | pwsh bin/pkg-update.ps1
-preset list |The presets: opt-in groups of tools on top of the core (packages.ps1), the picked ones marked | pwsh bin/preset.ps1 list
+preset list |The presets: opt-in groups of tools on top of the core (install/packages.ps1), the picked ones marked | pwsh bin/preset.ps1 list
 preset add | Pick a preset and install it now: omawin preset add data | pwsh bin/preset.ps1 add
 preset remove | Unpick a preset (what it installed stays): omawin preset remove data | pwsh bin/preset.ps1 remove
 start | Start the menu app in the background (GlazeWM does this at login) | app --start-hidden

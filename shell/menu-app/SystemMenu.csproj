@@ -1,0 +1,67 @@
+<!--
+  The menu app: the system menu (Win+Alt+Space), launcher (Win+Space), file finder and
+  screenshots, as a WinUI 3 window in the current theme (themes/*.json). Built by build.ps1
+  into %LOCALAPPDATA%\system-menu.
+  Unpackaged, and carries its own copy of the Windows App SDK, so nothing else is installed.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.19041.0</TargetPlatformMinVersion>
+    <RootNamespace>SystemMenu</RootNamespace>
+    <AssemblyName>SystemMenu</AssemblyName>
+    <!-- x64 by default; CI builds win-arm64 as well (-p:RuntimeIdentifier=win-arm64 -p:Platform=arm64
+         -p:Platforms=arm64, .github/workflows/release.yml), so an ARM64 PC downloads the app
+         instead of building it. -->
+    <Platforms Condition="'$(Platforms)' == ''">x64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">win-x64</RuntimeIdentifier>
+    <!-- The release this build is from: CI passes -p:OmawinRelease=v0.1.0; a build off a checkout
+         says (dev). Read with Get-Item SystemMenu.exe | % VersionInfo | % ProductVersion. -->
+    <OmawinRelease Condition="'$(OmawinRelease)' == ''">(dev)</OmawinRelease>
+    <InformationalVersion>$(OmawinRelease)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <UseWinUI>true</UseWinUI>
+    <WindowsPackageType>None</WindowsPackageType>
+    <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
+    <!-- Use the Windows App SDK's own resource (PRI) tools, so `dotnet build` works without Visual Studio. -->
+    <EnableMsixTooling>true</EnableMsixTooling>
+    <SelfContained>false</SelfContained>
+    <!-- Compiled ahead of time (14 MB more). On an idle PC it starts no faster (~0.6 s either
+         way), but at sign-in, with the processor busy, it took 16 s to be ready; this is to see
+         whether skipping .NET's compiling helps there (omawin profile login). -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <Nullable>enable</Nullable>
+    <!-- Source-generated COM (Audio.cs) needs it. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Program.Main (App.xaml.cs) checks for a running copy before starting WinUI. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- fff's C library (file search), fetched by build.ps1. -->
+    <None Include="lib\fff_c.dll" CopyToOutputDirectory="PreserveNewest" Link="fff_c.dll" Condition="Exists('lib\fff_c.dll')" />
+    <!-- Omarchy's icon font (its logo is the native bar's menu button), default/bar/omarchy.ttf. -->
+    <Content Include="..\..\default\bar\omarchy.ttf" CopyToOutputDirectory="PreserveNewest" Link="omarchy.ttf" />
+  </ItemGroup>
+  <!-- build.ps1 -Aot: one native program (Native AOT), so it's up seconds sooner at sign-in (the
+       bar lives here, docs/native-bar.md). The same code as the normal build. -->
+  <PropertyGroup Condition="'$(OmawinAot)' == 'true'">
+    <PublishAot>true</PublishAot>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <SelfContained>true</SelfContained>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- GDI+ for the screenshot overlay's drawing (Snip.cs, plain Win32 windows) and the About
+         sheet's PNG; not WinForms, which can't be compiled as one native program. -->
+    <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.7.260224002" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.22621.3233" />
+    <!-- QR reading in the snip overlay (omawin capture qr): ZXing's decoder, managed, ~0.5 MB. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
+  </ItemGroup>
+</Project>

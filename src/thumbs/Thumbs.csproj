@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The theme picker's pictures, made in CI (roadmap 1.9): run it with an output folder.
+       Runs anywhere .NET runs; the release job runs it on Linux. -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Omawin.Thumbs</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Decodes JPEG, PNG and WebP (Omarchy's backgrounds use all three); MIT. -->
+    <PackageReference Include="SkiaSharp" Version="3.119.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux.NoDependencies" Version="3.119.1" />
+  </ItemGroup>
+</Project>

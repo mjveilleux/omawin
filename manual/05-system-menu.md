@@ -31,7 +31,7 @@ The window keeps that height. Submenus slide in as lists, colored by kind: subme
 - Installs, removals and updates run in a small floating terminal you can watch.
 - **Update › This setup** runs `omawin update`: pulls the latest, relinks, runs new migrations.
 
-The rows are one text file, `launcher/menu.txt`: `id | icon | label | action`, and dotted ids make the submenus. Actions:
+The rows are one text file, `default/launcher/menu.txt`: `id | icon | label | action`, and dotted ids make the submenus. Actions:
 
 | Action | Does |
 |---|---|

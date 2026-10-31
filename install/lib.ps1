@@ -48,7 +48,7 @@ function Test-Interactive {
         -not ([Environment]::GetCommandLineArgs() -match '^-NonI')
 }
 
-# The presets this PC picked (packages.ps1 has them), one name per line.
+# The presets this PC picked (install/packages.ps1 has them), one name per line.
 $PresetsFile = "$env:LOCALAPPDATA\launcher\presets.txt"
 function Get-Presets {
     @(Get-Content $PresetsFile -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } |
@@ -73,6 +73,15 @@ function Get-LinuxPick {
 
 # WSL itself: the WSL package (what `wsl --install` puts in). And this account's distros, from
 # WSL's registry, so WSL isn't started to ask.
+# Git for Windows' folder (the bundle's per-user copy, or an installer's), or $null: Git Bash is its
+# bin\bash.exe. git.exe is in its cmd\ (what goes on the PATH) or bin\.
+function Get-GitHome {
+    $git = Get-Command git -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $git) { return $null }
+    $root = Split-Path (Split-Path $git.Source)
+    if (Test-Path (Join-Path $root 'bin\bash.exe')) { return $root }
+    $null
+}
 function Test-WslInstalled { Test-Path "$env:ProgramFiles\WSL\wsl.exe" }
 function Get-WslDistros {
     Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |

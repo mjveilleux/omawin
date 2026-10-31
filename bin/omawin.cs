@@ -8,7 +8,7 @@
 //   omawin --version            the release this exe is from ((dev) built off a checkout)
 //
 // What a command does is its row in commands.txt: hand the always-running menu app a request
-// (menu-app/, instant), run a PowerShell script of this repo, or start a program. In a
+// (shell/menu-app/, instant), run a PowerShell script of this repo, or start a program. In a
 // terminal, scripts run right there and their output shows; from a key (GlazeWM runs it with
 // --hide-window) they run hidden.
 //
@@ -396,11 +396,11 @@ static class Omawin
         return Detach(exe, a);
     }
 
-    // { title, command (null: a shell), color } per tab, from launcher/project-tabs.txt.
+    // { title, command (null: a shell), color } per tab, from default/launcher/project-tabs.txt.
     static List<string[]> ProjectTabs()
     {
         var tabs = new List<string[]>();
-        foreach (var raw in File.ReadAllLines(Path.Combine(Repo, "launcher", "project-tabs.txt"), Encoding.UTF8))
+        foreach (var raw in File.ReadAllLines(Path.Combine(Repo, "default", "launcher", "project-tabs.txt"), Encoding.UTF8))
         {
             var line = raw.Trim();
             if (line.Length == 0 || line.StartsWith("#")) continue;
@@ -430,7 +430,7 @@ static class Omawin
     // With noctty, a project is a herdr session named after the folder (herdr: the multiplexer,
     // and it keeps sessions running with no window, so agents carry on and reopening the project
     // reattaches). A session that isn't running is started headless and, if it comes up empty,
-    // given a tab per launcher/project-tabs.txt line before the window opens; then a noctty
+    // given a tab per default/launcher/project-tabs.txt line before the window opens; then a noctty
     // window attaches to it. Linux projects (WSL) use the herdr there, the same way.
 
     // A program on the PATH a new sign-in would have (herdr's installer puts a versioned folder
@@ -496,7 +496,7 @@ static class Omawin
     static string ShellQuote(string word) { return "'" + word.Replace("'", "'\\''") + "'"; }
 
     static string[] Prepend(string[] first, string[] rest) { return first.Concat(rest).ToArray(); }
-    // A new session's workspace: the project folder, a tab per launcher/project-tabs.txt line
+    // A new session's workspace: the project folder, a tab per default/launcher/project-tabs.txt line
     // (the first in front), each tab's command typed into its shell, so quitting it leaves a
     // prompt in the project.
     static void SetUpHerdrProject(Func<string[], string> call, string dir, string session)
@@ -525,7 +525,7 @@ static class Omawin
         return m.Success ? m.Groups[1].Value : null;
     }
 
-    //   <folder> [--wsl]: a window with a tab per launcher/project-tabs.txt line (noctty: a herdr
+    //   <folder> [--wsl]: a window with a tab per default/launcher/project-tabs.txt line (noctty: a herdr
     //   session named after the project, reattached if it's already running).
     static int LaunchProject(string[] args)
     {
@@ -758,7 +758,7 @@ static class Omawin
     }
     // --- the bar at sign-in -----------------------------------------------------------------------
     // GlazeWM runs this at login (omawin start bar). The bar is the menu app's own window ("omawin
-    // bar", menu-app/Bar/BarWindow.cs), which takes seconds to come up at sign-in; until it does, a
+    // bar", shell/menu-app/Bar/BarWindow.cs), which takes seconds to come up at sign-in; until it does, a
     // plain strip in the theme's colour holds its place.
     static int StartBar()
     {

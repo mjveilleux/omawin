@@ -14,7 +14,7 @@
         choco    choco upgrade <id> (Chocolatey's own admin prompt, if it needs one)
         mise     mise upgrade <tool>
         npm      npm update --global <package>
-        script   its install script again (herdr, Claude Code, ...: packages.ps1's ExtraInstalls)
+        script   its install script again (herdr, Claude Code, ...: install/packages.ps1's ExtraInstalls)
         found    yours from somewhere omawin can't tell: left alone
 
         omawin pkg update             everything
@@ -28,7 +28,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $Stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-. "$Repo\packages.ps1"
+. "$Repo\install\packages.ps1"
 . "$Repo\install\lib.ps1"
 $SoftwareFunctionsOnly = $true
 . "$Repo\install\software.ps1"
@@ -68,7 +68,7 @@ foreach ($group in $rows | Group-Object Source) {
         'script' {
             foreach ($i in $items) {
                 if ($ExtraInstalls.Contains($i.Id)) { Invoke-Update "$($i.Id) (its installer)" $ExtraInstalls[$i.Id] }
-                else { Write-Warn "$($i.Id): no install script for it in packages.ps1" }
+                else { Write-Warn "$($i.Id): no install script for it in install/packages.ps1" }
             }
         }
         'found' { foreach ($i in $items) { Write-Note "$($i.Name): yours, from elsewhere; left alone" } }

@@ -1,8 +1,8 @@
-# install.ps1 step: the core winget packages and the chosen presets' (packages.ps1), other
+# install.ps1 step: the core winget packages and the chosen presets' (install/packages.ps1), other
 # installers, the Nerd Font, then Neovim's and Neovide's config. -LinkOnly skips the installs and
 # keeps the config.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1), $Stamp and the package lists
-# (packages.ps1) are in scope. install.ps1 (to plan the admin step) and bin/preset.ps1 (to install
+# (install/packages.ps1) are in scope. install.ps1 (to plan the admin step) and bin/preset.ps1 (to install
 # one preset) dot-source it with $SoftwareFunctionsOnly set, for the functions alone.
 
 # The winget packages installed on this PC, from one `winget export` (every installed package it
@@ -163,7 +163,7 @@ function Register-WingetSource {
     finally { Remove-Item $msix -Force -ErrorAction SilentlyContinue }
 }
 
-# --- the tools bundle (roadmap 2.0, bundle/tools.txt) -------------------------------------------
+# --- the tools bundle (roadmap 2.0, install/tools.txt) -------------------------------------------
 # Omarchy installs from its ISO's offline package cache; omawin's release carries the core tools
 # the same way, built by CI from each tool's own release: a zip per tool, all fetched at once and
 # unpacked side by side into %LOCALAPPDATA%\omawin\tools. No winget, no installers, no admin.
@@ -208,7 +208,7 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge') }
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx') }
         })
     $script:ToolBundle
 }
@@ -264,7 +264,7 @@ function Start-ToolBundle($Installed, [string[]]$Only) {
     $plan = foreach ($t in $todo) {
         $remote = $t.Base -match '^[a-z]+://'
         [pscustomobject]@{
-            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge
+            Name = $t.Name; Version = $t.Version; Sha = $t.Sha; Dir = $t.Dir; Merge = [bool]$t.Merge; Sfx = [bool]$t.Sfx
             Url = $(if ($remote) { "$($t.Base)/$($t.File)" } else { $null })
             Zip = $(if ($remote) { Join-Path $work $t.File } else { Join-Path $t.Base $t.File })
         }
@@ -356,15 +356,15 @@ function Start-EarlyHelpers {
 function Install-ToolBundle($Installed, [string[]]$Only) { Start-ToolBundle $Installed $Only; Complete-ToolBundle }
 
 function Install-WingetPackages([string[]]$Ids) {
+    $bundled = @(Get-BundleCovered)
+    # Everything left came from the bundle: winget isn't asked anything (nor looked for).
+    if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Warn 'winget not found. Install "App Installer" from the Microsoft Store, then re-run.'
         return
     }
     $winget = (Get-Command winget).Source
     $installed = Get-WingetInstalled
-    $bundled = @(Get-BundleCovered)
-    # Everything left came from the bundle: winget isn't asked anything.
-    if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     Register-WingetSource
 
     $todo = New-Object Collections.Generic.List[string]
@@ -428,7 +428,7 @@ function Install-WingetPackages([string[]]$Ids) {
     Add-ToolPaths @(Get-WantedTools | Where-Object { @(Read-ToolBundle | ForEach-Object Name) -notcontains $_ })
 }
 
-# The commands the core and the chosen presets are for (packages.ps1's Tools); bun is the core's.
+# The commands the core and the chosen presets are for (install/packages.ps1's Tools); bun is the core's.
 function Get-WantedTools {
     @('bun') + @(foreach ($name in Get-ChosenPresets) { $Presets[$name].Tools }) |
         Where-Object { $_ } | Select-Object -Unique
@@ -490,7 +490,7 @@ function Install-Extras([string[]]$Names) {
     }
 }
 
-# The presets this PC picked, minus names packages.ps1 no longer has (said once, not fatal).
+# The presets this PC picked, minus names install/packages.ps1 no longer has (said once, not fatal).
 function Get-ChosenPresets {
     foreach ($name in Get-Presets) {
         if ($Presets.Contains($name)) { $name } else { Write-Warn "preset '$name' (in $PresetsFile) doesn't exist any more; omawin preset remove $name" }
@@ -532,7 +532,7 @@ function Initialize-Presets {
         } elseif ($answer -ne 'none') { Write-Warn "no Linux '$answer': none for now (omawin preset add wsl later)" }
     }
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
-    Set-Content $PresetsFile (@('# omawin presets on this PC (packages.ps1); omawin preset add|remove <name>') + $picked) -Encoding utf8
+    Set-Content $PresetsFile (@('# omawin presets on this PC (install/packages.ps1); omawin preset add|remove <name>') + $picked) -Encoding utf8
     Write-Note "presets: $(if ($picked) { $picked -join ', ' } else { 'none (omawin preset list)' })"
 }
 
@@ -549,7 +549,7 @@ function Install-NerdFont {
     $tmp = Join-Path $env:TEMP "nerdfont-$Stamp"
     New-Item -ItemType Directory -Force -Path $tmp | Out-Null
     $zip = Join-Path $tmp "$NerdFont.zip"
-    # The tools bundle brought it (bundle/tools.txt, font): its files, no download.
+    # The tools bundle brought it (install/tools.txt, font): its files, no download.
     $fromBundle = Join-Path $env:LOCALAPPDATA "omawin\fonts\$NerdFont"
     if (Test-Path (Join-Path $fromBundle '.omawin-version')) { $tmp = $fromBundle }
     else {
@@ -600,15 +600,15 @@ if (-not $SoftwareFunctionsOnly) {
     }
 
     Write-Step 'Neovim and Neovide'
-    Set-Junction "$env:LOCALAPPDATA\nvim" "$Repo\nvim"
+    Set-Junction "$env:LOCALAPPDATA\nvim" "$Repo\config\nvim"
     # Neovide uses the same Neovim config; this is only its own settings (config.toml).
-    Set-Junction "$env:APPDATA\neovide" "$Repo\neovide"
+    Set-Junction "$env:APPDATA\neovide" "$Repo\config\neovide"
 
     Write-Step 'R / RStudio'
-    # A one-line ~/.Rprofile (R's ~ is Documents) sourcing r/rprofile.R: RStudio follows the
+    # A one-line ~/.Rprofile (R's ~ is Documents) sourcing config/r/rprofile.R: RStudio follows the
     # desktop theme. An .Rprofile of your own (more than that one line) is left alone.
     $rprofile = Join-Path ([Environment]::GetFolderPath('MyDocuments')) '.Rprofile'
-    $source = "source('$("$Repo\r\rprofile.R" -replace '\\', '/')')"
+    $source = "source('$("$Repo\config\r\rprofile.R" -replace '\\', '/')')"
     $current = if (Test-Path $rprofile) { (Get-Content $rprofile -Raw).Trim() }
     if ($current -eq $source) { Write-Note "ok  $rprofile" }
     elseif (-not $current -or $current -match '^source\(.*rprofile\.R.*\)$') { Set-Content $rprofile $source -Encoding utf8; Write-Note "wrote $rprofile" }

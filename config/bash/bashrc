@@ -1,0 +1,51 @@
+# Git Bash, and Linux in WSL (wsl/setup.sh sources it): same prompt, keys and colors as PowerShell
+# (starship, zoxide, fzf, eza, bat; Tokyo Night). Starship config: $STARSHIP_CONFIG (omawin/config/starship/starship.toml)
+# Init scripts are cached in ~/.cache/bash (starting processes is slow in Git Bash);
+# after upgrading config/starship/zoxide/fzf run: update-shell-cache
+
+[[ $- == *i* ]] || return  # scripts and tools get a plain shell
+
+shell_cache="$HOME/.cache/bash"
+update-shell-cache() {
+  mkdir -p "$shell_cache"
+  if command -v starship &> /dev/null; then
+    # Bake in the continuation prompt, and read the clock from bash's $EPOCHREALTIME
+    # instead of launching `starship time` before and after every command.
+    local ps2; ps2=$(starship prompt --continuation)
+    starship init bash --print-full-init |
+      sed -E "s|^(\s*)PS2=.*|\1PS2='${ps2//|/\\|}'|" |
+      sed -E 's|\$\([^)]*starship(\.exe)?'"'"'? time\)|$(( ${EPOCHREALTIME/[.,]/} / 1000 ))|g' |
+      sed -E 's|^(\s*)'"'"'[^'"'"']*starship(\.exe)?'"'"' time$|\1echo $(( ${EPOCHREALTIME/[.,]/} / 1000 ))|' \
+      > "$shell_cache/starship.bash"
+  fi
+  command -v zoxide &> /dev/null && zoxide init bash > "$shell_cache/zoxide.bash"
+  # key bindings only (Ctrl+R, Ctrl+T, Alt+C); fzf's tab completion is slow to load here
+  command -v fzf &> /dev/null && fzf --bash | sed '/^### completion.bash ###/,$d' > "$shell_cache/fzf.bash"
+  echo "shell cache rebuilt in $shell_cache (open a new tab)"
+}
+[[ -s $shell_cache/starship.bash ]] || update-shell-cache > /dev/null
+for f in starship zoxide fzf; do
+  [[ -s $shell_cache/$f.bash ]] && source "$shell_cache/$f.bash"
+done
+
+# No visual bell: Git Bash's own /etc/inputrc sets `bell-style visible`, which flashes the whole
+# terminal on a failed completion or a backspace at an empty prompt.
+[[ $- == *i* ]] && bind 'set bell-style none' 2>/dev/null
+
+# fzf in the terminal's 16 colors (its "16" base scheme), so it follows the theme.
+export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border rounded --info inline-right --color=16,border:8,info:8,gutter:-1'
+export FZF_DEFAULT_COMMAND='fd --type f --hidden --strip-cwd-prefix --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range :200 {}'"
+export BAT_THEME=ansi
+
+alias ls='eza --icons --group-directories-first'
+alias ll='eza -la --icons --group-directories-first --git'
+alias lt='eza --tree --level 2 --icons --git-ignore'
+alias lg='lazygit'
+
+bind 'set completion-ignore-case on'
+bind '"\e[A": history-search-backward'  # type a prefix, then Up/Down
+bind '"\e[B": history-search-forward'
+HISTCONTROL=ignoreboth:erasedups
+HISTSIZE=10000

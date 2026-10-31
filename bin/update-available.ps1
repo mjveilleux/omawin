@@ -13,4 +13,4 @@ $upstream = git -C $repo rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$n
 if ($LASTEXITCODE -ne 0 -or -not $upstream) { 0; return }
 git -C $repo fetch --quiet 2>$null
 if ($LASTEXITCODE -ne 0) { 0; return }
-[int](git -C $repo rev-list --count "HEAD..$upstream" 2>$null)
+[int](config/git -C $repo rev-list --count "HEAD..$upstream" 2>$null)

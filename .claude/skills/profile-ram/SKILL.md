@@ -31,9 +31,9 @@ The table lists omawin's parts against idle budgets (the `$Parts` table at the t
 | Part | Process(es) | Look at |
 |---|---|---|
 | bar and dock | `zebar` + its WebView2 | `zebar/tokyo-islands/*.js`: intervals, `requestAnimationFrame` loops left running while nothing changes, listeners added on every render, big DOM rebuilt each tick |
-| menu app | `SystemMenu` (.NET, WinUI) | caches in `menu-app/` kept forever (clipboard history, indexes), images not released, background loops in `Background.cs` |
+| menu app | `SystemMenu` (.NET, WinUI) | caches in `shell/menu-app/` kept forever (clipboard history, indexes), images not released, background loops in `Background.cs` |
 | music player | `omawin-music`, `mpv`, the Suno window (`omawin-music --suno` + WebView2) | the Suno window holds a whole browser; it should exist only after the Suno tab was used. mpv's cache (`--demuxer-max-bytes`) |
-| agent | `opencode` (one `serve --service`), `herdr` | exactly one `opencode serve`; every other `opencode` is an open interface (~100 MB each) on a request tab. Finished requests close their tab (`agent/live.ps1`); a pile of clients means that broke |
+| agent | `opencode` (one `serve --service`), `herdr` | exactly one `opencode serve`; every other `opencode` is an open interface (~100 MB each) on a request tab. Finished requests close their tab (`src/agent/live.ps1`); a pile of clients means that broke |
 | terminal | `noctty`, its spare `pwsh` | one spare shell is by design (fast Win+Enter); more are open tabs |
 | GlazeWM, theme-watch, omawin listen | | should be tiny; any CPU while idle is a bug |
 

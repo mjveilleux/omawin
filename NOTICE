@@ -8,12 +8,12 @@ Copyright (c) David Heinemeier Hansson.
     missing colors are filled in and how themes install from a git link
     (themes/convert-theme.ps1 and theme.ps1, after omarchy-theme-color and
     omarchy-theme-install)
-  - fastfetch/logo.txt (Omarchy's icon, unchanged; see fastfetch/NOTICE)
-  - the About window's sheen (menu-app/AboutWindow.xaml.cs, ported from
+  - config/fastfetch/logo.txt (Omarchy's icon, unchanged; see config/fastfetch/NOTICE)
+  - the About window's sheen (shell/menu-app/AboutWindow.xaml.cs, ported from
     omarchy-branding-about-animation)
-  - the omarchy icon font (bar/omarchy.ttf, unchanged: its logo is the bar's
+  - the omarchy icon font (default/bar/omarchy.ttf, unchanged: its logo is the bar's
     menu button)
-  - the bar's layout, widgets and their behavior (bar/bar.json, menu-app/Bar/Widgets.cs),
+  - the bar's layout, widgets and their behavior (default/bar/bar.json, shell/menu-app/Bar/Widgets.cs),
     the agent usage collector (bin/agent-usage.ps1, ported from omarchy-agent-usage-claude),
     the package finder (bin/pkg-install.ps1, pkg-remove.ps1, after omarchy-pkg-install and
     omarchy-pkg-remove) and the development environments (bin/install-dev-env.ps1,
@@ -45,7 +45,7 @@ Tokyo Night, Nord, Rosé Pine, Everforest, Kanagawa, Flexoki, and the other them
 authors as credited by Omarchy.
 
 LazyVim starter (https://github.com/LazyVim/starter), Apache License 2.0: the base of
-nvim/ (see nvim/LICENSE).
+config/nvim/ (see config/nvim/LICENSE).
 
 fff (https://github.com/dmtrKovalenko/fff), MIT: the file finder library, fetched at
 build time and shipped in the menu app's release.

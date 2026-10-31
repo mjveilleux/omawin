@@ -1,4 +1,4 @@
-# install.ps1 step: the rest of the tools bundle (bundle/tools.txt), which has been unpacking in
+# install.ps1 step: the rest of the tools bundle (install/tools.txt), which has been unpacking in
 # the background since the install began (install/software.ps1, Start-ToolBundle), and the Nerd
 # Font it brought. Late on purpose: only GlazeWM, Bun, noctty and Windows Terminal are needed
 # sooner, and the steps that need them wait for those alone (Wait-BundleTools).

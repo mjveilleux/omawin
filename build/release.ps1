@@ -11,8 +11,8 @@
 #
 # The input layout is what the jobs produce:
 #   <InDir>\helpers\*.exe          build/helpers.ps1 -OutDir <InDir>\helpers
-#   <InDir>\menu-<arch>\           menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
-#   <InDir>\music-<arch>\omawin-music.exe   music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
+#   <InDir>\menu-<arch>\           shell/menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
+#   <InDir>\music-<arch>\omawin-music.exe   src/music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
 #
 #   .\build\release.ps1 -Tag v0.1.0 -InDir scratch\built -OutDir scratch\release
 #   .\build\release.ps1 -Tag v0.1.0 -InDir out -OutDir dist -Arch x64   (one architecture)
@@ -78,6 +78,17 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "nvim-parsers`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no prebuilt Neovim parsers ($parsers): left out of this release" }
+    # The theme picker's pictures (release.yml's thumbs job): merged into the folder the menu app
+    # keeps them in, not waited for (later).
+    $thumbs = Join-Path $InDir 'thumbs\omawin-tool-theme-thumbs.zip'
+    if ((Test-Path $thumbs) -and (Test-Path $list)) {
+        Add-File $thumbs 'omawin-tool-theme-thumbs.zip'
+        $version = (Get-Content (Join-Path $InDir 'thumbs\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $thumbs -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('theme-thumbs', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-theme-thumbs.zip', $sha, '-', '', 'launcher\thumbnails', 'merge later') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "theme-thumbs`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no theme pictures ($thumbs): left out of this release" }
 }
 
 if (-not $NoManifest) {

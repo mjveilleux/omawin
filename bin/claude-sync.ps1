@@ -8,13 +8,13 @@
     then the account's own (~/omawin-account: that job's or client's), which wins where both say
     something. A shared skill named in the account's claude/skills-off.txt is left out there.
 
-      claude/CLAUDE.md       your rules: ~/.claude/CLAUDE.md imports each folder's (@import, so an
+      config/claude/CLAUDE.md       your rules: ~/.claude/CLAUDE.md imports each folder's (@import, so an
                              edit in the folder is live). A ~/.claude/CLAUDE.md you wrote yourself
                              (without omawin's first line) is left alone.
-      claude/skills/<name>/  linked into ~/.claude/skills (junctions: live). A real folder of the
+      config/claude/skills/<name>/  linked into ~/.claude/skills (junctions: live). A real folder of the
                              same name already there is left alone and reported; links to a skill
                              no longer in either folder go. Claude.ai's synced skills aren't touched.
-      claude/settings.json   merged into ~/.claude/settings.json: omawin's claude/settings.json
+      config/claude/settings.json   merged into ~/.claude/settings.json: omawin's config/claude/settings.json
                              fills in what's missing, then the shared folder's and the account's
                              go on top. A key a folder sets wins;
                              lists are joined; keys only the live file has (what /config, herdr's
@@ -115,7 +115,7 @@ function Merge($base, $over) {
 $settingsFile = Join-Path $claudeDir 'settings.json'
 # omawin's own defaults only fill in what the live file lacks (/config's choices stay); the
 # layers' then win.
-$settings = Read-Json "$Repo\claude\settings.json"
+$settings = Read-Json "$Repo\config\claude\settings.json"
 if ($null -eq $settings) { $settings = [pscustomobject]@{} }
 $live = Read-Json $settingsFile
 if ($live) { $settings = Merge $settings $live }

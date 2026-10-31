@@ -2,7 +2,7 @@
 
 A new PC shouldn't need the .NET SDK (a 1 GB dependency) or a compile to get `omawin.exe`, the bar's helpers, the menu app and the music player. So GitHub Actions builds them when a version is tagged, publishes them with the hashes, and `install.ps1` downloads the ones for that PC, checking each against the published hash before it is used. No release, no network, no GitHub sign-in: it builds here instead, exactly as before.
 
-The build is not a second recipe. Every CI job runs the same script this PC runs — [`build/helpers.ps1`](../build/helpers.ps1), [`menu-app/build.ps1`](../menu-app/build.ps1), [`music/build.ps1`](../music/build.ps1) — with the tag added for the version stamp, so a release is the local build. The SDK is pinned once, in [`global.json`](../global.json) (9.0, any feature band), for CI and for this PC.
+The build is not a second recipe. Every CI job runs the same script this PC runs — [`build/helpers.ps1`](../build/helpers.ps1), [`shell/menu-app/build.ps1`](../shell/menu-app/build.ps1), [`src/music/build.ps1`](../src/music/build.ps1) — with the tag added for the version stamp, so a release is the local build. The SDK is pinned once, in [`global.json`](../global.json) (9.0, any feature band), for CI and for this PC.
 
 ## What a release holds
 
@@ -44,7 +44,7 @@ An ARM64 PC with an x64-only release builds its own menu app and player (a relea
 
 1. **what's here and current** is kept: an exe newer than its source, the menu app newer than `menu-app\`, the player newer than `music\`. So a release never replaces code you built from a newer checkout.
 2. **the release's file for this PC**: `bin/release.ps1` resolves the release (newest, or `-Release <tag>`/`OMAWIN_RELEASE`), downloads the asset whose name matches, and refuses anything whose SHA-256 doesn't match `SHA256SUMS.txt`. A refusal is not an error: it falls through to 3.
-3. **a build here**: a dev checkout, offline, no release, no GitHub sign-in, no SDK. `build/helpers.ps1`, `menu-app\build.ps1`, `music\build.ps1`.
+3. **a build here**: a dev checkout, offline, no release, no GitHub sign-in, no SDK. `build/helpers.ps1`, `shell\menu-app\build.ps1`, `src\music\build.ps1`.
 
 `-NoDownload` (or `OMAWIN_PREBUILT=0`) always builds; `-NoBuild` (`OMAWIN_PREBUILT=1`) never builds. The release this PC is on is recorded in `%LOCALAPPDATA%\launcher\release.txt`.
 

@@ -11,7 +11,7 @@
 
 $AdminBatch = $null
 
-# What needs admin: the whole-PC packages not installed yet ($WholePC in packages.ps1, among
+# What needs admin: the whole-PC packages not installed yet ($WholePC in install/packages.ps1, among
 # $Ids), the forks unless they're in and current, and WSL itself when the wsl preset is picked
 # and the PC hasn't got it.
 function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
@@ -50,7 +50,7 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
 }
 
 # Whether WSL went in just now and works only once Windows restarts: waits for the admin step's
-# word on it (the wsl preset's installer asks, packages.ps1). $false when it wasn't on the list.
+# word on it (the wsl preset's installer asks, install/packages.ps1). $false when it wasn't on the list.
 function Get-WslRestart {
     if (-not ($script:AdminBatch -and $script:AdminBatch.Plan.Wsl)) { return $false }
     Wait-AdminItems @('wsl')

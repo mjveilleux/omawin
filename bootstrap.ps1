@@ -10,14 +10,14 @@
 
     It needs nothing installed first:
 
-      1. installs git with winget
+      1. git and PowerShell 7 from the release's tools bundle (per-user, no admin; winget only
+         when there's no bundle), downloaded at once
       2. clones omawin to ~/omawin (or pulls it if it's already there)
       3. your own settings (docs/work.md): the PC's shared folder (C:\ProgramData\omawin\shared,
          yours in every account; found if another account made it, else started empty or from
          a private backup repo) and this account's (~/omawin-account, from a private repo or
          started fresh). A private repo opens Git's sign-in window.
-      4. PowerShell 7, from the release's tools bundle (downloaded while git clones)
-      5. runs install.ps1 in PowerShell 7, which sets up everything else
+      4. runs install.ps1 in PowerShell 7, which sets up everything else
 
     Safe to run again. Runs under Windows PowerShell 5.1, which every Windows PC has: the only part
     of omawin that does. It gets PowerShell 7 and hands everything after it to that.
@@ -104,7 +104,7 @@ if ($Fancy) {
     [Console]::Out.WriteLine('')
     $d = " $($Boot.Dot) "
     [Console]::Out.WriteLine("  $($Boot.Bold)Omakase Windows$($Boot.Reset)$($Boot.Dim)$($d)keyboard-driven developer desktop$($d)bootstrap$($Boot.Reset)")
-    [Console]::Out.WriteLine("  $($Boot.Dim)winget$($d)git$($d)omawin$($d)your settings$($d)install.ps1$($Boot.Reset)")
+    [Console]::Out.WriteLine("  $($Boot.Dim)PowerShell 7$($d)git$($d)omawin$($d)your settings$($d)install.ps1$($Boot.Reset)")
 }
 
 # Each step's line; the next one (or the end) marks the one before done, with its time.
@@ -130,8 +130,9 @@ function Update-SessionPath {
         [Environment]::GetEnvironmentVariable('Path', 'User')
 }
 
-Write-Step 'winget'
-if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+# winget, only when the release has no tools bundle to take git and PowerShell 7 from.
+function Assert-Winget {
+    if (Get-Command winget -ErrorAction SilentlyContinue) { return }
     # New PCs get winget (App Installer) from the Store shortly after first sign-in; nudge it.
     Write-Note 'winget is not ready yet; asking Windows to register App Installer ...'
     try { Add-AppxPackage -RegisterByFamilyName -MainPackage Microsoft.DesktopAppInstaller_8wekyb3d8bbwe } catch { }
@@ -141,9 +142,39 @@ if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
     }
 }
 
-# PowerShell 7 runs everything after this script (install.ps1 needs it). Taken from the release's
-# tools bundle (bundle/tools.txt): per-user, no admin, checked against the release's SHA256SUMS.
-# Its download starts now and runs while git gets the repo.
+# A tool from the bundle: checked against the release's list, unpacked where the install's tools
+# go (install/software.ps1 then sees it's there), and its folder on the PATH (this account's, and
+# this session's). Returns the folder.
+function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
+    $row = $Fetch.Row
+    $clock = [Diagnostics.Stopwatch]::StartNew()
+    if ($Fetch.File.Process) { $Fetch.File.Process.WaitForExit() }
+    $waited = $clock.Elapsed.TotalSeconds
+    $zip = $Fetch.File.Path
+    if (-not (Test-Path $zip) -or (Get-FileHash $zip -Algorithm SHA256).Hash -ne $row[3].ToUpper()) { throw "$What from the release doesn't match its published SHA-256" }
+    $dir = Join-Path $env:LOCALAPPDATA "omawin\tools\$($row[0])"
+    if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
+    New-Item -ItemType Directory -Force $dir | Out-Null
+    if ($row.Count -gt 7 -and ($row[7] -split ' ') -contains 'sfx') {
+        # 7-Zip's self-extractor (Git for Windows' portable build): -o the folder, -y no questions.
+        $p = Start-Process -FilePath $zip -ArgumentList "-o`"$dir`"", '-y' -WindowStyle Hidden -Wait -PassThru
+        if ($p.ExitCode -ne 0) { throw "couldn't unpack $What ($($p.ExitCode))" }
+    } else {
+        & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
+        if ($LASTEXITCODE -ne 0) { throw "couldn't unpack $What ($LASTEXITCODE)" }
+    }
+    Set-Content (Join-Path $dir '.omawin-version') "$($row[1]) $($row[3])"
+    $onPath = if ($Bin -and $Bin -ne '.') { Join-Path $dir $Bin } else { $dir }
+    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+    if (($userPath -split ';') -notcontains $onPath) { [Environment]::SetEnvironmentVariable('Path', (@($userPath.TrimEnd(';'), $onPath) | Where-Object { $_ }) -join ';', 'User') }
+    if (($env:Path -split ';') -notcontains $onPath) { $env:Path = "$onPath;$env:Path" }
+    Write-Note ("$What $($row[1]) -> $dir (waited {0:0.0} s for the download, unpacked in {1:0.0} s)" -f $waited, ($clock.Elapsed.TotalSeconds - $waited))
+    $dir
+}
+
+# git and PowerShell 7 (install.ps1 runs in it), from the release's tools bundle (install/tools.txt):
+# per-user, no admin, checked against the release's SHA256SUMS. Both downloads start now;
+# PowerShell 7's runs while git gets the repo.
 Write-Step 'PowerShell 7'
 $Pwsh = $null
 # OMAWIN_PWSH=bundle takes the release's copy even when the PC has one (the install-timing job:
@@ -151,7 +182,11 @@ $Pwsh = $null
 $pwshFound = if ($env:OMAWIN_PWSH -ne 'bundle') { Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1 }
 if ($pwshFound -and $pwshFound.Version.Major -ge 7) { $Pwsh = $pwshFound.Source; Write-Note "ok  $Pwsh" }
 $PwshFetch = $null
-if (-not $Pwsh) {
+$GitFetch = $null
+# OMAWIN_GIT=bundle takes the release's git even when the PC has one (the install test: a runner
+# comes with git, a new PC doesn't).
+$needGit = $env:OMAWIN_GIT -eq 'bundle' -or -not (Get-Command git -ErrorAction SilentlyContinue)
+if (-not $Pwsh -or $needGit) {
     $releaseBase = if ($env:OMAWIN_RELEASE_URL) { $env:OMAWIN_RELEASE_URL.TrimEnd('/', '\') }
                    elseif ($env:OMAWIN_RELEASE -and $env:OMAWIN_RELEASE -ne 'latest') { "https://github.com/$Repo/releases/download/$env:OMAWIN_RELEASE" }
                    else { "https://github.com/$Repo/releases/latest/download" }
@@ -168,22 +203,32 @@ if (-not $Pwsh) {
     }
     $sums = Get-ReleaseFile 'SHA256SUMS.txt'
     $list = Get-ReleaseFile 'omawin-tools.txt'
-    $row = $null
+    $rows = @{}
     if ((Test-Path $sums.Path) -and (Test-Path $list.Path)) {
         $want = (Get-Content $sums.Path | Where-Object { $_ -match '^([0-9a-fA-F]{64})\s+\*?omawin-tools\.txt$' } | ForEach-Object { $Matches[1] }) | Select-Object -First 1
         if ($want -and (Get-FileHash $list.Path -Algorithm SHA256).Hash -eq $want.ToUpper()) {
-            foreach ($line in Get-Content $list.Path) { $f = $line -split "`t"; if ($f[0] -eq 'pwsh' -and $f.Count -ge 4) { $row = $f; break } }
+            foreach ($line in Get-Content $list.Path) { $f = $line -split "`t"; if ($f[0] -in 'pwsh', 'git' -and $f.Count -ge 5) { $rows[$f[0]] = $f } }
         }
     }
-    if ($row) { $PwshFetch = @{ Row = $row; File = Get-ReleaseFile $row[2] -Background } }
-    else { Write-Note 'this release has no tools bundle: PowerShell 7 comes through winget' }
+    if ($needGit -and $rows['git']) { $GitFetch = @{ Row = $rows['git']; File = Get-ReleaseFile $rows['git'][2] -Background } }
+    if (-not $Pwsh -and $rows['pwsh']) { $PwshFetch = @{ Row = $rows['pwsh']; File = Get-ReleaseFile $rows['pwsh'][2] -Background } }
+    if (-not $rows.Count) { Write-Note 'this release has no tools bundle: git and PowerShell 7 come through winget' }
 }
 
 Write-Step 'git'
-if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+if (-not $needGit) { Write-Note 'ok  git' }
+elseif ($GitFetch) {
+    $gitDir = Install-BundleTool $GitFetch $GitFetch.Row[4] 'git'
+    # Git for Windows' portable build finishes its setup (Git Bash's /etc and /dev) with
+    # post-install.bat, which removes itself: in the background, git works without it meanwhile.
+    if (Test-Path "$gitDir\post-install.bat") {
+        Start-Process "$gitDir\git-bash.exe" -ArgumentList '--no-needs-console', '--hide', '--no-cd', '--command=post-install.bat' -WorkingDirectory $gitDir -WindowStyle Hidden
+    }
+} else {
+    Assert-Winget
     winget install --id Git.Git --exact --silent --accept-source-agreements --accept-package-agreements
     Update-SessionPath
-} else { Write-Note 'ok  git' }
+}
 
 if ($Local) {
     Write-Step "using the copy at $Target (OMAWIN_LOCAL=1)"
@@ -243,23 +288,11 @@ if ($Local) {
 # PowerShell 7, now that its download has had the clone's time: checked, unpacked where the
 # install's tools go (install/software.ps1 then sees it's there), and put on the PATH.
 if (-not $Pwsh -and $PwshFetch) {
-    $row = $PwshFetch.Row
-    if ($PwshFetch.File.Process) { $PwshFetch.File.Process.WaitForExit() }
-    $zip = $PwshFetch.File.Path
-    if (-not (Test-Path $zip) -or (Get-FileHash $zip -Algorithm SHA256).Hash -ne $row[3].ToUpper()) { throw "PowerShell 7 from the release doesn't match its published SHA-256" }
-    $dir = Join-Path $env:LOCALAPPDATA 'omawin\tools\pwsh'
-    if (Test-Path $dir) { Remove-Item $dir -Recurse -Force }
-    New-Item -ItemType Directory -Force $dir | Out-Null
-    & "$env:WINDIR\System32\tar.exe" -xf $zip -C $dir
-    if ($LASTEXITCODE -ne 0) { throw "couldn't unpack PowerShell 7 ($LASTEXITCODE)" }
-    Set-Content (Join-Path $dir '.omawin-version') "$($row[1]) $($row[3])"
-    $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-    if (($userPath -split ';') -notcontains $dir) { [Environment]::SetEnvironmentVariable('Path', (@($userPath.TrimEnd(';'), $dir) | Where-Object { $_ }) -join ';', 'User') }
-    $Pwsh = Join-Path $dir 'pwsh.exe'
-    Write-Note "PowerShell $($row[1]) -> $dir"
+    $Pwsh = Join-Path (Install-BundleTool $PwshFetch '.' 'PowerShell') 'pwsh.exe'
 }
 if ($work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
 if (-not $Pwsh) {
+    Assert-Winget
     winget install --id Microsoft.PowerShell --exact --silent --accept-source-agreements --accept-package-agreements
     Update-SessionPath
     $pwshFound = Get-Command pwsh -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1

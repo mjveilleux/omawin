@@ -1,7 +1,7 @@
 # How the desktop starts at sign-in, fast. Run by install/desktop.ps1 and a migration; safe to
 # run again. No admin.
 #
-# GlazeWM (which then starts the bar, the menu app and the terminal, glazewm/config.yaml) used to
+# GlazeWM (which then starts the bar, the menu app and the terminal, config/glazewm/config.yaml) used to
 # start from the registry's Run list. Windows launches that list late on purpose, from Explorer,
 # after the PC has gone idle: GlazeWM came up 47 s after sign-in, Handy 78 s (measured
 # 2026-10-14). A scheduled task at sign-in starts it straight away instead, and Windows' own

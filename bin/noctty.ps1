@@ -8,7 +8,7 @@
     (github.com/mjveilleux/noctty: upstream amanthanvi/noctty plus the theme-colored tab strip and
     spare shells; scripts/omawin-release.ps1 there publishes one), checks it against the
     SHA256SUMS published with it, and
-    unpacks it per-user (no admin). Its own updater is off (noctty/config.ghostty); this is the
+    unpacks it per-user (no admin). Its own updater is off (config/noctty/config.ghostty); this is the
     update. A running noctty is stopped first and started again in the background.
 
     The fork's builds are unsigned, so the checksum is the check.

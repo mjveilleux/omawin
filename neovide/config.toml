@@ -1,7 +1,0 @@
-# Neovide's own settings, read before it starts Neovim. Everything else (font, padding,
-# theme, keys) is the Neovim config, in nvim/lua/config/neovide.lua, so Neovide and Neovim
-# in the terminal look and work the same.
-fork = true      # `neovide` in a terminal hands it back right away
-frame = "none"   # no title bar: GlazeWM tiles it like any other window, as in Omarchy
-idle = true      # don't redraw when nothing changes
-tabs = false     # buffers, not one Neovide tab per file

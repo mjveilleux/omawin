@@ -12,7 +12,7 @@
         Tab  pick (several)    Enter  install    Alt+P  preview on / off    Alt+J / Alt+K  scroll it
 
     The system menu's Install > Package runs it in a floating window. What's here comes from
-    %LOCALAPPDATA%\launcher\installed.txt (launcher/menu.ps1 keeps it; refreshed in the background
+    %LOCALAPPDATA%\launcher\installed.txt (default/launcher/menu.ps1 keeps it; refreshed in the background
     when it's older than a day), so the list opens at once.
 #>
 param([string]$Query = '')
@@ -25,7 +25,7 @@ $installedFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
 $here = [Collections.Generic.HashSet[string]]::new()
 if (Test-Path $installedFile) { foreach ($l in Get-Content $installedFile) { [void]$here.Add($l.Trim()) } }
 if (-not (Test-Path $installedFile) -or (Get-Item $installedFile).LastWriteTime -lt (Get-Date).AddDays(-1)) {
-    Start-Process pwsh -WindowStyle Hidden -ArgumentList '-NoProfile', '-File', "`"$(Join-Path (Split-Path $PSScriptRoot) 'launcher\menu.ps1')`"", '-RefreshInstalled'
+    Start-Process pwsh -WindowStyle Hidden -ArgumentList '-NoProfile', '-File', "`"$(Join-Path (Split-Path $PSScriptRoot) 'default\launcher\menu.ps1')`"", '-RefreshInstalled'
 }
 
 # One line a package: its id (hidden; fzf hands it to the preview and back), then what you see:
