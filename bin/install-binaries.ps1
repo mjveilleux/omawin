@@ -216,6 +216,7 @@ $helpers = @(
     @{ Exe = 'omawin-listen'; Source = 'src\agent\omawin-listen.cs' }
     @{ Exe = 'omawin-path'; Source = 'bin\path-doctor.cs' }
     @{ Exe = 'omawin-uninstall'; Source = 'bin\uninstall.cs' }
+    @{ Exe = 'omawin-view'; Source = 'bin\view.cs' }
 )
 # Each piece: its release file, the sources it's built from, whether it could be built here
 # instead (csc.exe is in Windows; omawin-cli, the menu app, the player and omawin-windows need the

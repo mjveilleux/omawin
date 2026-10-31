@@ -26,6 +26,7 @@ namespace Omawin.Windows;
 //   wallpaper spread <picture>…  a picture per monitor, left to right (8.8; the theme switch uses it)
 //   pip [title]            the window in front, or one by title, live in a small window on top (8.6)
 //   display [save|apply|forget]  each set of monitors' layout, put back when it's plugged in again (8.7)
+//   open-with [on [types]|off|settings]  pictures, Markdown, JSON and logs offered to omawin's viewer (8.25)
 //   --version
 public static partial class Program
 {
@@ -59,6 +60,7 @@ public static partial class Program
                 "wallpaper" => WallpaperCommand.Run(rest),
                 "pip" => PipCommand.Run(rest),
                 "display" => DisplayCommand.Run(rest),
+                "open-with" => OpenWithCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -88,6 +90,7 @@ public static partial class Program
               omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
               omawin pip [title]          a window live in a small window on top (from a key: the one in front)
               omawin display              the monitors' layout; display save remembers it for this set, apply puts it back
+              omawin open-with            pictures, Markdown, JSON, logs: open-with on [types] offers omawin's viewer, off takes it back
             """);
         return 0;
     }

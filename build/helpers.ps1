@@ -42,6 +42,9 @@ $helpers = @(
     @{ Name = 'omawin-path'; Source = "$Repo\bin\path-doctor.cs"; Target = 'exe' }
     # omawin-uninstall: omawin uninstall, all of omawin out of this account (roadmap 2.10).
     @{ Name = 'omawin-uninstall'; Source = "$Repo\bin\uninstall.cs"; Target = 'exe' }
+    # omawin-view: what Windows opens a picture, Markdown, JSON or a log with once you give omawin
+    # those types (omawin open-with): hands the file to the menu app's viewer (roadmap 8.25).
+    @{ Name = 'omawin-view'; Source = "$Repo\bin\view.cs"; Target = 'winexe' }
 )
 
 # The release stamp. Two things: a generated file with the assembly attributes every helper carries

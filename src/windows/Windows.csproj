@@ -45,5 +45,7 @@
   <ItemGroup>
     <!-- omawin keyboard lists your snippets as the menu app's keyboard hook reads them: the same pure file. -->
     <Compile Include="../../shell/menu-app/KeyRules.cs" Link="Keys/KeyRules.cs" />
+    <!-- omawin open-with offers the types the menu app's viewer shows: its own list. -->
+    <Compile Include="../../shell/menu-app/ViewerFile.cs" Link="Explorer/ViewerFile.cs" />
   </ItemGroup>
 </Project>

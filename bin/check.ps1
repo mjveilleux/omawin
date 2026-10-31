@@ -240,7 +240,7 @@ else { Warn 'lock screen rotates on unlock' 'no task for this account (install.p
 # Helper exes: present and built from the current source (the same list as build/helpers.ps1).
 $helpers = [ordered]@{
     'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'; 'omawin-listen' = 'src\agent\omawin-listen.cs'
-    'omawin-path' = 'bin\path-doctor.cs'; 'omawin-uninstall' = 'bin\uninstall.cs'
+    'omawin-path' = 'bin\path-doctor.cs'; 'omawin-uninstall' = 'bin\uninstall.cs'; 'omawin-view' = 'bin\view.cs'
 }
 # Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
 # this checkout's. A pull gives the sources new dates, so the dates decide only without a

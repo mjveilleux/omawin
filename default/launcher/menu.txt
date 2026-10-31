@@ -80,6 +80,7 @@ setup.vpn | 󰖂 | VPN | run ms-settings:network-vpn
 setup.bluetooth | 󰂯 | Bluetooth | run ms-settings:bluetooth
 setup.sound | 󰕾 | Sound | run ms-settings:sound
 setup.defaults | 󰄬 | Default apps | run ms-settings:defaultapps
+setup.open-with | 󰋩 | Open pictures and text in omawin's viewer | omawin open-with on
 setup.startup | 󰐥 | Startup apps | run ms-settings:startupapps
 setup.windows | 󰒓 | Windows settings
 setup.windows.look | 󰏘 | Look | settings look

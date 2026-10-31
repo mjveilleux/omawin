@@ -41,6 +41,7 @@ namespace SystemMenu;
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
 //   SystemMenu --reply <pid> --setting|--settings|--tune-up …  `omawin setting` / `settings` / `tune-up`: the
 //                              answer is written for the waiting omawin.exe (Reply.cs)
+//   SystemMenu --view <path>   the viewer on a file, its path escaped (omawin-view.exe sends it)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a
 //                              report's screenshots, never in normal use
@@ -230,6 +231,13 @@ public partial class App : Application
         // `omawin setting …` and other requests that print an answer (Reply.cs): they need no
         // window, so one that comes early at sign-in is answered too.
         if (args is ["--reply", var pid, _, ..]) { Reply.Answer(pid, args[2..]); return; }
+        // A file Windows opened with omawin (omawin-view.exe, `omawin open-with`): the viewer, no
+        // launcher needed. The path comes escaped, one word (ViewerFile.Encode).
+        if (args is ["--view", .. var files])
+        {
+            foreach (var f in files) if (ViewerFile.Decode(f) is { } file) ViewerWindow.Show(file);
+            return;
+        }
         if (window == null) return;
         // `omawin profile menu` hides it between runs: at once, with no exit animation and no
         // focus handed back, so the next run starts from the same place.

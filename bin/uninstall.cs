@@ -301,6 +301,11 @@ static class Uninstall
         var fragment = Path.Combine(Local, @"Microsoft\Windows Terminal\Fragments\omawin");
         if (Directory.Exists(fragment)) Add(S, "remove Windows Terminal's omawin color scheme (" + fragment + ")", delegate { RemoveTree(fragment); });
 
+        // The file types omawin's viewer was offered for (omawin open-with, roadmap 8.25): only
+        // omawin's own keys and values (the types' keys stay; Windows' choice is Windows').
+        using (var app = Registry.CurrentUser.OpenSubKey(@"Software\Classes\Applications\omawin-view.exe"))
+            if (app != null) Add(S, "stop offering omawin's viewer for pictures and text (omawin open-with)", RemoveOpenWith);
+
         // Environment variables that point into the checkout, and this account's GlazeWM port.
         foreach (var name in new[] { "STARSHIP_CONFIG", "HERDR_CONFIG_PATH", "GLAZEWM_IPC_PORT" })
         {
@@ -338,13 +343,36 @@ static class Uninstall
     }
 
     // ~/.local/bin only while nothing but omawin's is in it: other tools put theirs there too (uv's).
-    static readonly string[] OurExes = { "omawin.exe", "omawin-uninstall.exe", "voice-meter.exe", "omawin-listen.exe", "omawin-music.exe" };
+    static readonly string[] OurExes = { "omawin.exe", "omawin-uninstall.exe", "voice-meter.exe", "omawin-listen.exe", "omawin-music.exe", "omawin-view.exe" };
     static bool IsOursOnPath(string path)
     {
         if (UninstallRules.IsUnder(path, Path.Combine(Local, "omawin"))) return true;
         if (!UninstallRules.IsUnder(path, Bin) || !Directory.Exists(Bin)) return false;
         return Directory.GetFileSystemEntries(Bin).All(f => OurExes.Contains(Path.GetFileName(f), StringComparer.OrdinalIgnoreCase)
             || Path.GetFileName(f).EndsWith(".old", StringComparison.OrdinalIgnoreCase) || Path.GetFileName(f).IndexOf(".exe.old-", StringComparison.OrdinalIgnoreCase) >= 0);
+    }
+
+    // What omawin open-with wrote (src/windows/Explorer/OpenWith.cs Plan), undone.
+    static void RemoveOpenWith()
+    {
+        const string Prefix = "omawin.view.";
+        using (var classes = Registry.CurrentUser.OpenSubKey(@"Software\Classes", true))
+        {
+            if (classes == null) return;
+            foreach (var name in classes.GetSubKeyNames().Where(n => n.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase)).ToList())
+            {
+                classes.DeleteSubKeyTree(name, false);
+                using (var offered = classes.OpenSubKey("." + name.Substring(Prefix.Length) + @"\OpenWithProgids", true))
+                    if (offered != null) offered.DeleteValue(name, false);
+            }
+            classes.DeleteSubKeyTree(@"Applications\omawin-view.exe", false);
+        }
+        Registry.CurrentUser.DeleteSubKeyTree(@"Software\omawin\Capabilities", false);
+        using (var registered = Registry.CurrentUser.OpenSubKey(@"Software\RegisteredApplications", true))
+            if (registered != null) registered.DeleteValue("omawin", false);
+        using (var omawin = Registry.CurrentUser.OpenSubKey(@"Software\omawin"))
+            if (omawin == null || omawin.SubKeyCount > 0 || omawin.ValueCount > 0) return;
+        Registry.CurrentUser.DeleteSubKey(@"Software\omawin", false);
     }
 
     static void PlanLook()
