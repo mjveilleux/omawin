@@ -121,19 +121,35 @@ async Task<(string, string, string)> Resolve(Tool t, CancellationToken ct)
     if (t.Source.StartsWith("github:"))
     {
         var repo = t.Source["github:".Length..];
-        using var req = new HttpRequestMessage(HttpMethod.Get, $"https://api.github.com/repos/{repo}/releases/latest");
-        req.Headers.Accept.ParseAdd("application/vnd.github+json");
-        if (!string.IsNullOrEmpty(token)) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        using var res = await http.SendAsync(req, ct);
-        res.EnsureSuccessStatusCode();
-        using var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
-        var tagName = doc.RootElement.GetProperty("tag_name").GetString()!;
-        foreach (var a in doc.RootElement.GetProperty("assets").EnumerateArray())
+        using var latest = await GitHub($"repos/{repo}/releases/latest", ct);
+        if (Match(latest.RootElement) is { } found) return found;
+        // The newest release has no file the pattern matches: upstream renamed its files (it
+        // happens: Neovide's 0.17). The newest release that still has one is bundled, and the
+        // new names are printed so tools.txt's pattern can follow; the release isn't failed for it.
+        var names = string.Join(", ", latest.RootElement.GetProperty("assets").EnumerateArray().Select(a => a.GetProperty("name").GetString()));
+        var newest = latest.RootElement.GetProperty("tag_name").GetString();
+        using var recent = await GitHub($"repos/{repo}/releases?per_page=15", ct);
+        foreach (var r in recent.RootElement.EnumerateArray())
         {
-            var n = a.GetProperty("name").GetString()!;
-            if (t.Asset.IsMatch(n)) return (a.GetProperty("browser_download_url").GetString()!, tagName, n);
+            if (r.GetProperty("draft").GetBoolean() || r.GetProperty("prerelease").GetBoolean()) continue;
+            if (Match(r) is { } older)
+            {
+                Console.WriteLine($"::warning::{t.Name}: {repo} {newest} has no file matching {t.Asset} ({names}); bundling {older.Version}");
+                return older;
+            }
         }
-        throw new InvalidOperationException($"{t.Name}: no asset matching {t.Asset} in {repo} {tagName}");
+        throw new InvalidOperationException($"{t.Name}: no asset matching {t.Asset} in {repo} {newest} ({names}) or the releases before it");
+
+        (string Url, string Version, string Name)? Match(JsonElement release)
+        {
+            var tagName = release.GetProperty("tag_name").GetString()!;
+            foreach (var a in release.GetProperty("assets").EnumerateArray())
+            {
+                var n = a.GetProperty("name").GetString()!;
+                if (t.Asset.IsMatch(n)) return (a.GetProperty("browser_download_url").GetString()!, tagName, n);
+            }
+            return null;
+        }
     }
     if (t.Source == "node-lts")
     {
@@ -217,4 +233,15 @@ static string FindRepo()
     for (var d = new DirectoryInfo(AppContext.BaseDirectory); d != null; d = d.Parent)
         if (File.Exists(Path.Combine(d.FullName, "install", "tools.txt"))) return d.FullName;
     return Directory.GetCurrentDirectory();
+}
+
+// A GitHub API answer, with the workflow's token when there is one (the anonymous limit is 60 an hour).
+async Task<JsonDocument> GitHub(string path, CancellationToken ct)
+{
+    using var req = new HttpRequestMessage(HttpMethod.Get, "https://api.github.com/" + path);
+    req.Headers.Accept.ParseAdd("application/vnd.github+json");
+    if (!string.IsNullOrEmpty(token)) req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+    using var res = await http.SendAsync(req, ct);
+    res.EnsureSuccessStatusCode();
+    return JsonDocument.Parse(await res.Content.ReadAsStringAsync(ct));
 }
