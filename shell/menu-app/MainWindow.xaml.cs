@@ -104,6 +104,10 @@ public sealed partial class MainWindow : Window
         appWindow.Title = "System Menu";
         int round = 2; // DWMWCP_ROUND
         DwmSetWindowAttribute(hwnd, 33, ref round, sizeof(int));
+        // Windows' own show and hide fade off: the menu has its own (Motion.cs), and with
+        // animations off it must appear in one frame (the CI motion check saw Windows' fade).
+        int noTransitions = 1; // DWMWA_TRANSITIONS_FORCEDISABLED
+        DwmSetWindowAttribute(hwnd, 3, ref noTransitions, sizeof(int));
         SystemBackdrop = new DesktopAcrylicBackdrop();
 
         foreach (var t in new[] { QueryText, Placeholder, FooterLeft }) t.FontFamily = textFont;
@@ -270,13 +274,58 @@ public sealed partial class MainWindow : Window
 
         shownAt = DateTime.Now;
         previous = GetForegroundWindow();
-        appWindow.Show();
+        ShowWhenDrawn();
         SystemMenu.Program.Trace("shown");
-        TraceNextFrame("painted");
         SetForegroundWindow(hwnd);
         Input.Focus(FocusState.Programmatic);
         Animate();
         Cascade();
+    }
+
+    // Shown, but kept out of sight (cloaked: DWM composes it and draws nothing) until XAML has
+    // drawn a frame of its content: a window shown straight away is an empty panel for a frame or
+    // two first (the CI motion check saw 2 frames, ~50 ms). Then it appears in one step, or its
+    // arrival animation carries on from there. Revealed after 100 ms whatever happens, so a frame
+    // that never comes can't keep it hidden.
+    Action? dropReveal; // the reveal still waiting for its frames, if any
+
+    void ShowWhenDrawn()
+    {
+        dropReveal?.Invoke(); // an earlier showing's wait, if a hide and a show came that fast
+        Cloak(true);
+        appWindow.Show();
+        int frames = 0;
+        EventHandler<object>? tick = null;
+        var fallback = DispatcherQueue.CreateTimer();
+        void Reveal()
+        {
+            if (tick == null) return;
+            CompositionTarget.Rendering -= tick;
+            tick = null;
+            fallback.Stop();
+            Cloak(false);
+            SystemMenu.Program.Trace("painted");
+        }
+        // The first Rendering is the frame being built with the content; on the second it's been
+        // composed, so uncloaking then shows it whole.
+        tick = (_, _) => { if (++frames >= 2) Reveal(); };
+        CompositionTarget.Rendering += tick;
+        dropReveal = () =>
+        {
+            if (tick != null) CompositionTarget.Rendering -= tick;
+            tick = null;
+            fallback.Stop();
+        };
+        fallback.Interval = TimeSpan.FromMilliseconds(100);
+        fallback.IsRepeating = false;
+        fallback.Tick += (_, _) => Reveal();
+        fallback.Start();
+    }
+
+    void Cloak(bool on)
+    {
+        int value = on ? 1 : 0;
+        DwmSetWindowAttribute(hwnd, 13, ref value, sizeof(int)); // DWMWA_CLOAK
     }
 
     // On screen and staying: not hidden, and not on its way out.
