@@ -1,0 +1,157 @@
+# Settings pages, consoles and classic dialogs, found by the system menu's search (roadmap 1B.1,
+# plans/02-settings-and-one-search.md §10). Always searched, beside Windows' own settings index
+# (its AllSystemSettings file, read on the PC) and all there is when that can't be read; it also
+# holds what Windows' index doesn't list: the admin consoles and the dialogs people still need.
+# Layered like items.txt: the shared folder's and this account's launcher/settings-pages.txt add theirs.
+#   uri | name | page | keywords
+# The uri is an ms-settings: page (Microsoft's documented list), a console or a program and its arguments.
+
+# --- System -----------------------------------------------------------------------------------
+ms-settings:display | Display | System › Display | monitor resolution scale hdr refresh rotate
+ms-settings:display-advanced | Advanced display | System › Display | refresh rate hz monitor information
+ms-settings:display-advancedgraphics | Graphics | System › Display | gpu preference per app graphics
+ms-settings:nightlight | Night light | System › Display | blue light warm evening
+ms-settings:sound | Sound | System › Sound | speakers microphone volume output input
+ms-settings:apps-volume | Volume mixer | System › Sound | per app volume mixer output
+ms-settings:sound-devices | All sound devices | System › Sound | audio devices disable
+ms-settings:notifications | Notifications | System › Notifications | toast banners alerts
+ms-settings:quiethours | Do not disturb | System › Notifications | focus quiet dnd
+ms-settings:focus | Focus | System › Focus | focus session timer
+ms-settings:powersleep | Power | System › Power | screen timeout sleep power mode
+ms-settings:batterysaver | Battery saver | System › Power | energy saver battery
+ms-settings:storagesense | Storage | System › Storage | disk space cleanup storage sense
+ms-settings:multitasking | Multitasking | System › Multitasking | snap alt tab shake desktops
+ms-settings:clipboard | Clipboard | System › Clipboard | history sync win+v
+ms-settings:project | Projecting to this PC | System › Projecting | miracast wireless display
+ms-settings:remotedesktop | Remote Desktop | System › Remote Desktop | rdp remote
+ms-settings:about | About | System › About | rename pc specs windows version edition
+ms-settings:developers | For developers | System › For developers | developer mode sudo end task
+ms-settings:troubleshoot | Troubleshoot | System › Troubleshoot | fix problems
+ms-settings:recovery | Recovery | System › Recovery | reset this pc advanced startup
+ms-settings:activation | Activation | System › Activation | product key license
+ms-settings:optionalfeatures | Optional features | System › Optional features | features add capability
+
+# --- Bluetooth & devices ----------------------------------------------------------------------
+ms-settings:bluetooth | Bluetooth and devices | Bluetooth & devices | pair devices
+ms-settings:printers | Printers and scanners | Bluetooth & devices | printer scanner
+ms-settings:mousetouchpad | Mouse | Bluetooth & devices › Mouse | pointer scroll wheel buttons
+ms-settings:devices-touchpad | Touchpad | Bluetooth & devices › Touchpad | gestures tap scroll
+ms-settings:pen | Pen and Windows Ink | Bluetooth & devices › Pen | stylus ink
+ms-settings:typing | Typing | Bluetooth & devices › Typing | autocorrect keyboard suggestions
+ms-settings:autoplay | AutoPlay | Bluetooth & devices › AutoPlay | usb drive media
+ms-settings:usb | USB | Bluetooth & devices › USB | usb notifications
+ms-settings:camera | Cameras | Bluetooth & devices › Cameras | webcam camera
+
+# --- Network & internet -----------------------------------------------------------------------
+ms-settings:network-status | Network and internet | Network & internet | network status
+ms-settings:network-wifi | Wi-Fi | Network & internet | wireless networks wlan
+ms-settings:network-ethernet | Ethernet | Network & internet | wired dns ip
+ms-settings:network-vpn | VPN | Network & internet | vpn connections
+ms-settings:network-proxy | Proxy | Network & internet | proxy pac server
+ms-settings:network-mobilehotspot | Mobile hotspot | Network & internet | tether share
+ms-settings:network-airplanemode | Airplane mode | Network & internet | flight radios
+ms-settings:network-advancedsettings | Advanced network settings | Network & internet | adapters reset
+ms-settings:datausage | Data usage | Network & internet | data limit metered
+
+# --- Personalization --------------------------------------------------------------------------
+ms-settings:personalization-background | Background | Personalization | wallpaper picture
+ms-settings:colors | Colours | Personalization | dark mode accent transparency color
+ms-settings:themes | Themes | Personalization | theme cursor sounds
+ms-settings:lockscreen | Lock screen | Personalization | lock spotlight
+ms-settings:fonts | Fonts | Personalization | font install
+ms-settings:taskbar | Taskbar | Personalization › Taskbar | taskbar icons alignment tray
+ms-settings:personalization-start | Start | Personalization › Start | start menu recommendations recent
+ms-settings:personalization-start-places | Folders on Start | Personalization › Start | start folders settings explorer
+
+# --- Apps -------------------------------------------------------------------------------------
+ms-settings:appsfeatures | Installed apps | Apps | uninstall programs remove
+ms-settings:advanced-apps | Advanced app settings | Apps | app sources archive
+ms-settings:defaultapps | Default apps | Apps | browser default open with
+ms-settings:startupapps | Startup apps | Apps | autostart login boot
+ms-settings:appsforwebsites | Apps for websites | Apps | links open
+
+# --- Accounts ---------------------------------------------------------------------------------
+ms-settings:yourinfo | Your info | Accounts | account picture
+ms-settings:signinoptions | Sign-in options | Accounts | password pin windows hello fingerprint
+ms-settings:emailandaccounts | Email and accounts | Accounts | email accounts
+ms-settings:otherusers | Other users | Accounts | family users add account
+ms-settings:backup | Windows Backup | Accounts | backup onedrive
+
+# --- Time & language --------------------------------------------------------------------------
+ms-settings:dateandtime | Date and time | Time & language | clock timezone time zone sync
+ms-settings:regionformatting | Region | Time & language | format region locale
+ms-settings:regionlanguage | Language and region | Time & language | language display keyboard layout
+ms-settings:speech | Speech | Time & language | voice recognition
+
+# --- Gaming -----------------------------------------------------------------------------------
+ms-settings:gaming-gamebar | Game Bar | Gaming | xbox capture
+ms-settings:gaming-gamedvr | Captures | Gaming | record clips
+ms-settings:gaming-gamemode | Game Mode | Gaming | performance
+
+# --- Accessibility ----------------------------------------------------------------------------
+ms-settings:easeofaccess-display | Text size | Accessibility | bigger text size
+ms-settings:easeofaccess-visualeffects | Visual effects | Accessibility | animations transparency scrollbars
+ms-settings:easeofaccess-mousepointer | Mouse pointer and touch | Accessibility | cursor size colour
+ms-settings:easeofaccess-cursor | Text cursor | Accessibility | caret indicator thickness
+ms-settings:easeofaccess-magnifier | Magnifier | Accessibility | zoom
+ms-settings:easeofaccess-colorfilter | Colour filters | Accessibility | grayscale colour blind
+ms-settings:easeofaccess-highcontrast | Contrast themes | Accessibility | high contrast
+ms-settings:easeofaccess-narrator | Narrator | Accessibility | screen reader
+ms-settings:easeofaccess-audio | Audio | Accessibility | mono audio
+ms-settings:easeofaccess-keyboard | Keyboard | Accessibility | sticky keys filter keys on-screen keyboard
+
+# --- Privacy & security -----------------------------------------------------------------------
+ms-settings:privacy | Privacy and security | Privacy & security | permissions
+ms-settings:privacy-general | General | Privacy & security | advertising id tailored
+ms-settings:privacy-speech | Speech | Privacy & security | online speech recognition
+ms-settings:privacy-feedback | Diagnostics and feedback | Privacy & security | telemetry diagnostic data
+ms-settings:privacy-activityhistory | Activity history | Privacy & security | timeline activity
+ms-settings:privacy-location | Location | Privacy & security | gps location
+ms-settings:privacy-webcam | Camera | Privacy & security | camera permission webcam
+ms-settings:privacy-microphone | Microphone | Privacy & security | mic permission
+ms-settings:privacy-notifications | Notifications access | Privacy & security | notifications permission
+ms-settings:privacy-radios | Radios | Privacy & security | bluetooth wifi control
+ms-settings:privacy-broadfilesystemaccess | File system | Privacy & security | file access
+ms-settings:findmydevice | Find my device | Privacy & security | lost stolen
+ms-settings:windowsdefender | Windows Security | Privacy & security | antivirus defender firewall
+ms-settings:privacy-searchpermissions | Search permissions | Privacy & security | safesearch cloud search history
+ms-settings:cortana-windowssearch | Searching Windows | Privacy & security | indexing search index
+
+# --- Windows Update ---------------------------------------------------------------------------
+ms-settings:windowsupdate | Windows Update | Windows Update | updates patch
+ms-settings:windowsupdate-history | Update history | Windows Update | installed updates
+ms-settings:windowsupdate-options | Advanced update options | Windows Update | active hours delivery optimization
+ms-settings:windowsinsider | Windows Insider Program | Windows Update | insider preview builds
+
+# --- Classic tools and consoles ---------------------------------------------------------------
+control.exe | Control Panel | Classic | control panel
+devmgmt.msc | Device Manager | Classic | drivers hardware devices
+services.msc | Services | Classic | services daemons
+eventvwr.msc | Event Viewer | Classic | logs events errors crash
+diskmgmt.msc | Disk Management | Classic | partitions volumes drives format
+taskschd.msc | Task Scheduler | Classic | scheduled tasks cron
+compmgmt.msc | Computer Management | Classic | management users shares
+perfmon.msc | Performance Monitor | Classic | performance counters
+resmon.exe | Resource Monitor | Classic | cpu disk network memory usage
+msinfo32.exe | System Information | Classic | hardware specs bios
+taskmgr.exe | Task Manager | Classic | processes kill cpu memory
+ncpa.cpl | Network adapters | Classic | adapter ipv4 dns ethernet
+appwiz.cpl | Programs and Features | Classic | uninstall msi programs
+mmsys.cpl | Sound (classic) | Classic | playback recording devices
+main.cpl | Mouse (classic) | Classic | pointer double click
+powercfg.cpl | Power options (classic) | Classic | power plan
+firewall.cpl | Windows Defender Firewall | Classic | firewall ports rules
+inetcpl.cpl | Internet options | Classic | proxy certificates
+intl.cpl | Region (classic) | Classic | formats locale
+timedate.cpl | Date and time (classic) | Classic | clock time zone internet time
+optionalfeatures.exe | Windows features | Classic | wsl hyper-v sandbox turn windows features on or off
+SystemPropertiesAdvanced.exe | Advanced system settings | Classic | performance virtual memory pagefile
+SystemPropertiesProtection.exe | System protection | Classic | restore point system restore
+SystemPropertiesRemote.exe | Remote settings | Classic | remote desktop assistance
+rundll32.exe sysdm.cpl,EditEnvironmentVariables | Environment variables | Classic | path env variables
+rundll32.exe shell32.dll,Options_RunDLL 0 | Folder options | Classic | file explorer options hidden extensions
+regedit.exe | Registry Editor | Classic | registry regedit
+gpedit.msc | Group Policy Editor | Classic | policy gpedit
+certmgr.msc | Certificates | Classic | certificates certmgr
+credwiz.exe | Credential backup | Classic | passwords credentials
+control.exe /name Microsoft.CredentialManager | Credential Manager | Classic | passwords saved credentials
