@@ -153,6 +153,23 @@ window_rules:
     match:
       - window_title: { regex: 'omawin-agent' }
 
+  # side-borders: Linux terminals get a green border (roadmap 3B: always know which side you're on).
+  # Their shell titles them "<distro> · <path>" (config/bash/bashrc); PowerShell's "pwsh · <folder>"
+  # is the one title of that shape left out (GlazeWM's regex has no lookahead, hence the spelling).
+  # A rule has no "stopped matching", so the second one puts the theme's borders back. Only with a
+  # GlazeWM that knows set-border-color (themes/render.ps1 leaves these out otherwise).
+  - commands: ['set-border-color {{ green }} --unfocused {{ linux_border_unfocused }}']
+    on: ['manage', 'title_change']
+    run_once: false
+    match:
+      - window_title: { regex: '^(?:[a-oq-z][a-z0-9._-]*|p(?:[^w ][a-z0-9._-]*)?|pw(?:[^s ][a-z0-9._-]*)?|pws(?:[^h ][a-z0-9._-]*)?|pwsh[a-z0-9._-]+) · ' }
+  - commands: ['set-border-color --reset']
+    on: ['manage', 'title_change']
+    run_once: false
+    match:
+      - window_title: { not_regex: '^(?:[a-oq-z][a-z0-9._-]*|p(?:[^w ][a-z0-9._-]*)?|pw(?:[^s ][a-z0-9._-]*)?|pws(?:[^h ][a-z0-9._-]*)?|pwsh[a-z0-9._-]+) · ' }
+  # side-borders: end
+
   # The terminal has no title bar (config/noctty/config.ghostty: window-decoration = none), and GlazeWM
   # floats windows without one: tile it like any other window.
   - commands: ['set-tiling']
