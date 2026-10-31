@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    omawin.exe and the bar's helpers, the menu app and omawin-music: a release's prebuilt files
+    omawin.exe and the bar's helpers, omawin-cli.exe, the menu app and omawin-music: a release's prebuilt files
     when there is one for this PC, otherwise built here.
 
 .DESCRIPTION
@@ -298,6 +298,35 @@ try {
             else {
                 if ($reason -and $reason -ne '-NoDownload') { Write-Note "building here: $reason" }
                 try { & "$Repo\build\helpers.ps1" -OutDir $BinDir; Save-Installed 'helpers' $key } catch { Write-Warn "the helpers didn't build: $_" }
+            }
+        }
+
+        # The compiled omawin (src/cli, .NET 9 Native AOT): omawin-cli.exe beside omawin.exe,
+        # which hands it the builtins that moved there (omawin pkg). Built here only when the
+        # .NET SDK is already on the PC, as the menu app; else the release's.
+        $key = Get-SourceKey @('src/cli')
+        $dest = Join-Path $BinDir 'omawin-cli.exe'
+        if (Test-Installed 'cli' $key { Test-Current $dest (Join-Path $Repo 'src\cli') }) { Write-Note 'ok  omawin-cli.exe' }
+        else {
+            $fromRelease = Get-PieceRelease "omawin-cli-*-win-$Arch.exe" @('src/cli') (-not $NoBuild -and (Test-DotNetSdk))
+            if ($fromRelease) {
+                # One in use (a pkg install running in another terminal) is renamed aside: it
+                # finishes on the old copy.
+                if (Test-Path $dest) {
+                    Remove-Item "$dest.old" -Force -ErrorAction SilentlyContinue
+                    Move-Item $dest "$dest.old" -Force
+                }
+                Copy-Item -LiteralPath $fromRelease -Destination $dest -Force
+                Write-Note 'omawin-cli.exe from the release'
+                Save-Installed 'cli' (Get-ReleaseKey $key)
+            }
+            elseif ($NoBuild) { Write-Warn "no omawin-cli.exe in a release ($reason) and -NoBuild: left as it is" }
+            else {
+                if ($reason -and $reason -ne '-NoDownload') { Write-Note "building here: $reason" }
+                if (Install-DotNetSdk) {
+                    try { & "$Repo\src\cli\build.ps1" -OutDir $BinDir -Arch $Arch; Save-Installed 'cli' $key }
+                    catch { Write-Warn "omawin-cli.exe build failed: $_" }
+                } else { Write-Warn '.NET SDK did not install; winget install Microsoft.DotNet.SDK.9, then install.ps1 -LinkOnly' }
             }
         }
     }

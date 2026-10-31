@@ -352,10 +352,36 @@ jobs:
           path: out/music-${{ matrix.arch }}
           if-no-files-found: error
 
+  # The compiled omawin (src/cli, Native AOT: the runner has Visual Studio's C++ tools), shipped
+  # as omawin-cli.exe beside omawin.exe, which hands it omawin pkg (roadmap 2.11).
+  cli:
+    needs: meta
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(vars.ARM64_RUNNERS == 'true' && '["x64","arm64"]' || '["x64"]') }}
+    runs-on: ${{ matrix.arch == 'arm64' && 'windows-11-arm' || 'windows-latest' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          dotnet-version: '9.0.x'
+      - name: Build (the same script this PC runs)
+        shell: pwsh
+        run: |
+          .\src\cli\build.ps1 -OutDir out\cli-${{ matrix.arch }} -Arch ${{ matrix.arch }} -Aot -Release '${{ needs.meta.outputs.version }}'
+          $v = & out\cli-${{ matrix.arch }}\omawin-cli.exe --version
+          if ($v -ne 'omawin ${{ needs.meta.outputs.version }}') { throw "--version said '$v'" }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: cli-${{ matrix.arch }}
+          path: out/cli-${{ matrix.arch }}/omawin-cli.exe
+          if-no-files-found: error
+
   # Names the files the way the installer looks for them, hashes them into SHA256SUMS.txt (what
   # bin/release.ps1 checks a download against), and publishes.
   release:
-    needs: [meta, helpers, menu, music, tools, parsers, thumbs, qs-host, plugin-gallery]
+    needs: [meta, helpers, cli, menu, music, tools, parsers, thumbs, qs-host, plugin-gallery]
     if: needs.meta.outputs.publish == 'true'
     runs-on: windows-latest
     permissions:

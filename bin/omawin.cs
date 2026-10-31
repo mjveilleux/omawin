@@ -114,6 +114,7 @@ static class Omawin
             if (InTerminal) Console.WriteLine("omawin " + Version);
             return 0;
         }
+        Typed = args;
         List<Command> commands;
         try { commands = Load(); }
         catch (Exception ex) { return Fail("can't read bin/commands.txt in " + Repo + ": " + ex.Message); }
@@ -225,8 +226,21 @@ static class Omawin
                     return Start("winget", "upgrade --id " + t.Winget + " --exact --accept-source-agreements --accept-package-agreements");
                 }
             case "default": return Default(args);
-            default: return Fail("no builtin \"" + name + "\"");
+            default: return Compiled(name);
         }
+    }
+
+    // Builtins that moved to the compiled omawin (src/cli/, .NET 9 Native AOT, roadmap 2.11):
+    // omawin pkg, so far. It ships beside this exe as omawin-cli.exe (bin/install-binaries.ps1)
+    // and routes the same words through the same commands.txt, so it's handed them as typed.
+    static string[] Typed = new string[0];
+    static int Compiled(string name)
+    {
+        var dir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+        var exe = Path.Combine(dir, "omawin-cli.exe");
+        if (!File.Exists(exe))
+            return Fail("\"" + name + "\" is done by omawin-cli.exe, which isn't in " + dir + " yet (omawin install -LinkOnly puts it there)");
+        return Start(exe, string.Join(" ", Typed.Select(Quote)));
     }
 
     // --- defaults: what omawin opens things with (bin/defaults.txt) ---------------------------

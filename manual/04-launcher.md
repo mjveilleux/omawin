@@ -37,7 +37,7 @@ Like Omarchy's package picker, in the launcher (System menu › Install › Pack
 - **Installs run in a small terminal you can watch** (it stays open at the end). Chocolatey asks for admin first; Scoop installs into your user folder without.
 - **A manager not on the PC?** Its tab offers to install it: winget (Microsoft's App Installer) registered for your account or put in, Chocolatey from winget or its own installer (asks for admin), Scoop with its own installer from scoop.sh.
 
-`omawin pkg install` is the same for winget in a terminal, with fzf.
+`omawin pkg install` with no name is the same for winget in a terminal, with fzf; with a name it installs by name with whichever manager suits it ([The omawin command](02-omawin-command.md#packages)).
 
 - **Projects**: git repos on Windows (in your home folder or one folder down, like `~/omawin` or `~/src/glazewm`; and Documents, OneDrive Documents, `~/source/repos`, `~/repos`) and in your Linux in WSL (under ~), zoxide favorites first. A repo you clone or `git init` shows up within seconds.
   - Opening one gives a terminal window on that project's own [herdr](https://herdr.dev) session, with tabs **shell | nvim | claude | opencode** (`default/launcher/project-tabs.txt`).

@@ -5,6 +5,7 @@
 # fake release (docs/releases.md, scratch) are laid out identically:
 #   omawin-helpers-<tag>.zip                 omawin.exe and the bar's helpers (any architecture)
 #   SystemMenu-<tag>-win-<arch>.zip          the menu app, unpacked into %LOCALAPPDATA%\system-menu
+#   omawin-cli-<tag>-win-<arch>.exe          the compiled omawin (src/cli), into ~/.local/bin
 #   omawin-music-<tag>-win-<arch>.exe        the music player, into ~/.local/bin
 #   omawin-tools.txt, omawin-tool-<name>.zip the tools bundle (build/bundle), as built
 #   SHA256SUMS.txt                           `<sha256>  <file>` per asset
@@ -12,6 +13,7 @@
 # The input layout is what the jobs produce:
 #   <InDir>\helpers\*.exe          build/helpers.ps1 -OutDir <InDir>\helpers
 #   <InDir>\menu-<arch>\           shell/menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
+#   <InDir>\cli-<arch>\omawin-cli.exe       src/cli/build.ps1 -OutDir <InDir>\cli-<arch>
 #   <InDir>\music-<arch>\omawin-music.exe   src/music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
 #
 #   .\build\release.ps1 -Tag v0.1.0 -InDir scratch\built -OutDir scratch\release
@@ -63,6 +65,10 @@ if (-not $OnlyManifest) {
             Add-Zip $menu "SystemMenu-$Tag-win-$a.zip"
         }
         else { Write-Warning "no menu app for win-$a ($menu): left out of this release" }
+
+        $cli = Join-Path $InDir "cli-$a\omawin-cli.exe"
+        if (Test-Path $cli) { Add-File $cli "omawin-cli-$Tag-win-$a.exe" }
+        else { Write-Warning "no omawin-cli for win-$a ($cli): left out of this release" }
 
         $music = Join-Path $InDir "music-$a\omawin-music.exe"
         if (Test-Path $music) { Add-File $music "omawin-music-$Tag-win-$a.exe" }

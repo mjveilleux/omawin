@@ -52,7 +52,9 @@ static partial class Program
     {
         SendToApp s => Send(s.Request),
         StartProcess p => Start(p.File, p.Arguments),
-        // Builtins move here one at a time (roadmap 2.11); until then bin/omawin.cs runs them.
+        // Builtins move here one at a time (roadmap 2.11): bin/omawin.cs hands this exe (shipped
+        // beside it as omawin-cli.exe) the ones it doesn't have, and still runs the rest itself.
+        RunBuiltin { Name: "pkg" } b => new Omawin.Cli.Pkg.PkgCommand(new Omawin.Cli.Pkg.WindowsHost(Repo, StateDir)).Run(b.Args),
         RunBuiltin b => Fail($"builtin {b.Name} isn't in this omawin yet; bin/omawin.cs runs it"),
         BadAction bad => Fail(bad.Message),
         _ => Fail("unreachable"),

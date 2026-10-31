@@ -23,6 +23,8 @@ The same names work from a terminal (`omawin capture text`, `omawin theme set gr
 
 `bin/omawin.cs`, compiled by the C# compiler that ships with Windows into `~/.local/bin` (C# 5). It reads `bin/commands.txt`, finds the longest command the words spell (`theme set gruvbox` = `theme set` + `gruvbox`), and runs its action with the remaining words appended. It starts in ~35 ms, much less than PowerShell's ~300 ms.
 
+Its successor is `src/cli/` (.NET 9 Native AOT, roadmap 2.11), shipped beside it as `omawin-cli.exe` (`bin/install-binaries.ps1`; the release's `omawin-cli-<tag>-win-<arch>.exe`). It reads the same `commands.txt` the same way; builtins move into it one at a time, and `omawin.exe` hands it the words of any builtin it doesn't run itself. `omawin pkg` is the first: `src/cli/Pkg/` (one package command over winget, Scoop, Chocolatey, mise and the Linux in WSL; names in `default/packages/names.txt`, what's installed in `%LOCALAPPDATA%\launcher\packages.tsv`), its decisions tested in `test/cli.Tests`.
+
 - **In a terminal** (it has a console or its output is redirected), scripts run in that terminal and it waits, returning their exit code.
 - **From a key** (no console), scripts run hidden and it returns at once.
 - `app` requests are written to `%LOCALAPPDATA%\launcher\system-menu-request`, and the named event `Local\dotfiles-system-menu-signal` wakes the menu app. If the app isn't running, it's started with the request as arguments.
