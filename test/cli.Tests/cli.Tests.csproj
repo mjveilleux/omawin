@@ -17,14 +17,12 @@
     <Compile Include="../../src/cli/Actions.cs" Link="cli/Actions.cs" />
     <Compile Include="../../src/bundle/Tools.cs" Link="bundle/Tools.cs" />
     <Compile Include="../../bin/path-doctor.cs" Link="bin/path-doctor.cs" />
-    <Compile Include="../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs;../../src/cli/Profile/*.cs" LinkBase="cli" />
     <!-- omawin uninstall's rules (a C# 5 helper built by build/helpers.ps1); OMAWIN_TESTS leaves
          out its Windows part. -->
     <Compile Include="../../bin/uninstall.cs" Link="bin/uninstall.cs" />
     <Compile Include="../../src/plugin-gallery/Scan.cs;../../src/plugin-gallery/Catalog.cs" LinkBase="plugin-gallery" />
     <Compile Include="../../shell/menu-app/Plugins/GalleryIndex.cs;../../shell/menu-app/Plugins/Manifest.cs" LinkBase="menu-app" />
-    <Compile Include="../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
-    <Compile Include="../../src/cli/Pkg/*.cs;../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
+    <Compile Include="../../src/cli/Pkg/*.cs;../../src/cli/Profile/*.cs;../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
