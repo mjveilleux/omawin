@@ -67,6 +67,7 @@ profile terminal | Measure what opening a terminal costs, step by step (-Runs 5,
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
 profile ram | What's using the memory and the processor, the whole PC by group, memory in use apart from cached, omawin's desktop against its 600 MB (-Save keeps a history and shows what changed, -Quick skips the processor, -Json for agents) | pwsh bin/profile-ram.ps1
 check | Health check: is everything in place and running | pwsh bin/check.ps1
+path | Your PATH and Windows': empty, missing and duplicate entries, and which node / python / git … runs and why (more to look up: omawin path rg); omawin path fix cleans yours, omawin path undo puts it back | run omawin-path.exe
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
 no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh bin/no-ads.ps1
 dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; -Check [name] says what's installed | pwsh bin/install-dev-env.ps1

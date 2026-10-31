@@ -213,6 +213,7 @@ try {
             @{ Exe = 'omawin'; Source = 'bin\omawin.cs' }
             @{ Exe = 'voice-meter'; Source = 'bin\voice-meter.cs' }
             @{ Exe = 'omawin-listen'; Source = 'src\agent\omawin-listen.cs' }
+            @{ Exe = 'omawin-path'; Source = 'bin\path-doctor.cs' }
         )
         $paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
         $key = Get-SourceKey $paths

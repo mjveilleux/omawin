@@ -220,7 +220,7 @@ if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\
 else { Warn 'lock screen rotates on unlock' 'no task for this account (install.ps1 makes it)' }
 # Helper exes: present and built from the current source (the same list as install/helpers.ps1).
 $helpers = [ordered]@{
-    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'
+    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'; 'omawin-path' = 'bin\path-doctor.cs'
 }
 # Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
 # this checkout's. A pull gives the sources new dates, so the dates decide only without a

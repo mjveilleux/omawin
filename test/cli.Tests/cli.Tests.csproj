@@ -8,11 +8,14 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <RootNamespace>Omawin.Cli.Tests</RootNamespace>
+    <!-- bin/path-doctor.cs is linked for its pure part; this leaves out its Main. -->
+    <DefineConstants>$(DefineConstants);OMAWIN_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/cli/CommandTable.cs" Link="cli/CommandTable.cs" />
     <Compile Include="../../src/cli/Actions.cs" Link="cli/Actions.cs" />
     <Compile Include="../../src/bundle/Tools.cs" Link="bundle/Tools.cs" />
+    <Compile Include="../../bin/path-doctor.cs" Link="bin/path-doctor.cs" />
     <Compile Include="../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
   </ItemGroup>
   <ItemGroup>
