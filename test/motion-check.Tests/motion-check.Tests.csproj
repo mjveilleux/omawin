@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Tests for the motion check's frame analysis (src/motion-check: Frames.cs, Analysis.cs) on
+       made-up frames: no Windows, so they run on Linux (.github/workflows/animations.yml). The
+       files are linked, not referenced: the tool itself records only on Windows. -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Omawin.MotionCheck.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/motion-check/Frames.cs" Link="motion-check/Frames.cs" />
+    <Compile Include="../../src/motion-check/Analysis.cs" Link="motion-check/Analysis.cs" />
+    <Compile Include="../../shell/menu-app/MotionTokens.cs" Link="motion-check/MotionTokens.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

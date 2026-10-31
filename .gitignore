@@ -53,3 +53,8 @@ src/windows/bin/
 src/windows/obj/
 test/windows.Tests/bin/
 test/windows.Tests/obj/
+# The menu app's motion check (roadmap 1.4) and its tests, built.
+src/motion-check/bin/
+src/motion-check/obj/
+test/motion-check.Tests/bin/
+test/motion-check.Tests/obj/

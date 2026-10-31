@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The menu app's motion, measured on a Windows desktop (roadmap 1.4): CI runs it
+       (.github/workflows/animations.yml). Builds anywhere; records only on Windows. The frame
+       analysis (Frames.cs, Analysis.cs) is tested on Linux (test/motion-check.Tests). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <RootNamespace>Omawin.MotionCheck</RootNamespace>
+    <AssemblyName>motion-check</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Motion's numbers (pure: no WinUI), so what's allowed is what the menu app does. -->
+    <Compile Include="..\..\shell\menu-app\MotionTokens.cs" Link="MotionTokens.cs" />
+  </ItemGroup>
+</Project>
