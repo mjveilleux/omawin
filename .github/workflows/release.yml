@@ -37,6 +37,10 @@ on:
         description: Create the GitHub release (the tag must exist)
         type: boolean
         default: false
+      drop-old:
+        description: After publishing, delete every other release (their git tags stay)
+        type: boolean
+        default: false
 
 # One run per ref for a real release (a re-tagged or re-run one doesn't race itself); a build for
 # the install-timing job (workflow_call) or by hand is its own, so those never queue behind each other.
@@ -321,6 +325,21 @@ jobs:
           $where = if ('${{ github.ref_type }}' -eq 'tag') { @('--verify-tag') } else { @('--target', '${{ github.sha }}') }
           gh release create $tag --repo '${{ github.repository }}' @where `
             --generate-notes --title $tag @pre @files
+
+      # By hand, with drop-old: the other releases go, so the one just published is the only one
+      # (the maintainer's call; their tags stay in git's history).
+      - name: Drop the other releases
+        if: inputs.drop-old == true
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = '${{ needs.meta.outputs.version }}'
+          $all = gh release list --repo '${{ github.repository }}' --limit 200 --json tagName | ConvertFrom-Json
+          foreach ($r in $all | Where-Object tagName -ne $tag) {
+            gh release delete $r.tagName --repo '${{ github.repository }}' --yes
+            Write-Host "deleted the release $($r.tagName)"
+          }
 
   # The release just published, installed the way a new PC does: the one-line bootstrap, as a new
   # standard user, downloading everything from GitHub (PowerShell 7 too: the runner's own is
