@@ -9,10 +9,10 @@ using Windows.UI;
 
 namespace SystemMenu;
 
-// The home screens are tiles, bento style: the launcher's (Win+Space) has a big Terminal tile,
-// wide Projects and Clipboard tiles that show what's in them, the other pages, a Menu bar and
-// what you use most; the system menu's (Win+Alt+Space) has a big Theme tile, wide Install and
-// Update tiles and the rest of its submenus. The theme picker is a grid of swatches, the
+// The home screens are tiles, bento style: One Search's (Win+Space, MainWindow.Search.cs) has a
+// big Terminal tile, wide Projects and Clipboard tiles that show what's in them, your items,
+// Browse and Theme, quick switches and what you use most; Browse's (the system menu's, under the
+// Commands filter) has a big Theme tile, wide Install and Update tiles and the rest of its submenus. The theme picker is a grid of swatches, the
 // background picker one of a theme's pictures. Typing, submenus and pages are lists
 // (MainWindow.xaml.cs). The selected tile lifts: it grows a little, rises, and its icon fills
 // with its color.
@@ -25,7 +25,7 @@ public sealed partial class MainWindow
     {
         public string Key = "";
         public string? BuiltIn;          // a launcher page's tile (it fills in its own details later)
-        public string Style = "tile";    // tile | hero | wide | swatch | picture | audio | audiobox | chip
+        public string Style = "tile";    // tile | hero | wide | swatch | picture | audio | audiobox | chip | switch
         public int Col, Row, ColSpan = 1, RowSpan = 1;
         public string Icon = "", Label = "";
         public string? Sub, Hint, AppId;
@@ -107,49 +107,6 @@ public sealed partial class MainWindow
 
     // --- what the home screens hold ------------------------------------------------------------
     Color KindColor(LaunchItem item) => Hex(item.BuiltIn == "menu" ? theme.Purple : item.BuiltIn != null ? theme.Cyan : theme.Accent);
-
-    TileLayout LauncherHome()
-    {
-        var layout = new TileLayout();
-        var own = launchItems.Where(i => !i.IsApp).ToList();
-        var placed = new HashSet<LaunchItem>();
-        TileSpec Spec(LaunchItem item, string style = "tile")
-        {
-            placed.Add(item);
-            return new TileSpec { Key = item.Key, BuiltIn = item.BuiltIn, Style = style, Icon = item.Icon, Label = item.Name, Color = KindColor(item), AppId = item.IconKey, Run = () => Launch(item) };
-        }
-        // Your first item (Terminal) big; Projects and Clipboard wide, with what's in them.
-        var first = own.FirstOrDefault(i => i.BuiltIn == null);
-        if (first != null)
-        {
-            var hero = Spec(first, "hero");
-            if (first.Command.Trim() == "omawin.exe launch terminal") { hero.Hint = "Win+Enter"; hero.Sub = "in the folder you're working in"; }
-            var wides = new List<TileSpec>();
-            foreach (var name in new[] { "projects", "clipboard" })
-                if (own.FirstOrDefault(i => i.BuiltIn == name) is { } item)
-                {
-                    var w = Spec(item, "wide");
-                    w.Sub = name == "projects" ? ProjectsSub() : ClipSub();
-                    w.SubMono = name == "clipboard";
-                    wides.Add(w);
-                }
-            layout.Top(hero, wides);
-        }
-        // The next four of your items, then the menu as a bar with what's in it.
-        var row = own.Where(i => !placed.Contains(i) && i.BuiltIn != "menu").Take(4).Select(i => Spec(i)).ToList();
-        if (own.FirstOrDefault(i => i.BuiltIn == "menu") is { } menu)
-        {
-            var bar = Spec(menu, "wide");
-            bar.ColSpan = 4;
-            bar.Sub = string.Join(" · ", MenuModel.Children(entries, "").Select(e => e.Label).Take(6));
-            row.Add(bar);
-        }
-        layout.Flow(row);
-        // What you open most (launch-history.json); before there's any, the rest in order.
-        var history = History.Load();
-        layout.Flow(launchItems.Where(i => !placed.Contains(i)).OrderByDescending(i => history.Boost(i.Key, "")).Take(8).Select(i => Spec(i)).ToList(), "Frequent");
-        return layout;
-    }
 
     string ProjectsSub() => projects is { Count: > 0 } p ? string.Join(" · ", p.Take(3).Select(x => x.Name)) : "your git repos";
 
@@ -273,7 +230,7 @@ public sealed partial class MainWindow
     // launcher's reads the clipboard and launch history).
     double HomeBodyDip(bool launcher)
     {
-        var layout = launcher ? LauncherHome() : MenuHome();
+        var layout = launcher ? OneHome() : MenuHome();
         builtHome = (launcher, layout);
         return layout.Height + 16 + 4; // + the window's frame
     }
@@ -282,7 +239,7 @@ public sealed partial class MainWindow
 
     // The home layout HomeBodyDip just built, if it's that one; else a fresh one.
     TileLayout Home(bool launcher, (bool Launcher, TileLayout Layout)? built) =>
-        built is { } b && b.Launcher == launcher ? b.Layout : launcher ? LauncherHome() : MenuHome();
+        built is { } b && b.Launcher == launcher ? b.Layout : launcher ? OneHome() : MenuHome();
 
     // The launcher home's live details: projects (the background index's latest, kept current
     // as repos come and go) and how many servers are running (asked at most every 10 s).
@@ -438,6 +395,15 @@ public sealed partial class MainWindow
                 var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
                 text.Children.Add(label);
                 if (s.Sub != null) text.Children.Add(Sub(s.Sub));
+                if (s.Swatch is { } sw)
+                {
+                    // The theme as one bar, its palette blending into each other (One Search's Theme tile).
+                    var blend = new LinearGradientBrush { StartPoint = new(0, 0), EndPoint = new(1, 0) };
+                    var stops = sw.Gradient.Length > 0 ? sw.Gradient : [sw.Accent];
+                    for (int i = 0; i < stops.Length; i++)
+                        blend.GradientStops.Add(new GradientStop { Color = Hex(stops[i]), Offset = stops.Length == 1 ? 0 : i / (double)(stops.Length - 1) });
+                    text.Children.Add(new Border { Height = 4, Width = 120, CornerRadius = new CornerRadius(2), Background = blend, HorizontalAlignment = HorizontalAlignment.Left, Margin = new Thickness(0, 4, 0, 0) });
+                }
                 Grid.SetColumn(text, 1);
                 body.Children.Add(text);
                 v.Inner.Children.Add(body);
@@ -550,6 +516,9 @@ public sealed partial class MainWindow
                 break;
             case "chip":
                 BuildChip(v, s, label);
+                break;
+            case "switch":
+                BuildSwitchTile(v, s, label); // One Search's quick switches (MainWindow.Search.cs)
                 break;
             default:
             {

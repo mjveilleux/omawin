@@ -113,6 +113,14 @@ public static class FileSearch
     // or just folders. An empty query lists what you use most (fff's frecency).
     public static List<Hit> Search(string query, string? scope = null, int limit = 60, bool foldersOnly = false)
     {
+        // One at a time: One Search asks off the UI thread while the finder asks on it.
+        lock (searching) return SearchNow(query, scope, limit, foldersOnly);
+    }
+
+    static readonly object searching = new();
+
+    static List<Hit> SearchNow(string query, string? scope, int limit, bool foldersOnly)
+    {
         var hits = new List<Hit>();
         Index[] all;
         lock (gate) all = [.. indexes.Where(i => scope == null || i.Root == scope)];

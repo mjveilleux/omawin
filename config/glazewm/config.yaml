@@ -305,12 +305,12 @@ keybindings:
   # started. With any other GlazeWM, themes/render.ps1 writes `shell-exec --hide-window omawin.exe
   # <command>` instead: the same keys, the same actions.
   #
-  # The launcher, like Omarchy's Super+Space: default/launcher/items.txt's items, then every installed
-  # app, in the same native window as the system menu (shell/menu-app/, running hidden, so it's
-  # instant).
+  # One Search, like Omarchy's Super+Space grown: apps, settings, commands, files, windows, projects,
+  # clipboard and themes in one bar, a bento home when nothing's typed (shell/menu-app/, running
+  # hidden, so it's instant; plans/one-search.md). The system menu is its Commands filter, Browse.
   - commands: ['emit omawin launcher']
     bindings: ['lwin+space']
-  # The launcher straight on the clipboard history (Win+V stays Windows' own).
+  # One Search on Clipboard, the history (Win+V stays Windows' own).
   - commands: ['emit omawin launcher clipboard']
     bindings: ['lwin+shift+v']
   # The launcher on Audio: every speaker and microphone, its volume and mute (shell/menu-app/Audio.cs);
@@ -324,11 +324,11 @@ keybindings:
   # this says so. (Windows' own Win+M, minimize everything, means little with tiling.)
   - commands: ['shell-exec --hide-window omawin.exe music open']
     bindings: ['lwin+m']
-  # The system menu, like Omarchy's: install / remove, themes, setup, power (default/launcher/menu.txt,
-  # drawn natively by shell/menu-app/; the launcher's Menu item opens it too).
-  - commands: ['shell-exec --hide-window omawin.exe menu']
+  # Win+Alt+Space was the system menu; it's One Search now (Win+Space), for one release with a
+  # note, then removed by a migration (plans/one-search.md, guardrail 10).
+  - commands: ['shell-exec --hide-window omawin.exe search --retired-key']
     bindings: ['lwin+alt+space']
-  # The file finder: files and folders in Desktop, Documents, Downloads and your repos (fff),
+  # One Search on Files: files and folders in Desktop, Documents, Downloads and your repos (fff),
   # with a preview; also the launcher's Files item. Win+F (Windows' Feedback Hub gives way);
   # Win+Shift+F, its old key, still works.
   - commands: ['emit omawin files']

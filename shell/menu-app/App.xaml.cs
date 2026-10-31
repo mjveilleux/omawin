@@ -9,10 +9,13 @@ namespace SystemMenu;
 // One copy runs all the time, hidden, so the menu shows instantly. Starting SystemMenu.exe
 // again just passes its arguments to that copy and exits; so does `omawin` (bin/omawin.cs,
 // the `app` rows of bin/commands.txt), more quickly:
-//   SystemMenu                 show / hide
-//   SystemMenu --launcher      the launcher (Win+Space): items.txt + every installed app
-//   SystemMenu --launcher <page>  the same as --page
-//   SystemMenu --files         the file finder (Win+F): files and folders, with a preview
+//   SystemMenu                 One Search on Commands, browsing (what the system menu was)
+//   SystemMenu --search [filter|page] [text]  One Search (Win+Space; MainWindow.Search.cs): on a
+//                              filter (file: Win+F, clipboard: Win+Shift+V, settings, …) or a page;
+//                              --browse [section]: Commands, browsing the menu (omawin menu);
+//                              --retired-key: Win+Alt+Space, with its note (Search/Request.cs)
+//   SystemMenu --launcher [page]  the same as --search (older omawin.exe copies, the bar)
+//   SystemMenu --files         the same as --search file
 //   SystemMenu --snip [text]   a screenshot (Win+Shift+S), or its text (Win+Shift+T): drag a region (Snip.cs)
 //   SystemMenu --snip color    the colour picker; --snip qr: read QR codes in a region
 //   SystemMenu --toggle stay-awake  keep the PC awake, or stop (StayAwake.cs)
@@ -225,6 +228,14 @@ public partial class App : Application
         // `omawin profile menu` hides it between runs: at once, with no exit animation and no
         // focus handed back, so the next run starts from the same place.
         if (args is ["--hide"]) { window.HideForProfile(); return; }
+        if (args.Length > 0 && args[0] == "--search")
+        {
+            var search = Search.SearchRequest.Parse(args);
+            if (search.Page == "about") (about ??= new AboutWindow()).ShowAbout();
+            else if (search.Page != null) window.OpenPage((search.Page + " " + search.PageArg).Trim());
+            else window.OpenSearch(search.Filter, search.Text, search.Section, search.RetiredKey);
+            return;
+        }
         int open = Array.IndexOf(args, "--open");
         int select = Array.IndexOf(args, "--select");
         if (open >= 0 && open + 1 < args.Length) window.ShowMenu(args[open + 1], open + 2 < args.Length ? args[open + 2] : null);

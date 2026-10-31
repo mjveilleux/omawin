@@ -9,6 +9,7 @@
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
             <RowDefinition Height="56" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="1" />
             <RowDefinition Height="*" />
             <RowDefinition Height="38" />
@@ -33,14 +34,19 @@
                      HorizontalAlignment="Left" IsSpellCheckEnabled="False" />
         </Grid>
 
+        <!-- One Search's filters: All, Apps, Settings, … as underlined words, each in its tag's
+             colour (MainWindow.Search.cs, DrawTabs). Collapsed outside One Search's own views. -->
+        <StackPanel x:Name="SearchTabs" Grid.Row="1" Orientation="Horizontal" Spacing="20" Height="30"
+                    Padding="20,0,20,4" Visibility="Collapsed" />
+
         <!-- A hairline in the theme's colors, with a soft light drifting along it. -->
-        <Grid x:Name="DividerLine" Grid.Row="1">
+        <Grid x:Name="DividerLine" Grid.Row="2">
             <Border x:Name="Divider" Opacity="0.7" />
             <Border x:Name="Sheen" Width="180" HorizontalAlignment="Left" />
         </Grid>
 
         <!-- The rows; in the file finder also folder chips above them and a preview beside. -->
-        <Grid x:Name="Body" Grid.Row="2">
+        <Grid x:Name="Body" Grid.Row="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="*" />
@@ -86,7 +92,7 @@
         </Grid>
 
         <!-- Footer: what's shown (or the theme) on the left, keys on the right. -->
-        <Grid x:Name="FooterBar" Grid.Row="3" Padding="16,0,12,0">
+        <Grid x:Name="FooterBar" Grid.Row="4" Padding="16,0,12,0">
             <TextBlock x:Name="FooterLeft" FontSize="12" VerticalAlignment="Center" />
             <StackPanel x:Name="Keys" Orientation="Horizontal" Spacing="14" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>

@@ -40,6 +40,11 @@ public sealed class GlazeWm
     // A command, as `glazewm command ...` takes it ("focus --workspace 2").
     public void Command(string command) => _ = SendAsync("command " + command);
 
+    // The windows GlazeWM manages, for One Search's Windows (Search/WindowList.cs): asked here,
+    // answered on the socket's thread through Windows.
+    public event Action<List<SystemMenu.Search.OpenWindow>>? Windows;
+    public void QueryWindows() => _ = SendAsync("query windows");
+
     async void Run()
     {
         while (true)
@@ -120,6 +125,7 @@ public sealed class GlazeWm
             }
             if (kind != "client_response" || !root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return;
             var asked = root.GetProperty("clientMessage").GetString();
+            if (asked == "query windows") { Windows?.Invoke(SystemMenu.Search.WindowList.Read(data)); return; }
             if (asked == "query monitors") monitors = ReadMonitors(data.GetProperty("monitors"));
             else if (asked == "query focused")
             {

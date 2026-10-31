@@ -44,7 +44,9 @@ public sealed partial class MainWindow
         DispatcherQueue.TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, () =>
         {
             settingsRedrawQueued = false;
-            if (appWindow.IsVisible && (settingRows.Count > 0 || settingsArea != null || confirmingAdmin)) Render();
+            // One Search's home shows switches too; a list keeps its selected row (resultsUpdate).
+            bool home = launching && tileMode && page == null && searchFilter == null;
+            if (appWindow.IsVisible && (settingRows.Count > 0 || settingsArea != null || confirmingAdmin || home)) { resultsUpdate = true; Render(); }
         });
     }
 
@@ -175,7 +177,7 @@ public sealed partial class MainWindow
             DispatcherQueue.TryEnqueue(() =>
             {
                 settingNote = (r.Message, query);
-                if (appWindow.IsVisible) Render();
+                if (appWindow.IsVisible) { resultsUpdate = true; Render(); }
                 else Snip.Say(r.Message); // a link or action closed the menu: the note at the bottom of the screen
             });
         });
