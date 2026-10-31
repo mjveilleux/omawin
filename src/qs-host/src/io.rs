@@ -21,8 +21,9 @@ pub mod qobject {
         #[qinvokable]
         // The command comes as one string, its words joined by \u{1f} (QML's join("\x1f")): a
         // JavaScript array doesn't reliably become a QStringList on the way in (Qt 6.4 hands over an
-        // empty one), and that character never appears in a command line.
-        fn start(self: Pin<&mut ProcessCore>, command: &QString, cwd: &QString, stdin: bool) -> bool;
+        // empty one), and that character never appears in a command line. (Not `stdin`: MSVC's
+        // C headers make that a macro, which breaks the generated C++.)
+        fn start(self: Pin<&mut ProcessCore>, command: &QString, cwd: &QString, with_stdin: bool) -> bool;
         #[qinvokable]
         fn write(self: Pin<&mut ProcessCore>, data: &QString);
         #[qinvokable]
@@ -111,7 +112,7 @@ fn command(argv: &[String]) -> Command {
 }
 
 impl qobject::ProcessCore {
-    fn start(mut self: Pin<&mut Self>, command_line: &QString, cwd: &QString, stdin: bool) -> bool {
+    fn start(mut self: Pin<&mut Self>, command_line: &QString, cwd: &QString, with_stdin: bool) -> bool {
         let argv = words(command_line);
         if argv.is_empty() {
             eprintln!("omawin-qs: a Process started with no command");
@@ -122,7 +123,7 @@ impl qobject::ProcessCore {
         if !dir.is_empty() {
             c.current_dir(dir);
         }
-        c.stdin(if stdin { Stdio::piped() } else { Stdio::null() }).stdout(Stdio::piped()).stderr(Stdio::piped());
+        c.stdin(if with_stdin { Stdio::piped() } else { Stdio::null() }).stdout(Stdio::piped()).stderr(Stdio::piped());
         let mut child = match c.spawn() {
             Ok(child) => child,
             Err(e) => {
