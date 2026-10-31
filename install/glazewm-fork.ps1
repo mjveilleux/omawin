@@ -56,6 +56,8 @@ $state = Join-Path $env:ProgramData 'omawin\glazewm-fork.txt'
 $Files = 'glazewm.exe', 'glazewm-watcher.exe', 'cli\glazewm.exe'
 # Says the fork went in on its own, with no official GlazeWM under it: -Restore removes its files.
 $alone = Join-Path $dir '.omawin-only'
+# And beside them, the list of what the fork can do (emit, ...), gone with the fork.
+$FeaturesFile = 'omawin-features.txt'
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 # Puts $New at $Target even while another Windows account runs it: a running program can't be
@@ -148,6 +150,11 @@ function Invoke-Elevated([string]$Switch) {
     if ($p.ExitCode -ne 0) { throw "the admin part failed$(if ($line) { ": $line" } else { " ($($p.ExitCode))" })" }
     $line
 }
+# GlazeWM's config again (themes/render.ps1), for the GlazeWM now in place; a failure is only said.
+function Update-GlazeConfig {
+    try { & (Join-Path (Split-Path $PSScriptRoot) 'themes\render.ps1') | Out-Null }
+    catch { Write-Warning "GlazeWM's config wasn't written again: $_ (omawin restart glazewm)" }
+}
 function Say([string]$Line) { if ($Out) { Set-Content $Out $Line -Encoding utf8 }; $Line }
 
 # --- the admin part ------------------------------------------------------------------------------
@@ -201,6 +208,12 @@ if ($Machine) {
                 if ((Test-Path $target) -and -not (Test-Path $keep)) { Copy-Item $target $keep }
                 Set-InUseFile $new $target
             }
+            # What this build can do beyond the official one (bin/glazewm-features.ps1 reads it
+            # beside glazewm.exe): data, not signed. A release from before it has none, so an old
+            # copy goes.
+            $features = Join-Path "$work\x" $FeaturesFile
+            if (Test-Path $features) { Copy-Item $features (Join-Path $dir $FeaturesFile) -Force }
+            else { Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue }
             New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
             Set-Content $state $release.tag_name -NoNewline
             Remove-OldTrust $cert.Thumbprint
@@ -219,6 +232,7 @@ if ($Machine) {
                 $keep = $target -replace '\.exe$', '.official.exe'
                 if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
             }
+            Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue
             Remove-Item $state -ErrorAction SilentlyContinue
             # Say writes -Out's one line: a failure above stays a failure, not a skip.
             if ($failure) { Say "failed  $failure (the official GlazeWM is back)" }
@@ -243,6 +257,7 @@ if ($RestoreMachine) {
         $keep = $target -replace '\.exe$', '.official.exe'
         if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
     }
+    Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue
     Remove-Item $state -ErrorAction SilentlyContinue
     # The official GlazeWM needs none of omawin's certificates: none stays trusted, and this PC's
     # own goes too.
@@ -268,13 +283,16 @@ if ($Check) {
 if ($After) {
     # (Windows PowerShell turns a native program's stderr into an error under 'Stop'.)
     try { winget pin add --id glzr-io.glazewm --exact --accept-source-agreements 2>$null | Out-Null } catch { }
+    # GlazeWM's config is written for what the GlazeWM in place can do (the menu keys' emit).
+    Update-GlazeConfig
     if ($Restart -and (Get-MyGlazeWM)) { Stop-GlazeWM; Start-GlazeWM }
     return
 }
 if ($Restore) {
     if (-not (Test-Path $exe)) { 'ok  no GlazeWM in Program Files: the per-user one runs'; return }
     Stop-GlazeWM
-    try { Invoke-Elevated '-RestoreMachine' } finally { Start-GlazeWM }
+    # Written again for the official GlazeWM, which refuses a config with emit in it.
+    try { Invoke-Elevated '-RestoreMachine' } finally { Update-GlazeConfig; Start-GlazeWM }
     return
 }
 # What the one prompt will change, said before Windows asks (roadmap 2.9).

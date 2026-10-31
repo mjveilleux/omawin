@@ -21,7 +21,10 @@
                                                 sign-in)
 
     Placeholders are Omarchy's: {{ accent }}, {{ background }}, {{ bright_red }}, ... (the keys of
-    colors.toml). Edit the templates, never the copies; then run this (or omawin restart glazewm).
+    colors.toml), plus {{ animations }} (true / false: %LOCALAPPDATA%\launcher\animations, which
+    `omawin toggle animations` writes). GlazeWM's copy is also written for the GlazeWM installed
+    (bin/glazewm-features.ps1): the menu keys' `emit` only where our fork knows it. Edit the
+    templates, never the copies; then run this (or omawin restart glazewm).
 
         .\render.ps1                  the current theme
         .\render.ps1 -Name nord       another one (set-theme.ps1 passes the new pick)
@@ -60,6 +63,11 @@ Fallback 'bright_foreground' 'foreground'
 Fallback 'orange' 'bright_yellow'
 foreach ($k in 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan') { Fallback "bright_$k" $k }
 $c['name'] = $Name
+# Not a colour: GlazeWM's animations.enabled, from %LOCALAPPDATA%\launcher\animations (on / off),
+# the file `omawin toggle animations` writes before it runs this with -Reload. On when unset.
+$animationsFile = Join-Path $State 'animations'
+$animationsOn = -not ((Test-Path $animationsFile) -and (Get-Content $animationsFile -Raw).Trim() -eq 'off')
+$c['animations'] = if ($animationsOn) { 'true' } else { 'false' }
 
 function Expand-Template([string]$Text, [string]$Source) {
     [regex]::Replace($Text, '\{\{\s*(\w+)\s*\}\}', {
@@ -171,6 +179,20 @@ $glazeUser = Join-Path (& "$Repo\bin\user-layer.ps1") 'glazewm\config.yaml'
 if (Test-Path $glazeUser) {
     try { $glazeText = Merge-GlazeUser $glazeText (Expand-Template ([IO.File]::ReadAllText($glazeUser)) $glazeUser) $glazeUser }
     catch { Write-Warning "your GlazeWM additions weren't added: $_" }
+}
+# Written for the GlazeWM that runs here (bin/glazewm-features.ps1: what our fork says it can do),
+# on the merged text, so your account folder's bindings may use emit too.
+$glazeFeatures = @(& "$Repo\bin\glazewm-features.ps1")
+# The menu keys reach the menu app straight from GlazeWM (`emit omawin <command>`, roadmap 1.2);
+# any other GlazeWM refuses the whole config over a command it doesn't know, so there the same
+# keys start omawin.exe with the same words, as before.
+if ($glazeFeatures -notcontains 'emit') {
+    $glazeText = [regex]::Replace($glazeText, "'emit omawin ([^']*)'", "'shell-exec --hide-window omawin.exe `$1'")
+}
+# Animations off on a fork from before `animations.enabled`: no animation configured at all.
+if (-not $animationsOn -and $glazeFeatures -notcontains 'animations.enabled') {
+    $nl = if ($glazeText.Contains("`r`n")) { "`r`n" } else { "`n" }
+    $glazeText = [regex]::Replace($glazeText, '(?m)^animations:[ \t]*\r?\n(?:[ \t]+\S.*\r?\n|[ \t]*\r?\n)*', "animations: {}$nl$nl")
 }
 Write-Text "$glazeDir\config.yaml" $glazeText
 

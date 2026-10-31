@@ -205,6 +205,21 @@ if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "
 elseif ($portsReady) { Warn 'ports' "still the shared 6123, though omawin's GlazeWM is in: sign out and back in (or omawin install -Step desktop)" }
 elseif ($havePort) { Warn 'ports' "set to $havePort, but the official GlazeWM is back: sign out and back in" }
 else { Pass 'ports' 'the official 6123 (omawin''s GlazeWM not in: one account''s desktop at a time)' }
+# The menu keys come straight from GlazeWM where our fork knows emit (roadmap 1.2): then the menu
+# app must be listening, or those keys do nothing until it's back. It holds this file while
+# GlazeWM has accepted its subscription (shell/menu-app/Bar/GlazeWm.cs).
+$glazeFeatures = @(& "$Repo\bin\glazewm-features.ps1")
+if ($glazeFeatures -notcontains 'emit' -and (Test-Path $glazeLive) -and (Get-Content $glazeLive -Raw) -match "'emit ") {
+    Fail 'menu keys' "GlazeWM's config uses emit, which this GlazeWM doesn't know (omawin restart glazewm writes it again)"
+}
+elseif ($glazeFeatures -contains 'emit') {
+    $subFile = Join-Path $env:LOCALAPPDATA 'launcher\emit-subscribed'
+    $subPid = 0
+    if (Test-Path $subFile) { [void][int]::TryParse((Get-Content $subFile -Raw).Trim(), [ref]$subPid) }
+    if ($subPid -and (Get-Process -Id $subPid -ErrorAction SilentlyContinue | Where-Object ProcessName -eq 'SystemMenu')) { Pass 'menu keys' 'straight from GlazeWM (emit): the menu app is listening' }
+    elseif (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Warn 'menu keys' "the menu app isn't subscribed to GlazeWM: Win+Space, Win+F and the launcher keys do nothing (omawin restart menu)" }
+    else { Warn 'menu keys' "the menu app isn't running: Win+Space, Win+F and the launcher keys do nothing (omawin start)" }
+}
 $stuck = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3' -ErrorAction SilentlyContinue).Settings
 if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn 'taskbar auto-hides' 'off; install.ps1 turns it on' }
 # No ads (bin/no-ads.ps1): Windows' suggestions off, and the PC maker's upsells gone. The OEM ones
@@ -313,7 +328,8 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
     }
     elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
 }
-foreach ($m in [regex]::Matches((Get-Content "$Repo\config\glazewm\config.yaml" -Raw), "omawin\.exe ([a-z -]+?)'")) {
+# (`emit omawin <command>` too: the same words, sent to the menu app instead, roadmap 1.2.)
+foreach ($m in [regex]::Matches((Get-Content "$Repo\config\glazewm\config.yaml" -Raw), "(?:omawin\.exe|emit omawin) ([a-z -]+?)'")) {
     $words = $m.Groups[1].Value.Trim()
     if (-not ($commandNames | Where-Object { $words -eq $_ -or $words.StartsWith("$_ ") })) { $commandProblems += "config/glazewm/config.yaml runs unknown 'omawin $words'" }
 }
