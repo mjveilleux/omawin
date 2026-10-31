@@ -14,7 +14,7 @@
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
 #                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu
-#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs),
+#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs), keyboard-lights,
 #                     disabled-hotkeys startup-item <app> layout-hotkey folder-type-general case-sensitive,
 #                     and the admin ones (read here, set in the one prompt by bin/settings-admin.ps1)
 #                     hibernate sudo windows-feature <feature> service <name> on=<mode> off=<mode>
@@ -34,6 +34,7 @@ look.desktop-icons | - | Desktop icons | desktop icons show hide | switch | buil
 look.drag-full-windows | - | Window contents while dragging | drag move window outline | switch | spi drag-full-windows |
 look.font-smoothing | - | ClearType font smoothing | cleartype font smooth text blurry | switch | spi font-smoothing |
 look.taskbar-alignment | - | Taskbar alignment | taskbar left centre center start position | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarAl dword values="0:Left,1:Centre" default=1 | minBuild=22000 check
+look.keyboard-lights | - | Keyboard and mouse lights follow the theme | rgb lighting dynamic lighting led keyboard mouse accent colour color | switch | builtin keyboard-lights |
 
 # --- explorer ---------------------------------------------------------------------------------
 explorer.extensions | - | File name extensions | ext extension .txt suffix | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\HideFileExt dword on=0 off=1 refresh-explorer |

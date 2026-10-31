@@ -39,6 +39,8 @@ public sealed class BuiltinHandler : ISettingHandler
         // The shell's keyboard hook (KeyHook.cs): values it reads from launcher\keys\.
         ["caps-lock"] = new HookValue("caps-lock", "caps", CapsLockRemap.Modes),
         ["copilot-key"] = new HookValue("copilot-key", "windows", ["windows", "launcher"]),
+        // RGB keyboards and mice in the theme's accent (KeyboardLights.cs, roadmap 8.9).
+        ["keyboard-lights"] = new KeyboardLightsSwitch(),
         // Phase 8 (roadmap 8G-8J; their rules are BuiltinRules.cs, tested).
         ["disabled-hotkeys"] = new DisabledHotkeys(),
         ["startup-item"] = new StartupItem(),
@@ -480,6 +482,18 @@ public sealed class BuiltinHandler : ISettingHandler
         {
             if (!allowed.Contains(value)) return $"not one of: {string.Join(", ", allowed)}";
             KeyHook.Write(name, value);
+            return null;
+        }
+    }
+
+    // look.keyboard-lights (8.9): omawin's own file; the lights follow (or let go) at once.
+    sealed class KeyboardLightsSwitch : IBuiltin
+    {
+        public bool Fast => true;
+        public string? Read(SettingEntry e) => KeyboardLights.On ? "on" : "off";
+        public string? Write(SettingEntry e, string value)
+        {
+            KeyboardLights.Set(value == "on");
             return null;
         }
     }

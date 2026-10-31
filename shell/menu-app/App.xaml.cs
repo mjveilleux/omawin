@@ -205,6 +205,7 @@ public partial class App : Application
             // The keyboard hook, only while Caps Lock's remap, the Copilot key or snippets are on (KeyHook.cs).
             try { KeyHook.Start(() => ui.TryEnqueue(() => HandleRequest(["--launcher"]))); } catch (Exception ex) { Log(ex); }
             DisplayWatch.Start(); // a saved monitor layout put back when its monitors are plugged in (DisplayWatch.cs)
+            KeyboardLights.Start(); // RGB keyboards in the theme's accent, when there is one (KeyboardLights.cs)
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
             Program.Trace("ready");

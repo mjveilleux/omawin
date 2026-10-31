@@ -75,6 +75,7 @@
     <Compile Include="..\..\shell\menu-app\KeyRules.cs" Link="Linked\KeyRules.cs" />
     <Compile Include="..\..\shell\menu-app\ClipEntries.cs" Link="Linked\ClipEntries.cs" />
     <Compile Include="..\..\shell\menu-app\WindowPicture.cs" Link="Linked\WindowPicture.cs" />
+    <Compile Include="..\..\shell\menu-app\LightColor.cs" Link="Linked\LightColor.cs" />
   </ItemGroup>
 
   <ItemGroup>

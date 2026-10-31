@@ -8,6 +8,9 @@
 - Neovim and Neovide, which switch live, open ones included
 - RStudio (within 2 s), VS Code and Positron
 - btop, from its next start
+- an RGB keyboard or mouse that Windows 11's **Dynamic Lighting** drives (most recent ones, any brand): every light in the theme's accent
+
+The lights take the accent when the device is plugged in and on every theme switch; nothing runs on a PC without such a device. Windows lets a program drive them while it's in front, so the accent shows while the launcher or the menu is open and Windows' own effect the rest of the time, unless omawin can be picked under **Settings › Personalization › Dynamic Lighting › Background light control** (not yet confirmed for omawin). To leave the lights alone: the setting **Keyboard and mouse lights follow the theme** (search *lights* in the launcher), or `omawin setting set look.keyboard-lights off`.
 
 **Win+Ctrl+Space** (or Style › Next background) cycles the theme's backgrounds. With more than one monitor, each gets its own: the chosen background on the leftmost, the theme's next ones on the others, left to right.
 
