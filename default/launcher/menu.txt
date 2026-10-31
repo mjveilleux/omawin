@@ -306,6 +306,7 @@ pc.whohas | 󰌾 | Who has this file? (its path on the clipboard) | task omawin 
 pc.hosts | 󰇺 | Hosts file | task omawin hosts
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
+pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu
 trigger.clip | 󰘦 | Change the clipboard's text
 trigger.clip.json | 󰘦 | JSON, indented | omawin clip json
 trigger.clip.jsonline | 󰘦 | JSON on one line | omawin clip json-line

@@ -17,6 +17,7 @@ namespace Omawin.Windows;
 //   connections [name]     which apps are talking to the internet (8.20)
 //   wifi-qr [network]      the Wi-Fi as a QR code a phone joins from (8.21)
 //   clip [transform]       the clipboard's text converted in place (8.14)
+//   classic-menu [on|off|status]  the full right-click menu back (8.24)
 //   --version
 public static partial class Program
 {
@@ -41,6 +42,7 @@ public static partial class Program
                 "connections" => ConnectionsCommand.Run(rest),
                 "wifi-qr" => WifiCommand.Run(rest),
                 "clip" => ClipCommand.Run(rest),
+                "classic-menu" => ClassicMenuCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -62,6 +64,7 @@ public static partial class Program
               omawin connections [name]   which apps are talking to the internet
               omawin wifi share [network] the Wi-Fi as a QR code
               omawin clip [transform]     the clipboard's text converted (clip lists them)
+              omawin classic-menu         the full right-click menu, or Windows 11's short one (on, off, status)
             """);
         return 0;
     }
@@ -104,11 +107,14 @@ public static partial class Program
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
     }
 
-    // Asked only where someone can answer: in a terminal (a menu row's or yours). With no terminal,
-    // or input redirected (a script), the answer is no.
+    // Whether a question can be answered here: a terminal (a menu row's or yours) with its input.
+    public static bool CanAsk => InTerminal && !Console.IsInputRedirected;
+
+    // Asked only where someone can answer. With no terminal, or input redirected (a script), the
+    // answer is no.
     public static bool Ask(string question)
     {
-        if (!InTerminal || Console.IsInputRedirected) return false;
+        if (!CanAsk) return false;
         Console.Write(question + " [y/N] ");
         var answer = Console.ReadLine();
         return answer != null && answer.Trim().StartsWith('y');

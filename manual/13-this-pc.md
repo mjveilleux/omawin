@@ -13,6 +13,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
+| `omawin classic-menu` | Explorer's full right-click menu back, or Windows 11's short one |
 
 ## "The file is open in another program"
 
@@ -72,3 +73,7 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 ## Microphones
 
 `omawin mic` mutes every microphone at once (not only the default one: an app may listen on any), or unmutes them when they're all muted; `omawin mic mute`, `omawin mic unmute`, `omawin mic status`. While they're all muted the bar shows a red crossed-out microphone; click it to unmute. It's the same mute as Sound settings, so it holds after a restart. It has no key yet: pick one and add it to `config/glazewm/config.yaml` (`omawin.exe mic`).
+
+## The full right-click menu
+
+`omawin classic-menu` (**System menu › This PC › Full right-click menu**) gives Explorer back Windows 10's full right-click menu, without **Show more options**; again, and Windows 11's short one is back (`on`, `off`, `status` to say which). It's for your account only and needs no admin. Explorer restarts to show it: the taskbar blinks and open folder windows close (in a terminal it asks first; say no and it shows from Explorer's next start).

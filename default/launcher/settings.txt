@@ -48,6 +48,7 @@ explorer.recent-start | - | Recently opened items in Start and jump lists | rece
 explorer.checkboxes | - | Item check boxes | checkbox select | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\AutoCheckSelect dword on=1 off=0 refresh-explorer |
 explorer.empty-drives | - | Empty drives | drives card reader removable | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\HideDrivesWithNoMedia dword on=0 off=1 default=1 refresh-explorer |
 explorer.sync-ads | - | Sync provider notifications (ads in File Explorer) | ads onedrive notifications sync | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowSyncProviderNotifications dword on=1 off=0 default=1 refresh-explorer |
+explorer.classic-menu | - | The full right-click menu (no "Show more options") | context menu right click classic show more options windows 10 | switch | builtin classic-menu restart-explorer | minBuild=22000 check
 
 # --- privacy ----------------------------------------------------------------------------------
 privacy.camera | - | Camera for apps | webcam camera permission | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\Value sz on=Allow off=Deny |
