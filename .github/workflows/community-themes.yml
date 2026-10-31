@@ -1,0 +1,63 @@
+# The community theme index for the theme picker's Community chip (roadmap 1.10), rebuilt weekly:
+# every theme omarchy.org/themes lists (and themes/community-extra.txt), read at a pinned commit by
+# src/community-themes, published as the assets of the release "community-themes":
+# community-themes.zip (index.json and thumbs/) and community-themes.zip.sha256. The menu app
+# fetches those (shell/menu-app/CommunityThemes.cs); `omawin theme add <name>` installs a theme at
+# the commit the index read.
+#
+# That release is never "latest" (and is a pre-release), so `omawin update` and the installer,
+# which read releases/latest, only ever see omawin's own releases. Its assets are replaced in
+# place each week; a PC that reads the new checksum before the new zip lands just tries again
+# the next day.
+#
+# Actions are pinned by commit SHA, as in release.yml.
+name: Community themes
+
+on:
+  schedule:
+    - cron: '17 3 * * 1' # Mondays 03:17 UTC
+  workflow_dispatch:
+
+concurrency:
+  group: community-themes
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  index:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: The index (src/community-themes)
+        env:
+          GITHUB_TOKEN: ${{ github.token }} # the API's rate limit: ~3 requests a theme
+        run: |
+          echo "### Community themes" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          dotnet run --project src/community-themes -c Release -- out | tee -a "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - name: Publish (the release community-themes)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=community-themes
+          if ! gh release view "$tag" --repo "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false \
+              --title 'Community themes (rebuilt weekly)' \
+              --notes 'The index the theme picker'"'"'s Community chip reads (roadmap 1.10), rebuilt every Monday by .github/workflows/community-themes.yml. Not an omawin release.'
+          fi
+          # The zip first, then its checksum: a PC reading in between sees a mismatch and waits a day.
+          gh release upload "$tag" out/community-themes.zip --repo "$GITHUB_REPOSITORY" --clobber
+          gh release upload "$tag" out/community-themes.zip.sha256 --repo "$GITHUB_REPOSITORY" --clobber

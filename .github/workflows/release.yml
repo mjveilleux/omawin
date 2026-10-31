@@ -395,7 +395,8 @@ jobs:
         run: |
           $tag = '${{ needs.meta.outputs.version }}'
           $all = gh release list --repo '${{ github.repository }}' --limit 200 --json tagName | ConvertFrom-Json
-          foreach ($r in $all | Where-Object tagName -ne $tag) {
+          # community-themes is the theme picker's index (community-themes.yml), not a release: it stays.
+          foreach ($r in $all | Where-Object { $_.tagName -ne $tag -and $_.tagName -ne 'community-themes' }) {
             gh release delete $r.tagName --repo '${{ github.repository }}' --yes
             Write-Host "deleted the release $($r.tagName)"
           }

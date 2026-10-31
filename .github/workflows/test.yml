@@ -24,3 +24,6 @@ jobs:
         run: dotnet test test/cli.Tests --logger "console;verbosity=normal"
       - name: omawin command builds with Native AOT
         run: dotnet publish src/cli -c Release -r linux-x64 -o out/cli && out/cli/omawin --version
+      # Weekly by community-themes.yml; built here too, as it shares Community.cs with the menu app.
+      - name: The community theme index builds
+        run: dotnet build src/community-themes -c Release

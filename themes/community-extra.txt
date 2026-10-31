@@ -1,0 +1,5 @@
+# Community themes the picker's Community chip shows besides omarchy.org/themes' list (roadmap
+# 1.10): one Omarchy theme repo per line, as owner/repo or its GitHub link. # starts a comment.
+# Read weekly by src/community-themes (.github/workflows/community-themes.yml), at the repo's
+# current commit, like the page's own; only its data is used (palette, light.mode, pictures).
+# A theme the page lists already needs no line here.
