@@ -1,0 +1,84 @@
+# Linux in WSL, checked without WSL (roadmap 3.11). The bash parts are tested and linted on the
+# runner itself (test/linux/setup-test.sh, ShellCheck); then wsl/setup.sh sets up Arch and Ubuntu
+# containers the way a new distro gets set up (setup.sh root, then user, then both again, then an
+# update) and wsl/check.sh checks the result. One run on a real PC per release covers what
+# containers can't: systemd, interop, the keep-warm, the terminals.
+name: Linux
+
+on:
+  push:
+    branches: [main, 'claude/**']
+    paths: ['wsl/**', 'config/bash/**', 'config/starship/**', 'test/linux/**', 'themes/btop/**', '.github/workflows/linux.yml']
+  pull_request:
+    paths: ['wsl/**', 'config/bash/**', 'config/starship/**', 'test/linux/**', 'themes/btop/**', '.github/workflows/linux.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  bash:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq shellcheck fd-find
+          sudo ln -sf "$(command -v fdfind)" /usr/local/bin/fd
+      - name: ShellCheck
+        run: |
+          shellcheck -x -S warning -e SC1090,SC1091 wsl/setup.sh wsl/check.sh wsl/bin/* test/linux/*.sh
+          shellcheck -s bash -S warning -e SC1090,SC1091 config/bash/bashrc config/bash/bash_profile
+      - name: Omarchy's base list at the pinned commit
+        run: |
+          commit="$(sed -n 's/^omarchy_commit=//p' wsl/setup.sh)"
+          mkdir -p "$RUNNER_TEMP/omarchy/install"
+          curl -fsSL "https://raw.githubusercontent.com/mjveilleux/omarchy/$commit/install/omarchy-base.packages" \
+            -o "$RUNNER_TEMP/omarchy/install/omarchy-base.packages"
+      - name: test/linux
+        run: OMARCHY_CHECKOUT="$RUNNER_TEMP/omarchy" bash test/linux/setup-test.sh
+
+  setup:
+    needs: bash
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['archlinux:latest', 'ubuntu:24.04']
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    steps:
+      # No git in the images: checkout falls back to downloading the files, which is enough.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: The repo readable by the user setup.sh makes
+        run: chmod -R a+rX "$GITHUB_WORKSPACE"
+      - name: setup.sh root
+        run: bash wsl/setup.sh root ci
+      - name: setup.sh user
+        run: runuser -l ci -c "bash '$GITHUB_WORKSPACE/wsl/setup.sh' user"
+      - name: The shell starts with Omarchy's defaults and omawin's on top
+        run: |
+          runuser -l ci -c 'bash -ic "
+            set -e
+            type starship zoxide fzf eza > /dev/null
+            [[ \$OMARCHY_PATH == /usr/share/omawin/omarchy ]]
+            [[ \$EDITOR == nvim ]]
+            alias ls | grep -q eza
+            [[ \$(type -t _omawin_prompt) == \"\" ]]
+          "'
+      - name: Linux's side in a WSL-like shell
+        run: |
+          runuser -l ci -c 'WSL_DISTRO_NAME=ci bash -ic "
+            set -e
+            [[ \$OMAWIN_SIDE == linux && -n \$OMAWIN_LINUX ]]
+            [[ \$(type -t _omawin_prompt) == function ]]
+            starship prompt | grep -q \"\$OMAWIN_LINUX\"
+          "'
+      - name: Run it again (safe to run twice)
+        run: |
+          bash wsl/setup.sh root ci
+          runuser -l ci -c "bash '$GITHUB_WORKSPACE/wsl/setup.sh' user"
+      - name: setup.sh update
+        run: bash wsl/setup.sh update
+      - name: wsl/check.sh
+        run: bash wsl/check.sh ci --ci

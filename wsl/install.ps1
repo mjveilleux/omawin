@@ -91,11 +91,14 @@ if ($distros -notcontains $Distro) {
     }
 }
 
-# The default user applies from WSL's next start, so the distro is stopped below when setup.sh
-# makes it this user. (Only then: stopping it ends whatever runs in it.)
-$wasDefault = ((& wsl.exe -d $Distro -u root '--' cat /etc/wsl.conf 2>$null) -join "`n") -match "(?m)^default=$user\s*$"
+# Windows' folders for setup.sh (the theme file, the account folder's overrides, the home).
+. "$PSScriptRoot\env.ps1"
+
+# /etc/wsl.conf (the default user, systemd, interop) applies from WSL's next start, so the distro
+# is stopped below when setup.sh changed it. (Only then: stopping it ends whatever runs in it.)
+$confBefore = (& wsl.exe -d $Distro -u root --exec cat /etc/wsl.conf 2>$null) -join "`n"
 Invoke-Wsl -d $Distro -u root --cd "$Repo\wsl" '--' bash ./setup.sh root $user
-if (-not $wasDefault) { Invoke-Wsl --terminate $Distro }
+if (((& wsl.exe -d $Distro -u root --exec cat /etc/wsl.conf 2>$null) -join "`n") -ne $confBefore) { Invoke-Wsl --terminate $Distro }
 
 # The agents this account has on Windows, in Linux too (Linux projects open a tab for each).
 $agents = @('claude', 'opencode' | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue })

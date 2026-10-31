@@ -69,10 +69,10 @@ if ($chosen -contains 'dictation' -and (Test-Path "$env:APPDATA\com.pais.handy\s
 if ($chosen -contains 'wsl') {
     $linux = @(foreach ($line in Get-Content "$Repo\bin\defaults.txt") { $p = @($line -split '\|' | ForEach-Object { $_.Trim() }); if ($p.Count -ge 5 -and $p[0] -eq 'linux') { , $p } })
     $picked = "$(Get-Content "$env:LOCALAPPDATA\launcher\defaults\linux" -TotalCount 1 -ErrorAction SilentlyContinue)".Trim()
-    $pick = @($linux | Where-Object { $_[1] -eq $picked }) + , $linux[0] | Select-Object -First 1
+    $linuxPick = @($linux | Where-Object { $_[1] -eq $picked }) + , $linux[0] | Select-Object -First 1
     $distros = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $_.GetValue('DistributionName') })
-    $what = "$(($pick[2] -split ',')[0]) (WSL)"
-    if ($distros -contains $pick[4]) { Pass $what "wsl -d $($pick[4])" }
+    $what = "$(($linuxPick[2] -split ',')[0]) (WSL)"
+    if ($distros -contains $linuxPick[4]) { Pass $what "wsl -d $($linuxPick[4])" }
     elseif (Test-Path "$env:LOCALAPPDATA\launcher\wsl-restart") { Warn $what 'WSL is in; it finishes setting up after Windows restarts' }
     else { Fail $what 'not installed for this account (omawin preset add wsl)' }
 }
@@ -372,6 +372,32 @@ else {
     $desktop = "omawin's desktop $($ram.System.DesktopMB) of $($ram.System.DesktopBudgetMB) MB; $([math]::Round($ram.Memory.InUseMB / 1KB, 1)) GB in use"
     if ($ram.System.DesktopMB -gt $ram.System.DesktopBudgetMB) { Warn 'memory' "$desktop (omawin profile ram says which part)" } else { Pass 'memory' $desktop }
     if ($ram.Kernel.NonPagedMB -gt 1024) { Warn 'drivers'' memory' "non-paged pool $($ram.Kernel.NonPagedMB) MB: a driver may be leaking (a driver update usually fixes it)" }
+}
+
+# --- Linux in WSL --------------------------------------------------------------------------
+# Its own checks (wsl/check.sh: systemd, Omarchy's repositories and packages, the tools, the
+# shell), only while it runs: check never starts WSL (~8 s cold). The pick and distros are the
+# wsl preset's check's, above.
+if ($chosen -contains 'wsl' -and $distros -contains $linuxPick[4]) {
+    Section "Linux ($($linuxPick[4]))"
+    $env:WSL_UTF8 = '1'
+    $running = @(& { $ErrorActionPreference = 'Continue'; & wsl.exe --list --running --quiet 2>$null } | ForEach-Object { "$_".Trim() }) -contains $linuxPick[4]
+    if (-not $running) { Warn 'Linux checks' "$($linuxPick[4]) isn't running, so they were skipped (a Linux terminal starts it)" }
+    else {
+        # The Linux user, named as wsl/install.ps1 names it.
+        $linuxUser = [Environment]::UserName.ToLower() -replace '[^a-z0-9_-]', ''
+        if ($linuxUser -notmatch '^[a-z_]') { $linuxUser = "u$linuxUser" }
+        $out = & { $ErrorActionPreference = 'Continue'; & wsl.exe -d $linuxPick[4] -u root --cd "$Repo\wsl" --exec bash ./check.sh $linuxUser 2>&1 }
+        foreach ($line in $out) {
+            $f = @("$line" -split "`t", 3)
+            switch ($f[0]) {
+                'ok' { Pass $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                'warn' { Warn $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                'fail' { Fail $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                default { if ("$line".Trim()) { Warn 'wsl/check.sh' "$line" } }
+            }
+        }
+    }
 }
 
 Write-Host ''

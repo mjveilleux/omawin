@@ -257,6 +257,23 @@ if ($btopDir -and (Test-Path $btopTheme)) {
     Write-Host "  btop        omarchy.theme"
 }
 
+# --- Linux in WSL -------------------------------------------------------------------------------
+# Its shell picks the theme up at its next prompt by itself (render.ps1's theme-linux.sh, read by
+# config/bash/bashrc), and its own copies (btop) with it. A running Linux is told now as well, so
+# a btop open there changes at once; a stopped one is never started for this.
+$env:WSL_UTF8 = '1'
+if (Test-Path "$env:ProgramFiles\WSL\wsl.exe") {
+    $running = @(& { $ErrorActionPreference = 'Continue'; & wsl.exe --list --running --quiet 2>$null } | ForEach-Object { "$_".Trim() } | Where-Object { $_ })
+    $linuxNames = @(foreach ($line in Get-Content "$PSScriptRoot\..\bin\defaults.txt") {
+            $p = @($line -split '\|' | ForEach-Object { $_.Trim() })
+            if ($p.Count -ge 5 -and $p[0] -eq 'linux') { $p[4] }
+        })
+    foreach ($distro in @($running | Where-Object { $linuxNames -contains $_ })) {
+        Start-Process wsl.exe -ArgumentList '-d', $distro, '--exec', 'bash', '-lc', 'omawin-theme-sync' -WindowStyle Hidden
+        Write-Host "  linux       $distro"
+    }
+}
+
 # --- VS Code, Positron ------------------------------------------------------------------------------
 # Like Omarchy: the theme's own extension when it names one (themes/vscode/<name>.json),
 # installed the first time; otherwise (or if that install fails) a color theme made from the

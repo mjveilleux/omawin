@@ -1,0 +1,130 @@
+# What Linux in WSL leaves out of Omarchy's base package list (install/omarchy-base.packages, read
+# by wsl/setup.sh at the commit it pins). Everything else Omarchy installs comes in, so a new
+# terminal tool in Omarchy arrives with the next pin bump and no change here. One name per line;
+# # comments. A name here that Omarchy's list no longer has is ignored.
+
+# The desktop: Windows and omawin draw it.
+hyprland
+hyprland-guiutils
+hyprland-preview-share-picker
+hyprpicker
+hyprsunset
+quickshell
+sddm
+uwsm
+plymouth
+xdg-desktop-portal-gtk
+xdg-desktop-portal-hyprland
+xdg-terminal-exec
+omarchy-hyprland-titlebars
+omarchy-screensaver
+owe
+grim
+slurp
+wl-clipboard
+wtype
+gpu-screen-recorder
+omasnap
+tesseract
+tesseract-data-eng
+zbar
+qt6-base
+qt6-declarative
+qt6-multimedia
+qt6-svg
+qt6-wayland
+qt6-imageformats
+python-gobject
+gnome-themes-extra
+yaru-icon-theme
+gnome-keyring
+libsecret
+udiskie
+gvfs-mtp
+gvfs-nfs
+gvfs-smb
+ffmpegthumbnailer
+# A remote-desktop server for Omarchy's desktop (its bar's remote-session indicator).
+gliff
+
+# Hardware and the system under it: WSL's kernel, Windows' network, sound, printers and power.
+alsa-utils
+asdcontrol
+avahi
+nss-mdns
+bluez
+bluez-tools
+bluez-utils
+bolt
+brightnessctl
+ddcutil
+cups
+cups-filters
+cups-pk-helper
+system-config-printer
+networkmanager
+wireless-regdb
+wireplumber
+pamixer
+rtkit
+omarchy-power-profiles-daemon
+kernel-modules-hook
+tzupdate
+dosfstools
+exfatprogs
+gnome-disk-utility
+qemu-user-static-binfmt
+# Windows' firewall guards the VM (.wslconfig firewall=true: Hyper-V's rules).
+ufw
+ufw-docker
+
+# Input methods: Windows' own.
+fcitx5
+fcitx5-chewing
+fcitx5-chinese-addons
+fcitx5-gtk
+fcitx5-hangul
+fcitx5-mozc
+fcitx5-qt
+fcitx5-table-extra
+
+# GUI apps: Windows has its own (WSLg could run these, but omawin doesn't install them).
+chromium
+nautilus
+nautilus-python
+sushi
+evince
+imv
+mpv
+mpv-mpris
+foot
+obsidian
+libreoffice-fresh
+localsend
+moonlight-qt
+pinta
+superwhisper-bin
+# Omarchy's removable preinstalls (its bin/omarchy-remove-preinstalls).
+aether
+cliamp
+hype
+monologue
+omacalc
+omacut
+omawrite
+signed
+
+# Fonts: the terminal is a Windows program, and Windows draws its text.
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+ttf-ia-writer
+ttf-jetbrains-mono-nerd-basic
+woff2-font-awesome
+ttfx
+
+# Neovim is omawin's config (config/nvim/, the same on both sides), not Omarchy's.
+omarchy-nvim
+
+# No AUR.
+yay
