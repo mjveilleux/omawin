@@ -14,6 +14,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin proxy` | this account's system proxy, set and switched |
 | `omawin disk` | where a developer's disk space went, and getting it back |
 | `omawin pip [title]` | a window live in a small window on top (picture-in-picture) |
+| `omawin display` | each set of monitors' layout, put back when they're plugged in again |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
@@ -115,3 +116,7 @@ Nothing outside a cache or a project's build output is ever deleted, and nothing
 ## Picture-in-picture
 
 `omawin pip teams` keeps an eye on a window while you work in another: the window whose title holds the words, live, in a small window that stays on top in the bottom-right corner (Windows' own live preview, the one Alt+Tab draws: nothing is recorded). Drag it anywhere, resize it at its edges, scroll to make it fainter or stronger; double-click goes to the window, right-click closes the picture, and it closes by itself when the window does. Bound to a key (`omawin.exe pip` in `config/glazewm/config.yaml`), it shows the window in front; it has no key until you choose one.
+
+## Monitors that follow the dock
+
+Docking and undocking can leave the monitors at the wrong resolution, in the wrong order or with the wrong main one. Lay them out once the way you want (Settings › Display), then `omawin display save` (**System menu › This PC › Monitors: remember this layout**): from then on, whenever that same set of monitors is plugged in, omawin puts the layout back by itself (each monitor's resolution, place and rotation, and which is the main one), a couple of seconds after the last one arrives. Each set is remembered on its own: the laptop alone, the laptop at the desk, the laptop in a meeting room. `omawin display` shows the monitors now and whether a layout is saved for them; `omawin display apply` puts it back by hand, `omawin display forget` stops it. Refresh rates and scaling are left as Windows keeps them. The layouts are in `%LOCALAPPDATA%\launcher\displays.txt`, a text file you can read and edit.

@@ -29,6 +29,7 @@
     <Compile Include="../../src/windows/Keys/ScancodeMap.cs" Link="windows/ScancodeMap.cs" />
     <Compile Include="../../src/windows/Desktop/WallpaperPlan.cs" Link="windows/WallpaperPlan.cs" />
     <Compile Include="../../src/windows/Desktop/PipPlan.cs" Link="windows/PipPlan.cs" />
+    <Compile Include="../../src/windows/Desktop/DisplayProfiles.cs" Link="windows/DisplayProfiles.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

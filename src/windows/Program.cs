@@ -25,6 +25,7 @@ namespace Omawin.Windows;
 //   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
 //   wallpaper spread <picture>…  a picture per monitor, left to right (8.8; the theme switch uses it)
 //   pip [title]            the window in front, or one by title, live in a small window on top (8.6)
+//   display [save|apply|forget]  each set of monitors' layout, put back when it's plugged in again (8.7)
 //   --version
 public static partial class Program
 {
@@ -57,6 +58,7 @@ public static partial class Program
                 "keyboard" => KeyboardCommand.Run(rest),
                 "wallpaper" => WallpaperCommand.Run(rest),
                 "pip" => PipCommand.Run(rest),
+                "display" => DisplayCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -85,6 +87,7 @@ public static partial class Program
               omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
               omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
               omawin pip [title]          a window live in a small window on top (from a key: the one in front)
+              omawin display              the monitors' layout; display save remembers it for this set, apply puts it back
             """);
         return 0;
     }

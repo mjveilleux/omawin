@@ -204,6 +204,7 @@ public partial class App : Application
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
             // The keyboard hook, only while Caps Lock's remap, the Copilot key or snippets are on (KeyHook.cs).
             try { KeyHook.Start(() => ui.TryEnqueue(() => HandleRequest(["--launcher"]))); } catch (Exception ex) { Log(ex); }
+            DisplayWatch.Start(); // a saved monitor layout put back when its monitors are plugged in (DisplayWatch.cs)
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
             Program.Trace("ready");
