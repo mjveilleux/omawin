@@ -121,7 +121,7 @@ The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `p
 
 ## Fixing Windows (`src/windows/`, `omawin-windows.exe`)
 
-Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `wifi share`, `clip` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
+Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `wifi share`, `clip`, `classic-menu` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
 
 | Folder | What it is |
 |---|---|
@@ -129,8 +129,9 @@ Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `
 | `Health/` | the event logs through `wevtapi` (`EvtQuery`, `EvtRender` as XML) and the sentences they become |
 | `Startup/` | the Run keys, Startup folders and programs' services; Task Manager's `StartupApproved` switch |
 | `Top/` | every process in one `NtQuerySystemInformation` call (the documented `Process` list as the fallback), grouped by app |
-| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries |
+| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries; DNS presets |
 | `Wifi/` | the saved profile (`WlanGetProfile`) and the `WIFI:` QR text, drawn with ZXing in half blocks |
+| `Explorer/` | the full right-click menu (8.24): the per-user registration Explorer falls back on |
 | `Clip/`, `Native/` | the clipboard's transforms; the clipboard, process close / end (a pid is checked against its start time first) |
 | `Admin/` | the few changes that need admin, as a Windows PowerShell script built only from checked values, run by Windows' own `powershell.exe` after one prompt that's preceded by what will change |
 

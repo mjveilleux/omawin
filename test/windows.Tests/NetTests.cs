@@ -81,6 +81,33 @@ public class NetTests
     }
 
     [Fact]
+    public void DnsPresetsAreFoundAndRecognised()
+    {
+        Assert.Equal("cloudflare", DnsPresets.Find("Cloudflare")!.Name);
+        Assert.Empty(DnsPresets.Find("dhcp")!.Servers);
+        Assert.Null(DnsPresets.Find("opendns"));
+        Assert.All(DnsPresets.All.SelectMany(p => p.Servers), s => Assert.True(IPAddress.TryParse(s, out _)));
+        var cf = new[] { IPAddress.Parse("1.1.1.1"), IPAddress.Parse("1.0.0.1") };
+        Assert.Equal("Cloudflare: 1.1.1.1, 1.0.0.1", DnsPresets.Describe(cf, manual: true));
+        Assert.Equal("your router (automatic): 1.1.1.1, 1.0.0.1", DnsPresets.Describe(cf, manual: false));
+        Assert.Equal("set by hand: 10.0.0.53", DnsPresets.Describe([IPAddress.Parse("10.0.0.53")], manual: true));
+        Assert.True(DnsPresets.IsManual("1.1.1.1,1.0.0.1"));
+        Assert.False(DnsPresets.IsManual(" "));
+    }
+
+    [Fact]
+    public void DnsScriptSetsEachAdapterOrResetsIt()
+    {
+        var set = AdminScripts.Dns([12, 7], ["1.1.1.1", "2606:4700:4700::1111"], "s");
+        Assert.Contains("Set-DnsClientServerAddress -InterfaceIndex 12 -ServerAddresses @('1.1.1.1', '2606:4700:4700::1111')", set);
+        Assert.Contains("-InterfaceIndex 7 ", set);
+        Assert.Contains("Clear-DnsClientCache", set);
+        Assert.Contains("-InterfaceIndex 3 -ResetServerAddresses", AdminScripts.Dns([3], [], "s"));
+        Assert.Throws<ArgumentException>(() => AdminScripts.Dns([3], ["1.1.1.1'); evil; ('"], "s"));
+        Assert.Throws<ArgumentException>(() => AdminScripts.Dns([], ["1.1.1.1"], "s"));
+    }
+
+    [Fact]
     public void ConnectionsGroupByAppAndRemote()
     {
         var gh = IPAddress.Parse("140.82.112.3");

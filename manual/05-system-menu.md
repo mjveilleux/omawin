@@ -3,7 +3,7 @@
 After Omarchy's menu, with these sections:
 - **Learn**: shortcuts, omawin commands, docs
 - **Trigger**: screenshot, text, clipboard, localhost, night light, speed test, colour picker, read a QR code, **Change the clipboard's text** (JSON, Base64, URL, a timestamp, a path for WSL), and **Toggle › Stay awake**
-- **This PC**: why it restarted, crashed or woke up; what starts with Windows; processes by app; apps on the internet; who has a file; the hosts file; share the Wi-Fi; mute every microphone ([This PC](13-this-pc.md))
+- **This PC**: why it restarted, crashed or woke up; what starts with Windows; processes by app; apps on the internet; who has a file; the hosts file; DNS; share the Wi-Fi; mute every microphone; the full right-click menu ([This PC](13-this-pc.md))
 - **Quick**: the Quick settings page and its switches (Wi-Fi, Bluetooth, brightness, power mode, night light, do not disturb)
 - **Style**: theme, backgrounds, configs to edit
 - **Setup**: launcher items, keys, packages, Windows settings, health check, no ads

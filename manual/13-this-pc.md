@@ -10,6 +10,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin top [name]` | processes by app, the busiest first |
 | `omawin connections [app]` | which apps are talking to the internet, and to whom |
 | `omawin hosts` | the hosts file, as entries |
+| `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
@@ -31,6 +32,7 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 - **Restarts and crashes**, newest first: blue screens with their stop code (`0x9F DRIVER_POWER_STATE_FAILURE`, searchable), restarts without a shutdown (power lost, or it froze; held power button; died asleep), and who restarted it and why (`Restart, by Windows Update: Operating System: Service pack (Planned)`). Bad ones are marked `!`. How many times it started.
 - **Apps that crashed or hung**, by app, with how many times and the module that failed.
 - **What woke it from sleep**: a device (often the mouse or the network card) or a timer (often Windows Update).
+- Whether Windows is **waiting for a restart** to finish installing updates (said first, when it is).
 - **Slow starts**, and what slowed them, when Windows lets this account read that log (else it says so: it needs admin or the Event Log Readers group).
 
 ## What starts with Windows
@@ -52,6 +54,10 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 - `omawin hosts add 127.0.0.1 myapp.test api.myapp.test` adds one; if a name already points elsewhere it says where.
 - `omawin hosts off myapp.test` comments it out (marked `# omawin-off`, so `omawin hosts on myapp.test` restores it exactly); other names on the same line keep working.
 - Every change shows the lines that change, then asks Windows once (the hosts file needs admin). The old file is kept beside it as `hosts.backup-<date>-<time>`, and Windows' DNS cache is cleared so the change shows at once. Nothing else is touched: the lines you wrote stay as you wrote them.
+
+## DNS
+
+`omawin dns` says which DNS each connected network uses: your router's (handed out automatically), or set by hand, named when it's one of the well-known ones. `omawin dns cloudflare` (or `quad9`, `google`) switches every connected adapter to it; `omawin dns router` gives them back to your network; add part of an adapter's name for one only (`omawin dns quad9 wi-fi`). It says which adapters change to what, then Windows asks once; the cache is cleared so the next lookup uses the new servers. **System menu › This PC › DNS** has the same. Cloudflare, Google and Quad9 are in Windows 11's DNS-over-HTTPS list, so Settings › Network can encrypt them.
 
 ## Share the Wi-Fi
 

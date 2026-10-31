@@ -85,6 +85,24 @@ public static partial class AdminScripts
         return Wrap(status, body);
     }
 
+    // DNS servers for these adapters (by interface index), or back to the network's own (DHCP) when
+    // none are given; then DNS's cache cleared, so the next lookup asks the new servers. DnsClient's
+    // cmdlets are in Windows PowerShell 5.1 since Windows 8.
+    public static string Dns(IReadOnlyList<int> interfaces, IReadOnlyList<string> servers, string status)
+    {
+        if (interfaces.Count == 0 || interfaces.Any(i => i is <= 0 or > 1_000_000)) throw new ArgumentException("not interface indexes", nameof(interfaces));
+        foreach (var s in servers)
+            if (!System.Net.IPAddress.TryParse(s, out _) || s.Any(c => !(char.IsAsciiHexDigit(c) || c is '.' or ':')))
+                throw new ArgumentException($"not an IP address: {s}", nameof(servers));
+        var body = new StringBuilder();
+        foreach (var i in interfaces)
+            body.Append(servers.Count == 0
+                ? $"Set-DnsClientServerAddress -InterfaceIndex {i} -ResetServerAddresses\n"
+                : $"Set-DnsClientServerAddress -InterfaceIndex {i} -ServerAddresses @({string.Join(", ", servers.Select(Quote))})\n");
+        body.Append("Clear-DnsClientCache");
+        return Wrap(status, body.ToString());
+    }
+
     // powershell.exe -EncodedCommand takes the script as UTF-16LE Base64: no quoting survives the
     // command line to go wrong.
     public static string Encode(string script) => Convert.ToBase64String(Encoding.Unicode.GetBytes(script));

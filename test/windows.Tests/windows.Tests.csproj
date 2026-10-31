@@ -19,6 +19,7 @@
     <Compile Include="../../src/windows/Net/HostsFile.cs" Link="windows/HostsFile.cs" />
     <Compile Include="../../src/windows/Net/SocketTable.cs" Link="windows/SocketTable.cs" />
     <Compile Include="../../src/windows/Net/Connections.cs" Link="windows/Connections.cs" />
+    <Compile Include="../../src/windows/Net/DnsPresets.cs" Link="windows/DnsPresets.cs" />
     <Compile Include="../../src/windows/Top/ProcessGroups.cs" Link="windows/ProcessGroups.cs" />
     <Compile Include="../../src/windows/Clip/Transforms.cs" Link="windows/Transforms.cs" />
     <Compile Include="../../src/windows/Wifi/WifiShare.cs" Link="windows/WifiShare.cs" />

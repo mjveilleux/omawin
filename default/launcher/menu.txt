@@ -304,6 +304,12 @@ pc.top | 󰊚 | Processes by app | task omawin top
 pc.connections | 󰖟 | Apps on the internet | task omawin connections
 pc.whohas | 󰌾 | Who has this file? (its path on the clipboard) | task omawin who-has
 pc.hosts | 󰇺 | Hosts file | task omawin hosts
+pc.dns | 󰇺 | DNS
+pc.dns.status | 󰇺 | Which DNS each network uses | task omawin dns
+pc.dns.cloudflare | 󰇺 | Cloudflare | task omawin dns cloudflare
+pc.dns.quad9 | 󰇺 | Quad9 (blocks known malware sites) | task omawin dns quad9
+pc.dns.google | 󰇺 | Google | task omawin dns google
+pc.dns.router | 󰇺 | Your router's (automatic) | task omawin dns router
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
 pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu
