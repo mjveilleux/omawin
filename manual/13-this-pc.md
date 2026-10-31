@@ -20,6 +20,8 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin mic` | every microphone muted or unmuted at once |
 | `omawin classic-menu` | Explorer's full right-click menu back, or Windows 11's short one |
 | `omawin updates` | what Windows Update is waiting to install, and the restart when you choose |
+| `omawin open-with` | pictures, Markdown, JSON and logs opened in omawin's own viewer |
+| `omawin notifications` | every notification Windows showed, kept and searchable |
 
 ## "The file is open in another program"
 
@@ -123,6 +125,18 @@ Windows' own cleanup misses where a developer's space goes. `omawin disk` measur
 - **Old projects' build output**: `omawin disk projects` looks through your project folders (`~/src`, `~/code`, `~/projects`, `~/repos`, `~/source/repos`, Documents) for `node_modules`, `target`, `bin` and `obj`, `.venv`, `.next`, `build` and the like, only beside the file that makes them (a `target` with no `Cargo.toml` beside it is left alone), in projects untouched for 30 days. `omawin disk projects ~/work 90` for another folder or age; `omawin disk projects clean` deletes what it listed, after asking. Each comes back with `npm install`, `cargo build` and so on.
 
 Nothing outside a cache or a project's build output is ever deleted, and nothing without asking.
+
+## Pictures and text in omawin's viewer
+
+`omawin open-with on` (**System menu › Setup › Open pictures and text in omawin's viewer**) offers omawin's viewer for pictures (PNG, JPG, GIF, WebP, BMP, TIFF, ICO, SVG, HEIC, AVIF), Markdown, JSON and logs, then opens its page in Settings › Default apps: pick **omawin viewer** there for each type you want, or for all of them. Windows lets only you choose a default (since 2024 no program may set one), so nothing changes until you do; name the types to offer fewer or others (`omawin open-with on png jpg md`, or `pictures`, `text`, `all`, which adds .txt, .csv, YAML, TOML, INI and XML). `omawin open-with` lists each type, whether omawin's offered for it and what opens it now; `open-with off` takes the offer back. All of it is in your account's own settings, no admin.
+
+The viewer opens as fast as the launcher, since the menu app is already running (a tiny `omawin-view.exe` hands it the file), in your theme. A picture fits the window: **+** and **−** zoom (or Ctrl+wheel), **0** fits again, **←** and **→** go through the folder's other pictures. A text file shows in the terminal's font: JSON laid out with indents, a log from its end (the latest lines), a big file's first megabyte. **e** opens it in your editor, **o** in another app (Windows' Open with), **f** shows it in its folder, **c** copies its path, **Esc** closes. GlazeWM tiles it like any window.
+
+## Notifications you can search
+
+Windows' notification centre forgets: omawin keeps every notification Windows shows, a month a file in `%LOCALAPPDATA%\launcher\notifications` (six months kept), on the launcher's **Notifications** page (`omawin launcher notifications`): newest first, or type to search the app, title and text; each row says its app. When a notification carries a verification code (a sign-in code, a one-time password), the note at the bottom of the screen says it and `omawin notifications code` copies it; on the page **Enter** copies a code, opens a notification's link in your browser, or copies its text.
+
+Windows lets an app read other apps' notifications only when it has a *package identity* and you've said yes once. `omawin notifications identity on` gives the menu app one, for your account, no admin: a small package with nothing in it but a description, pointing at the menu app where it already is. Until omawin's releases are signed, Windows accepts that only with **Developer Mode** on (Settings › System › For developers, or `omawin setting set developer.dev-mode on`); without it, the command says so and changes nothing. Then `omawin restart menu`, and Windows asks whether omawin may read your notifications. `omawin notifications` says whether it's reading; `identity off` removes the package (the history stays).
 
 ## Picture-in-picture
 

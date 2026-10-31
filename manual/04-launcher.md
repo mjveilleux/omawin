@@ -55,7 +55,7 @@ Type a sum and its value is the top row: **Enter copies it** (and closes the win
 
 ### Pages
 
-Localhost, Audio, Quick settings, Packages, Reports, Shortcuts and About open in the same window from their tiles or results: type to search, Esc to go back. Projects and Clipboard are filters with the same pages.
+Localhost, Audio, Quick settings, Packages, Reports, Shortcuts, Notifications and About open in the same window from their tiles or results: type to search, Esc to go back. Projects and Clipboard are filters with the same pages.
 
 ### Packages
 
@@ -100,12 +100,18 @@ Like Omarchy's package picker, in One Search (Browse › Install › Package, th
 One Search's **Files** filter (also the **Files** item, `/` typed first, or Tab to it):
 - results on the left: the name with matched letters, the folders it's in, and when it changed or its git status
 - a preview on the right: the picture itself for pictures (and how big it is), the first lines of text and code, a folder's contents
-- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), then each place it searches; **Ctrl+Tab** moves between them (Tab moves between One Search's filters). Ending what you type with `/` also shows only folders.
+- chips on top: All, **Folders** (only folders), **Images** (only pictures: PNG, JPG, GIF, WebP, BMP, ICO, TIFF, HEIC, AVIF, SVG), **Everywhere** (every drive, below), then each place it searches; **Ctrl+Tab** moves between them (Tab moves between One Search's filters). Ending what you type with `/` also shows only folders.
 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 
 It searches Desktop and Documents (both your home folder's and, when OneDrive backs them up, OneDrive's: chips "OneDrive Desktop", "OneDrive Documents"), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder. It watches them, honors `.gitignore` (so a repo's ignored files, like a Power BI project's `.pbix` copies, don't show; its `.pbip` does) and ranks files you open higher. Folders, then files, whose own name matches come first. Folders named in `default/launcher/finder-skip.txt` (node_modules, duckdb, …) are skipped. Search is by [fff](https://github.com/dmtrKovalenko/fff).
 
 Your Linux in WSL is one more place, its chip marked with the distro's logo (Arch or Ubuntu): Linux keeps a list of its home's files itself (refreshed every 10 minutes and when `~/src` changes, .gitignore honoured, no hidden folders), so the finder never crawls `\\wsl.localhost`. A Linux file opens in Linux (`omawin launch editor`); Ctrl+Enter shows it in Explorer.
+
+### Everywhere: every drive
+
+The **Everywhere** chip searches every file and folder name on your internal drives (C:, D:, …), like Everything: every word you type has to be in the name, any case (`2026 report`), `*.png` keeps only that type (several are fine: `logo *.png *.svg`), and a word with a `\` must be in the path too (`src\main`). Folders come first, then the best-named files; what's in your home folder comes before the rest of the disk among equals. Not in your folders? With it on, All's list ends with **Search every drive for "…"**.
+
+It's off until you turn it on: Enter on the chip, or `omawin everywhere on`. No admin and no service: the menu app walks the drives once (a minute or two, at background priority, so you don't notice it), then Windows tells it of every file created, deleted or renamed. It walks again after each sign-in once you've been away from the keyboard for two minutes (to see what changed while it wasn't running), once a day, and when Windows says it dropped changes (a huge copy). The list (names only, never contents; only what your account can open) is in `%LOCALAPPDATA%\launcher\disk-index`, and in memory only while you search it. `omawin everywhere` says how many names and when it last walked; `everywhere rebuild` walks now; `everywhere off` stops it and deletes the list. It leaves out what the finder skips, the Recycle Bin and Windows' own bookkeeping folders (`WinSxS`, `System Volume Information`).
 
 **Linux apps:** a GUI app you install in your Linux (WSLg puts it in Start as "Firefox (archlinux)") is an app here too, with "Arch app" beside it; typing `linux` or the distro's name finds them.

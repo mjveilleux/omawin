@@ -41,10 +41,10 @@ Research behind it (2026-10-15): the ManagedShell, RetroBar, Seelen UI, YASB and
 | Emoji panel | Win+. | partly | emoji search in the launcher; Windows' panel stays the fallback (it types into any app, IME included) | none |
 | Ads, Tips, Widgets, Copilot | Explorer, policies | remove | policies off; the Copilot key opens the launcher or a coding agent | no-ads |
 | Alt+Tab, Task View | Explorer | later | Win+Tab as a GlazeWM workspace overview; leave Alt+Tab (hooks fight games and elevated windows) | none |
-| Notifications | Action Center | later | do-not-disturb and our own toasts first; reading others' notifications needs identity | none |
+| Notifications | Action Center | later | do-not-disturb and our own toasts first; reading others' notifications needs identity | the Notifications page: a searchable history, codes copied (with identity) |
 | Volume / brightness OSD | Explorer | later | a themed OSD when our keys change volume; Windows' flyout can't be suppressed cleanly | none |
 | Task Manager | taskmgr | later | process list and "kill" in the launcher; taskmgr for the rest | none |
-| Image viewer | Photos | later | Direct2D / WIC viewer window in the shell, `.png` / `.jpg` forwarder | none |
+| Image viewer | Photos | done (2026-10-31) | a viewer window in the shell (WinUI's image, so WIC's codecs), `omawin-view.exe` forwarder; Markdown, JSON and logs too | omawin viewer (`omawin open-with`) |
 | Calculator | Calculator | later | the launcher's math row; `calculator:` forwarder | launcher math |
 | Weather | Widgets | later | bar widget from Open-Meteo (no key) | none |
 | Notepad | Notepad | other app | the default editor (`omawin launch editor`) registered for `.txt` | Neovim |
@@ -89,8 +89,8 @@ The plan for replacing the taskbar, from the research (ManagedShell's `ExplorerH
 ## Phase 2: the shell foundation
 
 - [ ] Windows App SDK 2.x; Native AOT and trimming (`SelfContained=true`), checking Core Audio COM and the WinForms overlay are AOT-safe; move the snip overlay to Win32 / Direct2D
-- [ ] Sparse package identity for the shell
-- [ ] Forwarder exe pattern for file types and protocols, and a Setup › Default apps row that opens the right Settings page
+- [ ] Sparse package identity for the shell (2026-10-31: the manifest, `app.manifest`'s `<msix>` and a per-account registration, `omawin notifications identity on`, built; Windows takes it unsigned only in Developer Mode until releases sign it: `open-questions/notification-identity.md`)
+- [x] Forwarder exe pattern for file types and protocols, and a Setup › Default apps row that opens the right Settings page (2026-10-31: `omawin-view.exe` for pictures and text, `omawin open-with`, which opens omawin's own Default apps page; protocols are left)
 - [ ] A shared keyboard hook (in GlazeWM's fork or the shell) for Win tap, Win+S, Win+X, Win+V, Win+number and the Copilot key, so Explorer's own shortcuts are taken in one place (keys agreed first)
 - [ ] Toasts (`AppNotificationManager`) as the shell's one way to notify
 

@@ -61,6 +61,9 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `MenuModel.cs` | reads `default/launcher/menu.txt` and the theme; paths (`Repo`, `StateDir`) |
 | `Launcher.cs`, `Fuzzy.cs` | launcher items + installed apps, keywords, launch history; fzy-style fuzzy scoring |
 | `FileSearch.cs` | the file finder, on [fff](https://github.com/dmtrKovalenko/fff)'s C library (`lib/fff_c.dll`, a pinned release that `build.ps1` downloads and checksums; not committed) |
+| `DiskIndex.cs`, `Everywhere.cs` | whole-disk search, the finder's Everywhere chip (`omawin everywhere`): every name on the fixed drives, walked at idle and kept current from Windows' change notifications; no admin |
+| `ViewerWindow.cs`, `ViewerFile.cs` | omawin's viewer for pictures and text, opened by `omawin-view.exe` (`bin/view.cs`) for the types `omawin open-with` offers |
+| `NoticeLog.cs`, `NotificationHistory.cs` | the notification history and its page; Windows' listener once the menu app has identity (`identity/AppxManifest.xml`, `omawin notifications identity on`) |
 | `AppIcons.cs` | real app icons |
 | `Background.cs` | work done all the time in the background: clipboard history, the installed-apps index, the reports index |
 | `Snip.cs` | screenshots, text from the screen, the colour picker and QR reading (below; QR by ZXing.Net, ~0.5 MB) |
@@ -178,6 +181,9 @@ Never in the repo:
 | `linux-files.tsv` | Linux's files for the finder, written inside Linux by `omawin-index-files` |
 | `linux-warm.pid` | the process holding Linux warm (`omawin start terminal`); `linux-warm-off` turns it off |
 | `fff\` | the file finder's indexes |
+| `disk-index\` | whole-disk search's list of names (`index.bin`), when it's on (`omawin everywhere`) |
+| `notifications\` | the notification history, a month a file (`yyyy-MM.tsv`), six months kept |
+| `identity\` | the copy of omawin's package manifest and its logos, once registered (`omawin notifications identity on`) |
 | `dirs\` | PowerShell tab title → folder, for Win+Enter |
 | `theme`, `background`, `nvim-theme`, `lockscreen*` | the current theme, its background, and the lock screen |
 | `backgrounds\`, `thumbnails\` | themes' wallpapers, downloaded once; small copies of every theme's backgrounds, for the theme and background pickers (the release brings them) |
