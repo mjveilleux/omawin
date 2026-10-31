@@ -254,7 +254,8 @@ install.gaming | 󰊗 | Gaming
 install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
 
 remove | 󰭌 | Remove
-remove.package | 󰏓 | Package | task omawin pkg remove
+remove.package | 󰏓 | Packages | @packages remove
+remove.windows-apps | 󰖳 | Windows apps (Clipchamp, News, …) | task omawin windows-apps remove
 remove.development | 󰵮 | Development
 remove.development.rails | 󰫏 | Ruby on Rails | task omawin dev remove ruby
 remove.development.docker-dbs |  | Docker DB | task omawin dev remove docker-db
@@ -306,6 +307,11 @@ pc.startup | 󱓞 | What starts with Windows | task omawin startup
 pc.top | 󰊚 | Processes by app | task omawin top
 pc.connections | 󰖟 | Apps on the internet | task omawin connections
 pc.whohas | 󰌾 | Who has this file? (its path on the clipboard) | task omawin who-has
+pc.display | 󰍹 | Monitors: the layout | task omawin display
+pc.displaysave | 󰍹 | Monitors: remember this layout for these monitors | omawin display save
+pc.keyboard | 󰌌 | Keyboard: Caps Lock, Copilot key, snippets | task omawin keyboard
+pc.disk | 󰋊 | Disk space: caches and Linux disks | task omawin disk
+pc.diskprojects | 󰋊 | Disk space: old projects' build output | task omawin disk projects
 pc.hosts | 󰇺 | Hosts file | task omawin hosts
 pc.dns | 󰇺 | DNS
 pc.dns.status | 󰇺 | Which DNS each network uses | task omawin dns
@@ -313,9 +319,20 @@ pc.dns.cloudflare | 󰇺 | Cloudflare | task omawin dns cloudflare
 pc.dns.quad9 | 󰇺 | Quad9 (blocks known malware sites) | task omawin dns quad9
 pc.dns.google | 󰇺 | Google | task omawin dns google
 pc.dns.router | 󰇺 | Your router's (automatic) | task omawin dns router
+pc.dns.encrypt | 󰌾 | Encrypt DNS (DNS over HTTPS) | task omawin dns encrypt
+pc.proxy | 󰒍 | Proxy (this account) | task omawin proxy
+pc.updates | 󰚰 | Windows Update
+pc.updates.status | 󰚰 | What's waiting, and is a restart owed? | task omawin updates
+pc.updates.tonight | 󰜉 | Restart tonight at 03:00 | omawin updates restart tonight
+pc.updates.cancel | 󰜺 | Call off the restart | omawin updates restart cancel
+pc.updates.pause | 󰏤 | Pause updates for a week | task omawin updates pause
+pc.updates.resume | 󰐊 | Resume updates | task omawin updates resume
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
 pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu
+pc.shellext | 󰍜 | Right-click menu add-ins (shell extensions) | task omawin shell-extensions
+pc.env | 󰘦 | Environment variables | task omawin env
+pc.devdrive | 󰋊 | Dev Drive (faster builds) | task omawin dev-drive
 trigger.clip | 󰘦 | Change the clipboard's text
 trigger.clip.json | 󰘦 | JSON, indented | omawin clip json
 trigger.clip.jsonline | 󰘦 | JSON on one line | omawin clip json-line

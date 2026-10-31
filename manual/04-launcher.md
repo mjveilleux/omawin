@@ -13,6 +13,7 @@ With nothing typed it opens on tiles that keep their places, so you learn them b
 - **Browse** (everything the system menu had) and **Theme** (yours, its palette as one gradient; Enter opens the Themes filter)
 - **Quick**: Wi-Fi, Bluetooth, Dark mode and Microphone (apps' access to it), each saying On or Off; Enter switches it
 - **Frequent**: the four apps you open most
+- **Pinned**, once you've pinned something: up to four of yours, in the order you pinned them. **Ctrl+P** on any result (an app, a setting, a command, a file, a project, a theme) pins it; Ctrl+P again, on the result or on its tile here, unpins it. It's the last row, so pinning never moves anything above it. A setting's pin shows its value and Enter switches it there.
 
 Arrow keys move between tiles; the selected one lifts. Only what's in the tiles changes, never where they are.
 
@@ -38,7 +39,8 @@ Some filters are richer views: **Files** is the file finder (below), **Clipboard
 ### Keys
 
 - **Enter** does the obvious thing: opens, runs, switches a setting, pastes a copy, applies a theme. A command that needs words (`theme set <name>`) fills the bar for them; scripts run in a terminal so you can see what they say.
-- **Ctrl+K** lists the selected result's other actions: run as administrator, show in folder, copy path, terminal here, open in the editor, run in a terminal, copy the command, close a window, delete a copy, a theme's backgrounds, a setting's previous value. Esc closes the list.
+- **Ctrl+K** lists the selected result's other actions: run as administrator, show in folder, copy path, terminal here, open in the editor, run in a terminal, copy the command, close a window, delete a copy, a theme's backgrounds, a setting's previous value, pin to the home. Esc closes the list.
+- **Ctrl+P** pins the selected result to the home, or unpins it (above).
 - **Ctrl+Enter** shows a file in its folder; **Ctrl+Shift+Enter** runs one of your items as administrator (Windows asks first).
 - **Settings switch in place**: a switch says On or Off and Enter flips it; **← / →** step a choice; **Ctrl+Z** puts the last change back ([Windows settings](05-system-menu.md#windows-settings)).
 - **Esc** steps back one thing at a time: the actions, then what you typed, then a view, then the filter, then the window. Win+Space again also hides it.
@@ -73,7 +75,7 @@ Like Omarchy's package picker, in One Search (Browse › Install › Package, th
 - **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. When Windows has reserved a common dev port at start-up (Hyper-V and WSL take random ranges, so a server on 3000 or 8080 fails though nothing is listening there), a yellow line says which and what to do. Under them are your favorite sites from `default/launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.
-- **Clipboard** (the filter, or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
+- **Clipboard** (the filter, or **Win+Shift+V**): everything you've copied, text and pictures, newest first, searchable, with the full text or the picture in a preview; Enter pastes it. **Ctrl+P** pins an entry to the top for good (again to unpin); the rest keeps the newest 200. **Ctrl+X** deletes one. What a password manager marks private is never kept, as in Windows' own clipboard history.
   - Enter pastes it into the window you were in; **Ctrl+X** deletes an entry.
   - The newest 200 copies are kept. Copies that password managers mark private are skipped.
 - **Audio** (or **Win+A**): every speaker and headset, with what's playing on each inside it (the music player, Chrome, Teams…), then every microphone, each with its volume as a bar; the one Windows is using says "in use". It opens on the first speaker.
@@ -82,7 +84,7 @@ Like Omarchy's package picker, in One Search (Browse › Install › Package, th
   - It's there for keyboards whose volume keys Windows doesn't understand (some compact keyboards send volume keys only in a Mac mode, which Windows rejects).
 - **Quick settings** (or the system menu's **Quick › All of it**): the machine's switches, with the Audio page below them. Across the top: Wi-Fi (the network in use, its signal), Bluetooth, a brightness tile per monitor, the power mode, night light, do not disturb, the battery. It opens on the first speaker, and reads the machine afresh each time it opens.
   - **Space** works the selected switch: Wi-Fi or Bluetooth on or off (off takes a second press: the first says "Press again to turn Wi-Fi off", and any other key cancels), the next power mode. **← →** (or **+ −**) set a monitor's brightness, 5% a press (**Shift** for 1%), never below 5%.
-  - **Enter** opens what a switch holds: the networks nearby (Enter joins one Windows has saved, on the one in use it disconnects), the paired devices, the three power modes. The lists open on the first network or device; turning the radio off is the last row.
+  - **Enter** opens what a switch holds: the networks nearby (Enter joins one Windows has saved, on the one in use it disconnects), the paired devices, the three power modes. The lists open on the first network or device; turning the radio off is the last row. Under a Bluetooth headset, a second row switches its **hands-free** part: on, any app that opens the headset's microphone (a call, a dictation app) drops it to call quality, mono, for everything; off, it stays in stereo and another microphone is used. Turn it on again for calls through the headset.
   - Night light and do not disturb have no API Windows lets a program use, so those two open the Settings page that owns them; so does a Wi-Fi network Windows hasn't saved (the launcher's box would show the password as you typed it).
 - **Reports** (only when your account folder, `~/omawin-account`, has a reports script: [docs/work.md](../docs/work.md)): reports from your own folders and shares, newest first. A share you can't reach right now (VPN off) keeps its last list.
   - Picking one runs your script's import; a share that's offline asks to connect the VPN first.
@@ -102,3 +104,7 @@ One Search's **Files** filter (also the **Files** item, `/` typed first, or Tab 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 
 It searches Desktop and Documents (both your home folder's and, when OneDrive backs them up, OneDrive's: chips "OneDrive Desktop", "OneDrive Documents"), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder. It watches them, honors `.gitignore` (so a repo's ignored files, like a Power BI project's `.pbix` copies, don't show; its `.pbip` does) and ranks files you open higher. Folders, then files, whose own name matches come first. Folders named in `default/launcher/finder-skip.txt` (node_modules, duckdb, …) are skipped. Search is by [fff](https://github.com/dmtrKovalenko/fff).
+
+Your Linux in WSL is one more place, its chip marked with the distro's logo (Arch or Ubuntu): Linux keeps a list of its home's files itself (refreshed every 10 minutes and when `~/src` changes, .gitignore honoured, no hidden folders), so the finder never crawls `\\wsl.localhost`. A Linux file opens in Linux (`omawin launch editor`); Ctrl+Enter shows it in Explorer.
+
+**Linux apps:** a GUI app you install in your Linux (WSLg puts it in Start as "Firefox (archlinux)") is an app here too, with "Arch app" beside it; typing `linux` or the distro's name finds them.

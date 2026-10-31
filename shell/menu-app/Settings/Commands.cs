@@ -12,7 +12,7 @@ public static class SettingCommands
     public readonly record struct Answer(int Code, string Text);
 
     public const string SettingUsage = "omawin setting list [area] | get <id> | set <id> <value> [--now] | toggle <id> | undo";
-    public const string SettingsUsage = "omawin settings save [-Shared] | apply [-NoAdmin] | admin";
+    public const string SettingsUsage = "omawin settings save [-Shared] | apply [-NoAdmin] [-Changed] | admin";
     public const string TuneUpUsage = "omawin tune-up [apply [-Auto]]";
 
     // omawin setting list [area] | get <id> | set <id> <value> [--now] | toggle <id> | undo
@@ -65,16 +65,16 @@ public static class SettingCommands
         }
     }
 
-    // omawin settings save [-Shared] | apply [-NoAdmin] | admin [--yes]
-    // account / shared: the two settings.txt files (the account folder's, the PC's shared folder's).
-    public static async Task<Answer> Settings(SettingStore store, string[] a, string account, string shared)
+    // omawin settings save [-Shared] | apply [-NoAdmin] [-Changed] | admin [--yes]
+    // account / shared: the two settings.txt files (the account folder's, the PC's shared folder's);
+    // applied: the record of what apply last set (settings-applied.txt; null: none kept).
+    public static async Task<Answer> Settings(SettingStore store, string[] a, string account, string shared, string? applied = null)
     {
-        bool toShared = a.Any(x => x.Equals("-Shared", StringComparison.OrdinalIgnoreCase));
-        bool noAdmin = a.Any(x => x.Equals("-NoAdmin", StringComparison.OrdinalIgnoreCase));
+        bool Flag(string name) => a.Any(x => x.Equals(name, StringComparison.OrdinalIgnoreCase));
         switch (a.FirstOrDefault())
         {
-            case "save": return Save(store, toShared ? shared : account);
-            case "apply": return await Apply(store, [shared, account], noAdmin);
+            case "save": return Save(store, Flag("-Shared") ? shared : account);
+            case "apply": return await Apply(store, [shared, account], Flag("-NoAdmin"), applied, Flag("-Changed"));
             case "admin":
             {
                 if (store.AdminQueue.Count == 0) return new(0, "No admin changes waiting");
@@ -98,11 +98,20 @@ public static class SettingCommands
     }
 
     // The shared folder's file, then the account's (the account wins, as for launcher files).
-    static async Task<Answer> Apply(SettingStore store, string[] files, bool noAdmin)
+    // changedOnly (an update, roadmap 1B.5): only the lines that changed since the last apply, so
+    // a setting you've changed here since isn't put back by an update that didn't touch it.
+    static async Task<Answer> Apply(SettingStore store, string[] files, bool noAdmin, string? applied, bool changedOnly)
     {
         var wanted = SettingValueFile.Read(files.Where(File.Exists).Select(File.ReadAllLines));
         if (wanted.Count == 0) return new(0, $"No settings.txt to apply ({string.Join(", ", files)})");
+        var before = applied != null && File.Exists(applied) ? SettingValueFile.Read([File.ReadAllLines(applied)]) : [];
+        if (changedOnly)
+        {
+            wanted = SettingValueFile.Changed(wanted, before);
+            if (wanted.Count == 0) return new(0, "settings.txt hasn't changed since it was last applied");
+        }
         var report = new List<string>();
+        var done = new List<(string Id, string Value)>();
         int failed = 0;
         foreach (var (id, value) in wanted)
         {
@@ -110,8 +119,18 @@ public static class SettingCommands
             if (e.Kind is SettingKind.Link or SettingKind.Action) { report.Add($"skipped {id}: has no value"); continue; }
             var r = store.Set(e, value, "apply");
             if (!r.Ok) failed++;
+            else done.Add((id, value)); // set, already so, or waiting for the admin prompt: not set again by an update
             if (r.Ok && !r.Changed && !r.Queued) continue; // already so: nothing to say
             report.Add(r.Message);
+        }
+        if (applied != null && done.Count > 0)
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(applied)!);
+                File.WriteAllLines(applied, SettingValueFile.Record(before, done));
+            }
+            catch (IOException) { } // it only costs setting them again on the next update
         }
         int waiting = store.AdminQueue.Count;
         if (waiting > 0 && !noAdmin)
@@ -130,20 +149,21 @@ public static class SettingCommands
     // only the visible ones are read or set. apply first lists what it will change and asks
     // (code 3), then sets each through the store (undoable, admin ones queued) and, on that same
     // yes, applies the admin ones in the one prompt. -Auto (install, an update): only the 'auto'
-    // ones, never admin, nothing asked.
+    // ones, never admin, nothing asked, each only once (seenFile remembers which; TuneUp.AutoOnce),
+    // and silent when there's nothing new, so an update says only what it changed.
     public static async Task<Answer> TuneUp(SettingStore store, string[] a, IReadOnlyList<Recommendation> recs,
-        IReadOnlyList<SettingEntry> catalog, int build, bool unverified = false)
+        IReadOnlyList<SettingEntry> catalog, int build, bool unverified = false, string? seenFile = null)
     {
         bool apply = a.FirstOrDefault() == "apply";
         if (a.Length > 0 && !apply && a[0] != "list") return new(2, TuneUpUsage);
         bool autoOnly = a.Any(x => x.Equals("-Auto", StringComparison.OrdinalIgnoreCase));
         var rows = SystemMenu.TuneUp.Report(recs, catalog, Reader(store, recs, catalog, build, unverified), build, unverified);
         if (!apply) return new(0, SystemMenu.TuneUp.Format(rows).TrimEnd());
+        if (autoOnly) return Auto(store, rows, seenFile);
 
-        var todo = SystemMenu.TuneUp.ToApply(rows, autoOnly);
-        if (autoOnly) todo = todo.Where(r => !r.Entry.Admin).ToList(); // auto never prompts (TuneUp.Check holds the file to it)
+        var todo = SystemMenu.TuneUp.ToApply(rows, autoOnly: false);
         if (todo.Count == 0) return new(0, "Every recommended setting is already applied (omawin tune-up lists them)");
-        if (!autoOnly && !a.Contains("--yes"))
+        if (!a.Contains("--yes"))
         {
             int admin = todo.Count(r => r.Entry.Admin);
             return new(3, $"omawin tune-up apply sets {todo.Count} Windows setting{(todo.Count == 1 ? "" : "s")}"
@@ -161,13 +181,39 @@ public static class SettingCommands
             report.Add(o.Message);
         }
         // You said yes to the list, admin ones included: this is the one prompt.
-        if (!autoOnly && todo.Any(r => r.Entry.Admin) && store.AdminQueue.Count > 0)
+        if (todo.Any(r => r.Entry.Admin) && store.AdminQueue.Count > 0)
         {
             var o = await store.ApplyAdminAsync();
             if (!o.Ok) failed++;
             report.Add(o.Message);
         }
         report.Add("Each is undone like any setting: omawin setting undo, or in the system menu.");
+        return new(failed == 0 ? 0 : 1, string.Join('\n', report));
+    }
+
+    // -Auto: the 'auto' ones not seen before, set without asking; nothing printed when there's
+    // nothing new (install and every update run this, and say what it prints).
+    static Answer Auto(SettingStore store, List<TuneUpRow> rows, string? seenFile)
+    {
+        var seenBefore = seenFile != null && File.Exists(seenFile)
+            ? File.ReadAllLines(seenFile).Select(l => l.Trim()).Where(l => l.Length > 0).ToList() : [];
+        var todo = SystemMenu.TuneUp.AutoOnce(rows, new HashSet<string>(seenBefore, StringComparer.OrdinalIgnoreCase));
+        var report = new List<string>();
+        var set = new List<string>();
+        int failed = 0;
+        foreach (var r in todo)
+        {
+            var o = store.Set(r.Entry, r.Rec.Value, "tune-up");
+            if (o.Ok) set.Add(r.Rec.Id); else failed++;
+            report.Add(o.Message);
+        }
+        if (seenFile != null)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(seenFile)!);
+            File.WriteAllLines(seenFile, SystemMenu.TuneUp.Seen(seenBefore, rows, set));
+        }
+        if (report.Count == 0) return new(0, "");
+        report.Insert(0, "omawin's recommended Windows settings (omawin tune-up says why; each undone like any setting):");
         return new(failed == 0 ? 0 : 1, string.Join('\n', report));
     }
 

@@ -10,11 +10,16 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin top [name]` | processes by app, the busiest first |
 | `omawin connections [app]` | which apps are talking to the internet, and to whom |
 | `omawin hosts` | the hosts file, as entries |
-| `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's |
+| `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's; `encrypt` for DNS over HTTPS |
+| `omawin proxy` | this account's system proxy, set and switched |
+| `omawin disk` | where a developer's disk space went, and getting it back |
+| `omawin pip [title]` | a window live in a small window on top (picture-in-picture) |
+| `omawin display` | each set of monitors' layout, put back when they're plugged in again |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
 | `omawin classic-menu` | Explorer's full right-click menu back, or Windows 11's short one |
+| `omawin updates` | what Windows Update is waiting to install, and the restart when you choose |
 
 ## "The file is open in another program"
 
@@ -57,7 +62,13 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 
 ## DNS
 
-`omawin dns` says which DNS each connected network uses: your router's (handed out automatically), or set by hand, named when it's one of the well-known ones. `omawin dns cloudflare` (or `quad9`, `google`) switches every connected adapter to it; `omawin dns router` gives them back to your network; add part of an adapter's name for one only (`omawin dns quad9 wi-fi`). It says which adapters change to what, then Windows asks once; the cache is cleared so the next lookup uses the new servers. **System menu › This PC › DNS** has the same. Cloudflare, Google and Quad9 are in Windows 11's DNS-over-HTTPS list, so Settings › Network can encrypt them.
+`omawin dns` says which DNS each connected network uses: your router's (handed out automatically), or set by hand, named when it's one of the well-known ones. `omawin dns cloudflare` (or `quad9`, `google`) switches every connected adapter to it; `omawin dns router` gives them back to your network; add part of an adapter's name for one only (`omawin dns quad9 wi-fi`). It says which adapters change to what, then Windows asks once; the cache is cleared so the next lookup uses the new servers. **System menu › This PC › DNS** has the same.
+
+**Encrypted DNS.** `omawin dns encrypt` turns on DNS over HTTPS (Windows 11) for the servers in use that Windows knows an encrypted address for: Cloudflare, Google and Quad9. Lookups then go encrypted, and none is sent in the clear. `omawin dns encrypt off` is the undo; `omawin dns` says under each network whether its DNS is encrypted. Your router's DNS can't be encrypted this way: switch to one of the three first. **System menu › This PC › DNS › Encrypt DNS** does the same.
+
+## The proxy
+
+`omawin proxy` says which system proxy this account uses (the one Edge, Chrome, winget and most programs follow): a server, the names that skip it, a setup script. `omawin proxy set proxy.example.com:8080` sets one and turns it on (names that should skip it go after: `omawin proxy set proxy.example.com:8080 *.corp.example`; the local network always does); `omawin proxy off` and `on` switch it without forgetting the server; `omawin proxy script <url>` uses a setup script (PAC), `script off` removes it. Each change says what it was before. It's Settings › Network › Proxy, for your account only, no admin; running programs are told at once. The launcher's *System proxy* switch does the on and off.
 
 ## Share the Wi-Fi
 
@@ -83,3 +94,39 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 ## The full right-click menu
 
 `omawin classic-menu` (**System menu › This PC › Full right-click menu**) gives Explorer back Windows 10's full right-click menu, without **Show more options**; again, and Windows 11's short one is back (`on`, `off`, `status` to say which). It's for your account only and needs no admin. Explorer restarts to show it: the taskbar blinks and open folder windows close (in a terminal it asks first; say no and it shows from Explorer's next start).
+
+## Windows Update without surprises
+
+`omawin updates` says whether Windows is waiting for a restart to finish installing updates, whether updates are paused and until when, your active hours (when Windows never restarts by itself), what's waiting to install (as of Windows Update's last check: nothing is downloaded or started by asking) and what was installed lately. **System menu › This PC › Windows Update** has the same, and the common changes:
+- `omawin updates restart tonight` restarts the PC at 03:00; `omawin updates restart 22:30` at another time; `omawin updates restart cancel` calls it off. Windows warns whoever is signed in before it happens. No admin.
+- `omawin updates pause` pauses updates for a week (`pause 14` for two; five weeks at most, as Settings allows); `omawin updates resume` is the undo. It's the same pause as Settings › Windows Update, which shows it and whose **Resume** works too.
+- `omawin updates hours 9-18` sets the active hours by hand (18 hours at most, Windows' limit); `omawin updates hours auto` lets Windows pick them from when you use the PC. They're also settings in the launcher (search *active hours*).
+
+Pausing and active hours are settings for the whole PC: it says what will change, then Windows asks once. Nothing here hides an update or turns Windows Update off.
+
+## Disk space
+
+Windows' own cleanup misses where a developer's space goes. `omawin disk` measures it (**System menu › This PC › Disk space**):
+- **Caches**: npm, pnpm, Yarn, Bun, NuGet, pip, uv, cargo, Go, Gradle, Maven, mise's downloads, and Temp's files older than a week, biggest first, wherever their environment variables put them. Everything in them comes back when a tool needs it. `omawin disk clean npm` empties one: through the tool's own command when it has one and it's installed (`npm cache clean --force`, `uv cache clean`, `go clean -modcache`…), else by deleting the folder's contents; files in use are left. It says the size and asks first.
+- **Linux disks**: each WSL distro's disk and Docker Desktop's, with what they really take. They grow and never shrink by themselves; `omawin disk sparse Arch` stops that distro and makes its disk give freed space back to Windows from now on (WSL's own switch, no admin). Docker's: `docker system df`, then `docker builder prune` and `docker system prune`.
+- **Old projects' build output**: `omawin disk projects` looks through your project folders (`~/src`, `~/code`, `~/projects`, `~/repos`, `~/source/repos`, Documents) for `node_modules`, `target`, `bin` and `obj`, `.venv`, `.next`, `build` and the like, only beside the file that makes them (a `target` with no `Cargo.toml` beside it is left alone), in projects untouched for 30 days. `omawin disk projects ~/work 90` for another folder or age; `omawin disk projects clean` deletes what it listed, after asking. Each comes back with `npm install`, `cargo build` and so on.
+
+Nothing outside a cache or a project's build output is ever deleted, and nothing without asking.
+
+## Picture-in-picture
+
+`omawin pip teams` keeps an eye on a window while you work in another: the window whose title holds the words, live, in a small window that stays on top in the bottom-right corner (Windows' own live preview, the one Alt+Tab draws: nothing is recorded). Drag it anywhere, resize it at its edges, scroll to make it fainter or stronger; double-click goes to the window, right-click closes the picture, and it closes by itself when the window does. Bound to a key (`omawin.exe pip` in `config/glazewm/config.yaml`), it shows the window in front; it has no key until you choose one.
+
+## Monitors that follow the dock
+
+Docking and undocking can leave the monitors at the wrong resolution, in the wrong order or with the wrong main one. Lay them out once the way you want (Settings › Display), then `omawin display save` (**System menu › This PC › Monitors: remember this layout**): from then on, whenever that same set of monitors is plugged in, omawin puts the layout back by itself (each monitor's resolution, place and rotation, and which is the main one), a couple of seconds after the last one arrives. Each set is remembered on its own: the laptop alone, the laptop at the desk, the laptop in a meeting room. `omawin display` shows the monitors now and whether a layout is saved for them; `omawin display apply` puts it back by hand, `omawin display forget` stops it. Refresh rates and scaling are left as Windows keeps them. The layouts are in `%LOCALAPPDATA%\launcher\displays.txt`, a text file you can read and edit.
+## The right-click menu's add-ins
+`omawin shell-extensions` (**System menu › This PC › Right-click menu add-ins**) lists every add-in programs have put into Explorer (7-Zip, Git, an antivirus, a cloud drive…), the ones that aren't Windows' own first, each with its maker, where it shows (right-click on files, on folders, drag and drop…) and its program. Windows loads them all into Explorer itself, so one slow or broken add-in slows or hangs every right-click. `omawin shell-extensions off <name>` leaves one out, through Windows' own list of blocked add-ins, for your account only; `on <name>` puts it back. Explorer reads the list when it starts: add `--now` to restart it then.
+
+## Environment variables
+
+`omawin env` (**System menu › This PC › Environment variables**) lists your environment variables and the PC's, a PATH as its entries. `omawin env set <name> <value>` and `omawin env unset <name>` change yours at once and tell Windows, so the next terminal you open sees it; `omawin env undo` puts back what was there before the last change, a variable that wasn't set included. Add `-Machine` for the PC's, which every account shares: the change is shown first, then Windows asks for an administrator once. `omawin path` checks the PATH itself (broken entries, which `node` or `python` wins).
+
+## A Dev Drive
+
+`omawin dev-drive` (**System menu › This PC › Dev Drive**) says whether this PC has a Dev Drive: Microsoft's ReFS drive for code, which Defender scans in its performance mode, so builds and package installs run noticeably faster. `omawin dev-drive create` makes one (100 GB unless you say, at least 50; the first free letter from D unless you name one) as a file that grows as it's used (`C:\DevDrive\dev.vhdx`), attached again at every start-up: it says exactly what it will do, then Windows asks for an administrator once. It needs Windows 11 with its 2023 updates. `omawin dev-drive caches E` then points the package managers' caches at it (npm, Yarn, Bun, NuGet, pip, uv, Go, Gradle, vcpkg, mise) through your environment variables, leaving any you set yourself; the old caches stay where they are, and `omawin env undo` puts back one at a time. Nothing of yours moves: put new projects on the drive.

@@ -27,7 +27,7 @@ public static class Packages
 {
     public static readonly string[] Sources = ["winget", "choco", "scoop"];
 
-    public static string Label(string source) => source switch { "winget" => "winget", "choco" => "Chocolatey", _ => "Scoop" };
+    public static string Label(string source) => source switch { "winget" => "winget", "choco" => "Chocolatey", "scoop" => "Scoop", _ => InstalledPackages.Label(source) };
 
     // Ids handed to menu.ps1 -Install: what the three managers' ids look like, nothing that
     // could break out of a command line (each source checks the same again).

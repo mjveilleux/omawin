@@ -1,0 +1,117 @@
+name: Screenshots
+
+# Pictures of the menu app on a real Windows desktop (a GitHub runner's): the bar and One Search
+# in its main views, full screen, uploaded as the artifact `screenshots`. By hand, or on a push
+# that changes this file. Set up as an install would leave it, as far as the menu app goes: the
+# Nerd Font and the theme pictures from the latest release, a theme and its wallpaper. No GlazeWM
+# (nothing tiles) and the runner's own apps.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/screenshots.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: The font and theme pictures from the latest release, as an install puts them
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo '${{ github.repository }}' --pattern 'omawin-tool-font.zip' --pattern 'omawin-tool-theme-thumbs.zip' --dir dl
+          $fonts = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+          New-Item -ItemType Directory -Force $fonts, (Join-Path $env:LOCALAPPDATA 'launcher\thumbnails') | Out-Null
+          Expand-Archive dl\omawin-tool-font.zip dl\font -Force
+          Add-Type -Namespace Native -Name Gdi -MemberDefinition '[DllImport("gdi32.dll", CharSet = CharSet.Unicode)] public static extern int AddFontResourceW(string file);'
+          $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+          if (-not (Test-Path $key)) { New-Item $key -Force | Out-Null }
+          Get-ChildItem dl\font -Recurse -Filter *.ttf | ForEach-Object {
+            $to = Join-Path $fonts $_.Name
+            Copy-Item $_.FullName $to -Force
+            Set-ItemProperty $key "$($_.BaseName) (TrueType)" $to
+            [void][Native.Gdi]::AddFontResourceW($to)
+          }
+          Expand-Archive dl\omawin-tool-theme-thumbs.zip (Join-Path $env:LOCALAPPDATA 'launcher\thumbnails') -Force
+          # The theme's wallpaper (kanagawa's is a JPEG: Windows Server has no WebP decoder).
+          Invoke-WebRequest 'https://raw.githubusercontent.com/basecamp/omarchy/ecf0eb362283efad6404b939981c7ef8d58039b3/themes/kanagawa/backgrounds/1-kanagawa.jpg' -OutFile "$env:TEMP\wallpaper.jpg"
+          Add-Type -Namespace Native -Name Desk -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfoW(int action, int param, string value, int flags);'
+          [void][Native.Desk]::SystemParametersInfoW(0x14, 0, "$env:TEMP\wallpaper.jpg", 3) # SPI_SETDESKWALLPAPER, saved and broadcast
+      - name: Build the menu app
+        shell: pwsh
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu -BuildOnly -Jit
+      - name: One Search, step by step
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Drawing, System.Windows.Forms
+          # A bigger screen where the runner allows it (Windows Server's own cmdlet).
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Host "resolution stays: $($_.Exception.Message)" }
+          $state = Join-Path $env:LOCALAPPDATA 'launcher'
+          New-Item -ItemType Directory -Force $state, shots | Out-Null
+          'kanagawa' | Set-Content (Join-Path $state 'theme') -NoNewline
+          'on' | Set-Content (Join-Path $state 'animations') -NoNewline
+          $env:DOTFILES = (Get-Location).Path
+          (New-Object -ComObject Shell.Application).MinimizeAll() # the runner's console off the desktop
+          $app = Start-Process out\menu\SystemMenu.exe -ArgumentList '--start-hidden' -PassThru
+          # Up once its request signal exists; then a moment for the bar's first paint.
+          $deadline = (Get-Date).AddSeconds(60)
+          $ready = $null
+          while (-not [Threading.EventWaitHandle]::TryOpenExisting('Local\dotfiles-system-menu-signal', [ref]$ready) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 250 }
+          if ($ready) { $ready.Dispose() } else { throw 'the menu app never came up' }
+          Start-Sleep 5
+
+          # As omawin.exe sends it (bin/omawin.cs Send): the words in the request file, then the signal.
+          function Send([string]$Request) {
+            Set-Content (Join-Path $state 'system-menu-request') $Request -NoNewline
+            $signal = [Threading.EventWaitHandle]::OpenExisting('Local\dotfiles-system-menu-signal')
+            [void]$signal.Set()
+            $signal.Dispose()
+          }
+          # A fresh view: the same request on an open menu closes it, as the key does.
+          function View([string]$Request) { Send '--hide'; Start-Sleep -Milliseconds 400; Send $Request }
+          function Shot([string]$Name) {
+            Start-Sleep -Milliseconds 1500 # the arrival, rows, icons and file results settle
+            $screen = [Windows.Forms.SystemInformation]::VirtualScreen
+            $bitmap = [Drawing.Bitmap]::new($screen.Width, $screen.Height)
+            $g = [Drawing.Graphics]::FromImage($bitmap)
+            $g.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)
+            $bitmap.Save("shots\$Name.png", [Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bitmap.Dispose()
+            Write-Host "shots\$Name.png ($($screen.Width)x$($screen.Height))"
+          }
+
+          Shot '00-desktop-bar'
+          View '--search';                  Shot '01-home'
+          Send '--type term';               Shot '02-typing-term'
+          Send '--type dark';               Shot '03-typing-dark-settings'
+          Send '--type 12*4.5';             Shot '04-calculator'
+          View '--search setting';          Shot '05-filter-settings'
+          Send '--type mouse';              Shot '06-settings-mouse'
+          View '--search command --browse'; Shot '07-browse-commands'
+          View '--search command';          Shot '08-filter-commands'
+          Send '--type theme';              Shot '09-commands-theme'
+          View '--search file';             Shot '10-filter-files'
+          Send '--type readme';             Shot '11-files-readme'
+          View '--search theme';            Shot '12-themes'
+          View '--search clipboard';        Shot '13-clipboard'
+          View '--search --retired-key';    Shot '14-win-alt-space-note'
+
+          if (-not $app.HasExited) { $app.Kill() }
+          $log = Join-Path $state 'system-menu.log'
+          if (Test-Path $log) { Copy-Item $log shots\ }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+          retention-days: 14
+          if-no-files-found: error

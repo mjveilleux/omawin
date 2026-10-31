@@ -797,7 +797,7 @@ New projects go in `~/src` in Linux: wherever a project is created (the launcher
 
 ### Windows Terminal, Install › Development
 
-- Windows Terminal generates a profile per distro itself (its WSL profile generator; the GUID is derived from the distro name *(check)*). `config/windows-terminal/settings.json`'s `defaultProfile` stays PowerShell; `LaunchTerminal` passes `wsl.exe -d <distro>` explicitly, so the default profile doesn't matter for omawin's windows.
+- Windows Terminal generates a profile per distro itself (its WSL profile generator). Its GUID is a v5 UUID of the distro's name in UTF-16 under Terminal's profile namespace `{2BDE4A90-D05F-401C-9492-E40884EAD1D8}` (checked: Ubuntu's comes out as the well-known `{2c4de342-38b7-51cf-b940-2309a097f518}`), so `wsl/install.ps1` writes a fragment that `updates` that profile (`startingDirectory: ~`). `config/windows-terminal/settings.json`'s `defaultProfile` stays PowerShell; `LaunchTerminal` passes `wsl.exe -d <distro>` explicitly, so the default profile doesn't matter for omawin's windows.
 - Install › Development asks the side, Linux first; a Linux pick runs `wsl.exe -d <distro> -- bash -lc "mise use -g <tool>@latest"` (login shell: mise on PATH).
 - `bin/profile-terminal.ps1` gains `-Wsl` (passes `--wsl` to the launches it times).
 

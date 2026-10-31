@@ -169,6 +169,33 @@ if command -v fd > /dev/null; then
   expect_not "index: no hidden folders" "$index" ".cache"
 fi
 
+# omawin-dev-env: what counts as installed (a mise version folder, not the alias links mise leaves
+# behind), and the databases' containers. docker here is a stand-in with one database's container.
+dev_env="$repo/wsl/bin/omawin-dev-env"
+mise_dir="$tmp/mise"
+mkdir -p "$mise_dir/installs/node/22.1.0" "$mise_dir/installs/go" "$tmp/dockerbin"
+ln -s /nonexistent "$mise_dir/installs/go/latest"
+cat > "$tmp/dockerbin/docker" << EOF
+#!/bin/bash
+case \$1 in
+  info) exit 0 ;;
+  ps) printf 'postgres18\nsomething-else\n' ;;
+  *) echo "\$*" >> $(printf %q "$tmp/docker.log") ;;
+esac
+EOF
+chmod +x "$tmp/dockerbin/docker"
+dev() { MISE_DATA_DIR="$mise_dir" PATH="$tmp/dockerbin:$PATH" bash "$dev_env" "$@"; }
+expect_eq "dev-env: the installed ones" "$(dev check | xargs)" "docker-db node"
+if dev check node; then ok; else bad "dev-env: node is installed"; fi
+if dev check go; then bad "dev-env: a mise alias alone isn't Go"; else ok; fi
+dev check nosuch 2> /dev/null; expect_eq "dev-env: an unknown name" "$?" "2"
+if dev install docker-db PostgreSQL Nope > /dev/null 2>&1; then bad "dev-env: an unknown database fails"; else ok; fi
+expect_eq "dev-env: nothing ran before the unknown database was found" "$(cat "$tmp/docker.log" 2> /dev/null)" ""
+dev install docker-db Redis > /dev/null
+expect_has "dev-env: Omarchy's Redis, on this PC only" "$(cat "$tmp/docker.log")" "run -d --restart unless-stopped -p 127.0.0.1:6379:6379 --name=redis redis:7"
+dev remove docker-db PostgreSQL > /dev/null
+expect_has "dev-env: a database removed with its data" "$(cat "$tmp/docker.log")" "rm --force --volumes postgres18"
+
 # --- config/bash/bashrc in an interactive shell --------------------------------------------------------
 os_id="$(. /etc/os-release && echo "$ID")"
 mkdir -p "$tmp/run" ~/src/my\ app

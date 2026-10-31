@@ -148,6 +148,30 @@ function Write-Log([string]$Text) {
     try { [IO.File]::AppendAllText($UI.Log, ('{0:yyyy-MM-dd HH:mm:ss}  {1}{2}' -f (Get-Date), $Text, [Environment]::NewLine)) } catch { }
 }
 
+# While an install or update runs, the bar shows a glyph that opens its log; when it ends, a
+# toast says how it went (roadmap 2.2; shell/menu-app/Bar/Installing.cs reads these two files).
+# install-running.txt: kind, this process, the log. install-done.txt: kind, result, seconds, the
+# step it stopped at. A crash leaves running behind; the bar sees the process gone.
+$InstallRunningFile = Join-Path $env:LOCALAPPDATA 'launcher\install-running.txt'
+$InstallDoneFile = Join-Path $env:LOCALAPPDATA 'launcher\install-done.txt'
+
+function Start-InstallMark([string]$Kind) {
+    try {
+        New-Item -ItemType Directory -Force -Path (Split-Path $InstallRunningFile) | Out-Null
+        [IO.File]::WriteAllLines($InstallRunningFile, [string[]]@("kind`t$Kind", "pid`t$PID", "log`t$($UI.Log)"))
+    } catch { }
+}
+
+function Stop-InstallMark([string]$Kind) {
+    try {
+        $failed = @($UI.Steps | Where-Object { $_.State -eq 'failed' } | ForEach-Object { $_.Name }) | Select-Object -First 1
+        $result = if ($failed) { 'failed' } elseif ($UI.Warnings.Count) { 'warnings' } else { 'ok' }
+        $seconds = [Math]::Round(((Get-Date) - $Started).TotalSeconds).ToString([Globalization.CultureInfo]::InvariantCulture)
+        [IO.File]::WriteAllLines($InstallDoneFile, [string[]]@("kind`t$Kind", "result`t$result", "seconds`t$seconds", "failed`t$failed", "warnings`t$($UI.Warnings.Count)"))
+        Remove-Item $InstallRunningFile -ErrorAction SilentlyContinue
+    } catch { }
+}
+
 function Write-UILine([string]$Text) { [Console]::Out.WriteLine($Text) }
 
 function Format-Duration([double]$Seconds) {

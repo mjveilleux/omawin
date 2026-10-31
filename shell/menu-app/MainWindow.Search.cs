@@ -408,6 +408,17 @@ public sealed partial class MainWindow
             case Windows.System.VirtualKey.K when ctrl && (actionsFor != null || page == null && !tileMode && selected < results.Count):
                 ToggleActions();
                 return true;
+            // Ctrl+P: pin the selected result to the home, or unpin it; on the home, a pin's tile.
+            case Windows.System.VirtualKey.P when ctrl && actionsFor == null && page == null && !tileMode && !finding && selected < results.Count
+                    && Pins.CanPin(results[selected].Tag):
+                TogglePin(results[selected]);
+                return true;
+            case Windows.System.VirtualKey.P when ctrl && tileMode && OnHome && selected < tiles.Count && tiles[selected].Spec.Key.StartsWith(Pins.TileKey):
+                var tile = tiles[selected].Spec;
+                SavePins(Pins.Toggle(PinList, tile.Key[Pins.TileKey.Length..], STag.More).Pins);
+                Render();
+                FooterLeft.Text = Pins.Say(PinChange.Unpinned, tile.Label);
+                return true;
             // Ctrl+Enter: show a file in its folder; Ctrl+Shift+Enter: run an item as administrator.
             case Windows.System.VirtualKey.Enter when ctrl && actionsFor == null && page == null && !tileMode && !finding && selected < results.Count:
                 var r = results[selected];
@@ -463,7 +474,8 @@ public sealed partial class MainWindow
     ResultFacts FactsOf(Result r) => new(
         Program: r.Data is LaunchItem { IsApp: false, BuiltIn: null } item && !Launcher.Link.IsMatch(item.Command.Trim()),
         Folder: r.Data is FileSearch.Hit { IsDir: true },
-        Undoable: Settings.History.LastUndoable() != null);
+        Undoable: Settings.History.LastUndoable() != null,
+        Pinned: PinList.Contains(r.Id));
 
     // What each action does, for this result.
     List<ResultAction> ActionsOf(Result r) => ActionPlan.Bind(ActionPlan.For(r.Tag, r.Row, FactsOf(r)), verb => Do(r, verb));
@@ -517,11 +529,13 @@ public sealed partial class MainWindow
             case (Project p, Verb.CopyPath):
                 return Now(() => { ClipboardHistory.SetText(p.Path); Dismiss(); });
             case (ClipFile f, Verb.Copy):
-                return Now(() => { try { ClipboardHistory.SetText(File.ReadAllText(f.File)); } catch (IOException) { } Dismiss(); });
+                return Now(() => { try { ClipboardHistory.SetEntry(f.File); } catch (IOException) { } Dismiss(); });
             case (ClipFile f, Verb.Delete):
                 return Now(() => { try { File.Delete(f.File); } catch (IOException) { } clipTexts.Remove(f.File); clipList = null; Render(); });
             case (ThemeRef t, Verb.Backgrounds):
                 return Now(() => { OpenBackgrounds(t.File); Render(); Slide(1); });
+            case (_, Verb.Pin):
+                return Now(() => TogglePin(r));
             default:
                 return null;
         }
@@ -595,7 +609,7 @@ public sealed partial class MainWindow
         if (ReferenceEquals(appsFor, launchItems)) return appResults;
         appsFor = launchItems;
         return appResults = [.. launchItems.Select(item => new Result("app:" + item.Key, STag.App, item.Name,
-            item.IsApp ? "" : item.Hint.TrimEnd(' ', '›'), string.Join(' ', item.Keywords),
+            item.IsApp ? item.Linux ?? "" : item.Hint.TrimEnd(' ', '›'), string.Join(' ', item.Keywords),
             Primary: () => { Launch(item, SearchText); return Task.CompletedTask; })
             { Icon = item.Icon, IconKey = item.IconKey, Data = item })];
     }
@@ -737,10 +751,12 @@ public sealed partial class MainWindow
                 SourceUpdated();
             }));
         }
-        return [.. (projects ?? []).Select(p => new Result("project:" + p.Path, STag.Project, p.Name, p.Shown + (p.Wsl ? " · " + Projects.Linux.Name : ""), "repo project",
-            Primary: () => { HideMenu(); Projects.Open(p); return Task.CompletedTask; })
-        { Icon = Glyph(0xE83A), Data = p })];
+        return [.. (projects ?? []).Select(FromProject)];
     }
+
+    Result FromProject(Project p) => new("project:" + p.Path, STag.Project, p.Name, p.Shown + (p.Wsl ? " · " + Projects.Linux.Name : ""), "repo project",
+        Primary: () => { HideMenu(); Projects.Open(p); return Task.CompletedTask; })
+    { Icon = Glyph(0xE83A), Data = p };
 
     // The clipboard history: each entry's first line, read once (a file never changes once written).
     sealed record ClipFile(string File);
@@ -759,7 +775,7 @@ public sealed partial class MainWindow
         {
             if (!clipTexts.TryGetValue(f, out var line)) clipTexts[f] = line = OneLine(f, 90);
             return new Result("clip:" + Path.GetFileName(f), STag.Clipboard, line, "Copied " + Ago(ClipboardHistory.When(f)),
-                Primary: () => { Paste(f); return Task.CompletedTask; }) { Icon = Glyph(0xF014C), Data = new ClipFile(f) };
+                Primary: () => { Paste(f); return Task.CompletedTask; }) { Icon = Glyph(ClipEntries.IsImage(f) ? 0xF02E9 : 0xF014C), Data = new ClipFile(f) };
         })];
     }
 
@@ -816,6 +832,7 @@ public sealed partial class MainWindow
     // A new showing reads the files-backed sources again.
     void ForgetSources()
     {
+        pinList = null;
         themeList = null;
         clipList = null;
         filesFor = "";
@@ -931,7 +948,8 @@ public sealed partial class MainWindow
                 lines.Add("Opens Windows' own page for it.");
                 break;
         }
-        if (r.Tag is not (STag.More or STag.Package or STag.Web or STag.Calculator)) lines.Add("Ctrl+K: more actions.");
+        if (r.Tag is not (STag.More or STag.Package or STag.Web or STag.Calculator))
+            lines.Add(!Pins.CanPin(r.Tag) ? "Ctrl+K: more actions." : PinList.Contains(r.Id) ? "Ctrl+K: more actions. Ctrl+P: unpin it from the home." : "Ctrl+K: more actions. Ctrl+P: pin it to the home.");
         return string.Join("\n\n", lines);
     }
 
@@ -952,7 +970,7 @@ public sealed partial class MainWindow
         var history = History.Load();
         var byUse = launchItems.Where(i => history.Items.ContainsKey(i.Key)).OrderByDescending(i => history.Boost(i.Key, "")).Select(i => i.Key);
         var here = new HashSet<string>(HomePlan.Switches.Where(id => Settings.Find(id) != null));
-        var rows = HomePlan.Arrange([.. byKey.Values.Select(i => new HomeItem(i.Key, i.BuiltIn, i.IsApp))], byUse, here);
+        var rows = HomePlan.Arrange([.. byKey.Values.Select(i => new HomeItem(i.Key, i.BuiltIn, i.IsApp))], byUse, here, PinList);
         foreach (var row in rows)
         {
             var specs = row.Slots.Select(s => HomeTile(s, byKey)).OfType<TileSpec>().ToList();
@@ -968,6 +986,7 @@ public sealed partial class MainWindow
     TileSpec? HomeTile(HomeSlot slot, Dictionary<string, LaunchItem> byKey)
     {
         var style = slot.Style switch { HomeStyle.Hero => "hero", HomeStyle.Wide => "wide", HomeStyle.Switch => "switch", _ => "tile" };
+        if (slot.Style == HomeStyle.Pin) return PinTile(slot.Key[Pins.TileKey.Length..], byKey);
         if (slot.Key == HomePlan.Browse)
             return new TileSpec
             {
@@ -1004,6 +1023,105 @@ public sealed partial class MainWindow
         if (item.BuiltIn == "projects") spec.Sub = ProjectsSub();
         if (item.BuiltIn == "clipboard") { spec.Sub = ClipSub(); spec.SubMono = true; }
         return spec;
+    }
+
+    // --- pins (Ctrl+P; Search/Pins.cs) -----------------------------------------------------------
+    // Your pinned results' ids, read once a showing; %LOCALAPPDATA%\launcher\pins.txt.
+    static string PinsFile => Path.Combine(MenuModel.StateDir, "pins.txt");
+    List<string>? pinList;
+
+    List<string> PinList
+    {
+        get
+        {
+            if (pinList != null) return pinList;
+            try { return pinList = File.Exists(PinsFile) ? Pins.Parse(File.ReadAllLines(PinsFile)) : []; }
+            catch (IOException) { return pinList = []; }
+        }
+    }
+
+    void SavePins(List<string> list)
+    {
+        pinList = list;
+        try
+        {
+            Directory.CreateDirectory(MenuModel.StateDir);
+            File.WriteAllLines(PinsFile, list);
+        }
+        catch (IOException ex) { App.Log(ex); }
+    }
+
+    // The home: nothing typed, no filter, no view open.
+    bool OnHome => launching && page == null && searchFilter == null && current.Length == 0 && !pickingTheme && Input.Text.Length == 0;
+
+    // Ctrl+P (or Ctrl+K's Pin) on a result: on the home's Pinned row, or off it. The list stays as
+    // it was, the same row selected; the footer says what happened.
+    void TogglePin(Result r)
+    {
+        var (list, change) = Pins.Toggle(PinList, r.Id, r.Tag);
+        if (change is PinChange.Pinned or PinChange.Unpinned) SavePins(list);
+        if (actionsFor != null) CloseActions();
+        else { resultsUpdate = true; Render(); }
+        FooterLeft.Text = Pins.Say(change, r.Name);
+    }
+
+    // A pin's tile: an app as its own tile, anything else as its result (icon, name, tag colour);
+    // Enter does what Enter on the result does. Gone (a file deleted, an app uninstalled): no tile,
+    // and the pin waits in case it comes back.
+    TileSpec? PinTile(string id, Dictionary<string, LaunchItem> byKey)
+    {
+        var key = Pins.TileKey + id;
+        if (id.StartsWith(ResultIds.App, StringComparison.Ordinal) && byKey.TryGetValue(id[ResultIds.App.Length..], out var item))
+            return new TileSpec { Key = key, BuiltIn = item.BuiltIn, Icon = item.Icon, Label = item.Name, Color = KindColor(item), AppId = item.IconKey, Run = () => Launch(item) };
+        if (PinnedResult(id) is not { } r) return null;
+        var spec = new TileSpec
+        {
+            Key = key, Icon = r.Icon ?? Glyph(TagLook.Glyph(r.Tag)), Label = r.Name, Color = PaintColor(r.Tag), AppId = r.IconKey,
+            Sub = TagLook.Word(r.Tag).ToLowerInvariant(), Run = () => Activate(r),
+        };
+        if (r.Data is SettingEntry { Kind: SettingKind.Switch or SettingKind.Choice or SettingKind.Slider } e)
+        {
+            HookSettings();
+            var value = Settings.Peek(e);
+            spec.Sub = value == null ? "…" : Settings.LabelNow(e, value);
+            spec.Current = value == "on";
+            if (spec.Current) spec.Color = Hex(theme.Green);
+        }
+        return spec;
+    }
+
+    // A pinned id back to its result, from the source that made it.
+    Result? PinnedResult(string id)
+    {
+        string After(string prefix) => id[prefix.Length..];
+        try
+        {
+            if (id.StartsWith("setting:", StringComparison.Ordinal))
+                return Settings.Find(After("setting:")) is { } e ? FromSetting(e) : null;
+            if (id.StartsWith("page:", StringComparison.Ordinal)) // one of Windows' own pages: found again by its name
+                return SettingResults(id[(id.LastIndexOf('#') + 1)..], pending: false).FirstOrDefault(r => r.Id == id);
+            if (id.StartsWith("cmd:", StringComparison.Ordinal) || id.StartsWith("menu:", StringComparison.Ordinal))
+                return CommandResults("").FirstOrDefault(r => r.Id == id);
+            if (id.StartsWith("theme:", StringComparison.Ordinal))
+                return ThemeResults().FirstOrDefault(r => r.Id == id);
+            if (id.StartsWith("project:", StringComparison.Ordinal))
+            {
+                var path = After("project:");
+                if (ProjectResults().FirstOrDefault(r => r.Id == id) is { } known) return known;
+                bool linux = path.StartsWith('/'); // a WSL project, before the projects are found again
+                return linux || Directory.Exists(path) ? FromProject(new Project(linux, path, 0, false)) : null;
+            }
+            if (id.StartsWith("file:", StringComparison.Ordinal))
+            {
+                var path = After("file:");
+                bool dir = !FileSearch.IsLinux(path) && Directory.Exists(path);
+                if (!dir && !File.Exists(path) && !FileSearch.IsLinux(path)) return null;
+                var name = Path.GetFileName(path.TrimEnd('\\', '/'));
+                return FromFile(new FileSearch.Hit(path, name.Length > 0 ? name : path, Path.GetDirectoryName(path) ?? "", "", dir, 0, null, null, false, 0));
+            }
+        }
+        catch (Exception ex) { App.Log(ex); }
+        return null;
     }
 
     // A quick switch: its icon, name and state; On glows in green with a hairline ring, Off is

@@ -220,11 +220,23 @@ static class Omawin
         string reply = Path.Combine(dir, id + ".txt");
         Directory.CreateDirectory(dir);
         if (File.Exists(reply)) File.Delete(reply);
+        string progress = Path.Combine(dir, id + ".progress");
+        if (File.Exists(progress)) File.Delete(progress);
         using (var done = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\omawin-reply-" + id))
         {
             int sent = Send("--reply " + id + " " + request);
             if (sent != 0) return sent;
-            if (!done.WaitOne(20000)) return Fail("the menu app didn't answer (omawin restart menu)");
+            // A long answer (removing apps) writes its progress beside the reply as it goes: each
+            // new line is shown, and keeps the wait going; 20 s with no word is a menu app that's gone.
+            var lastWord = DateTime.UtcNow;
+            int shown = 0;
+            while (!done.WaitOne(500))
+            {
+                shown = ShowProgress(progress, shown, ref lastWord);
+                if ((DateTime.UtcNow - lastWord).TotalSeconds > 20) return Fail("the menu app didn't answer (omawin restart menu)");
+            }
+            ShowProgress(progress, shown, ref lastWord);
+            try { File.Delete(progress); } catch (IOException) { }
         }
         string[] lines;
         try { lines = File.ReadAllLines(reply, Encoding.UTF8); File.Delete(reply); }
@@ -247,6 +259,20 @@ static class Omawin
             else Console.Error.WriteLine(text);
         }
         return code;
+    }
+
+    // The progress lines past the first `shown`, printed in a terminal; returns how many there are.
+    static int ShowProgress(string file, int shown, ref DateTime lastWord)
+    {
+        string text;
+        try { text = File.Exists(file) ? File.ReadAllText(file, Encoding.UTF8) : ""; }
+        catch (IOException) { return shown; }
+        // Only whole lines: the last piece is empty, or a line still being written.
+        string[] lines = text.Split('\n');
+        int complete = lines.Length - 1;
+        for (int i = shown; i < complete; i++) if (InTerminal) Console.WriteLine(lines[i].TrimEnd('\r'));
+        if (complete > shown) lastWord = DateTime.UtcNow;
+        return Math.Max(shown, complete);
     }
 
     static int Builtin(string name, string[] args)
@@ -721,6 +747,7 @@ static class Omawin
             a.Add("-e");
             a.AddRange(l.Command);
         }
+        Trace("noctty-own-process"); // omawin profile terminal -Wsl: from here to noctty's first frame
         return Detach(exe, a);
     }
 

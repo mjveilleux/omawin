@@ -9,7 +9,7 @@
 - RStudio (within 2 s), VS Code and Positron
 - btop, from its next start
 
-**Win+Ctrl+Space** (or Style › Next background) cycles the theme's backgrounds.
+**Win+Ctrl+Space** (or Style › Next background) cycles the theme's backgrounds. With more than one monitor, each gets its own: the chosen background on the leftmost, the theme's next ones on the others, left to right.
 
 **System menu › Style › Backgrounds** shows them all at once: a grid of your theme's wallpapers, the one on your desktop checked. Arrow keys move, Enter (or a click) sets one and leaves the grid open so you can try another; only the wallpaper and the lock screen change. Type to narrow it by the picture's name. **Tab** (Shift+Tab back) shows the next theme's wallpapers: picking one of those switches to that theme, on that wallpaper. Every picture comes with omawin, so the grid is complete as soon as it opens.
 

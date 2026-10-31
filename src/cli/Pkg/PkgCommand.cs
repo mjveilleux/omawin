@@ -10,7 +10,7 @@ namespace Omawin.Cli.Pkg;
 //   omawin pkg install <name...> [--from winget|scoop|choco|mise] [--machine] [--linux]
 //   omawin pkg remove <name...> [--linux]
 //   omawin pkg update [name...] [--all] [--from <manager>] [--linux]
-//   omawin pkg list [--refresh] [--updates] [--linux]
+//   omawin pkg list [--refresh] [--updates] [--linux] [--tsv]
 //   omawin pkg info <name>
 //   omawin pkg move <name> --to <manager>
 //   omawin pkg prefer [manager...]
@@ -367,7 +367,7 @@ public sealed class PkgCommand(Host host)
         {
             var listed = new Dictionary<string, IReadOnlyList<Installed>>();
             foreach (var m in Managers.Installable.Where(host.Has))
-                if (Ask(m) is { } now) listed[m] = now;
+                if (Ask(m, quiet: a.Tsv) is { } now) listed[m] = now;
             rows = PackageRecord.Merge(rows, listed, Names);
             WriteRecord(rows);
             WriteInstalled(rows);
@@ -380,6 +380,13 @@ public sealed class PkgCommand(Host host)
                 foreach (var p in CommandLines.ParseOutdated(m, output)) waiting[m + ":" + p.Id] = p.Version;
             }
         if (a.From != null) rows = rows.Where(r => r.Source == a.From).ToList();
+        // --tsv: for the menu app's Install › Remove, a row a line: name, source, id, version, by.
+        if (a.Tsv)
+        {
+            foreach (var r in rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase))
+                o.WriteLine(string.Join('\t', new[] { r.Name, r.Source, r.Id, r.Version, r.By }.Select(s => s.Replace('\t', ' ').Replace('\n', ' '))));
+            return 0;
+        }
         if (rows.Count == 0) { o.WriteLine("  nothing recorded yet: omawin pkg list --refresh asks each manager"); return 0; }
         var table = rows.OrderBy(r => r.Name, StringComparer.OrdinalIgnoreCase).Select(r => new[]
         {
@@ -392,9 +399,9 @@ public sealed class PkgCommand(Host host)
     }
 
     // What a manager says it has, or null when it couldn't say (its rows are then left as they are).
-    List<Installed>? Ask(string manager)
+    List<Installed>? Ask(string manager, bool quiet = false)
     {
-        o.WriteLine($"  asking {Managers.Label(manager)} ...");
+        if (!quiet) o.WriteLine($"  asking {Managers.Label(manager)} ...");
         if (manager == Managers.Winget)
         {
             var file = host.TempFile("winget-export.json");

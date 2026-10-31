@@ -12,8 +12,20 @@ static class Reply
         if (pid.Length == 0 || pid.Length > 10 || !pid.All(char.IsAsciiDigit)) return; // it names a file and an event
         Task.Run(async () =>
         {
+            // A long answer (removing apps) says how it's going: a line at a time beside the
+            // reply, which omawin.exe prints as it waits, and which keeps it waiting.
+            var progressFile = Path.Combine(MenuModel.StateDir, "replies", pid + ".progress");
+            void Progress(string line)
+            {
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(progressFile)!);
+                    File.AppendAllText(progressFile, line.Replace('\n', ' ') + "\n");
+                }
+                catch (IOException ex) { App.Log(ex); }
+            }
             SettingCommands.Answer answer;
-            try { answer = await WinSettings.Answer(request); }
+            try { answer = await WinSettings.Answer(request, Progress); }
             catch (Exception ex) { App.Log(ex); answer = new(1, ex.Message); }
             try
             {

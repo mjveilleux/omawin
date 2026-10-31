@@ -103,6 +103,81 @@ public static partial class AdminScripts
         return Wrap(status, body.ToString());
     }
 
+    // DNS over HTTPS on or off for these adapters' servers (8.19): each one's DohFlags key, made or
+    // removed; only servers Windows knows an encrypted address for. Then the cache is cleared.
+    public static string DnsEncryption(IReadOnlyList<(Guid Adapter, string Server)> servers, bool on, string status)
+    {
+        if (servers.Count == 0) throw new ArgumentException("no servers", nameof(servers));
+        var body = new StringBuilder();
+        foreach (var (adapter, server) in servers)
+        {
+            if (!System.Net.IPAddress.TryParse(server, out var ip) || DnsPresets.Encryptable(ip) == null)
+                throw new ArgumentException($"not a server with an encrypted address: {server}", nameof(servers));
+            // .NET's registry calls, not the provider's paths: an IPv6 key name has colons in it.
+            var key = Quote(DnsPresets.DohKey(adapter, ip));
+            body.Append(on
+                ? $"$k = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey({key}); $k.SetValue('DohFlags', [long]{DnsPresets.DohAutomatic}, [Microsoft.Win32.RegistryValueKind]::QWord); $k.Close()\n"
+                : $"[Microsoft.Win32.Registry]::LocalMachine.DeleteSubKey({key}, $false)\n");
+        }
+        body.Append("Clear-DnsClientCache");
+        return Wrap(status, body.ToString());
+    }
+
+    // Windows' own key remap (8.12), read at the next start. A map that was there before omawin's
+    // first is kept beside it ("Scancode Map (before omawin)"), and off puts that one back.
+    public const string ScancodeBackup = "Scancode Map (before omawin)";
+
+    public static string ScancodeMapWrite(byte[]? map, string status)
+    {
+        if (map != null && ScancodeMap.Read(map) == null) throw new ArgumentException("not a Scancode Map", nameof(map));
+        var body = new StringBuilder($"$k = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey({Quote(ScancodeMap.Key)})\ntry {{\n")
+            .Append($"$old = $k.GetValue({Quote(ScancodeMap.Value)})\n")
+            .Append($"$kept = $k.GetValue({Quote(ScancodeBackup)})\n");
+        if (map != null)
+            body.Append($"if ($old -ne $null -and $kept -eq $null) {{ $k.SetValue({Quote(ScancodeBackup)}, [byte[]]$old, [Microsoft.Win32.RegistryValueKind]::Binary) }}\n")
+                .Append($"$k.SetValue({Quote(ScancodeMap.Value)}, [byte[]]@({string.Join(",", map.Select(x => $"0x{x:X2}"))}), [Microsoft.Win32.RegistryValueKind]::Binary)\n");
+        else
+            body.Append($"if ($kept -ne $null) {{ $k.SetValue({Quote(ScancodeMap.Value)}, [byte[]]$kept, [Microsoft.Win32.RegistryValueKind]::Binary); $k.DeleteValue({Quote(ScancodeBackup)}, $false) }}\n")
+                .Append($"else {{ $k.DeleteValue({Quote(ScancodeMap.Value)}, $false) }}\n");
+        body.Append("} finally { $k.Close() }");
+        return Wrap(status, body.ToString());
+    }
+
+    // Windows Update's pause (8.18): the values Settings writes, each a UTC time checked here; or,
+    // with none given, the pause removed (resume). The service reads them at its next check, and
+    // Settings shows "Resume updates" as for its own pause.
+    public static string UpdatePause(IReadOnlyList<(string Name, string Value)> values, string status)
+    {
+        var key = Quote(@"HKLM:\" + UpdatePlan.UxKey);
+        var body = new StringBuilder($"$k = {key}\nif (-not (Test-Path -LiteralPath $k)) {{ New-Item -Path $k -Force | Out-Null }}\n");
+        if (values.Count == 0)
+            foreach (var name in UpdatePlan.PauseValueNames)
+                body.Append($"Remove-ItemProperty -LiteralPath $k -Name {Quote(name)} -ErrorAction SilentlyContinue\n");
+        foreach (var (name, value) in values)
+        {
+            if (!UpdatePlan.PauseValueNames.Contains(name)) throw new ArgumentException($"not a pause value: {name}", nameof(values));
+            if (!Regex.IsMatch(value, @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")) throw new ArgumentException($"not a UTC time: {value}", nameof(values));
+            body.Append($"New-ItemProperty -LiteralPath $k -Name {Quote(name)} -Value {Quote(value)} -PropertyType String -Force | Out-Null\n");
+        }
+        return Wrap(status, body.ToString().TrimEnd());
+    }
+
+    // Active hours (8.18): set by hand from start to end (Windows' automatic choice off), or, with
+    // null, Windows choosing them again from when the PC is used.
+    public static string UpdateActiveHours((int Start, int End)? hours, string status)
+    {
+        var body = new StringBuilder($"$k = {Quote(@"HKLM:\" + UpdatePlan.UxKey)}\nif (-not (Test-Path -LiteralPath $k)) {{ New-Item -Path $k -Force | Out-Null }}\n");
+        if (hours is { } h)
+        {
+            if (h.Start is < 0 or > 23 || h.End is < 0 or > 23) throw new ArgumentOutOfRangeException(nameof(hours), "hours are 0 to 23");
+            body.Append($"New-ItemProperty -LiteralPath $k -Name 'ActiveHoursStart' -Value {h.Start} -PropertyType DWord -Force | Out-Null\n")
+                .Append($"New-ItemProperty -LiteralPath $k -Name 'ActiveHoursEnd' -Value {h.End} -PropertyType DWord -Force | Out-Null\n")
+                .Append("New-ItemProperty -LiteralPath $k -Name 'SmartActiveHoursState' -Value 0 -PropertyType DWord -Force | Out-Null");
+        }
+        else body.Append("New-ItemProperty -LiteralPath $k -Name 'SmartActiveHoursState' -Value 1 -PropertyType DWord -Force | Out-Null");
+        return Wrap(status, body.ToString());
+    }
+
     // powershell.exe -EncodedCommand takes the script as UTF-16LE Base64: no quoting survives the
     // command line to go wrong.
     public static string Encode(string script) => Convert.ToBase64String(Encoding.Unicode.GetBytes(script));

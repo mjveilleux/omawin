@@ -56,10 +56,27 @@ static partial class Program
         // Builtins move here one at a time (roadmap 2.11): bin/omawin.cs hands this exe (shipped
         // beside it as omawin-cli.exe) the ones it doesn't have, and still runs the rest itself.
         RunBuiltin { Name: "pkg" } b => new Omawin.Cli.Pkg.PkgCommand(new Omawin.Cli.Pkg.WindowsHost(Repo, StateDir)).Run(b.Args),
+        RunBuiltin { Name: "profile-linux" } b => ProfileLinux(b.Args),
+        RunBuiltin { Name: "remove" } b => new Omawin.Cli.Remove.RemoveCommand(new Omawin.Cli.Remove.WindowsRemoveHost(Repo, StateDir), Omawin.Cli.Remove.RemoveCommand.Read(Repo, StateDir)).Run(b.Args),
         RunBuiltin b => Fail($"builtin {b.Name} isn't in this omawin yet; bin/omawin.cs runs it"),
         BadAction bad => Fail(bad.Message),
         _ => Fail("unreachable"),
     };
+
+    // omawin profile linux (roadmap 3.5). Its runs stop WSL, which ends the keep-warm too, so the
+    // keep-warm is started again after (omawin start terminal: it only starts what isn't running).
+    static int ProfileLinux(string[] args)
+    {
+        if (!OperatingSystem.IsWindows()) return Fail("profile linux measures WSL, on Windows");
+        var code = Omawin.Cli.Profile.LinuxProfile.Command(new Omawin.Cli.Profile.WslMachine(), args, Repo, StateDir, Console.Out);
+        if (code == 0)
+        {
+            var omawin = Path.Combine(Home, ".local", "bin", "omawin.exe");
+            try { if (File.Exists(omawin)) Process.Start(new ProcessStartInfo(omawin, "start terminal") { UseShellExecute = false, CreateNoWindow = true })?.Dispose(); }
+            catch (System.ComponentModel.Win32Exception) { }
+        }
+        return code;
+    }
 
     // This account's folder (docs/work.md): OMAWIN_USER_LAYER, else ~/omawin-account, else the
     // older ~/omawin-work where it hasn't moved yet.

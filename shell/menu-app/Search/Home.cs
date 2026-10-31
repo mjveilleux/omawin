@@ -11,10 +11,12 @@ namespace SystemMenu.Search;
 //   Browse (wide)             | Theme (wide: its palette as one gradient)
 //   QUICK     Wi-Fi · Bluetooth · Dark mode · Microphone
 //   FREQUENT  the four apps you open most
+//   PINNED    yours, up to four (Ctrl+P on a result, Search/Pins.cs): last, so nothing above moves
 
-public enum HomeStyle { Hero, Wide, Tile, Switch }
+public enum HomeStyle { Hero, Wide, Tile, Switch, Pin }
 
-// Key: a launcher item's key, a setting's id ("setting:look.dark-apps"), or "browse" / "theme".
+// Key: a launcher item's key, a setting's id ("setting:look.dark-apps"), "browse" / "theme", or
+// a pin's "pin:<result id>".
 public sealed record HomeSlot(string Key, HomeStyle Style, int ColSpan = 1);
 
 // Top: the hero and its two wides; else tiles flowing four to a row under an optional title.
@@ -32,9 +34,11 @@ public static class HomePlan
 
     // items: your items then the apps, in the launcher's order; byUse: keys, most used first
     // (the launcher's history); switchesHere: the switches this PC's catalog has (a desktop
-    // without Wi-Fi has no Wi-Fi switch; that's the PC, not the moment, so places still hold).
-    public static List<HomeRow> Arrange(IReadOnlyList<HomeItem> items, IEnumerable<string> byUse, ISet<string> switchesHere)
+    // without Wi-Fi has no Wi-Fi switch; that's the PC, not the moment, so places still hold);
+    // pins: your pinned result ids, in the order pinned (Pins.cs).
+    public static List<HomeRow> Arrange(IReadOnlyList<HomeItem> items, IEnumerable<string> byUse, ISet<string> switchesHere, IReadOnlyList<string>? pins = null)
     {
+        pins ??= [];
         var rows = new List<HomeRow>();
         var own = items.Where(i => !i.IsApp).ToList();
         var placed = new HashSet<string>();
@@ -63,13 +67,20 @@ public static class HomePlan
         var switches = Switches.Where(switchesHere.Contains).Select(id => new HomeSlot(SettingPrefix + id, HomeStyle.Switch)).ToList();
         if (switches.Count > 0) rows.Add(new("Quick", switches));
 
-        // What you open most; before there's any history, the first apps in order.
+        // What you open most; before there's any history, the first apps in order. A pinned app
+        // has its own place below, so it isn't here twice.
+        foreach (var pin in pins)
+            if (pin.StartsWith(ResultIds.App, StringComparison.Ordinal)) placed.Add(pin[ResultIds.App.Length..]);
         var known = new HashSet<string>(items.Select(i => i.Key));
         var menu = own.FirstOrDefault(i => i.BuiltIn == "menu")?.Key;
         var frequent = byUse.Where(k => known.Contains(k) && !placed.Contains(k) && k != menu).Distinct()
             .Concat(items.Where(i => i.IsApp && !placed.Contains(i.Key)).Select(i => i.Key))
             .Distinct().Take(4).ToList();
         if (frequent.Count > 0) rows.Add(new("Frequent", [.. frequent.Select(k => new HomeSlot(k, HomeStyle.Tile))]));
+
+        // Yours, last: pinning or unpinning never moves anything above.
+        var pinned = pins.Take(Pins.Most).Select(id => new HomeSlot(Pins.TileKey + id, HomeStyle.Pin)).ToList();
+        if (pinned.Count > 0) rows.Add(new("Pinned", pinned));
         return rows;
     }
 }

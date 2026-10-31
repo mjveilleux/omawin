@@ -12,7 +12,7 @@
 #   run <program> [args]   start a program
 #   builtin <name> [args]  done by omawin.exe itself: launch-terminal, launch-project,
 #                          launch-editor, terminal-here, terminal-warm, update-terminal, default;
-#                          pkg by the compiled omawin-cli.exe beside it (src/cli/)
+#                          pkg and remove by the compiled omawin-cli.exe beside it (src/cli/)
 # {repo} in an action is this repo's folder; a pwsh script's path may start with {user}/, this
 # account's own folder (docs/work.md: ~/omawin-account, or OMAWIN_USER_LAYER).
 # Words typed after the command are added to the end.
@@ -29,6 +29,7 @@ theme set | Apply a theme: omawin theme set gruvbox [-Background village-square]
 theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
 theme backgrounds | The background picker: a grid of the current theme's pictures, Enter sets one, Tab shows another theme's; or a theme's: omawin theme backgrounds gruvbox | app --open style.backgrounds
 theme background | One of the current theme's backgrounds, by name or part of it: omawin theme background village-square | pwsh themes/set-theme.ps1 -Background
+wallpaper spread | A picture per monitor, left to right (the theme switch does this with the theme's backgrounds when there's more than one monitor): omawin wallpaper spread <picture> [picture…] | run omawin-windows wallpaper spread
 theme add | Install a community theme by name (omawin theme search), at the commit the index checked, or any theme from its git link; applies it | pwsh themes/theme.ps1 add
 theme search | Community themes matching every word (name, author, light, dark), with their repos: omawin theme search nord | pwsh themes/theme.ps1 search
 theme preview | A community theme across the desktop for a moment, nothing installed: omawin theme preview <name>; omawin theme preview off puts yours back (the picker's Community chip does this as you move) | pwsh themes/theme.ps1 preview
@@ -71,9 +72,11 @@ reports index | Refresh the Reports list now (this account's reports script; doc
 
 update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 uninstall | All of omawin out of this account: shows everything first, lets you keep programs, asks once (--dry-run shows only; --yes asks nothing). No admin | run omawin-uninstall.exe
+remove | One optional part out again: a preset (dictation, music, agents, data, …), plugin <id> or theme <name>; what omawin put in for it goes, yours stays; shown first, asked once (--dry-run, --yes) | builtin remove
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
-profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
+profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4; -Wsl: a Linux window, warm or -Scenario cold) | pwsh bin/profile-terminal.ps1
+profile linux | Your Linux in WSL's cold start against a warm one, and what keeping it warm costs in memory (stops WSL: it asks first; -Runs 3, -Settle 60, -Yes) | builtin profile-linux
 profile menu | Measure a menu key to its first frame, per surface (-Surface launcher, menu or files; -Runs 10), or typing in the launcher to the list on screen (-Typing); -Hand for runs pressed by you | pwsh bin/profile-menu.ps1
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
 profile ram | What's using the memory and the processor, the whole PC by group, memory in use apart from cached, omawin's desktop against its 600 MB (-Save keeps a history and shows what changed, -Quick skips the processor, -Json for agents) | pwsh bin/profile-ram.ps1
@@ -81,14 +84,14 @@ check | Health check: is everything in place and running | pwsh bin/check.ps1
 path | Your PATH and Windows': empty, missing and duplicate entries, and which node / python / git … runs and why (more to look up: omawin path rg); omawin path fix cleans yours, omawin path undo puts it back | run omawin-path.exe
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
 no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh bin/no-ads.ps1
-dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
-dev remove | Take a development environment away again: omawin dev remove node | pwsh bin/remove-dev-env.ps1
+dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; in your Linux in WSL or in Windows (asked; -Linux or -Windows answers); -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
+dev remove | Take a development environment away again: omawin dev remove node (-Linux or -Windows: which side) | pwsh bin/remove-dev-env.ps1
 pkg find | The package picker, in the launcher: winget, Chocolatey or Scoop (Tab), fuzzy found, Enter installs; Ctrl+Space picks several | app --launcher packages
 pkg install | Install by name with whichever manager omawin picks (default/packages/names.txt; --from winget, scoop, choco or mise; --machine; --linux); no name: winget's catalogue, fuzzy found (fzf, Tab picks several) | builtin pkg install
 pkg remove | Remove through the manager that installed it: omawin pkg remove <name>; no name: what winget installed here, fuzzy found | builtin pkg remove
 pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path; --force reads it again | builtin pkg index
 pkg update | Update what omawin put in, each through where it came from (the tools bundle, winget, Scoop, mise, its installer): [name], --all (every manager's everything), --from choco (Chocolatey's, one admin prompt) | builtin pkg update
-pkg list | What's installed and where from (%LOCALAPPDATA%\launcher\packages.tsv): --refresh asks each manager, --updates shows what's waiting, --linux your Linux's | builtin pkg list
+pkg list | What's installed and where from (%LOCALAPPDATA%\launcher\packages.tsv): --refresh asks each manager, --updates shows what's waiting, --linux your Linux's, --tsv a row a line (name, source, id, version, by) for scripts | builtin pkg list
 pkg info | Which managers have a package, at what version, which copy is here and which runs (PATH order) | builtin pkg info
 pkg move | Take a package from another manager: installs it there, removes the old copy, remembers: omawin pkg move fd --to scoop | builtin pkg move
 pkg prefer | Your order of package managers for omawin pkg install: omawin pkg prefer scoop winget (no names: the order now) | builtin pkg prefer
@@ -125,10 +128,15 @@ setting set | Change a Windows setting (undoable; admin ones wait for one prompt
 setting toggle | Flip a Windows setting's switch, or step to its next choice: omawin setting toggle look.dark-apps | ask --setting toggle
 setting undo | Put back the last Windows setting changed through omawin (Ctrl+Z in the system menu) | ask --setting undo
 settings save | The Windows settings you've changed, into your account folder's settings.txt (-Shared: the PC's shared folder's), for a new PC | ask --settings save
-settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting) | ask --settings apply
+settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting); -Changed: only the lines changed since the last apply (what an update runs) | ask --settings apply
 settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin
 tune-up | omawin's recommended Windows settings (default/launcher/tune-up.txt): each one, applied or not, and why | ask --tune-up
 tune-up apply | Set the recommended Windows settings not yet applied: listed first, then set (each undoable), admin ones in one prompt; -Auto: only the ones that need no asking | ask --tune-up apply
+windows-apps | The Store apps installed for you, biggest first, the ones omawin suggests removing marked (default/launcher/windows-apps.txt); never Windows' own parts | ask --windows-apps
+env | Your environment variables and the PC's: omawin env lists them (a PATH as its entries); get <name>; set <name> <value>; unset <name>; undo. -Machine: the PC's, shown first, then one admin prompt. New terminals see a change at once | ask --env
+dev-drive | A Dev Drive for code and package caches (faster builds and installs): omawin dev-drive says if there's one; create [<GB>] [<letter>] makes one (shown, then one admin prompt); caches <letter> points npm, Bun, NuGet, pip, uv, Go, … at it (undoable) | ask --dev-drive
+shell-extensions | The add-ins programs put in Explorer's right-click menu (shell extensions), with their maker: off <name> leaves one out (for you, undoable), on <name> puts it back; --now restarts Explorer | ask --shell-extensions
+windows-apps remove | Remove Windows' extra apps for your account (Clipchamp, News, Solitaire, …): the suggested ones, or name some; listed and asked first, each back from the Store | ask --windows-apps remove
 # Fixing Windows (roadmap Phase 8): the answers Windows has and doesn't show. omawin-windows (src/windows/)
 # does them in your terminal; the system menu's "This PC" rows open them in one.
 who-has | Which programs hold a file or folder open, then close or end them: omawin who-has <path> (no path: the one on the clipboard, from Explorer's Copy as path) | run omawin-windows who-has
@@ -140,5 +148,11 @@ connections | Which apps are talking to the internet now, and to whom: omawin co
 wifi share | The Wi-Fi you're on as a QR code a phone joins from; a saved one: omawin wifi share <network>; --show prints the password | run omawin-windows wifi-qr
 clip | The clipboard's text changed in place: json, json-line, base64, unbase64, url, unurl, date, timestamp, trim, lower, upper, path (omawin clip lists them) | run omawin-windows clip
 classic-menu | The full right-click menu in Explorer (no "Show more options"), or Windows 11's short one: on, off, status; no word: the other one. Explorer restarts to show it | run omawin-windows classic-menu
-dns | Each connected network's DNS, and a switch: omawin dns cloudflare, quad9, google, or router (what your network gives); [adapter] for one only. Says what changes, then one admin prompt | run omawin-windows dns
+dns | Each connected network's DNS, and a switch: omawin dns cloudflare, quad9, google, or router (what your network gives); [adapter] for one only; omawin dns encrypt [on/off] turns DNS over HTTPS on for them. Says what changes, then one admin prompt | run omawin-windows dns
+display | Monitor profiles that follow the dock: omawin display says how the monitors are laid out; display save remembers this layout (resolution, place, rotation, the main one) for this set of monitors, and it comes back by itself whenever they're plugged in again; display apply puts it back now; display forget | run omawin-windows display
+pip | A window live in a small always-on-top window (picture-in-picture: drag it, resize it at its edges, scroll for fainter, double-click to go to the window, right-click to close; it closes with the window): omawin pip <part of a title>, or from a key the window in front. No key until you choose one | run omawin-windows pip
+keyboard | What your keys do differently: Caps Lock (Escape, Control, or Escape tapped and Control held: the setting input.caps-lock), the Copilot key (input.copilot-key: the launcher), your text snippets (snippets.txt in your account folder: a trigger like ;sig, then the text); keyboard signin caps-escape, caps-control, swap-caps-control, caps-off or off sets Windows' own remap, which works at the sign-in screen and in admin windows (one admin prompt, then a restart) | run omawin-windows keyboard
+disk | Where a developer's disk space went: the package managers' caches (npm, pnpm, Bun, NuGet, pip, uv, cargo, Go, Gradle, Maven, Temp) and Linux's disks, biggest first; disk clean <cache> empties one (its tool's own command when it has one); disk projects [clean] [folder] [days] lists, then deletes after asking, build output (node_modules, target, bin and obj, .venv) in projects untouched for a month; disk sparse <distro> makes a WSL disk give space back | run omawin-windows disk
+proxy | This account's system proxy (what Edge, Chrome, winget and most programs use): omawin proxy says what's set; set <host:port> [names that skip it], on, off, script <url> or script off. No admin | run omawin-windows proxy
+updates | Windows Update without surprises: what's waiting and whether a restart is owed; restart [tonight, a time, now or cancel] sets the restart when you choose; pause [days] (a week unless said), resume, hours <start>-<end> or auto (one admin prompt each, said first) | run omawin-windows updates
 mic | Every microphone at once: toggle (the default), mute, unmute, status; a red microphone in the bar while they're all muted (click it to unmute). No key until you choose one | app --mic

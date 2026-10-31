@@ -19,6 +19,8 @@ public sealed record BarData(
     int Updates)
 {
     public sealed record Battery(int Percent, bool Charging);
+    // Your Linux in WSL (Bar.LinuxLoop); null without one.
+    public LinuxState.Status? Linux { get; init; }
 }
 
 // One of bar.json's widgets (Omarchy's bar widgets, as Zebar's bar had them: the same names, behaviour and
@@ -45,7 +47,10 @@ public abstract class BarWidget
         "monitor" => new MonitorWidget(),
         "power" => new PowerWidget(),
         "tray" => new TrayWidget(),
-        _ => null, // media, agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
+        "linux" => new LinuxWidget(),
+        "media" => new MediaWidget(),
+        "installing" => new InstallingWidget(),
+        _ => null, // agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
     };
 
     public static readonly FontFamily Mono = new("JetBrainsMono Nerd Font, JetBrainsMono NF, Cascadia Mono, Consolas");
@@ -272,6 +277,47 @@ sealed class UpdateWidget : BarWidget
     public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
 }
 
+// While an install or update runs in the background (Installing.cs): a download glyph that
+// breathes; click: its log, live, in a small terminal. Its end is a toast, not this.
+sealed class InstallingWidget : BarWidget
+{
+    readonly Cell cell = new();
+    string? log;
+    public override FrameworkElement Element => cell;
+    public InstallingWidget()
+    {
+        cell.SetIcon(Glyph(0xF01DA)); // nf-md-download
+        cell.Visibility = Visibility.Collapsed;
+        cell.Click = () =>
+        {
+            if (string.IsNullOrEmpty(log)) return;
+            MenuModel.Omawin("launch", "terminal", "--title", "menu-task", "--", "pwsh", "-NoLogo", "-NoProfile", "-Command",
+                $"Get-Content -Wait -Tail 60 -LiteralPath '{log.Replace("'", "''")}'");
+        };
+        var light = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(cell.Icon);
+        Action breathe = () => Motion.Breathe(light, 0.45f);
+        cell.Loaded += (_, _) => { Motion.Changed += breathe; breathe(); };
+        cell.Unloaded += (_, _) => Motion.Changed -= breathe;
+        if (!hooked)
+        {
+            hooked = true; // once for every bar
+            Installing.Changed += () => SystemMenu.Bar.Refresh();
+        }
+        Installing.Start();
+    }
+    static bool hooked;
+
+    public override void Update(BarData data)
+    {
+        var now = Installing.Now;
+        cell.Visibility = now != null ? Visibility.Visible : Visibility.Collapsed;
+        if (now == null) return;
+        log = now.Log;
+        cell.Tip = InstallMark.Tip(now);
+    }
+    public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+}
+
 // The tray: a drawer of the apps' icons (Tray.cs) that opens while the mouse is on it, after the
 // arrow that points the way it opens. Click an icon: the app's own click; right click: its menu.
 sealed class TrayWidget : BarWidget
@@ -359,6 +405,90 @@ sealed class TrayWidget : BarWidget
     [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool GetCursorPos(out Point point);
 
     public override void Paint(Theme theme) { base.Paint(theme); chevron.Paint(theme); foreach (var c in cells.Values) c.Cell.Paint(theme); }
+}
+
+// Your Linux in WSL (roadmap 3.10): its distro's logo, bright while it runs and faint while it's
+// stopped; not there without a Linux. Click: a terminal in it (starting it); right click, while it
+// runs: stop it (omawin linux stop, the keep-warm with it). The tooltip has the VM's memory.
+sealed class LinuxWidget : BarWidget
+{
+    readonly Cell cell = new();
+    LinuxState.Status? last;
+    public override FrameworkElement Element => cell;
+    public LinuxWidget()
+    {
+        cell.Visibility = Visibility.Collapsed;
+        cell.Click = () => { SystemMenu.Bar.Omawin("launch terminal --wsl"); SystemMenu.Bar.LinuxChanged(); };
+        cell.RightClick = () =>
+        {
+            if (last is not { Running: true }) return;
+            SystemMenu.Bar.Omawin("linux stop");
+            SystemMenu.Bar.LinuxChanged();
+        };
+    }
+    public override void Update(BarData data)
+    {
+        last = data.Linux;
+        if (data.Linux is not { } s) { cell.Visibility = Visibility.Collapsed; return; }
+        cell.Visibility = Visibility.Visible;
+        cell.SetIcon(Glyph(LinuxFiles.Logo(s.Distro)));
+        // The icon's own opacity, not the cell's: the cell's is the bar's arrival fade (Bar.Arrive).
+        cell.Icon.Opacity = s.Running ? 1 : 0.45;
+        cell.Tip = LinuxState.Tip(s);
+    }
+    public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+}
+
+// What's playing, from Windows' media controls (Media.cs): play/pause, the title, next. Shown only
+// while something plays or is paused. The title: click plays or pauses, right click goes back,
+// the wheel skips (up: next, down: previous).
+sealed class MediaWidget : BarWidget
+{
+    const int Play = 0xF040A, Pause = 0xF03E4, Next = 0xF04AD; // nf-md-play, pause, skip_next
+    readonly StackPanel row = new() { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed };
+    readonly Cell toggle = new(), title = new() { Padding = new Thickness(4, 0, 4, 0) }, next = new("Next");
+    Media.State? shown;
+    public override FrameworkElement Element => row;
+
+    public MediaWidget()
+    {
+        title.Text.FontSize = 11.5;
+        title.Text.MaxWidth = 260; // MediaText cuts it first; this only guards a very wide font
+        title.Text.TextTrimming = TextTrimming.CharacterEllipsis;
+        next.SetIcon(Glyph(Next));
+        toggle.Click = title.Click = Media.Toggle;
+        title.RightClick = Media.Previous;
+        title.Wheel = up => { if (up > 0) Media.Next(); else Media.Previous(); };
+        next.Click = Media.Next;
+        row.Children.Add(toggle);
+        row.Children.Add(title);
+        row.Children.Add(next);
+        if (!hooked)
+        {
+            hooked = true; // once for every bar: a monitor change makes the widgets again
+            Media.Changed += () => SystemMenu.Bar.Refresh();
+        }
+        Media.Start();
+    }
+    static bool hooked;
+
+    public override void Update(BarData data)
+    {
+        var now = Media.Now;
+        if (Equals(now, shown)) return;
+        shown = now;
+        if (now == null) { row.Visibility = Visibility.Collapsed; return; }
+        row.Visibility = Visibility.Visible;
+        toggle.SetIcon(Glyph(now.Playing ? Pause : Play));
+        toggle.Tip = now.Playing ? "Pause" : "Play";
+        toggle.Opacity = now.CanToggle ? 1 : 0.5;
+        next.Visibility = now.CanNext ? Visibility.Visible : Visibility.Collapsed;
+        title.SetText(MediaText.Label(now.Title, now.Artist, now.App));
+        title.Opacity = now.Playing ? 1 : 0.6; // paused: there, but quiet
+        title.Tip = MediaText.Tip(now.Title, now.Artist, now.App, now.Playing);
+    }
+
+    public override void Paint(Theme theme) { base.Paint(theme); toggle.Paint(theme); title.Paint(theme); next.Paint(theme); }
 }
 
 // The Bluetooth glyph; click: Quick settings (its radio and devices).

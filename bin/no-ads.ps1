@@ -10,7 +10,9 @@
       - "suggestions": promoted apps installed silently, Start recommendations, tips and
         suggestions toasts, the welcome / "finish setting up your PC" screens, suggested content
         in Settings, lock screen fun facts, OneDrive promos in Explorer, account nags in Start;
-        the advertising ID and tailored experiences.
+        the advertising ID and tailored experiences. Each is a line of the settings catalog
+        ($UserIds below; default/launcher/settings.txt), so the system menu shows it, turns it
+        back on and undoes it like any setting; one you turned back on through omawin stays on.
     Windows, with admin (one Windows permission prompt; -Admin, or this script asks):
       - the "no consumer features" policy, which stops promoted apps being installed (Home
         editions may ignore some of it; the per-user switches above cover them).
@@ -40,6 +42,54 @@ if ($PSVersionTable.PSEdition -eq 'Core' -and -not (Get-Command Get-AppxPackage 
 function Set-Dword([string]$Key, [string]$Name, [int]$Value) {
     if (-not (Test-Path $Key)) { New-Item -Path $Key -Force | Out-Null }
     Set-ItemProperty -Path $Key -Name $Name -Value $Value -Type DWord
+}
+
+# Windows' own switches this turns off are lines of the settings catalog (default/launcher/
+# settings.txt, roadmap 1B.5), by id: each is a switch in the system menu, turned back on and
+# undone like any setting, and this sets the off values the catalog has for it, so the two can't
+# drift. (This runs first at install, before the menu app and its settings service exist.)
+$UserIds = @(
+    'privacy.promoted-apps',            # promoted apps installed silently, preinstalled and OEM apps
+    'privacy.start-suggestions',        # suggestions, tips, shortcuts and new apps in Start
+    'privacy.tips',                     # tips and suggestions toasts
+    'privacy.lock-screen-tips',         # lock screen fun facts and tips
+    'privacy.welcome',                  # the welcome experience after updates
+    'privacy.settings-suggestions',     # suggested content in Settings
+    'privacy.timeline-suggestions',     # suggestions in the timeline
+    'privacy.finish-setup',             # "finish setting up your device"
+    'privacy.account-nags',             # account nags in Start
+    'privacy.suggested-notifications',  # Windows' suggestion notifications
+    'privacy.ad-id',                    # the advertising ID
+    'privacy.tailored',                 # tailored experiences
+    'explorer.sync-ads',                # OneDrive / Microsoft 365 promos in Explorer
+    'system.search-highlights'          # Bing's promos in the search box
+)
+$Repo = Split-Path $PSScriptRoot
+
+# A catalog line's values and their off value: "reg <HKCU|HKLM path> dword ... off=<n>", each part
+# of a joined line ("... + reg ...").
+function Get-CatalogOff([string]$Id) {
+    $line = [IO.File]::ReadAllLines((Join-Path $Repo 'default\launcher\settings.txt')) | Where-Object { $_ -like "$Id |*" } | Select-Object -First 1
+    if (-not $line) { throw "'$Id' isn't in default/launcher/settings.txt" }
+    foreach ($part in (($line -split '\|')[5].Trim() -split ' \+ ')) {
+        if ($part -notmatch '^reg (HK(CU|LM))\\(\S+)\\([^\\\s]+) dword .*\boff=(\d+)') { throw "'$Id' isn't a DWORD switch: $part" }
+        [pscustomobject]@{ Key = "$($Matches[1]):\$($Matches[3])"; Name = $Matches[4]; Value = [int]$Matches[5] }
+    }
+}
+
+# A switch you turned back on through omawin (the system menu, omawin setting set) is yours: the
+# settings history's last change to it says on, and this leaves it on.
+$Yours = @{}
+$historyFile = Join-Path $env:LOCALAPPDATA 'launcher\settings-history.tsv'
+if (Test-Path $historyFile) {
+    foreach ($l in [IO.File]::ReadAllLines($historyFile)) { $f = $l -split "`t"; if ($f.Count -ge 5) { $Yours[$f[1]] = ($f[3] -eq 'on') } }
+}
+
+function Set-CatalogOff([string[]]$Ids) {
+    foreach ($id in $Ids) {
+        if ($Yours[$id]) { "kept  $id on: you turned it on (omawin setting set $id off turns it off)"; continue }
+        foreach ($v in Get-CatalogOff $id) { Set-Dword $v.Key $v.Name $v.Value }
+    }
 }
 
 function Get-Installed([string]$Name) {
@@ -207,7 +257,7 @@ $Modules = [ordered]@{
         }
         User = {
             # Settings > Personalization > Taskbar > Copilot.
-            Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced' 'ShowCopilotButton' 0
+            Set-CatalogOff 'look.ai-copilot-button'
             # Settings > Apps > Startup: any Copilot entry off (its "approved" flag, as Task Manager does).
             $approved = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StartupApproved\Run'
             foreach ($name in (Get-ItemProperty $Run -ErrorAction SilentlyContinue).PSObject.Properties.Name | Where-Object { $_ -match 'Copilot' }) {
@@ -240,36 +290,20 @@ $Modules = [ordered]@{
 }
 $Present = @($Modules.Keys | Where-Object { & $Modules[$_].Found })
 
-$CloudContent = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\CloudContent'
+# The "no consumer features" policy: privacy.consumer-features, machine-wide.
+$PolicyId = 'privacy.consumer-features'
 function Test-PolicySet {
-    $p = Get-ItemProperty $CloudContent -ErrorAction SilentlyContinue
-    $p.DisableWindowsConsumerFeatures -eq 1 -and $p.DisableSoftLanding -eq 1 -and $p.DisableConsumerAccountStateContent -eq 1
+    if ($Yours[$PolicyId]) { return $true } # you turned it back on: nothing for admin to do
+    foreach ($v in Get-CatalogOff $PolicyId) {
+        if ((Get-ItemProperty $v.Key -ErrorAction SilentlyContinue).($v.Name) -ne $v.Value) { return $false }
+    }
+    $true
 }
 
 if (-not $Admin) {
     # This part's lines go to the output (not Write-Host), so install.ps1 can show them as its
     # own notes; run alone, they print as usual.
-    $cdm = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager'
-    foreach ($name in 'SilentInstalledAppsEnabled', 'SystemPaneSuggestionsEnabled', 'SoftLandingEnabled',
-        'PreInstalledAppsEnabled', 'PreInstalledAppsEverEnabled', 'OemPreInstalledAppsEnabled',
-        'FeatureManagementEnabled', 'RotatingLockScreenOverlayEnabled',
-        'SubscribedContent-310093Enabled', # welcome experience after updates
-        'SubscribedContent-338387Enabled', # lock screen fun facts and tips
-        'SubscribedContent-338388Enabled', # suggestions in Start
-        'SubscribedContent-338389Enabled', # tips and suggestions toasts
-        'SubscribedContent-338393Enabled', 'SubscribedContent-353694Enabled', 'SubscribedContent-353696Enabled', # suggested content in Settings
-        'SubscribedContent-353698Enabled', # suggestions in the timeline
-        'SubscribedContent-88000326Enabled') { Set-Dword $cdm $name 0 }
-    $advanced = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced'
-    Set-Dword $advanced 'ShowSyncProviderNotifications' 0 # OneDrive / Microsoft 365 promos in Explorer
-    Set-Dword $advanced 'Start_IrisRecommendations' 0      # tips, shortcuts and new apps in Start
-    Set-Dword $advanced 'Start_AccountNotifications' 0     # account nags in Start
-    Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement' 'ScoobeSystemSettingEnabled' 0 # "finish setting up"
-    Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo' 'Enabled' 0
-    # Settings > Privacy > Search permissions > Show search highlights: Bing's promos in search.
-    Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\SearchSettings' 'IsDynamicSearchBoxEnabled' 0
-    Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Privacy' 'TailoredExperiencesWithDiagnosticDataEnabled' 0
-    Set-Dword 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.Suggested' 'Enabled' 0
+    Set-CatalogOff $UserIds
     'ok  Windows suggestions and promos off'
 
     foreach ($name in $Present) { & $Modules[$name].User }
@@ -294,8 +328,6 @@ foreach ($name in $Present) {
 }
 
 Write-Host 'Policy: no consumer features (promoted apps)'
-Set-Dword $CloudContent 'DisableWindowsConsumerFeatures' 1
-Set-Dword $CloudContent 'DisableSoftLanding' 1
-Set-Dword $CloudContent 'DisableConsumerAccountStateContent' 1
+Set-CatalogOff $PolicyId | ForEach-Object { Write-Host "  $_" }
 Write-Host 'Done.'
 Start-Sleep 3

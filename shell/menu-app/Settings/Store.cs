@@ -43,6 +43,11 @@ public sealed class SettingStore(
     // Unset (tests, or a PC where it can't run): admin changes stay queued.
     public Func<IReadOnlyList<string>, Task<AdminRun>>? RunAdmin { get; set; }
 
+    // An admin change whose value is worked out on this side before it's queued (the dev
+    // runtimes found on this account's PATH, which the elevated run, maybe another account,
+    // can't see). Returns the value to queue, or an error to show instead. Unset: queued as given.
+    public Func<SettingEntry, string, (string? Value, string? Error)>? ResolveAdmin { get; set; }
+
     public IReadOnlyList<SettingEntry> Entries() => entries();
 
     public SettingEntry? Find(string id) => Entries().FirstOrDefault(e => e.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -141,8 +146,20 @@ public sealed class SettingStore(
         }
         if (e.Admin)
         {
+            if (ResolveAdmin != null)
+            {
+                (string? Value, string? Error) resolved;
+                try { resolved = ResolveAdmin(e, value); }
+                catch (Exception ex) { log?.Invoke(ex); resolved = (null, ex.Message); }
+                if (resolved.Value == null) return new(false, $"{e.Name}: {resolved.Error ?? "nothing to do"}");
+                value = resolved.Value;
+            }
             AdminQueue.Add(e.Id, value);
             int n = AdminQueue.Count;
+            var shown = SettingAdminQueue.DescribeValue(e, value) ?? SettingValues.Label(e, value, choices);
+            if (!HasValue(e))
+                return new(true, $"{e.Name}{(shown.Length > 0 ? $" ({shown})" : "")} needs admin; queued"
+                    + (n > 1 ? $" with {n - 1} other change{(n > 2 ? "s" : "")}" : "") + ". Apply in one prompt: omawin settings admin", Queued: true);
             return new(true, $"{e.Name}: {SettingValues.Label(e, value, choices)} needs admin; queued"
                 + (n > 1 ? $" with {n - 1} other change{(n > 2 ? "s" : "")}" : "") + ". Apply in one prompt: omawin settings admin", Queued: true);
         }
@@ -192,7 +209,7 @@ public sealed class SettingStore(
 
     // The words shown before the one prompt (2.9: it says exactly what it will change).
     public List<string> DescribeAdmin() => AdminQueue.Items().Select(i => Find(i.Id) is { } e
-        ? $"{e.Name}: {Label(e, i.Value)}" + (e.Takes.HasFlag(Takes.Restart) ? " (needs a restart)" : e.Takes.HasFlag(Takes.SignOut) ? " (after you sign out)" : "")
+        ? $"{e.Name}: {SettingAdminQueue.DescribeValue(e, i.Value) ?? Label(e, i.Value)}" + (e.Takes.HasFlag(Takes.Restart) ? " (needs a restart)" : e.Takes.HasFlag(Takes.SignOut) ? " (after you sign out)" : "")
         : $"{i.Id}: not in this omawin's catalog, skipped").ToList();
 
     // Apply everything queued in one elevated run, then read each back and record what changed.
@@ -203,7 +220,8 @@ public sealed class SettingStore(
         if (items.Count == 0) return new(true, "No admin changes waiting");
         if (RunAdmin == null) return new(false, "Admin changes can't be applied from here: omawin settings admin");
         var known = items.Select(i => (i.Id, i.Value, Entry: Find(i.Id))).Where(x => x.Entry is { Admin: true }).ToList();
-        var plan = known.Select(x => SettingAdminQueue.PlanLine(x.Entry!, x.Value)).OfType<string>().ToList();
+        var plan = known.SelectMany(x => SettingAdminQueue.PlanLines(x.Entry!, x.Value)).ToList();
+        int changes = known.Count(x => SettingAdminQueue.PlanLines(x.Entry!, x.Value).Count > 0);
         if (plan.Count == 0) { AdminQueue.Clear(); return new(false, "Nothing queued has an admin path; queue cleared"); }
         var before = known.ToDictionary(x => x.Id, x => ReadNow(x.Entry!), StringComparer.OrdinalIgnoreCase);
         AdminRun run;
@@ -216,7 +234,7 @@ public sealed class SettingStore(
         AdminQueue.Clear();
         bool restart = known.Any(x => x.Entry!.Takes.HasFlag(Takes.Restart));
         return run.Failures.Count == 0
-            ? new(true, $"Applied {plan.Count} admin change{(plan.Count == 1 ? "" : "s")}" + (restart ? "; restart Windows to finish" : ""), Changed: changed > 0)
+            ? new(true, $"Applied {changes} admin change{(changes == 1 ? "" : "s")}" + (restart ? "; restart Windows to finish" : ""), Changed: changed > 0)
             : new(false, string.Join("; ", run.Failures), Changed: changed > 0);
     }
 }

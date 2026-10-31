@@ -15,7 +15,7 @@ The build is not a second recipe. Every CI job runs the same script this PC runs
 | `SystemMenu-<tag>-win-arm64.zip` | the same for ARM64, once ARM64 CI runs | `%LOCALAPPDATA%\system-menu` |
 | `omawin-music-<tag>-win-x64.exe` | the music player, one exe | `~/.local/bin` |
 | `omawin-music-<tag>-win-arm64.exe` | the same for ARM64 | `~/.local/bin` |
-| `omawin-windows-<tag>-win-x64.exe` | Phase 8's fixes (`omawin who-has`, `health`, `startup`, `top`, `hosts`, `connections`, `wifi share`, `clip`), one exe | `~/.local/bin` |
+| `omawin-windows-<tag>-win-x64.exe` | Phase 8's fixes (`omawin who-has`, `health`, `startup`, `top`, `hosts`, `dns`, `proxy`, `connections`, `wifi share`, `clip`, `updates`, `disk`, `keyboard`, `pip`, `display`, …), one exe | `~/.local/bin` |
 | `omawin-windows-<tag>-win-arm64.exe` | the same for ARM64 | `~/.local/bin` |
 | `SHA256SUMS.txt` | `<sha256>  <file>` per asset: what a download is checked against | (never copied) |
 

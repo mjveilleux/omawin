@@ -23,6 +23,13 @@
     <Compile Include="../../src/windows/Top/ProcessGroups.cs" Link="windows/ProcessGroups.cs" />
     <Compile Include="../../src/windows/Clip/Transforms.cs" Link="windows/Transforms.cs" />
     <Compile Include="../../src/windows/Wifi/WifiShare.cs" Link="windows/WifiShare.cs" />
+    <Compile Include="../../src/windows/Updates/UpdatePlan.cs" Link="windows/UpdatePlan.cs" />
+    <Compile Include="../../src/windows/Net/ProxySettings.cs" Link="windows/ProxySettings.cs" />
+    <Compile Include="../../src/windows/Disk/DevCaches.cs" Link="windows/DevCaches.cs" />
+    <Compile Include="../../src/windows/Keys/ScancodeMap.cs" Link="windows/ScancodeMap.cs" />
+    <Compile Include="../../src/windows/Desktop/WallpaperPlan.cs" Link="windows/WallpaperPlan.cs" />
+    <Compile Include="../../src/windows/Desktop/PipPlan.cs" Link="windows/PipPlan.cs" />
+    <Compile Include="../../src/windows/Desktop/DisplayProfiles.cs" Link="windows/DisplayProfiles.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

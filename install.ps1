@@ -106,6 +106,8 @@ if ($Update) { Add-InstallStep 'update' 'this setup, from GitHub' 3 -First }
 Start-InstallBoard $version $what
 Write-InstallBanner $version $what
 Write-InstallPlan
+$markKind = if ($Update) { 'update' } else { 'install' }
+Start-InstallMark $markKind
 
 try {
     # --- 0. omawin update: what it pulled ---------------------------------------------------------
@@ -198,6 +200,8 @@ try {
     Write-InstallSummary
 } finally {
     Close-InstallUI
+    # The bar's install glyph goes, and its toast says how it went (after the screen's finale).
+    Stop-InstallMark $markKind
     # (The shell that ran this keeps its environment: a later -Step may ask for admin again.)
     Remove-Item Env:OMAWIN_NO_ADMIN -ErrorAction SilentlyContinue
 }

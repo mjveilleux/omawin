@@ -6,7 +6,8 @@
     themes/<name>.json (made from Omarchy's themes by import-omarchy.ps1), or an installed theme's
     in %LOCALAPPDATA%\launcher\themes (theme.ps1, which wins), is applied to:
       wallpaper        the theme's first background (downloaded once, kept in
-                       %LOCALAPPDATA%\launcher\backgrounds)
+                       %LOCALAPPDATA%\launcher\backgrounds); with several monitors, the
+                       next ones on the others, left to right
       lock screen      the same picture (set-lockscreen.ps1), so signing in matches
       Windows          dark or light mode, to match
       GlazeWM, noctty, Windows Terminal, the bar
@@ -151,25 +152,51 @@ if ($NextBackground) {
     $last = Get-Content "$State\background" -ErrorAction SilentlyContinue
     $index = ([Math]::Max(-1, [array]::IndexOf($backgrounds, $last)) + 1) % [Math]::Max(1, $backgrounds.Count)
 }
-if ($backgrounds) {
-    $source = $backgrounds[$index]
-    if ($source -match '^https?://') {
+# A background's picture on disk: downloaded the first time, kept for next time.
+function Get-BackgroundFile([string]$Source) {
+    if ($Source -match '^https?://') {
         # A previewed theme's pictures go with its files, apart from the themes' own: it may
         # share a name with one.
         $folder = if ($From) { Join-Path $From "backgrounds\$Name" } else { Join-Path $State "backgrounds\$Name" }
-        $image = Join-Path $folder (Split-Path $source -Leaf)
-        if (-not (Test-Path $image)) {
-            New-Item -ItemType Directory -Force (Split-Path $image) | Out-Null
-            Invoke-WebRequest $source -OutFile "$image.part" -UseBasicParsing
-            Move-Item "$image.part" $image -Force
+        $file = Join-Path $folder (Split-Path $Source -Leaf)
+        if (-not (Test-Path $file)) {
+            New-Item -ItemType Directory -Force (Split-Path $file) | Out-Null
+            Invoke-WebRequest $Source -OutFile "$file.part" -UseBasicParsing
+            Move-Item "$file.part" $file -Force
         }
-    } elseif ([IO.Path]::IsPathRooted($source)) { $image = $source } # an installed theme's own
-    else { $image = Join-Path $Repo $source }
-    Add-Type -Namespace Theme -Name Desktop -MemberDefinition '[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(uint action, uint param, string value, uint flags);'
+        return $file
+    }
+    if ([IO.Path]::IsPathRooted($Source)) { return $Source } # an installed theme's own
+    return Join-Path $Repo $Source
+}
+if ($backgrounds) {
+    $source = $backgrounds[$index]
+    $image = Get-BackgroundFile $source
+    Add-Type -Namespace Theme -Name Desktop -MemberDefinition @'
+[DllImport("user32.dll", CharSet = CharSet.Unicode)] public static extern bool SystemParametersInfo(uint action, uint param, string value, uint flags);
+[DllImport("user32.dll")] public static extern int GetSystemMetrics(int index);
+'@
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' WallpaperStyle '10' # fill
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' TileWallpaper '0'
-    $null = [Theme.Desktop]::SystemParametersInfo(20, 0, $image, 3) # SPI_SETDESKWALLPAPER, save + tell apps
-    Write-Host "  wallpaper   $(Split-Path $image -Leaf)"
+    # Several monitors and several backgrounds: one each, left to right, from this one on
+    # (roadmap 8.8, omawin-windows' IDesktopWallpaper). Else, or if that fails, one for all.
+    $monitors = [Theme.Desktop]::GetSystemMetrics(80) # SM_CMONITORS
+    $spreader = Join-Path $HOME '.local\bin\omawin-windows.exe'
+    $spread = $false
+    if ($monitors -gt 1 -and $backgrounds.Count -gt 1 -and (Test-Path $spreader)) {
+        try {
+            $pictures = @($image) + @(for ($k = 1; $k -lt [Math]::Min($monitors, $backgrounds.Count); $k++) {
+                Get-BackgroundFile $backgrounds[($index + $k) % $backgrounds.Count]
+            })
+            & $spreader wallpaper spread @pictures
+            $spread = $LASTEXITCODE -eq 0
+        } catch { Write-Host "  (one picture per monitor didn't work: $($_.Exception.Message))" }
+    }
+    if ($spread) { Write-Host "  wallpaper   $(($pictures | ForEach-Object { Split-Path $_ -Leaf }) -join ', ')" }
+    else {
+        $null = [Theme.Desktop]::SystemParametersInfo(20, 0, $image, 3) # SPI_SETDESKWALLPAPER, save + tell apps
+        Write-Host "  wallpaper   $(Split-Path $image -Leaf)"
+    }
 }
 if ($backgrounds -and -not $Preview) {
     Set-Content "$State\background" $source

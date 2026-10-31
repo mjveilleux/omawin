@@ -22,7 +22,7 @@
     <Compile Include="../../bin/uninstall.cs" Link="bin/uninstall.cs" />
     <Compile Include="../../src/plugin-gallery/Scan.cs;../../src/plugin-gallery/Catalog.cs" LinkBase="plugin-gallery" />
     <Compile Include="../../shell/menu-app/Plugins/GalleryIndex.cs;../../shell/menu-app/Plugins/Manifest.cs" LinkBase="menu-app" />
-    <Compile Include="../../src/cli/Pkg/*.cs;../../src/cli/Profile/*.cs;../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
+    <Compile Include="../../src/cli/Pkg/*.cs;../../src/cli/Profile/*.cs;../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs;../../src/cli/Remove/*.cs" LinkBase="cli" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

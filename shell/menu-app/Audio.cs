@@ -383,6 +383,54 @@ public static partial class Audio
         finally { PropVariantClear(ref value); }
     }
 
+    // --- an app starting to play, told (roadmap 8.10) ----------------------------------------
+    // While the Audio page is open, each speaker's session manager says when a new app starts a
+    // sound, so it shows at once instead of at the next key. Registered once per opening, let go
+    // when the page closes; the managers and the watcher are held for as long as they're registered.
+    static readonly List<IAudioSessionManager2> watched = [];
+    static SessionWatcher? watcher;
+    static readonly object watching = new();
+
+    public static void WatchSessions(Action changed)
+    {
+        lock (watching)
+        {
+            if (watcher != null) return;
+            watcher = new SessionWatcher(changed);
+            try
+            {
+                Enumerator().EnumAudioEndpoints(DataFlow.Render, ActiveOnly, out var all);
+                all.GetCount(out uint count);
+                for (uint i = 0; i < count; i++)
+                {
+                    try
+                    {
+                        all.Item(i, out var device);
+                        var manager = (IAudioSessionManager2)Activate(device, SessionManagerIid);
+                        // The docs: list the sessions once first, or new ones aren't reported.
+                        manager.GetSessionEnumerator(out _);
+                        manager.RegisterSessionNotification(watcher);
+                        watched.Add(manager);
+                    }
+                    catch (Exception ex) { App.Log(ex); }
+                }
+            }
+            catch (Exception ex) { App.Log(ex); }
+        }
+    }
+
+    public static void StopWatchingSessions()
+    {
+        lock (watching)
+        {
+            if (watcher == null) return;
+            foreach (var manager in watched)
+                try { manager.UnregisterSessionNotification(watcher); } catch (Exception ex) { App.Log(ex); }
+            watched.Clear();
+            watcher = null;
+        }
+    }
+
     // --- Core Audio (mmdeviceapi.h, endpointvolume.h) ---------------------------------------
     // Source-generated COM ([GeneratedComInterface] and these wrappers), not [ComImport]: the
     // same code in the normal build and the native one (Native AOT has no built-in COM).
@@ -484,6 +532,19 @@ public static partial class Audio
         void GetAudioSessionControl(IntPtr group, uint flags, out IntPtr control);
         void GetSimpleAudioVolume(IntPtr group, uint flags, out IntPtr volume);
         void GetSessionEnumerator(out IAudioSessionEnumerator sessions);
+        void RegisterSessionNotification(IAudioSessionNotification notification);
+        void UnregisterSessionNotification(IAudioSessionNotification notification);
+    }
+
+    [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("641DD20B-4D41-49CC-ABA3-174B9477BB08")]
+    internal partial interface IAudioSessionNotification { void OnSessionCreated(IntPtr session); }
+
+    // Windows calls it on a worker thread of its own when an app starts a sound session: only
+    // pass the news on (calling back into the session manager from here can deadlock).
+    [GeneratedComClass]
+    internal sealed partial class SessionWatcher(Action changed) : IAudioSessionNotification
+    {
+        public void OnSessionCreated(IntPtr session) => changed();
     }
 
     [GeneratedComInterface(StringMarshalling = StringMarshalling.Utf16), Guid("E2F5BB11-0570-40CA-ACDD-3AA01277DEE8")]

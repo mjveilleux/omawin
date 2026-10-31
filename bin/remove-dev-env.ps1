@@ -6,13 +6,17 @@
 .DESCRIPTION
         remove-dev-env.ps1 node
         remove-dev-env.ps1 docker-db [MySQL ...]   (no names: pick the containers with fzf)
+        remove-dev-env.ps1 node -Linux             from your Linux in WSL (-Windows: from Windows;
+                                                   neither: asked, as install-dev-env.ps1 asks)
 
     Names: ruby docker-db node bun deno go php laravel symfony python elixir phoenix zig rust
     java dotnet ocaml clojure scala. It's done when install-dev-env.ps1 -Check no longer finds it.
 #>
 param(
     [Parameter(Position = 0)][string]$Name,
-    [Parameter(Position = 1, ValueFromRemainingArguments = $true)][string[]]$Rest
+    [Parameter(Position = 1, ValueFromRemainingArguments = $true)][string[]]$Rest,
+    [switch]$Linux,
+    [switch]$Windows
 )
 $ErrorActionPreference = 'Stop'
 $e = [char]27
@@ -21,6 +25,19 @@ $Names = 'ruby', 'docker-db', 'node', 'bun', 'deno', 'go', 'php', 'laravel', 'sy
 if (-not $Name -or $Names -notcontains $Name) {
     Write-Host "Usage: remove-dev-env.ps1 <$($Names -join '|')>" -ForegroundColor Red
     exit 1
+}
+
+# Which side, asked as install-dev-env.ps1 asks it (-Linux or -Windows answers): in Linux,
+# wsl/bin/omawin-dev-env removes it there.
+$sideArgs = @{}
+if ($Linux) { $sideArgs.Linux = $true }
+if ($Windows) { $sideArgs.Windows = $true }
+$side = & "$PSScriptRoot\install-dev-env.ps1" -Side @sideArgs
+if (-not $side) { exit 0 }  # quit at the question
+if ($side -ne 'windows') {
+    $env:WSL_UTF8 = '1'
+    & wsl.exe -d $side --cd "$(Split-Path $PSScriptRoot)\wsl" --exec bash ./bin/omawin-dev-env remove $Name @($Rest | Where-Object { $_ })
+    exit $LASTEXITCODE
 }
 $MiseData = if ($env:MISE_DATA_DIR) { $env:MISE_DATA_DIR } else { Join-Path $env:LOCALAPPDATA 'mise' }
 $LocalBin = Join-Path $HOME '.local\bin'

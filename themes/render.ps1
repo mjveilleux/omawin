@@ -111,6 +111,8 @@ function Get-LinuxBackground([string]$Background, [string]$Accent, [string]$Fore
 }
 # A palette without those colours (or not as #rrggbb) leaves Linux on the plain background.
 $c['linux_background'] = try { Get-LinuxBackground $c['background'] $c['accent'] $c['foreground'] } catch { $c['background'] }
+# Linux windows' border while another window has focus: their green, most of the way to the background.
+$c['linux_border_unfocused'] = try { Get-MixedColor $c['green'] $c['background'] 0.6 } catch { $c['green'] }
 
 function Expand-Template([string]$Text, [string]$Source) {
     [regex]::Replace($Text, '\{\{\s*(\w+)\s*\}\}', {
@@ -231,6 +233,10 @@ $glazeFeatures = @(& "$Repo\bin\glazewm-features.ps1")
 # keys start omawin.exe with the same words, as before.
 if ($glazeFeatures -notcontains 'emit') {
     $glazeText = [regex]::Replace($glazeText, "'emit omawin ([^']*)'", "'shell-exec --hide-window omawin.exe `$1'")
+}
+# Linux windows' green border (roadmap 3B) needs set-border-color: without it, the rules go.
+if ($glazeFeatures -notcontains 'set_border_color') {
+    $glazeText = [regex]::Replace($glazeText, '(?ms)^  # side-borders: Linux.*?^  # side-borders: end\r?\n', '')
 }
 # Animations off on a fork from before `animations.enabled`: no animation configured at all.
 if (-not $animationsOn -and $glazeFeatures -notcontains 'animations.enabled') {

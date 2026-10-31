@@ -167,6 +167,8 @@ public sealed partial class MainWindow
         }
         audioTimer ??= MakeAudioTimer();
         audioTimer.Start();
+        // An app that starts to play while the page is open shows at once (Audio.cs, 8.10).
+        Audio.WatchSessions(() => DispatcherQueue.TryEnqueue(() => { if (launching && page == "audio" && routing == null && appWindow.IsVisible) Render(); }));
         QuickFooter($"{outputs} outputs · {inputs} inputs · {mics} microphones");
         // Short: the footer's left side carries the device counts, and longer hints ran into them.
         if (quickSwitches) SetKeys(("space", "toggle"), ("← →", "level"), ("↵", "open"), ("esc", "back"));
@@ -502,6 +504,14 @@ public sealed partial class MainWindow
             string state = target.Connected ? "connected" : target.Le ? "Bluetooth LE · Windows connects these itself" : "disconnected";
             AddRow(Glyph(target.Connected ? 0xF00B1 : 0xF00AF), target.Name, Hex(target.Connected ? theme.Green : theme.Accent),
                 () => ToggleDevice(target), target.Connected ? Tag.Current : Tag.Text, target.Le ? "LE" : "", sub: state, highlight: hits);
+            // A headset's hands-free (8.49): on, any app opening its microphone drops it to call
+            // quality, mono, for everything; off, it stays in stereo and another microphone is used.
+            if (target.Handsfree is { } hf)
+                AddRow(Glyph(0xF02CB), hf ? $"{target.Name}: hands-free (call quality) on" : $"{target.Name}: stays in stereo (hands-free off)", Hex(theme.Muted),
+                    () => DoQuick(() => QuickSettings.BluetoothHandsfree(target, !hf)
+                        ?? $"{target.Name}: {(hf ? "stays in stereo; calls use another microphone" : "hands-free on again, for calls through it")}", QsPart.Bluetooth),
+                    Tag.Text, hf ? "on" : "off",
+                    sub: hf ? "Enter: stay in stereo when an app opens a microphone" : "Enter: hands-free back on, for calls through this headset");
         }
         AddRow(Glyph(0xF0493), "Bluetooth settings", Hex(theme.Comment), () => QuickSettings.Open("ms-settings:bluetooth"), sub: "pair a new device");
         if (on) Toggle();

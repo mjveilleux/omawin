@@ -114,6 +114,19 @@ public static class TuneUp
     public static List<TuneUpRow> ToApply(IEnumerable<TuneUpRow> rows, bool autoOnly) =>
         rows.Where(r => r.State == TuneUpState.NotApplied && (!autoOnly || r.Rec.When == TuneUpWhen.Auto)).ToList();
 
+    // What install and every update set by themselves (-Auto): each 'auto' recommendation once.
+    // seen: the ids an earlier -Auto already found applied or set. A setting you changed back
+    // afterwards is yours: it's never set again, and only a recommendation new to this PC (one an
+    // update adds, or one verified since) is set, and said.
+    public static List<TuneUpRow> AutoOnce(IEnumerable<TuneUpRow> rows, IReadOnlySet<string> seen) =>
+        ToApply(rows, autoOnly: true).Where(r => !r.Entry.Admin && !seen.Contains(r.Rec.Id)).ToList();
+
+    // The ids to remember after an -Auto run: those seen before, every 'auto' one found applied,
+    // and those just set.
+    public static List<string> Seen(IEnumerable<string> before, IEnumerable<TuneUpRow> rows, IEnumerable<string> set) =>
+        before.Concat(rows.Where(r => r.Rec.When == TuneUpWhen.Auto && r.State == TuneUpState.Applied).Select(r => r.Rec.Id))
+            .Concat(set).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.OrdinalIgnoreCase).ToList();
+
     // The report for a terminal: what's applied, what's left (and how to apply it), each with why.
     public static string Format(IReadOnlyList<TuneUpRow> rows)
     {

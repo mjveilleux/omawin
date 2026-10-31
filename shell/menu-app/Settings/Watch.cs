@@ -33,7 +33,7 @@ static class SettingWatch
             if (!watched.Add(e.Id)) return;
             try
             {
-                if (e.How.Verb == "reg") WatchKey(e, e.How.Target);
+                if (e.How.Verb == "reg") foreach (var part in e.Parts) WatchKey(e, part.How.Target);
                 else if (e.How.Verb == "builtin" && e.How.Target == "proxy")
                     WatchKey(e, @"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings\ProxyEnable");
                 else if (e.How.Verb == "builtin" && e.How.Target == "desktop-icons")

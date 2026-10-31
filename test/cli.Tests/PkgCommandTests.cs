@@ -224,6 +224,17 @@ public sealed class PkgCommandTests : IDisposable
         Assert.Equal(["scoop:fd"], File.ReadAllLines(Path.Combine(root, "state", "installed.txt")));
     }
 
+    // Install › Remove reads this: a row a line, nothing else on stdout (not even "asking …").
+    [Fact]
+    public void ListTsvIsOnlyRows()
+    {
+        host.Outputs["scoop export"] = """{"apps":[{"Name":"fd","Version":"10.2.0"}]}""";
+        host.Present.Remove("choco");
+        host.Present.Remove("mise");
+        Assert.Equal(0, Run("list", "--tsv"));
+        Assert.Equal(["fd\tscoop\tfd\t10.2.0\tfound"], host.Out.ToString().Split('\n', StringSplitOptions.RemoveEmptyEntries).Select(l => l.TrimEnd('\r')));
+    }
+
     [Fact]
     public void TheCatalogListIsReadAgainOnlyWhenWingetsChanged()
     {

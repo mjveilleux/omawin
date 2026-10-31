@@ -55,9 +55,15 @@ public sealed class SettingAdminQueue(string path)
 
     // One line of the plan the elevated script reads: resolved and checked here, never catalog
     // text it would interpret. "<id>\t<verb>\t<target>\t<type or args>\t<value>"; null when the
-    // entry has no admin path (only HKLM registry values and a closed list of builtins do; the
-    // script checks both again).
-    public static readonly string[] AdminBuiltins = ["hibernate", "sudo", "windows-feature"];
+    // entry has no admin path (only machine-wide registry values, this account's policies, and a
+    // closed list of builtins do; the script checks each again).
+    public static readonly string[] AdminBuiltins =
+        ["hibernate", "sudo", "windows-feature", "service", "utf8", "firewall-dev", "ssh-agent", "ai-paint"];
+
+    // HKCU\Software\Policies: a standard account can only read it, so its lines are admin too.
+    // The elevated run may be another account (a standard user's prompt takes an admin's
+    // password), so the script writes them to this account's hive by its SID, never to HKCU there.
+    public const string UserPolicies = @"HKCU\Software\Policies\";
 
     public static string? PlanLine(SettingEntry e, string value)
     {
@@ -65,11 +71,27 @@ public sealed class SettingAdminQueue(string path)
         if (value.Contains('\t') || value.Contains('\n')) return null;
         return e.How.Verb switch
         {
-            "reg" when e.How.Target.StartsWith(@"HKLM\", StringComparison.OrdinalIgnoreCase) && e.How.Args is [var type, ..] =>
+            "reg" when (e.How.Target.StartsWith(@"HKLM\", StringComparison.OrdinalIgnoreCase)
+                        || e.How.Target.StartsWith(UserPolicies, StringComparison.OrdinalIgnoreCase)) && e.How.Args is [var type, ..] =>
                 string.Join('\t', e.Id, "reg", e.How.Target, type, SettingValues.FromWords(e, value)),
+            // A service's switch goes as the start mode its line names for on / off.
+            "builtin" when e.How.Target == "service" =>
+                ServiceStart.ModeFor(e, value) is { } mode && e.How.Args is [var service] ? string.Join('\t', e.Id, "builtin", "service", service, mode) : null,
             "builtin" when AdminBuiltins.Contains(e.How.Target) =>
                 string.Join('\t', e.Id, "builtin", e.How.Target, string.Join(' ', e.How.Args), value),
             _ => null,
         };
     }
+
+    // Every line one change needs: one per value a joined line (reg A + reg B) sets, all or none.
+    public static List<string> PlanLines(SettingEntry e, string value)
+    {
+        var lines = e.Parts.Select(p => PlanLine(p, value)).ToList();
+        return lines.All(l => l != null) ? lines.OfType<string>().ToList() : [];
+    }
+
+    // How a queued value reads in the list before the prompt: an action's resolved value (the
+    // dev runtimes a firewall rule is for) by name, not as the paths it carries.
+    public static string? DescribeValue(SettingEntry e, string value) =>
+        e.How.Verb == "builtin" && e.How.Target == "firewall-dev" ? DevRuntimes.Describe(value) : null;
 }

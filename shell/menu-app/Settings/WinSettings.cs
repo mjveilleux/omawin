@@ -74,6 +74,7 @@ public static class WinSettings
                     App.Log);
                 s.Watch = e => SettingWatch.Ensure(s, e);
                 s.RunAdmin = RunElevated;
+                s.ResolveAdmin = BuiltinHandler.ResolveAdmin;
                 return store = s;
             }
         }
@@ -176,7 +177,7 @@ public static class WinSettings
     // Windows PowerShell 5.1 (always there, and an elevated per-user pwsh.exe could be swapped by
     // anything that can write to the user's folder, AGENTS.md), hidden, with fixed verbs: it reads
     // the plan and checks every line against its own allow-list. Declined: nothing ran.
-    static async Task<AdminRun> RunElevated(IReadOnlyList<string> plan)
+    internal static async Task<AdminRun> RunElevated(IReadOnlyList<string> plan)
     {
         var dir = MenuModel.StateDir;
         Directory.CreateDirectory(dir);
@@ -186,8 +187,11 @@ public static class WinSettings
         File.Delete(resultFile);
         var script = Path.Combine(MenuModel.Repo, "bin", "settings-admin.ps1");
         var powershell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+        // This account's SID: the prompt may run as another account (an admin's password on a
+        // standard account), and this account's policies (HKCU\Software\Policies) go in its hive.
+        using var me = System.Security.Principal.WindowsIdentity.GetCurrent();
         var info = new ProcessStartInfo(powershell,
-            $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" -Plan \"{planFile}\" -Result \"{resultFile}\"")
+            $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" -Plan \"{planFile}\" -Result \"{resultFile}\" -User {me.User?.Value}")
         { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
         try
         {
@@ -219,12 +223,19 @@ public static class WinSettings
     }
 
     // --- `omawin setting …` / `omawin settings …` / `omawin tune-up` -----------------------------
-    public static async Task<SettingCommands.Answer> Answer(string[] request) => request switch
+    public static async Task<SettingCommands.Answer> Answer(string[] request, Action<string>? progress = null) => request switch
     {
         ["--setting", .. var rest] => SettingCommands.Setting(Store, rest, ExplorerRestart.Now),
         ["--settings", .. var rest] => await SettingCommands.Settings(Store, rest,
-            Path.Combine(MenuModel.Work, "settings.txt"), Path.Combine(MenuModel.Shared, "settings.txt")),
-        ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified),
+            Path.Combine(MenuModel.Work, "settings.txt"), Path.Combine(MenuModel.Shared, "settings.txt"),
+            Path.Combine(MenuModel.StateDir, "settings-applied.txt")),
+        ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified,
+            Path.Combine(MenuModel.StateDir, "tune-up-auto.txt")),
+        // Not a setting, but answered the same way: Windows' extra apps (roadmap 8.50, WindowsAppsStore.cs).
+        ["--windows-apps", .. var rest] => WindowsAppsStore.Answer(rest, progress ?? (_ => { })),
+        ["--shell-extensions", .. var rest] => ShellExtensionsWin.Answer(rest),
+        ["--env", .. var rest] => await EnvVars.Answer(EnvVarsWin.Instance, EnvVarsWin.History, rest),
+        ["--dev-drive", .. var rest] => await DevDrive.Answer(DevDriveWin.Instance, EnvVarsWin.Instance, EnvVarsWin.History, rest),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

@@ -35,6 +35,7 @@ public static class Bar
     static bool ethernet;
     static int listening, updates;
     static bool started, arrived;
+    static LinuxState.Status? linux;
 
     // From App.OnLaunched: how widgets reach the menu app (a request, as SystemMenu.exe takes it).
     public static void Start(Action<string[]> handle)
@@ -229,6 +230,85 @@ public static class Bar
             }
         }) { IsBackground = true, Name = "bar updates" }.Start();
         new Thread(VoiceMeter) { IsBackground = true, Name = "bar voice" }.Start();
+        new Thread(LinuxLoop) { IsBackground = true, Name = "bar linux" }.Start();
+    }
+
+    // --- your Linux in WSL (roadmap 3.10, LinuxState) ---------------------------------------------
+    // Every 5 s: is there a Linux (WSL's registry), and is WSL's VM up (its process; nothing is
+    // started). wsl.exe is asked only while the VM is up (LinuxState.ShouldAsk), and soon after the
+    // bar's own clicks start or stop it (LinuxChanged).
+    static readonly AutoResetEvent linuxNow = new(false);
+    static volatile bool linuxAsk;
+
+    public static void LinuxChanged()
+    {
+        // A cold start takes seconds, a stop a moment: asked again at both.
+        foreach (var ms in new[] { 2500, 10000 })
+            Task.Delay(ms).ContinueWith(_ => { linuxAsk = true; linuxNow.Set(); }, TaskScheduler.Default);
+    }
+
+    static void LinuxLoop()
+    {
+        bool vmWasUp = false, running = false;
+        var asked = DateTime.MinValue;
+        var lastDistro = "";
+        while (true)
+        {
+            try
+            {
+                var (name, distro) = Projects.Linux;
+                LinuxState.Status? now = null;
+                if (Projects.Distros().Contains(distro, StringComparer.OrdinalIgnoreCase))
+                {
+                    var (vmUp, vmBytes) = WslVm();
+                    if (distro != lastDistro || linuxAsk) vmWasUp = false; // ask now
+                    linuxAsk = false;
+                    if (!vmUp) running = false;
+                    else if (LinuxState.ShouldAsk(vmUp, vmWasUp, asked, DateTime.Now))
+                    {
+                        running = WslRunning(distro);
+                        asked = DateTime.Now;
+                    }
+                    vmWasUp = vmUp;
+                    lastDistro = distro;
+                    now = new LinuxState.Status(distro, name, running, running ? vmBytes : null);
+                }
+                if (now != linux) { linux = now; ui?.TryEnqueue(Push); }
+            }
+            catch (Exception ex) { App.Log(ex); }
+            linuxNow.WaitOne(5000);
+        }
+    }
+
+    // WSL's VM: up when its process is there (vmmemWSL; vmmem on older WSL), and its memory when
+    // Windows lets this user read it.
+    static (bool Up, long? Bytes) WslVm()
+    {
+        foreach (var name in new[] { "vmmemWSL", "vmmem" })
+        {
+            var found = Process.GetProcessesByName(name);
+            try
+            {
+                if (found.Length == 0) continue;
+                try { return (true, found.Sum(p => p.WorkingSet64)); }
+                catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception) { return (true, null); }
+            }
+            finally { foreach (var p in found) p.Dispose(); }
+        }
+        return (false, null);
+    }
+
+    static bool WslRunning(string distro)
+    {
+        var info = new ProcessStartInfo("wsl.exe", "--list --running --quiet")
+        {
+            UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, StandardOutputEncoding = Encoding.UTF8,
+        };
+        info.Environment["WSL_UTF8"] = "1";
+        using var p = Process.Start(info)!;
+        var output = p.StandardOutput.ReadToEndAsync();
+        if (!p.WaitForExit(10_000)) { try { p.Kill(); } catch (InvalidOperationException) { } return false; }
+        return LinuxState.Running(output.Result, distro);
     }
 
     // The link the internet goes over: past a VPN or a virtual adapter (Tailscale, WSL's) to the
@@ -317,7 +397,7 @@ public static class Bar
     {
         if (windows.Count == 0) return;
         var wm = Wm.Last;
-        var data = new BarData(wm, DateTime.Now, Battery(), wifi, ethernet, speaker, StayAwake.On, listening, updates);
+        var data = new BarData(wm, DateTime.Now, Battery(), wifi, ethernet, speaker, StayAwake.On, listening, updates) { Linux = linux };
         foreach (var bar in windows)
         {
             bar.Monitor = wm?.Monitors.FirstOrDefault(m => m.X == bar.Screen.X && m.Y == bar.Screen.Y);

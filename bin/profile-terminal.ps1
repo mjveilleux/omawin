@@ -22,12 +22,42 @@
       tab      a new tab in the terminal in front (noctty.com +new-tab; the Ctrl+Shift+T key
                does the same inside noctty, without the request from outside)
 
+    -Wsl times Linux windows instead (roadmap 3.4, 3.5): omawin launch terminal --wsl, a noctty
+    process of its own running wsl.exe (no spare shell: bash in a warm WSL starts at once), done
+    at bash's first output on screen.
+      window   your Linux running (kept warm): what a Linux window costs every time
+      cold     after `wsl --shutdown` each run: the VM, the distro and systemd first. It stops
+               every distro, so it asks first (-Yes doesn't)
+    `omawin profile linux` times WSL alone, with no window, and what keeping it warm costs.
+
     -Video saves a 60 fps recording of the whole screen alongside. It closes the terminals it
     opened on that workspace and switches back afterwards.
 #>
-param([int]$Runs = 5, [string]$Workspace = '8', [ValidateSet('window', 'cold', 'tab')][string]$Scenario = 'window', [string]$Video)
+param([int]$Runs = 5, [string]$Workspace = '8', [ValidateSet('window', 'cold', 'tab')][string]$Scenario = 'window', [string]$Video,
+    [switch]$Wsl, [switch]$Yes)
 
 $ErrorActionPreference = 'Stop'
+if ($Wsl -and $Scenario -eq 'tab') { Write-Host 'A tab of the terminal in front is its own shell: -Wsl times windows (-Scenario window or cold).' -ForegroundColor Red; exit 2 }
+# The Linux omawin opens (omawin default linux): its WSL name, from bin/defaults.txt.
+$distro = $null
+if ($Wsl) {
+    $env:WSL_UTF8 = '1'
+    $rows = @(foreach ($line in Get-Content (Join-Path (Split-Path $PSScriptRoot) 'bin\defaults.txt')) {
+            $p = @($line -split '\|' | ForEach-Object { $_.Trim() })
+            if ($p.Count -ge 5 -and $p[0] -eq 'linux') { [pscustomobject]@{ Name = $p[1]; Distro = $p[4] } }
+        })
+    $pickFile = Join-Path $env:LOCALAPPDATA 'launcher\defaults\linux'
+    $picked = if (Test-Path $pickFile) { "$(Get-Content $pickFile -TotalCount 1)".Trim() }
+    $distro = (@($rows | Where-Object Name -eq $picked) + $rows | Select-Object -First 1).Distro
+    if (@(& wsl.exe --list --quiet 2>$null | ForEach-Object { "$_".Trim() }) -notcontains $distro) {
+        Write-Host "$distro isn't installed for this account (omawin preset add wsl)." -ForegroundColor Red; exit 1
+    }
+    if ($Scenario -eq 'cold' -and -not $Yes) {
+        $answer = Read-Host "This stops every Linux in WSL (wsl --shutdown) $Runs times: save your work there first. Go on? [y/N]"
+        if ($answer -notmatch '^y') { Write-Host 'Nothing done.'; exit 1 }
+    }
+}
+$mainLabel = if ($Wsl) { 'omawin main launch terminal --wsl' } else { 'omawin main terminal here' }
 $state = Join-Path $env:LOCALAPPDATA 'launcher'
 $traceOn = Join-Path $state 'trace-on'
 $traceLog = Join-Path $state 'trace.log'
@@ -50,10 +80,14 @@ function RestartBackgroundNoctty {
     Start-Sleep 2
 }
 # Done when the terminal's first frame is up and, if a shell started from scratch, its prompt.
+# A Linux window is done at bash's first output (its prompt): no pwsh marks there, and a cold
+# WSL takes seconds.
 function WaitDone([int]$frames, [int]$prompts, [bool]$needPrompt) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
-    while ($sw.ElapsedMilliseconds -lt 8000) {
-        if ((Count 'noctty first-frame') -gt $frames -and (-not $needPrompt -or (Count 'pwsh first-prompt') -gt $prompts)) { return }
+    $limit = if ($Wsl) { 60000 } else { 8000 }
+    while ($sw.ElapsedMilliseconds -lt $limit) {
+        $prompted = if ($Wsl) { (Count 'noctty first-output') -gt $prompts } else { -not $needPrompt -or (Count 'pwsh first-prompt') -gt $prompts }
+        if ((Count 'noctty first-frame') -gt $frames -and $prompted) { return }
         Start-Sleep -Milliseconds 5
     }
 }
@@ -65,7 +99,8 @@ try {
     glazewm command focus --workspace $Workspace | Out-Null
     Start-Sleep -Milliseconds 500
     if (-not (Get-Process noctty -ErrorAction SilentlyContinue)) { RestartBackgroundNoctty }
-    if ($Scenario -ne 'cold') { Start-Process omawin.exe -ArgumentList 'launch', 'terminal' -WindowStyle Hidden; Start-Sleep 2.5 } # the terminal in front
+    if ($Wsl) { if ($Scenario -ne 'cold') { & wsl.exe -d $distro --exec /bin/true } } # warm: Linux up first
+    elseif ($Scenario -ne 'cold') { Start-Process omawin.exe -ArgumentList 'launch', 'terminal' -WindowStyle Hidden; Start-Sleep 2.5 } # the terminal in front
     Set-Content $traceOn ''
     Remove-Item $traceLog -ErrorAction SilentlyContinue
 
@@ -82,11 +117,16 @@ try {
     }
 
     for ($run = 1; $run -le $Runs; $run++) {
-        if ($Scenario -eq 'cold') { CloseTerminals; RestartBackgroundNoctty }
-        $frames = Count 'noctty first-frame'; $prompts = Count 'pwsh first-prompt'
+        if ($Wsl) {
+            CloseTerminals
+            if ($Scenario -eq 'cold') { & wsl.exe --shutdown; Start-Sleep 3 }
+        }
+        elseif ($Scenario -eq 'cold') { CloseTerminals; RestartBackgroundNoctty }
+        $frames = Count 'noctty first-frame'; $prompts = Count $(if ($Wsl) { 'noctty first-output' } else { 'pwsh first-prompt' })
         Mark "run-$run"
         Mark 'key'
         if ($Scenario -eq 'tab') { Start-Process $nocttyCom -ArgumentList '+new-tab' -WindowStyle Hidden }
+        elseif ($Wsl) { glazewm command shell-exec --hide-window omawin.exe launch terminal --wsl | Out-Null }
         else { glazewm command shell-exec --hide-window omawin.exe terminal here | Out-Null }
         WaitDone $frames $prompts ($Scenario -eq 'cold')
         Start-Sleep -Milliseconds 1200 # let the next spare shell start before the next run
@@ -96,6 +136,8 @@ try {
     Remove-Item $traceOn -ErrorAction SilentlyContinue
     CloseTerminals
     if ($previous -and $previous -ne $Workspace) { glazewm command focus --workspace $previous | Out-Null }
+    # wsl --shutdown ended the keep-warm too: started again (it only starts what isn't running).
+    if ($Wsl -and $Scenario -eq 'cold') { Start-Process omawin.exe -ArgumentList 'start', 'terminal' -WindowStyle Hidden }
 }
 
 # --- the numbers -------------------------------------------------------------------------------
@@ -105,10 +147,11 @@ $marks = foreach ($line in Get-Content $traceLog) {
 }
 $labels = [ordered]@{
     'omawin process-created'    = 'omawin.exe created by Windows'
-    'omawin main terminal here' = 'omawin code running'
+    $mainLabel                  = 'omawin code running'
     'omawin found-noctty'       = 'omawin: noctty in front'
     'omawin noctty-listed'      = 'omawin: got its folder (+list-windows)'
     'omawin noctty-new-window'  = 'omawin: asks noctty (+new-window)'
+    'omawin noctty-own-process' = 'omawin: starts a noctty of its own (Linux)'
     'noctty ipc-new-window'     = 'noctty got the request'
     'noctty surface-create'     = 'noctty creating the window/tab'
     'noctty gl-start'           = 'noctty: OpenGL context...'
@@ -141,7 +184,7 @@ for ($i = 0; $i -lt $keys.Count; $i++) {
     # The prompt is on screen at the first frame that has the shell's output in it: a spare
     # shell's prompt was already written, so that's its output read and a frame after it; a
     # shell started now writes it at "first prompt".
-    $written = if ($t.ContainsKey('noctty spare-taken')) { $t['noctty first-output'] } else { $t['pwsh first-prompt'] }
+    $written = if ($Wsl -or $t.ContainsKey('noctty spare-taken')) { $t['noctty first-output'] } else { $t['pwsh first-prompt'] }
     if ($null -ne $written -and $t.ContainsKey('noctty first-frame')) { $t['prompt-on-screen'] = [math]::Max($written, $t['noctty first-frame']) }
     $timelines += , $t
 }
@@ -155,16 +198,18 @@ function Row([string]$name, $values) {
 }
 $head = '{0,-40}' -f ''
 for ($i = 1; $i -le $timelines.Count; $i++) { $head += '{0,7}' -f "run $i" }
-Write-Host "`nScenario: $Scenario. Timeline: ms since the key`n"
+Write-Host "`nScenario: $Scenario$(if ($Wsl) { " (Linux, $distro)" }). Timeline: ms since the key`n"
 Write-Host ($head + '{0,8}' -f 'median')
 foreach ($label in $labels.Keys) { Row $labels[$label] ($timelines | ForEach-Object { $_[$label] }) }
 
 function Span($r, $a, $b) { if (($null -eq $a -or $r.ContainsKey($a)) -and $r.ContainsKey($b)) { $from = if ($null -eq $a) { 0 } else { $r[$a] }; if ($r[$b] -ge $from) { $r[$b] - $from } } }
 $spans = [ordered]@{
     'key -> omawin.exe created'           = @($null, 'omawin process-created')
-    'omawin start-up (.NET)'              = @('omawin process-created', 'omawin main terminal here')
+    'omawin start-up (.NET)'              = @('omawin process-created', $mainLabel)
     'omawin: ask noctty the folder'       = @('omawin found-noctty', 'omawin noctty-listed')
     'omawin -> noctty got the request'    = @('omawin noctty-new-window', 'noctty ipc-new-window')
+    'omawin: noctty of its own -> frame'  = @('omawin noctty-own-process', 'noctty first-frame')
+    'Linux: first frame -> bash output'   = @('noctty first-frame', 'noctty first-output')
     'noctty: request -> window shown'     = @('noctty ipc-new-window', 'noctty window-shown')
     'noctty: window shown -> first frame' = @('noctty window-shown', 'noctty first-frame')
     'new shell: pwsh start-up'            = @('pwsh process-created', 'pwsh profile-start')

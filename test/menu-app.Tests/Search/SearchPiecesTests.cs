@@ -139,12 +139,62 @@ public class SearchPiecesTests
         Assert.Equal(["setting:look.dark-apps"], rows.Single(r => r.Title == "Quick").Slots.Select(s => s.Key));
     }
 
+    // --- pins (Ctrl+P) -------------------------------------------------------------------------
+    [Fact]
+    public void PinsGoLastSoNothingAboveMoves()
+    {
+        var before = HomePlan.Arrange(Items, ["app.zoom"], AllSwitches);
+        var after = HomePlan.Arrange(Items, ["app.zoom"], AllSwitches, ["setting:look.dark-apps", "file:C:\\notes.md"]);
+        Assert.Equal(before.Count + 1, after.Count);
+        for (int i = 0; i < before.Count; i++) Assert.Equal(before[i].Slots, after[i].Slots);
+        Assert.Equal("Pinned", after[^1].Title);
+        Assert.Equal(["pin:setting:look.dark-apps", "pin:file:C:\\notes.md"], after[^1].Slots.Select(s => s.Key));
+        Assert.All(after[^1].Slots, s => Assert.Equal(HomeStyle.Pin, s.Style));
+    }
+
+    [Fact]
+    public void APinnedAppIsntInFrequentToo()
+    {
+        var rows = HomePlan.Arrange(Items, ["app.zoom", "app.slack"], AllSwitches, ["app:app.zoom"]);
+        Assert.DoesNotContain("app.zoom", rows.Single(r => r.Title == "Frequent").Slots.Select(s => s.Key));
+        Assert.Equal(["pin:app:app.zoom"], rows[^1].Slots.Select(s => s.Key));
+    }
+
+    [Fact]
+    public void CtrlPPinsAtTheEndUnpinsAndNeverDropsOneOfYours()
+    {
+        var (one, c1) = Pins.Toggle([], "file:a", Tag.File);
+        Assert.Equal(["file:a"], one);
+        Assert.Equal(PinChange.Pinned, c1);
+        var full = new List<string> { "a:1", "a:2", "a:3", "a:4" };
+        Assert.Equal(PinChange.Full, Pins.Toggle(full, "cmd:update", Tag.Command).Change);
+        var (three, c2) = Pins.Toggle(full, "a:2", Tag.App);
+        Assert.Equal(["a:1", "a:3", "a:4"], three);
+        Assert.Equal(PinChange.Unpinned, c2);
+        Assert.Equal(PinChange.NotPinnable, Pins.Toggle([], "win:42", Tag.Window).Change);
+        Assert.Equal(PinChange.NotPinnable, Pins.Toggle([], "clip:x", Tag.Clipboard).Change);
+    }
+
+    [Fact]
+    public void ThePinsFileIsIdsOnceEach()
+    {
+        Assert.Equal(["app:x", "setting:look.dark-apps"], Pins.Parse(["# mine", " app:x ", "", "setting:look.dark-apps", "app:x", "junk"]));
+    }
+
+    [Fact]
+    public void CtrlKOffersPinOrUnpin()
+    {
+        Assert.Equal("Pin to the home", ActionPlan.For(Tag.File, RowKind.None, new())[^1].Label);
+        Assert.Equal("Unpin from the home", ActionPlan.For(Tag.Project, RowKind.None, new(Pinned: true))[^1].Label);
+        Assert.DoesNotContain(ActionPlan.For(Tag.Window, RowKind.None, new()), a => a.Verb == Verb.Pin);
+    }
+
     // --- actions -------------------------------------------------------------------------------
     [Fact]
     public void EnterIsTheFirstActionAndCtrlKListsTheRest()
     {
         Assert.Equal(Verb.Switch, ActionPlan.For(Tag.Setting, RowKind.Switch, new())[0].Verb);
-        Assert.Equal([Verb.Next, Verb.Previous, Verb.CopyCommand, Verb.Undo],
+        Assert.Equal([Verb.Next, Verb.Previous, Verb.CopyCommand, Verb.Undo, Verb.Pin],
             ActionPlan.For(Tag.Setting, RowKind.Choice, new(Undoable: true)).Select(a => a.Verb));
         Assert.Equal(Verb.Open, ActionPlan.For(Tag.Setting, RowKind.Link, new())[0].Verb);
         Assert.DoesNotContain(ActionPlan.For(Tag.File, RowKind.None, new(Folder: true)), a => a.Verb == Verb.OpenInEditor);

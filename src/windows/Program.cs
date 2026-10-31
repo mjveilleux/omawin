@@ -19,6 +19,13 @@ namespace Omawin.Windows;
 //   clip [transform]       the clipboard's text converted in place (8.14)
 //   classic-menu [on|off|status]  the full right-click menu back (8.24)
 //   dns [preset] [adapter] the adapters' DNS, and Cloudflare / Quad9 / Google / your router's (8.19)
+//   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
+//   proxy [set|on|off|script]  this account's system proxy (8.19)
+//   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
+//   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
+//   wallpaper spread <picture>…  a picture per monitor, left to right (8.8; the theme switch uses it)
+//   pip [title]            the window in front, or one by title, live in a small window on top (8.6)
+//   display [save|apply|forget]  each set of monitors' layout, put back when it's plugged in again (8.7)
 //   --version
 public static partial class Program
 {
@@ -45,6 +52,13 @@ public static partial class Program
                 "clip" => ClipCommand.Run(rest),
                 "classic-menu" => ClassicMenuCommand.Run(rest),
                 "dns" => DnsCommand.Run(rest),
+                "updates" => UpdatesCommand.Run(rest),
+                "proxy" => ProxyCommand.Run(rest),
+                "disk" => DiskCommand.Run(rest),
+                "keyboard" => KeyboardCommand.Run(rest),
+                "wallpaper" => WallpaperCommand.Run(rest),
+                "pip" => PipCommand.Run(rest),
+                "display" => DisplayCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -67,7 +81,13 @@ public static partial class Program
               omawin wifi share [network] the Wi-Fi as a QR code
               omawin clip [transform]     the clipboard's text converted (clip lists them)
               omawin classic-menu         the full right-click menu, or Windows 11's short one (on, off, status)
-              omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it
+              omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it; dns encrypt [on|off] for DNS over HTTPS
+              omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
+              omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
+              omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
+              omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
+              omawin pip [title]          a window live in a small window on top (from a key: the one in front)
+              omawin display              the monitors' layout; display save remembers it for this set, apply puts it back
             """);
         return 0;
     }

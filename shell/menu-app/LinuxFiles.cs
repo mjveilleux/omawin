@@ -67,6 +67,30 @@ public static class LinuxFiles
         _ => distro,
     };
 
+    // The distro's logo in the Nerd Font (nf-linux-*), as the prompt's side mark has it
+    // (config/starship/starship.toml): the finder's chip, the bar's Linux, Projects. Tux for one
+    // without its own.
+    public static int Logo(string distro) => distro.ToLowerInvariant() switch
+    {
+        "archlinux" or "arch" => 0xF303,
+        var d when d.StartsWith("ubuntu") => 0xF31B,
+        var d when d.StartsWith("debian") => 0xF306,
+        var d when d.StartsWith("fedora") => 0xF30A,
+        var d when d.StartsWith("opensuse") || d.StartsWith("suse") => 0xF314,
+        var d when d.StartsWith("alpine") => 0xF300,
+        _ => 0xF31A,
+    };
+
+    // A root that's a distro's folder as Windows sees it (\\wsl.localhost\<distro>): that distro's
+    // logo; null for any other folder.
+    public static int? LogoOfRoot(string? root)
+    {
+        const string prefix = @"\\wsl.localhost\";
+        if (root == null || !root.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)) return null;
+        var distro = root[prefix.Length..].Split('\\')[0];
+        return distro.Length == 0 ? null : Logo(distro);
+    }
+
     // A Linux path as Windows reaches it, for Explorer: \\wsl.localhost\<distro>\home\you\x.
     public static string WindowsPath(string distro, string linuxPath) =>
         $@"\\wsl.localhost\{distro}{linuxPath.Replace('/', '\\')}";

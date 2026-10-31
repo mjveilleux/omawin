@@ -348,6 +348,18 @@ docker_root() {
   systemctl enable docker.socket > /dev/null 2>&1 || true
 }
 
+# A shorter cold start (roadmap 3.5) that costs nothing once Linux is up. WSL's network is Windows',
+# there before the distro starts, so nothing at boot has to wait for it; the wait-online services
+# (systemd-networkd's, NetworkManager's) find nothing of theirs to wait for and can hold
+# network-online.target, which Docker's service is ordered after, for up to two minutes. Masked,
+# the target is reached at once. (omawin profile linux shows systemd's boot and its slowest units.)
+fast_boot() {
+  local unit
+  for unit in systemd-networkd-wait-online.service NetworkManager-wait-online.service; do
+    [[ -L /etc/systemd/system/$unit ]] || systemctl mask "$unit" > /dev/null 2>&1 || true
+  done
+}
+
 # The user's systemd manager runs from the distro's start, not only while a terminal is open: the
 # file index and the SSH agent bridge (user units, refresh_part) are up when Windows asks.
 linger() { mkdir -p /var/lib/systemd/linger && touch "/var/lib/systemd/linger/$1"; }
@@ -376,6 +388,7 @@ root_part() {
   fi
   docker_root "$user"
   linger "$user"
+  fast_boot
   # omawin set this distro up: wsl/install.ps1 and `omawin update` leave one without it alone
   # (it's yours), and `omawin linux reset` refuses it.
   [[ -f /etc/omawin ]] || printf 'Set up by omawin (wsl/setup.sh), %s.\n' "$(date +%Y-%m-%d)" > /etc/omawin
@@ -398,6 +411,7 @@ update_part() {
   # distro's next start).
   docker_root "$user"
   linger "$user"
+  fast_boot
   wsl_conf "$user"
   # Windows' folders, passed on (runuser -l starts from a clean environment).
   runuser -l "$user" -c "$(printf 'OMAWIN_STATE=%q OMAWIN_ACCOUNT=%q USERPROFILE=%q LOCALAPPDATA=%q bash %q refresh' \

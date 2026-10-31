@@ -6,14 +6,19 @@
 # how, by verb (shell/menu-app/Settings/):
 #   reg <HIVE\key\value> <dword|qword|sz|expand_sz> on= off= | values= | range= [default=] [broadcast=<area>]
 #       [refresh-explorer] [restart-explorer]     a registry value; off=- deletes it (Windows' default)
+#       a switch may join values with " + " (reg A … + reg B …): set together, off when all are off
 #   spi <name>        SystemParametersInfo (Switches.cs): animations mouse-accel pointer-speed key-repeat
 #                     key-delay sticky-hotkey swap-buttons scroll-lines double-click drag-full-windows
 #                     font-smoothing snap focus-follows-mouse menu-delay min-animate filter-hotkey toggle-hotkey
 #   powercfg <name> <ac|dc|both>   the active power plan (Switches.cs): screen-off sleep hibernate-after
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
-#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu, and the
-#                     admin ones hibernate sudo windows-feature <feature>
+#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu
+#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs),
+#                     disabled-hotkeys startup-item <app> layout-hotkey folder-type-general case-sensitive,
+#                     and the admin ones (read here, set in the one prompt by bin/settings-admin.ps1)
+#                     hibernate sudo windows-feature <feature> service <name> on=<mode> off=<mode>
+#                     ssh-agent utf8 ai-paint firewall-dev
 #   link <uri or program>   opens a page; omawin <command>   one of omawin's commands
 # notes: admin (one prompt for all of them, roadmap 2.9), signout, restart, minBuild=, maxBuild=, check.
 # CI sets and restores every reg, spi and powercfg line on a Windows runner (.github/workflows/test.yml).
@@ -59,8 +64,21 @@ privacy.tailored | - | Tailored experiences | diagnostic tailored tips | switch 
 privacy.online-speech | - | Online speech recognition | speech voice cloud | switch | reg HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy\HasAccepted dword on=1 off=0 | check
 privacy.app-tracking | - | Most used apps in Start (launch tracking) | tracking launch most used start | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_TrackProgs dword on=1 off=0 default=1 |
 privacy.language-list | - | Websites see my language list | language http accept websites | switch | reg "HKCU\Control Panel\International\User Profile\HttpAcceptLanguageOptOut" dword on=0 off=1 default=0 | check
-privacy.settings-suggestions | - | Suggested content in Settings | suggestions ads settings recommended | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338393Enabled dword on=1 off=0 default=1 | check
-privacy.tips | - | Tips and suggestions when using Windows | tips suggestions tricks | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338389Enabled dword on=1 off=0 default=1 | check
+privacy.settings-suggestions | - | Suggested content in Settings | suggestions ads settings recommended | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338393Enabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-353694Enabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-353696Enabled dword on=1 off=0 default=1 |
+privacy.tips | - | Tips and suggestions when using Windows | tips suggestions tricks toasts | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338389Enabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SoftLandingEnabled dword on=1 off=0 default=1 |
+# omawin no-ads (bin/no-ads.ps1) turns these off at install and at every update, by these ids, and
+# these other lines too: ad-id, tailored, tips, settings-suggestions above; explorer.sync-ads,
+# privacy.finish-setup, system.search-highlights, look.ai-copilot-button. Each is undone here like
+# any setting, and one you turn back on through omawin stays on (no-ads reads the history). Set on
+# every install for long, so not marked check. (SubscribedContent-88000326: Windows doesn't say.)
+privacy.promoted-apps | - | Apps Windows installs for you (promoted and preinstalled) | promoted apps silent install preinstalled ads candy | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SilentInstalledAppsEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\PreInstalledAppsEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\PreInstalledAppsEverEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\OemPreInstalledAppsEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\FeatureManagementEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-88000326Enabled dword on=1 off=0 default=1 |
+privacy.start-suggestions | - | Suggestions and recommendations in Start | start suggestions recommendations promoted ads | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SystemPaneSuggestionsEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338388Enabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_IrisRecommendations dword on=1 off=0 default=1 |
+privacy.lock-screen-tips | - | Fun facts and tips on the lock screen | lock screen fun facts tips | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\RotatingLockScreenOverlayEnabled dword on=1 off=0 default=1 + reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338387Enabled dword on=1 off=0 default=1 |
+privacy.welcome | - | Windows welcome experience after updates | welcome what's new updates | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-310093Enabled dword on=1 off=0 default=1 |
+privacy.timeline-suggestions | - | Suggestions in the timeline | timeline suggestions | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-353698Enabled dword on=1 off=0 default=1 |
+privacy.account-nags | - | Account notifications in Start | account microsoft backup notifications start nag | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_AccountNotifications dword on=1 off=0 default=1 |
+privacy.suggested-notifications | - | Suggestion notifications from Windows | suggested notifications toast suggestions | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Notifications\Settings\Windows.SystemToast.Suggested\Enabled dword on=1 off=0 default=1 |
+privacy.consumer-features | - | Consumer features: promoted apps and offers (policy) | consumer features policy promoted apps cloud content | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableWindowsConsumerFeatures dword on=- off=1 + reg HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableSoftLanding dword on=- off=1 + reg HKLM\SOFTWARE\Policies\Microsoft\Windows\CloudContent\DisableConsumerAccountStateContent dword on=- off=1 | admin
 
 # --- input ------------------------------------------------------------------------------------
 input.mouse-accel | - | Enhance pointer precision (mouse acceleration) | acceleration accel mouse | switch | spi mouse-accel |
@@ -129,7 +147,7 @@ developer.restart-explorer | - | Restart Explorer | explorer restart taskbar ref
 
 # --- Phase 8: faster and calmer (roadmap 8G-8J; plans/07-fixing-windows.md) -------------------
 # What omawin recommends for each, and why, is default/launcher/tune-up.txt (omawin tune-up).
-# A line naming a builtin, spi or powercfg handler the settings code doesn't have yet carries "check".
+# Every handler these lines name exists; "check" stays on each until it has been set and read back on a PC.
 
 # 8.26 Windows stops fighting the tiling manager
 system.snap-flyout | - | Snap layouts on the maximize button | snap layouts flyout maximize hover | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapAssistFlyout dword on=1 off=0 |
@@ -154,7 +172,7 @@ system.startup-onedrive | - | OneDrive starts at sign-in | onedrive startup logi
 system.startup-teams | - | Teams starts at sign-in | teams startup login | switch | builtin startup-item MSTeams | check
 
 # 8.29 accidents that don't happen
-input.layout-hotkey | - | Alt+Shift switches the keyboard layout | language hotkey alt shift layout input | switch | builtin layout-hotkey | signout check
+input.layout-hotkey | - | Alt+Shift switches the keyboard layout | language hotkey alt shift layout input | switch | builtin layout-hotkey | check
 input.narrator-shortcut | - | Win+Ctrl+Enter starts Narrator | narrator shortcut accessibility | switch | reg HKCU\Software\Microsoft\Narrator\NoRoam\WinEnterLaunchEnabled dword on=1 off=0 | check
 input.filter-shortcut | - | Holding Right Shift asks about Filter Keys | filter keys shortcut prompt | switch | spi filter-hotkey | check
 input.toggle-shortcut | - | Holding Num Lock asks about Toggle Keys | toggle keys shortcut prompt | switch | spi toggle-hotkey | check
@@ -174,6 +192,16 @@ developer.utf8 | - | Use UTF-8 for programs that aren't Unicode (beta) | utf8 co
 developer.firewall-dev | - | Dev servers may listen on private networks | firewall node bun python dotnet go prompt allow | action | builtin firewall-dev | admin check
 developer.ssh-agent | - | SSH agent starts with Windows | ssh agent openssh keys | switch | builtin ssh-agent | admin check
 developer.case-sensitive | - | Make a folder case-sensitive (for Linux tools) | case sensitive folder fsutil wsl | action | builtin case-sensitive | check
+
+# 8.12 / 8.23 the shell's keyboard hook: live, no restart, no admin (Windows' own Scancode Map for the
+# sign-in screen is omawin keyboard signin)
+input.caps-lock | - | Caps Lock key | caps lock escape control remap vim hyper | choice | builtin caps-lock values="caps:Caps Lock,escape:Escape,control:Control,escape-control:Escape tapped / Control held" default=caps |
+input.copilot-key | - | The Copilot key opens | copilot key launcher remap | choice | builtin copilot-key values="windows:Copilot,launcher:omawin's launcher" default=windows |
+
+# 8.18 Windows Update: active hours (the pause and the restart are omawin updates: a time, not a value)
+system.update-active-auto | - | Windows Update picks active hours by itself | update active hours restart automatic | switch | reg HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\SmartActiveHoursState dword on=1 off=0 | admin check
+system.update-active-start | - | Windows Update: active hours start | update active hours restart start morning | choice | reg HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\ActiveHoursStart dword values="6:06:00,7:07:00,8:08:00,9:09:00,10:10:00,11:11:00,12:12:00" default=8 | admin check
+system.update-active-end | - | Windows Update: active hours end | update active hours restart end evening | choice | reg HKLM\SOFTWARE\Microsoft\WindowsUpdate\UX\Settings\ActiveHoursEnd dword values="17:17:00,18:18:00,19:19:00,20:20:00,21:21:00,22:22:00,23:23:00,0:00:00" default=17 | admin check
 
 # 8.43 drivers on your terms
 system.update-no-drivers | - | Windows Update leaves drivers alone | update driver exclude quality | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\ExcludeWUDriversInQualityUpdate dword on=1 off=- | admin

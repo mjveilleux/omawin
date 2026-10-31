@@ -16,7 +16,7 @@ public static partial class Actions
     // Done by omawin itself (bin/omawin.cs's Builtin; pkg by this exe, which omawin.cs hands it
     // to); commands.txt may only name these.
     public static readonly string[] Builtins =
-        ["launch-terminal", "launch-project", "launch-editor", "terminal-here", "terminal-warm", "start-glazewm", "start-bar", "update-terminal", "default", "pkg", "linux"];
+        ["launch-terminal", "launch-project", "launch-editor", "terminal-here", "terminal-warm", "start-glazewm", "start-bar", "update-terminal", "default", "pkg", "linux", "profile-linux", "remove"];
 
     // repo: this repo's folder ({repo}); user: this account's folder ({user}, docs/work.md).
     public static Plan Plan(Command command, string[] extra, string repo, string user)

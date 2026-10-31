@@ -26,7 +26,9 @@ public sealed record WifiNetwork(string Ssid, int Signal, bool Connected, bool H
 
 // A paired device. Le: it came from the Bluetooth LE stack, which has no connect of its own
 // (Windows keeps HID devices up by itself); classic devices take the audio services below.
-public sealed record BtDevice(string Name, ulong Address, bool Connected, bool Le = false);
+// Handsfree (roadmap 8.49): a headset's hands-free service (call quality, its microphone) is on or
+// off; null when it has none, or Windows wouldn't say.
+public sealed record BtDevice(string Name, ulong Address, bool Connected, bool Le = false, bool? Handsfree = null);
 
 // A monitor: the built-in panel (WMI), or an external one over DDC/CI (dxva2). Writable is false
 // when the monitor answers but doesn't implement the brightness control (MC_CAPS_BRIGHTNESS).
@@ -147,6 +149,14 @@ public static class QuickSettings
     public static string? BluetoothConnect(BtDevice device, bool connect)
     {
         try { return Bt.SetAudioServices(device.Address, connect); }
+        catch (Exception ex) { App.Log(ex); return ex.Message; }
+    }
+
+    // A headset's hands-free service on or off (roadmap 8.49): off, it stays in stereo when an
+    // app opens a microphone (another one is used); on again for calls through it.
+    public static string? BluetoothHandsfree(BtDevice device, bool on)
+    {
+        try { return Bt.SetHandsfree(device.Address, on); }
         catch (Exception ex) { App.Log(ex); return ex.Message; }
     }
 
@@ -536,7 +546,7 @@ static class Bt
             if (name.Length == 0) return;
             // Classic wins over LE when a dual-mode device is paired on both stacks.
             if (found.TryGetValue(address, out var already) && (!already.Le || !le)) return;
-            found[address] = new BtDevice(name, address, connected, le);
+            found[address] = new BtDevice(name, address, connected, le, le ? null : HandsfreeState(address));
         }
         catch (Exception ex) { App.Log(ex); }
     }
@@ -562,6 +572,79 @@ static class Bt
     [DllImport("bthprops.cpl")] static extern bool BluetoothFindRadioClose(IntPtr find);
     [DllImport("bthprops.cpl")] static extern uint BluetoothSetServiceState(IntPtr radio, ref DeviceInfo device, ref Guid service, uint flags);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr handle);
+    [DllImport("bthprops.cpl")] static extern uint BluetoothEnumerateInstalledServices(IntPtr radio, ref DeviceInfo device, ref uint count, [Out] Guid[] services);
+
+    // --- hands-free (roadmap 8.49) ------------------------------------------------------------
+    // When any app opens a Bluetooth headset's microphone, Windows switches the headset to its
+    // hands-free profile: mono, call quality, for everything. With hands-free off the headset
+    // stays in stereo and another microphone is used. Windows can't tell "turned off" from "never
+    // had it", so the headsets omawin turned it off for are remembered, to offer it back.
+    static string HandsfreeOffFile => Path.Combine(MenuModel.StateDir, "bt-handsfree-off");
+
+    static HashSet<ulong> TurnedOff()
+    {
+        try
+        {
+            return File.Exists(HandsfreeOffFile)
+                ? File.ReadAllLines(HandsfreeOffFile).Select(l => ulong.TryParse(l.Trim(), System.Globalization.NumberStyles.HexNumber, null, out var a) ? a : 0).Where(a => a != 0).ToHashSet()
+                : [];
+        }
+        catch (IOException) { return []; }
+    }
+
+    // On: the headset has hands-free running; off: omawin turned it off; null: it has none.
+    static bool? HandsfreeState(ulong address)
+    {
+        var services = InstalledServices(address);
+        if (services == null) return null;
+        return services.Contains(Handsfree) ? true : TurnedOff().Contains(address) ? false : null;
+    }
+
+    static List<Guid>? InstalledServices(ulong address)
+    {
+        var parameters = new FindRadioParams { dwSize = (uint)Marshal.SizeOf<FindRadioParams>() };
+        var find = BluetoothFindFirstRadio(ref parameters, out var radio);
+        if (find == IntPtr.Zero || radio == IntPtr.Zero) return null;
+        try
+        {
+            var device = new DeviceInfo { dwSize = (uint)Marshal.SizeOf<DeviceInfo>(), Address = address, Name = "" };
+            var services = new Guid[32];
+            uint count = (uint)services.Length;
+            return BluetoothEnumerateInstalledServices(radio, ref device, ref count, services) == 0 ? [.. services.Take((int)Math.Min(count, (uint)services.Length))] : null;
+        }
+        finally
+        {
+            BluetoothFindRadioClose(find);
+            CloseHandle(radio);
+        }
+    }
+
+    public static string? SetHandsfree(ulong address, bool on)
+    {
+        var parameters = new FindRadioParams { dwSize = (uint)Marshal.SizeOf<FindRadioParams>() };
+        var find = BluetoothFindFirstRadio(ref parameters, out var radio);
+        if (find == IntPtr.Zero || radio == IntPtr.Zero) return "No Bluetooth radio";
+        try
+        {
+            var device = new DeviceInfo { dwSize = (uint)Marshal.SizeOf<DeviceInfo>(), Address = address, Name = "" };
+            var guid = Handsfree;
+            uint result = BluetoothSetServiceState(radio, ref device, ref guid, on ? ServiceEnable : ServiceDisable);
+            if (result == ErrorServiceDoesNotExist) return "this device has no hands-free service";
+            if (result is not (0 or ErrorInvalidParameter or EInvalidArg)) return $"BluetoothSetServiceState: error {result}";
+        }
+        finally
+        {
+            BluetoothFindRadioClose(find);
+            CloseHandle(radio);
+        }
+        var off = TurnedOff();
+        if (on ? off.Remove(address) : off.Add(address))
+        {
+            Directory.CreateDirectory(MenuModel.StateDir);
+            File.WriteAllLines(HandsfreeOffFile, off.Select(a => a.ToString("X12")));
+        }
+        return null;
+    }
 
     public static string? SetAudioServices(ulong address, bool connect)
     {

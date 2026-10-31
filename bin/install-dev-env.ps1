@@ -16,16 +16,27 @@
         install-dev-env.ps1 -Check node           exit 0 if it's installed, 1 if not
         install-dev-env.ps1 -Check                the installed ones, one a line (for the menu's check marks)
 
+    Which side (roadmap 3.4): with your Linux in WSL set up, you're asked whether the environment
+    goes in Linux or in Windows, Linux first (Windows first while PowerShell is your default
+    shell: omawin default shell). -Linux or -Windows answers it. In Linux it's Omarchy's own way,
+    wsl/bin/omawin-dev-env: mise for the languages, Docker Engine for the databases (which
+    mirrored networking makes localhost:<port> for Windows' apps too). Without a Linux, Windows.
+    -Check is Windows' unless -Linux is given (which starts Linux to ask it).
+
     Names: ruby docker-db node bun deno go php laravel symfony python elixir phoenix zig rust
     java dotnet ocaml clojure scala. bin/remove-dev-env.ps1 takes them away again.
 #>
 param(
     [Parameter(Position = 0)][string]$Name,
     [Parameter(Position = 1, ValueFromRemainingArguments = $true)][string[]]$Rest,
-    [switch]$Check
+    [switch]$Check,
+    [switch]$Linux,
+    [switch]$Windows,
+    [switch]$Side      # only ask which side (for remove-dev-env.ps1)
 )
 $ErrorActionPreference = 'Stop'
 $e = [char]27
+$Repo = Split-Path $PSScriptRoot
 $Names = 'ruby', 'docker-db', 'node', 'bun', 'deno', 'go', 'php', 'laravel', 'symfony', 'python',
     'elixir', 'phoenix', 'zig', 'rust', 'java', 'dotnet', 'ocaml', 'clojure', 'scala'
 
@@ -73,7 +84,55 @@ function Test-Env([string]$Env) {
     }
 }
 
+# --- Which side: Linux or Windows ----------------------------------------------------------------
+# The Linux omawin opens (omawin default linux, bin/defaults.txt; the PC's pick, else one this
+# account has), when WSL has it; $null when there's none, or Windows was chosen. Asked in a
+# terminal, Linux first unless PowerShell is the default shell; a run with nobody to answer takes
+# the default shell's side. bin/remove-dev-env.ps1 asks the same way (-Side).
+function Get-DevSide([string]$Doing) {
+    if ($Windows) { return $null }
+    $rows = @(foreach ($line in Get-Content "$Repo\bin\defaults.txt") {
+            $p = @($line -split '\|' | ForEach-Object { $_.Trim() })
+            if ($p.Count -ge 5 -and $p[0] -eq 'linux') { [pscustomobject]@{ Name = $p[1]; Label = ($p[2] -split ',')[0]; Distro = $p[4] } }
+        })
+    $state = "$env:LOCALAPPDATA\launcher\defaults"
+    $picked = if (Test-Path "$state\linux") { "$(Get-Content "$state\linux" -TotalCount 1)".Trim() }
+    # WSL's registry, so WSL isn't started just to ask what's there.
+    $have = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $_.GetValue('DistributionName') })
+    $pick = @($rows | Where-Object Name -eq $picked) + @($rows | Where-Object { $have -contains $_.Distro }) | Select-Object -First 1
+    if (-not $pick -or $have -notcontains $pick.Distro) {
+        if ($Linux) { throw 'there is no Linux in WSL here yet (omawin preset add wsl)' }
+        return $null
+    }
+    if ($Linux) { return $pick }
+    $shell = if (Test-Path "$state\shell") { "$(Get-Content "$state\shell" -TotalCount 1)".Trim() } else { 'linux' }
+    $sides = @("$($pick.Label) (Linux in WSL)", 'Windows')
+    if ($shell -eq 'windows') { [array]::Reverse($sides) }
+    $interactive = [Environment]::UserInteractive -and -not [Console]::IsInputRedirected -and (Get-Command fzf -ErrorAction SilentlyContinue)
+    if (-not $interactive) { return $(if ($shell -eq 'windows') { $null } else { $pick }) }
+    $answer = $sides | fzf --prompt "$Doing in > " --header 'Enter pick  Esc quit' --height 6 --reverse --no-info
+    if (-not $answer) { Write-Host 'Nothing done.'; exit 0 }
+    if ($answer -eq 'Windows') { $null } else { $pick }
+}
+
+# omawin-dev-env (wsl/bin) in that Linux, as you, straight from the repo (wsl/ is checked out
+# with LF endings, so bash reads it from Windows' disk); its exit code is this script's.
+function Invoke-LinuxDevEnv($Pick, [string[]]$Arguments) {
+    $env:WSL_UTF8 = '1'
+    Write-Host "$e[2min $($Pick.Label): omawin-dev-env $($Arguments -join ' ')$e[0m`n"
+    & wsl.exe -d $Pick.Distro --cd "$Repo\wsl" --exec bash ./bin/omawin-dev-env @Arguments
+    exit $LASTEXITCODE
+}
+
+# bin/remove-dev-env.ps1's question: the Linux's WSL name, "windows", or nothing when you quit.
+if ($Side) {
+    $pick = Get-DevSide 'Remove'
+    if ($pick) { $pick.Distro } else { 'windows' }
+    exit 0
+}
+
 if ($Check) {
+    if ($Linux) { Invoke-LinuxDevEnv (Get-DevSide 'Check') (@('check') + @($Name | Where-Object { $_ })) }
     if ($Name) {
         if ($Names -notcontains $Name) { Write-Host "Unknown environment: $Name" -ForegroundColor Red; exit 2 }
         if (Test-Env $Name) { exit 0 } else { exit 1 }
@@ -87,6 +146,9 @@ if (-not $Name -or $Names -notcontains $Name) {
     Write-Host "Usage: install-dev-env.ps1 <$($Names -join '|')>" -ForegroundColor Red
     exit 1
 }
+
+$side = Get-DevSide 'Install'
+if ($side) { Invoke-LinuxDevEnv $side (@('install', $Name) + @($Rest | Where-Object { $_ })) }
 
 # --- Helpers ----------------------------------------------------------------------------------
 
@@ -259,7 +321,7 @@ function Install-Erlang-Elixir {
 
 function Install-DockerDb {
     if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
-        throw 'Docker is not installed. Install Docker Desktop (winget install Docker.DockerDesktop), start it, and run this again.'
+        throw 'Docker is not installed on Windows. Your Linux in WSL comes with Docker Engine (omawin preset add wsl, then pick Linux here); or install Docker Desktop (winget install Docker.DockerDesktop), start it, and run this again.'
     }
     docker info *> $null
     if ($LASTEXITCODE) { throw 'Docker is installed but not running. Start Docker Desktop and run this again.' }

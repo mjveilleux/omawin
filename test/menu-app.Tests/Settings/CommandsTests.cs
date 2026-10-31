@@ -70,6 +70,39 @@ public class CommandsTests
         Assert.Contains("skipped look.retired", r.Text);
         Assert.Equal(["apply", "apply"], store.History.Changes().Select(c => c.Source));
     }
+
+    // An update: only what settings.txt changed since the last apply; a setting changed on this
+    // PC since stays as you left it; admin ones wait in the queue, never prompting.
+    [Fact]
+    public async Task AnUpdateAppliesOnlyWhatChanged()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        string account = dir.File("account.txt"), shared = dir.File("shared.txt"), applied = dir.File("applied.txt");
+        File.WriteAllLines(account, ["look.dark-apps = on", "explorer.open-to = 3"]);
+        await SettingCommands.Settings(store, ["apply", "-NoAdmin"], account, shared, applied);
+        SettingCommands.Setting(store, ["set", "look.dark-apps", "off"]); // changed here, by hand
+
+        var same = await SettingCommands.Settings(store, ["apply", "-NoAdmin", "-Changed"], account, shared, applied);
+        Assert.Contains("hasn't changed", same.Text);
+        Assert.Equal("off", windows.Values["look.dark-apps"]);
+
+        File.WriteAllLines(account, ["look.dark-apps = on", "explorer.open-to = 1", "developer.long-paths = on"]);
+        var r = await SettingCommands.Settings(store, ["apply", "-NoAdmin", "-Changed"], account, shared, applied);
+        Assert.Equal(0, r.Code);
+        Assert.Equal(("off", "1"), (windows.Values["look.dark-apps"], windows.Values["explorer.open-to"]));
+        Assert.Equal([("developer.long-paths", "on")], store.AdminQueue.Items());
+        Assert.Contains("hasn't changed", (await SettingCommands.Settings(store, ["apply", "-NoAdmin", "-Changed"], account, shared, applied)).Text);
+    }
+
+    [Fact]
+    public void ChangedComparesIdsAndValuesIgnoringCase()
+    {
+        var wanted = new List<(string, string)> { ("a.one", "On"), ("a.two", "3"), ("a.new", "x") };
+        var changed = SettingValueFile.Changed(wanted, [("A.ONE", "on"), ("a.two", "2")]);
+        Assert.Equal([("a.two", "3"), ("a.new", "x")], changed);
+        Assert.Equal(["a.one = on", "a.two = 3"], SettingValueFile.Record([("a.one", "on"), ("a.two", "2")], [("A.two", "3")]).Skip(1));
+    }
 }
 
 // omawin tune-up: the recommended settings against the fixture's Windows, through the same store.
@@ -132,6 +165,31 @@ public class TuneUpCommandTests
         Assert.Equal(0, r.Code);
         Assert.Equal(["look.dark-apps=on"], windows.Writes);
         Assert.Equal(0, store.AdminQueue.Count);
+    }
+
+    // Install and every update run -Auto: a recommendation you turned back is yours, so it's set
+    // once; one new to this PC (an update adds it, or it's verified since) is set then, and said.
+    [Fact]
+    public async Task AutoSetsEachOnceAndIsQuietWithNothingNew()
+    {
+        using var dir = new TempDir();
+        var (store, windows) = Fixture.Store(dir);
+        var seen = dir.File("tune-up-auto.txt");
+        var first = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, Catalog_(), 26100, seenFile: seen);
+        Assert.Contains("Dark mode for apps: On", first.Text);
+        Assert.Equal(["explorer.open-to", "look.dark-apps"], File.ReadAllLines(seen)); // set, and found applied
+
+        windows.Values["look.dark-apps"] = "off"; // you turned it back
+        var again = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, Catalog_(), 26100, seenFile: seen);
+        Assert.Equal((0, ""), (again.Code, again.Text));
+        Assert.Single(windows.Writes);
+
+        // Verified since (no longer "check"): set at the next update.
+        var verified = Catalog_().Select(e => e.Id == "look.unverified" ? e with { Unverified = false } : e).ToList();
+        windows.Values["look.unverified"] = "on";
+        var next = await SettingCommands.TuneUp(store, ["apply", "-Auto"], Recs, verified, 26100, seenFile: seen);
+        Assert.Equal("look.unverified=off", windows.Writes[^1]);
+        Assert.Contains("look.unverified", File.ReadAllLines(seen));
     }
 
     [Fact]
