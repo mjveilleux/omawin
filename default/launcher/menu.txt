@@ -52,7 +52,7 @@ style.theme | 󰸌 | Theme | themes
 style.backgrounds | 󰋩 | Backgrounds | backgrounds
 style.background | 󰸉 | Next background | omawin theme next-background
 style.themes-browse | 󰖟 | More themes (omarchy.org) | omawin theme browse
-style.themes-install | 󰏗 | Install a theme (git link) | task omawin.exe theme install
+style.themes-install | 󰏗 | Install a theme (name or link) | task omawin.exe theme install
 style.themes-update | 󰚰 | Update installed themes | task omawin.exe theme update
 style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme remove
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\default\launcher\menu.ps1" -SetWallpaper
