@@ -73,7 +73,8 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `Settings/` | Windows' settings (roadmap 1B): `Catalog.cs` parses `default/launcher/settings.txt`; `Store.cs` is the service (cached values, `Set` / `Toggle` / `Step` / `UndoLast`, the undo history, the admin queue), with its handlers handed in so it's tested on Linux; `Switches.cs` (reg, spi, powercfg) and `Builtins.cs` (radios, refresh rate, HDR, proxy, audio devices, …) touch Windows; `Watch.cs` follows registry keys and `WM_SETTINGCHANGE`; `Index.cs` reads Windows' own settings index and `default/launcher/settings-pages.txt`; `Search.cs` ranks them; `Commands.cs` answers `omawin setting` / `settings`; `WinSettings.cs` wires it all, and is what the window (and One Search) uses |
 | `TuneUp.cs` | omawin's recommended Windows settings (`default/launcher/tune-up.txt`, roadmap 8G): parsed, checked against the catalog, reported as applied or not, and what `omawin tune-up apply` sets |
 | `MainWindow.Settings.cs` | settings rows (Browse's search, a settings area): their values, Enter / Space / ← → / Ctrl+Z; One Search's setting results use the same keys and `DoSetting` |
-| `Reply.cs` | the menu app's half of `ask`: the answer file and event |
+| `Reply.cs` | the menu app's half of `ask`: the answer file and event, and progress lines for a long answer |
+| `WindowsApps.cs`, `ShellExtensions.cs`, `EnvVars.cs`, `DevDrive.cs` | Phase 8's commands answered here (`omawin windows-apps`, `shell-extensions`, `env`, `dev-drive`): each a pure file of rules and words (tested), beside its Windows side (`…Store.cs` / `…Win.cs`) |
 
 Requests it understands: `--search [filter|page] [text]` (One Search; `--browse [section]` for Commands' Browse, `--retired-key` for Win+Alt+Space's note; `Search/Request.cs`), `--launcher [page]` and `--files` (the same, for older callers), `--page <name>`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--toggle animations [on|off|status]`, `--open <menu id>`, `--start-hidden`, `--reply <pid> --setting|--settings …` (answered, `ask`), no arguments (Browse); plus `--select`, `--type` and `--key`, used for walkthrough recordings, and `--hide` (at once, no animation) for `omawin profile menu`.
 
@@ -187,5 +188,9 @@ Never in the repo:
 | `settings-admin-queue.tsv` | settings that need admin, waiting for the one prompt (`omawin settings admin`) |
 | `settings-index.tsv` | Windows' own settings index, read from `AllSystemSettings_*.xml` in this PC's language; rebuilt when Windows changes it |
 | `airplane` | while airplane mode is on: the radios it turned off, to turn back on |
+| `tune-up-auto.txt` | the recommended settings install and updates have already set or found set (each is set by them once) |
+| `disabled-hotkeys`, `layout-hotkey`, `explorer-bags.reg`, `explorer-bagmru.reg` | what a Phase 8 builtin changed, to put back exactly that when it's turned back |
+| `env-history.tsv` | every environment variable changed through `omawin env`, with what was there (undo) |
+| `windows-apps-removed.tsv`, `bt-handsfree-off` | the Windows apps removed through omawin (to get back from the Store); the headsets whose hands-free omawin turned off |
 | `system-menu.log` | the menu app's errors |
 | `stay-awake` | present while stay awake is on (removed when it's turned off or the menu app starts) |
