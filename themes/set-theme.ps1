@@ -22,8 +22,10 @@
         .\set-theme.ps1 gruvbox
         .\set-theme.ps1 gruvbox -Background village-square   on that background (part of its name)
         .\set-theme.ps1 -NextBackground     the current theme's next background (Win+Ctrl+Space)
+        .\set-theme.ps1 -Background leaves  one of the current theme's backgrounds; only the
+                                            wallpaper changes (the background picker)
 
-    `omawin theme set` and `omawin theme next-background` run this.
+    `omawin theme set`, `omawin theme next-background` and `omawin theme background` run this.
 
     The name is remembered in %LOCALAPPDATA%\launcher\theme. Starship (on its starbase
     background) is the default, what install.ps1 applies. Nothing tracked by git changes.
@@ -72,13 +74,16 @@ function Find-ThemeFile([string]$Relative) {
 
 $current = Get-Content "$State\theme" -ErrorAction SilentlyContinue
 if (-not $current) { $current = 'starship' }
-if ($NextBackground -or -not $Name) { $Name = $current }
+# A background of the theme you have, by itself (-NextBackground, or -Background with no theme
+# named): only the wallpaper changes, so it's as quick as Win+Ctrl+Space.
+$wallpaperOnly = $NextBackground -or ($Background -and -not $Name)
+if ($wallpaperOnly -or -not $Name) { $Name = $current }
 $file = Find-ThemeFile "$Name.json"
 if (-not (Test-Path $file)) { throw "No theme '$Name' (omawin theme list)." }
 $theme = Get-Content $file -Raw | ConvertFrom-Json
 
 # --- the colors first: what you see change at once ----------------------------------------------
-if (-not $NextBackground) {
+if (-not $wallpaperOnly) {
     Set-Content "$State\theme" $Name -NoNewline
     Set-Content "$State\nvim-theme" $(if ($theme.nvimSpec) { $theme.nvimSpec } else { $Name }) -NoNewline
 
@@ -117,9 +122,14 @@ if (-not $NextBackground) {
 $backgrounds = @($theme.backgrounds)
 $index = 0
 if ($Background) {
-    for ($i = 0; $i -lt $backgrounds.Count; $i++) {
-        if ((Split-Path $backgrounds[$i] -Leaf) -like "*$Background*") { $index = $i; break }
-    }
+    # Its whole name first (what the background picker passes: "1-leaves" mustn't land on
+    # "11-leaves"), then any whose name holds it (what you type: "village").
+    $names = @($backgrounds | ForEach-Object { [IO.Path]::GetFileNameWithoutExtension(($_ -split '\?')[0]) })
+    $found = -1
+    for ($i = 0; $i -lt $names.Count -and $found -lt 0; $i++) { if ($names[$i] -eq $Background) { $found = $i } }
+    for ($i = 0; $i -lt $names.Count -and $found -lt 0; $i++) { if ($names[$i] -like "*$Background*") { $found = $i } }
+    if ($found -ge 0) { $index = $found }
+    elseif ($wallpaperOnly) { throw "No background '$Background' in $Name ($($names -join ', '))." }
 }
 if ($NextBackground) {
     $last = Get-Content "$State\background" -ErrorAction SilentlyContinue
@@ -151,7 +161,7 @@ if ($backgrounds) {
         '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$PSScriptRoot\set-lockscreen.ps1`"", "`"$image`"")
     Write-Host "  lock screen (same picture)"
 }
-if ($NextBackground) { return }
+if ($wallpaperOnly) { return }
 
 # --- RStudio ------------------------------------------------------------------------------------
 # An editor theme (.rstheme: CSS for its Ace editor; RStudio colors its panes to match) made

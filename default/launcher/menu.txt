@@ -16,6 +16,8 @@
 #   @<page>          one of the launcher's pages (@keys, @clipboard, @localhost, ...)
 #   themes           the theme picker (themes/*.json and installed themes, applied by
 #                    themes/set-theme.ps1)
+#   backgrounds      the background picker: a grid of a theme's pictures (set by
+#                    themes/set-theme.ps1 -Background)
 # A ! in front of the action asks before doing it.
 
 learn | 󰧑 | Learn
@@ -47,6 +49,7 @@ quick.dnd | 󰂛 | Do not disturb | omawin toggle dnd
 
 style | 󰏘 | Style
 style.theme | 󰸌 | Theme | themes
+style.backgrounds | 󰋩 | Backgrounds | backgrounds
 style.background | 󰸉 | Next background | omawin theme next-background
 style.themes-browse | 󰖟 | More themes (omarchy.org) | omawin theme browse
 style.themes-install | 󰏗 | Install a theme (git link) | task omawin.exe theme install

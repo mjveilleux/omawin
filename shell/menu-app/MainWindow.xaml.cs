@@ -39,6 +39,8 @@ public sealed partial class MainWindow : Window
     string start = "";             // where this showing started (Esc there hides)
     MenuEntry? confirming;         // asking "Yes, restart?" for this row
     bool pickingTheme;             // showing the theme list
+    string? backgroundsOf;         // showing this theme's backgrounds (the background picker, MainWindow.Tiles.cs)
+    (string Theme, string Source)? pickedBackground; // the one just picked here, checked before set-theme.ps1 has written it down
     bool launching;                // the launcher (Win+Space): items + apps, not the menu
     bool menuFromLauncher;         // the menu was opened from the launcher (Esc goes back to it)
     List<LaunchItem> launchItems = [];
@@ -130,9 +132,10 @@ public sealed partial class MainWindow : Window
         else ShowMenu(""); // hidden, or showing the launcher / finder: the menu
     }
 
-    public void ShowMenu(string at)
+    // `with`: what follows the row id (--open style.backgrounds gruvbox: that theme's backgrounds).
+    public void ShowMenu(string at, string? with = null)
     {
-        try { Show(at); } catch (Exception ex) { App.Log(ex); }
+        try { Show(at, with: with); } catch (Exception ex) { App.Log(ex); }
     }
 
     // Win+Space: the launcher, or hide it if it's in front.
@@ -162,7 +165,7 @@ public sealed partial class MainWindow : Window
             }
             if (!appWindow.IsVisible) Show("");
             var parent = entries.TryGetValue(id, out var e) ? e.Parent : "";
-            if (pickingTheme || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
+            if (pickingTheme || backgroundsOf != null || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
             selected = Math.Max(0, MenuModel.Children(entries, current).FindIndex(c => c.Id == id));
             Highlight();
         }
@@ -190,14 +193,14 @@ public sealed partial class MainWindow : Window
             case "right": if (tileMode) NavTile(1, 0); else RunSelected(); break;
             case "enter": RunSelected(); break;
             case "esc": if (Input.Text.Length > 0) Input.Text = ""; else Back(hideAtTop: true); break;
-            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else Move(1); break;
-            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else Move(-1); break;
+            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else if (backgroundsOf != null) CycleBackgroundTheme(1); else Move(1); break;
+            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else if (backgroundsOf != null) CycleBackgroundTheme(-1); else Move(-1); break;
             case "pick": if (launching && page == "packages") TogglePackagePick(); break; // Ctrl+Space
         }
     }
 
     // Shows the menu at a submenu; when it's already showing, just goes there.
-    void Show(string at, bool asLauncher = false, bool asFinder = false)
+    void Show(string at, bool asLauncher = false, bool asFinder = false, string? with = null)
     {
         bool showing = appWindow.IsVisible;
         if (!showing)
@@ -205,6 +208,7 @@ public sealed partial class MainWindow : Window
             installed = MenuModel.Installed();
             entries = MenuModel.Load(installed);
             RefreshInstalledIfOld();
+            pickedBackground = null; // by now set-theme.ps1 has written down the one picked last time
         }
         launching = asLauncher;
         page = null;
@@ -216,14 +220,21 @@ public sealed partial class MainWindow : Window
         current = entries.TryGetValue(at, out var e) && e.IsSubmenu ? at : "";
         confirming = null;
         pickingTheme = false;
+        backgroundsOf = null;
         Input.Text = "";
         selected = 0;
-        // --open style.theme: straight to the theme list.
+        // --open style.theme: straight to the theme list; --open style.backgrounds [theme]: to
+        // that theme's backgrounds (yours when it's left out or isn't one).
         if (entries.TryGetValue(at, out var picker) && picker.Kind == "themes")
         {
             current = picker.Parent;
             pickingTheme = true;
             selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == themeName));
+        }
+        else if (picker is { Kind: "backgrounds" })
+        {
+            current = picker.Parent;
+            OpenBackgrounds(ThemeFileNamed(with) ?? themeName);
         }
         if (!showing)
         {
@@ -555,6 +566,17 @@ public sealed partial class MainWindow : Window
             FooterLeft.Text = $"{home.Cells.Count} themes";
             SetKeys(("←↑↓→", "move"), ("↵", "apply"), ("esc", "back"));
         }
+        else if (backgroundsOf is { } of)
+        {
+            SetCrumbs("style", "Backgrounds");
+            var shown = of == themeName ? theme : MenuModel.LoadTheme(of);
+            Placeholder.Text = $"Search {shown.Name}'s backgrounds…";
+            var grid = BackgroundPicker(of, shown, query);
+            if (grid.Cells.Count > 0) home = grid;
+            else AddRow(char.ConvertFromUtf32(0xF0156), shown.Backgrounds.Length == 0 ? $"{shown.Name} has no backgrounds" : "No matches", Hex(theme.Comment), () => { }, dim: true);
+            FooterLeft.Text = $"{shown.Name} · {grid.Cells.Count} backgrounds";
+            SetKeys(("←↑↓→", "move"), ("↵", "set"), ("tab", "another theme"), ("esc", "back"));
+        }
         else if (launching && page != null)
         {
             home = RenderPage(query);
@@ -607,10 +629,10 @@ public sealed partial class MainWindow : Window
             {
                 var e = list[i];
                 bool have = e.Package != null && installed.Contains(e.Package);
-                // By kind: submenus purple, pages and the theme picker cyan, actions yellow,
+                // By kind: submenus purple, pages and the pickers cyan, actions yellow,
                 // ones that ask first (restart, shut down) red, what's installed gray.
                 var color = Hex(have ? theme.Comment : e.IsSubmenu ? theme.Purple : e.Confirm ? theme.Red
-                    : e.Kind == "themes" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
+                    : e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
                 var (tag, text) = TagFor(e, have);
                 string? sub = query.Length > 0 && e.Parent.Length > 0 ? MenuModel.PathLabel(entries, e.Parent) : null;
                 AddRow(e.Icon, e.Label, color, () => Pick(e), tag, text, dim: have, sub: sub);
@@ -850,7 +872,7 @@ public sealed partial class MainWindow : Window
 
     (Tag, string) TagFor(MenuEntry e, bool have)
     {
-        if (e.IsSubmenu || e.Kind == "themes" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
+        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
         if (have) return (Tag.Installed, "Installed");
         if (e.Kind == "omawin" && e.Argument == "toggle stay-awake") return StayAwake.On ? (Tag.Installed, "On") : (Tag.Text, "off");
         if (e.Package != null) return (Tag.Text, e.Kind);
@@ -1197,6 +1219,9 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Enter when finding && ctrl:
                 if (selected < findHits.Count) OpenFile(findHits[selected], Input.Text.Trim(), reveal: true);
                 break;
+            // The background picker: Tab shows the next theme's backgrounds.
+            case VirtualKey.Tab when backgroundsOf != null:
+                CycleBackgroundTheme(shift ? -1 : 1); break;
             // Tiles: the arrows move in two dimensions.
             case VirtualKey.Down when tileMode: NavTile(0, 1); break;
             case VirtualKey.Up when tileMode: NavTile(0, -1); break;
@@ -1257,6 +1282,7 @@ public sealed partial class MainWindow : Window
         }
         if (confirming != null) confirming = null;
         else if (pickingTheme) { pickingTheme = false; from = entries.Values.FirstOrDefault(e => e.Kind == "themes")?.Id ?? ""; }
+        else if (backgroundsOf != null) { backgroundsOf = null; from = entries.Values.FirstOrDefault(e => e.Kind == "backgrounds")?.Id ?? ""; }
         else if (current.Length > 0 && current != start) current = entries.TryGetValue(current, out var e) ? e.Parent : "";
         else if (menuFromLauncher)
         {
@@ -1283,6 +1309,7 @@ public sealed partial class MainWindow : Window
         if (e.IsSubmenu) { current = e.Id; selected = 0; Render(); Slide(1); return; }
         if (e.Package != null && installed.Contains(e.Package)) return; // already installed
         if (e.Kind == "themes") { pickingTheme = true; selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == themeName)); Render(); Slide(1); return; }
+        if (e.Kind == "backgrounds") { OpenBackgrounds(themeName); Render(); Slide(1); return; }
         if (e.Confirm) { confirming = e; selected = 1; Render(); return; }
         Run(e);
     }
@@ -1390,6 +1417,20 @@ public sealed partial class MainWindow : Window
         // Repaint right away; set-theme.ps1 takes care of everything else.
         ApplyTheme(file);
         pickingTheme = true;
+        Render();
+    }
+
+    // The background picker's Enter: one of your theme's backgrounds changes only the wallpaper
+    // (set-theme.ps1 -Background, as quick as Win+Ctrl+Space); another theme's switches to that
+    // theme, on that background. The picker stays, the new one checked, to try another.
+    void SetBackground(string file, string source)
+    {
+        var name = ThemePictures.Name(source);
+        var script = Path.Combine(MenuModel.ThemesDir, "set-theme.ps1");
+        RunPowerShell(file == themeName ? $"-File \"{script}\" -Background \"{name}\"" : $"-File \"{script}\" {file} -Background \"{name}\"", script: false);
+        pickedBackground = (file, source);
+        ApplyTheme(file); // another theme's: repaint right away, as SetTheme does
+        selectKey = BackgroundKey(file, source);
         Render();
     }
 

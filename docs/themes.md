@@ -50,7 +50,9 @@ The shell itself has no colors of its own: PSReadLine, fzf, bat and starship use
 
 Known: noctty's project windows (`omawin launch project`) are separate noctty instances (`--single-instance=false`), which a reload request doesn't reach; they keep their colors until reopened.
 
-`-NextBackground` (`omawin theme next-background`, Win+Ctrl+Space) moves to the current theme's next background.
+`-NextBackground` (`omawin theme next-background`, Win+Ctrl+Space) moves to the current theme's next background. `-Background <name>` with no theme named (`omawin theme background`, the background picker's Enter) sets one of the current theme's: its whole name first (`1-leaves`, not `11-leaves`), then any that contains it. Both change only the wallpaper and lock screen (steps 5-6), not the colors.
+
+The background picker (System menu › Style › Backgrounds, `omawin theme backgrounds [theme]`; `MainWindow.Tiles.cs`) shows a theme's backgrounds from `%LOCALAPPDATA%\launcher\thumbnails\<theme>--<picture>.png`: 320 pixels wide, made for every background of every theme in CI (`src/thumbs`, ~80 pictures, ~6 MB) and shipped in the tools bundle as `theme-thumbs`; `ThemeThumbs.cs` makes one itself only when it's missing (a theme installed later). Both name them with `shell/menu-app/ThemePictures.cs`, which `src/thumbs` compiles too. The check comes from `%LOCALAPPDATA%\launcher\background`, the source set-theme.ps1 last set.
 
 ## Templates: nothing in the repo changes on a switch
 
