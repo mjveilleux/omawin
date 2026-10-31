@@ -125,7 +125,7 @@ The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `p
 
 ## Fixing Windows (`src/windows/`, `omawin-windows.exe`)
 
-Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `wifi share`, `clip`, `classic-menu` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
+Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `proxy`, `wifi share`, `clip`, `classic-menu`, `updates`, `disk`, `keyboard`, `pip`, `display`, `wallpaper spread` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
 
 | Folder | What it is |
 |---|---|
@@ -133,9 +133,13 @@ Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `
 | `Health/` | the event logs through `wevtapi` (`EvtQuery`, `EvtRender` as XML) and the sentences they become |
 | `Startup/` | the Run keys, Startup folders and programs' services; Task Manager's `StartupApproved` switch |
 | `Top/` | every process in one `NtQuerySystemInformation` call (the documented `Process` list as the fallback), grouped by app |
-| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries; DNS presets |
+| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries; DNS presets and DNS over HTTPS per adapter; the system proxy's values |
 | `Wifi/` | the saved profile (`WlanGetProfile`) and the `WIFI:` QR text, drawn with ZXing in half blocks |
 | `Explorer/` | the full right-click menu (8.24): the per-user registration Explorer falls back on |
+| `Updates/` | Windows Update's state: the registry, and the Windows Update Agent's offline search by name through `IDispatch` (`Native/Dispatch.cs`) |
+| `Disk/` | developer caches and build output, measured with `FileSystemEnumerable`; WSL's and Docker's disks |
+| `Keys/` | Windows' own key remap (`Scancode Map`); the live remaps and snippets are the menu app's keyboard hook (`shell/menu-app/KeyHook.cs`, `KeyRules.cs`, linked here for `omawin keyboard`) |
+| `Desktop/` | a picture per monitor (`IDesktopWallpaper`), picture-in-picture (the DWM thumbnail API), monitor layouts (`QueryDisplayConfig` / `SetDisplayConfig`; the menu app's `DisplayWatch.cs` applies them when monitors change) |
 | `Clip/`, `Native/` | the clipboard's transforms; the clipboard, process close / end (a pid is checked against its start time first) |
 | `Admin/` | the few changes that need admin, as a Windows PowerShell script built only from checked values, run by Windows' own `powershell.exe` after one prompt that's preceded by what will change |
 
