@@ -47,7 +47,12 @@ BarWidget {
   function toggle() { if (panelLoader.item) panelLoader.item.toggle() }
   function closeForPopoutSwitch() { if (panelLoader.item) panelLoader.item.closeForPopoutSwitch() }
 
+  // Whether this bar is on GlazeWM's focused monitor: omawin's host says (bar.screenFocused);
+  // a bar that doesn't say counts as focused.
+  readonly property bool onFocusedScreen: bar && bar.screenFocused !== undefined ? bar.screenFocused : true
+
   onOpenedChanged: if (watch.running) watch.write("panel " + (opened ? "1" : "0") + "\n")
+  onOnFocusedScreenChanged: if (watch.running) watch.write("focus " + (onFocusedScreen ? "1" : "0") + "\n")
   onBarChanged: injectPanel()
 
   implicitWidth: button.implicitWidth + (title.visible ? title.width + Style.space(4) : 0)
@@ -68,9 +73,9 @@ BarWidget {
         else if (m.type === "open") { if (m.value) root.open(); else root.close() }
       }
     }
-    // This bar answers Win+M; with several monitors, `omawin-music open` picks the bar that says
-    // it's on the focused one, and else the first.
-    onStarted: watch.write("focus 1\n")
+    // With several monitors, `omawin-music open` (Win+M) picks the bar that says it's on the
+    // focused one, and else the first.
+    onStarted: watch.write("focus " + (root.onFocusedScreen ? "1" : "0") + "\n")
     // It ends when the player can't be found at all (not installed): tried again a while later.
     onExited: retry.start()
   }

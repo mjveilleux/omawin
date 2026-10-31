@@ -29,10 +29,13 @@ Window {
   height: contentHeight + padding * 2
   visible: open
 
+  // Under the widget, on the widget's own monitor (each monitor's bar has its own host): the
+  // panel takes the bar window's screen first, so its position is read in that screen's units.
   function place() {
     if (!anchorItem || !anchorItem.Window.window) return
-    var p = anchorItem.mapToGlobal(0, anchorItem.height)
     var screen = anchorItem.Window.window.screen
+    if (screen && root.screen !== screen) root.screen = screen
+    var p = anchorItem.mapToGlobal(0, anchorItem.height)
     var right = screen ? screen.virtualX + screen.width : p.x + width
     x = Math.max(screen ? screen.virtualX : 0, Math.min(p.x, right - width - Style.gapsOut))
     y = p.y + Style.gapsOut

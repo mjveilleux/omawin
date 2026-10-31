@@ -11,6 +11,7 @@ import qs.Ui
 // manifest read, its bar widget loaded with what the bar hands a widget (bar, settings: the
 // manifest's defaults), in a window of its own: borderless, on top, the bar's height, at
 // --at x,y,w,h (the cell omawin's bar keeps for it) or else the top right of the main screen.
+// omawin's bar starts one host per plugin per monitor; each draws its plugin once.
 //
 //   --plugin-dir <folder>   the plugin (its manifest.json and QML)
 //   --at x,y,w,h        where its cell is, in screen pixels
@@ -48,6 +49,9 @@ Window {
     readonly property string fontFamily: Style.font.family
     readonly property int barSize: Style.bar.sizeHorizontal
     readonly property string position: "top"
+    // omawin's own: whether this bar is on the monitor GlazeWM has focused (the bar says, over
+    // stdin: src/bar.rs), so a key that opens a panel opens the one on that monitor.
+    readonly property bool screenFocused: BarLink.focused
     function barSizeFor(screenName) { return barSize }
     function run(command) { Quickshell.execDetached(["cmd", "/c", command]) }
     function switchPanelFrom(widget, direction) { return false }
@@ -56,13 +60,29 @@ Window {
 
   flags: Qt.Tool | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
   color: Commons.Color.bar.background
-  // --at is in the screen's pixels (what omawin's bar knows); Qt places windows in its own units
-  // (pixels divided by the screen's scale: 150% is 1.5).
-  readonly property real ratio: Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1
-  width: at.length === 4 && at[2] > 0 ? at[2] / ratio : Math.max(40, widget.item ? widget.item.implicitWidth : 40)
-  height: at.length === 4 && at[3] > 0 ? at[3] / ratio : Style.bar.sizeHorizontal
-  x: at.length === 4 ? at[0] / ratio : Screen.virtualX + Screen.width - width - 200
-  y: at.length === 4 ? at[1] / ratio : Screen.virtualY
+
+  // --at is in the screen's pixels (what omawin's bar knows); Qt places windows in its own units.
+  // Each screen keeps its top left corner in pixels, and everything inside it is pixels divided
+  // by that screen's scale (150% is 1.5), so a cell on a second monitor is mapped from that
+  // monitor's corner with that monitor's scale: dividing the whole position by one scale would
+  // put it on the wrong screen whenever the monitors' scales differ, or one isn't at 0,0.
+  readonly property bool placed: at.length === 4 && at[2] > 0 && at[3] > 0
+  readonly property var target: placed ? screenAt(at[0], at[1]) : null
+  function screenAt(px, py) {
+    var screens = Qt.application.screens
+    for (var i = 0; i < screens.length; i++) {
+      var s = screens[i]
+      var r = s.devicePixelRatio > 0 ? s.devicePixelRatio : 1
+      if (px >= s.virtualX && px < s.virtualX + s.width * r && py >= s.virtualY && py < s.virtualY + s.height * r) return s
+    }
+    return screens.length > 0 ? screens[0] : null
+  }
+  readonly property real ratio: target && target.devicePixelRatio > 0 ? target.devicePixelRatio : (Screen.devicePixelRatio > 0 ? Screen.devicePixelRatio : 1)
+  screen: target ? target : Qt.application.screens[0]
+  width: placed ? at[2] / ratio : Math.max(40, widget.item ? widget.item.implicitWidth : 40)
+  height: placed ? at[3] / ratio : Style.bar.sizeHorizontal
+  x: placed ? target.virtualX + (at[0] - target.virtualX) / ratio : Screen.virtualX + Screen.width - width - 200
+  y: placed ? target.virtualY + (at[1] - target.virtualY) / ratio : Screen.virtualY
   visible: !checking
 
   Component.onCompleted: {
