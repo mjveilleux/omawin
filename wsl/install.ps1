@@ -104,5 +104,29 @@ if (((& wsl.exe -d $Distro -u root --exec cat /etc/wsl.conf 2>$null) -join "`n")
 $agents = @('claude', 'opencode' | Where-Object { Get-Command $_ -ErrorAction SilentlyContinue })
 Invoke-Wsl -d $Distro -u $user --cd "$Repo\wsl" '--' bash ./setup.sh user @agents
 
+# Windows Terminal's own profile for this distro (its WSL generator makes one per distro) opens in
+# Linux's home rather than the Windows folder WSL would translate, through a fragment of omawin's:
+# settings.json stays yours (anything you set there wins), and a Linux omawin didn't set up gets
+# none. Terminal names that profile by a name-based (v5) UUID of the distro's name in UTF-16
+# under its profile namespace (Ubuntu's is the well-known {2c4de342-38b7-51cf-b940-2309a097f518}).
+# omawin's own windows pass wsl.exe themselves, so Win+Enter doesn't depend on it.
+function Get-TerminalWslGuid([string]$Name) {
+    $ns = [byte[]](0x2B, 0xDE, 0x4A, 0x90, 0xD0, 0x5F, 0x40, 0x1C, 0x94, 0x92, 0xE4, 0x08, 0x84, 0xEA, 0xD1, 0xD8)
+    $sha = [Security.Cryptography.SHA1]::Create()
+    $b = [byte[]]$sha.ComputeHash([byte[]]($ns + [Text.Encoding]::Unicode.GetBytes($Name)))[0..15]
+    $b[6] = ($b[6] -band 0x0F) -bor 0x50   # version 5
+    $b[8] = ($b[8] -band 0x3F) -bor 0x80   # RFC 4122 variant
+    $hex = -join ($b | ForEach-Object { $_.ToString('x2') })
+    '{' + $hex.Substring(0, 8) + '-' + $hex.Substring(8, 4) + '-' + $hex.Substring(12, 4) + '-' + $hex.Substring(16, 4) + '-' + $hex.Substring(20) + '}'
+}
+$fragments = "$env:LOCALAPPDATA\Microsoft\Windows Terminal\Fragments\omawin"
+New-Item -ItemType Directory -Force -Path $fragments | Out-Null
+$wtProfile = [ordered]@{ updates = (Get-TerminalWslGuid $Distro); startingDirectory = '~'; hidden = $false }
+$fragment = [ordered]@{
+    '$help'  = "Written by omawin's wsl/install.ps1: Windows Terminal's own $($pick.Label) profile, opening in Linux's home. Rewritten each setup; settings.json wins over it."
+    profiles = @($wtProfile)
+}
+[IO.File]::WriteAllText("$fragments\linux-$Distro.json", ($fragment | ConvertTo-Json -Depth 4), (New-Object Text.UTF8Encoding $false))
+
 Save-Pick
 "$($pick.Label) is set up: Win+Space > Projects lists its repos; nvim there is omawin's"
