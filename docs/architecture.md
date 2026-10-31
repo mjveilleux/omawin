@@ -119,7 +119,7 @@ The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `p
   - runs the system menu's longer jobs, which the menu app hands it as `-Run <row id>`, in a small floating "menu-task" terminal: installs, removals, `task` rows
   - keeps `installed.txt`
   - `-SetWallpaper` and `-SearchPackage`
-  - `-Install "<source>:<id>;..."` and `-InstallManager winget|choco|scoop` for the launcher's Packages page (`shell/menu-app/Packages.cs`, `MainWindow.Packages.cs`): winget's catalog from `bin/pkg-index.ps1`, Scoop's from its cloned buckets, Chocolatey's community feed asked as you type
+  - `-Install "<source>:<id>;..."` and `-InstallManager winget|choco|scoop` for the launcher's Packages page (`shell/menu-app/Packages.cs`, `MainWindow.Packages.cs`): winget's catalog from `omawin pkg index`, Scoop's from its cloned buckets, Chocolatey's community feed asked as you type
 - `default/launcher/common.ps1`: the fzf look and helpers for the terminal pieces that remain.
 - `default/launcher/rename-workspace.ps1`: Alt+N (`omawin workspace rename`), in a small terminal titled "rename".
 - Reports: the page is omawin's, the folders and the import are the account folder's (`~/omawin-account`, see [work.md](work.md)).

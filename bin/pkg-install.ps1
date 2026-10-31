@@ -4,7 +4,7 @@
     omarchy-pkg-install, for winget).
 
 .DESCRIPTION
-    Every package winget knows (bin/pkg-index.ps1 reads its catalog off the PC, no network) in
+    Every package winget knows (omawin pkg index reads its catalog off the PC, no network) in
     fzf: type to narrow by name, id or tag, the preview shows what it is (bin/pkg-preview.ps1),
     Tab picks several, Enter installs them with winget, one after another, right here. The ones
     already here are marked.
@@ -20,7 +20,8 @@ $ErrorActionPreference = 'Stop'
 $e = [char]27
 if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) { throw 'fzf is missing (it is in the core: omawin install)' }
 
-$list = & "$PSScriptRoot\pkg-index.ps1"
+$list = omawin-cli.exe pkg index | Select-Object -Last 1
+if ($LASTEXITCODE) { throw "$list" }
 $installedFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
 $here = [Collections.Generic.HashSet[string]]::new()
 if (Test-Path $installedFile) { foreach ($l in Get-Content $installedFile) { [void]$here.Add($l.Trim()) } }

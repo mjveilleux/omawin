@@ -2,12 +2,12 @@ namespace Omawin.Cli.Pkg;
 
 // `omawin pkg <verb> [names] [flags]`, GNU-style as omawin's commands take them:
 //   omawin pkg install go --from mise      omawin pkg move fd --to scoop
-public sealed record PkgArgs(string Verb, List<string> Names, string? From = null, string? To = null, bool Linux = false, string? Scope = null, bool Refresh = false, bool Updates = false, bool All = false)
+public sealed record PkgArgs(string Verb, List<string> Names, string? From = null, string? To = null, bool Linux = false, string? Scope = null, bool Refresh = false, bool Updates = false, bool All = false, bool Force = false)
 {
     public static PkgArgs Parse(IReadOnlyList<string> args, out string? error)
     {
         string? problem = null, from = null, to = null, scope = null;
-        bool linux = false, refresh = false, updates = false, all = false;
+        bool linux = false, refresh = false, updates = false, all = false, force = false;
         var names = new List<string>();
         var verb = args.Count > 0 ? args[0] : "";
         for (int i = 1; i < args.Count; i++)
@@ -32,6 +32,7 @@ public sealed record PkgArgs(string Verb, List<string> Names, string? From = nul
                 case "--refresh": refresh = true; break;
                 case "--updates": updates = true; break;
                 case "--all": all = true; break;
+                case "--force" or "-Force": force = true; break;
                 // pkg update -List, as bin/pkg-update.ps1 took it.
                 case "-List" or "--list" when verb == "update": verb = "list"; break;
                 default:
@@ -41,6 +42,6 @@ public sealed record PkgArgs(string Verb, List<string> Names, string? From = nul
             }
         }
         error = problem;
-        return new PkgArgs(verb, names, from, to, linux, scope, refresh, updates, all);
+        return new PkgArgs(verb, names, from, to, linux, scope, refresh, updates, all, force);
     }
 }

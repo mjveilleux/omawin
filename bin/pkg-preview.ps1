@@ -3,7 +3,7 @@
     The preview pane of omawin pkg install / remove (fzf runs it for the package under the cursor).
 
 .DESCRIPTION
-    What the catalog says at once (bin/pkg-index.ps1: name, id, version, short name, tags,
+    What the catalog says at once (omawin pkg index: name, id, version, short name, tags,
     whether it's here), then winget's own page for it (publisher, description, homepage,
     license), which takes a second or two to come.
 

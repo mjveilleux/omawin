@@ -43,8 +43,31 @@ public sealed class PkgCommand(Host host)
             "info" => a.Names.Count == 1 ? Info(a.Names[0]) : Fail("omawin pkg info <name>"),
             "move" => a.Names.Count == 1 && a.To != null ? Move(a.Names[0], a.To) : Fail("omawin pkg move <name> --to winget|scoop|choco|mise"),
             "prefer" => Prefer(a.Names),
-            _ => Fail($"no pkg command \"{a.Verb}\" (install, remove, update, list, info, move, prefer)"),
+            "index" => Index(a.Force),
+            _ => Fail($"no pkg command \"{a.Verb}\" (install, remove, update, list, info, move, prefer, index)"),
         };
+    }
+
+    // --- index: winget's catalogue as a list (the Packages page, the fzf pickers) ----------------
+
+    // %LOCALAPPDATA%\launcher\winget-index.tsv, read again only when winget's catalogue changed
+    // (its package version, kept in winget-index.version); prints the list's path.
+    int Index(bool force)
+    {
+        var list = Path.Combine(host.State, "winget-index.tsv");
+        var stamp = Path.Combine(host.State, "winget-index.version");
+        if (host.FindWingetCatalog() is not { } catalog)
+            return Fail("winget's catalog isn't on this PC yet: run winget once (winget search x), then try again");
+        var (db, version) = catalog;
+        if (!force && File.Exists(list) && ReadLines(stamp).FirstOrDefault()?.Trim() == version)
+        {
+            o.WriteLine(list);
+            return 0;
+        }
+        WriteLines(list, host.ReadWingetCatalog(db));
+        WriteLines(stamp, [version]);
+        o.WriteLine(list);
+        return 0;
     }
 
     // --- install ----------------------------------------------------------------------------
@@ -90,7 +113,7 @@ public sealed class PkgCommand(Host host)
     }
 
     // Not a name omawin knows: each manager's catalogue, in order; the first with an exact hit
-    // (or one hit) is used, else you pick from what they found.
+    // (its id or name is what you typed) is used, else you pick from what they found.
     Choice Search(SearchIn s)
     {
         if (!Choose.SafeId(s.Query)) return new CantChoose($"\"{s.Query}\" isn't a package name");

@@ -8,7 +8,7 @@ namespace SystemMenu;
 
 // The data behind the launcher's Packages page (MainWindow.Packages.cs): three package managers'
 // catalogs, searched with the launcher's fuzzy matching, like Omarchy's package picker.
-//   winget       its whole catalog is on the PC (bin/pkg-index.ps1 reads it: ~16,000 packages)
+//   winget       its whole catalog is on the PC (omawin pkg index reads it: ~16,000 packages)
 //   Scoop        the buckets it has cloned (~/scoop/buckets/<bucket>/bucket/*.json), read here
 //   Chocolatey   no catalog on the PC: its community feed is asked as you type
 // What's installed: installed.txt (winget and Chocolatey, kept by default/launcher/menu.ps1) and Scoop's
@@ -91,14 +91,15 @@ public static class Packages
         catch (Exception ex) { App.Log(ex); return []; }
     }
 
-    // winget: bin/pkg-index.ps1 writes winget-index.tsv (id, name, moniker, version, tags) when
-    // winget's catalog changed, and prints its path. null: unchanged since stamp.
+    // winget: `omawin pkg index` (omawin-cli.exe, src/cli/Pkg/WingetCatalog.cs) writes
+    // winget-index.tsv (id, name, moniker, version, tags) when winget's catalog changed, in
+    // milliseconds (no PowerShell to start). null: unchanged since stamp.
     static (string, List<Package>?) ReadWinget(string? stamp)
     {
         var file = Path.Combine(MenuModel.StateDir, "winget-index.tsv");
         try
         {
-            using var p = Process.Start(new ProcessStartInfo("pwsh", $"-NoLogo -NoProfile -File \"{Path.Combine(MenuModel.Repo, "bin", "pkg-index.ps1")}\"")
+            using var p = Process.Start(new ProcessStartInfo(Path.Combine(Home, ".local", "bin", "omawin-cli.exe"), "pkg index")
             { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true })!;
             p.WaitForExit(60_000);
         }

@@ -10,6 +10,7 @@
     <RootNamespace>Omawin.Cli.Tests</RootNamespace>
     <!-- bin/path-doctor.cs and bin/uninstall.cs are linked for their pure parts; this leaves out their Windows parts. -->
     <DefineConstants>$(DefineConstants);OMAWIN_TESTS</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- src/cli/Pkg/WingetCatalog.cs: LibraryImport stubs -->
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../../src/cli/CommandTable.cs" Link="cli/CommandTable.cs" />

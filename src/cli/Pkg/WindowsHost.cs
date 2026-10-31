@@ -158,6 +158,9 @@ public sealed class WindowsHost(string repo, string state) : Host
         return found;
     }
 
+    public override (string Db, string Version)? FindWingetCatalog() => WingetCatalog.Find();
+    public override List<string> ReadWingetCatalog(string db) => WingetCatalog.Read(db);
+
     public override string? Ask(string prompt)
     {
         if (Console.IsInputRedirected) return null;

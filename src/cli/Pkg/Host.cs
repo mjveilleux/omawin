@@ -31,6 +31,11 @@ public abstract class Host
     // A question in the terminal; null when there's no one to ask (no console, input redirected).
     public abstract string? Ask(string prompt);
 
+    // winget's catalogue on this PC (its index.db and version), and its packages as
+    // winget-index.tsv's lines (WingetCatalog).
+    public abstract (string Db, string Version)? FindWingetCatalog();
+    public abstract List<string> ReadWingetCatalog(string db);
+
     // OMAWIN_NO_ADMIN: nothing may ask for admin (install.ps1 sets it after its one prompt).
     public abstract bool NoAdmin { get; }
 

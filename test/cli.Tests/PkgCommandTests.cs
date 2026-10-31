@@ -37,6 +37,14 @@ public sealed class PkgCommandTests : IDisposable
             return ElevatedCode;
         }
         public override IReadOnlyList<string> OnPath(string command) => [];
+        public (string, string)? Catalog = ("index.db", "2026.1031.1.0");
+        public int CatalogReads;
+        public override (string Db, string Version)? FindWingetCatalog() => Catalog;
+        public override List<string> ReadWingetCatalog(string db)
+        {
+            CatalogReads++;
+            return [WingetCatalog.Line("jqlang.jq", "jq", "jq", "1.7.1", ["json", "cli"])];
+        }
         public override string? Ask(string prompt) => null;
         public override string TempFile(string name) => Path.Combine(state, name);
     }
@@ -214,6 +222,23 @@ public sealed class PkgCommandTests : IDisposable
         Assert.Contains(host.Ran, r => r.StartsWith("winget export --output"));
         Assert.Equal(["fd scoop found", "go mise found"], Rows().Select(r => $"{r.Name} {r.Source} {r.By}"));
         Assert.Equal(["scoop:fd"], File.ReadAllLines(Path.Combine(root, "state", "installed.txt")));
+    }
+
+    [Fact]
+    public void TheCatalogListIsReadAgainOnlyWhenWingetsChanged()
+    {
+        var list = Path.Combine(root, "state", "winget-index.tsv");
+        Assert.Equal(0, Run("index"));
+        Assert.Equal(["jqlang.jq\tjq\tjq\t1.7.1\tjson, cli"], File.ReadAllLines(list));
+        Assert.Equal(list, host.Out.ToString().Trim());
+        Run("index");
+        Assert.Equal(1, host.CatalogReads);
+        host.Catalog = ("index.db", "2026.1101.1.0");
+        Run("index");
+        Run("index", "--force");
+        Assert.Equal(3, host.CatalogReads);
+        host.Catalog = null;
+        Assert.Equal(1, Run("index"));
     }
 
     [Fact]

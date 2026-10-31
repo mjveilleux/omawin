@@ -242,7 +242,7 @@ sealed class IndicatorsWidget : BarWidget
     public override void Paint(Theme theme) { base.Paint(theme); mic.Paint(theme); mug.Paint(theme); }
 }
 
-// An arrow in red while omawin updates are waiting (bin/update-available.ps1); click: update.
+// An arrow in red while omawin updates are waiting (Bar.UpdatesWaiting: git, every 6 hours); click: update.
 sealed class UpdateWidget : BarWidget
 {
     readonly Cell cell = new();

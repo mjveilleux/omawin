@@ -245,18 +245,34 @@ public static class Bar
         return null;
     }
 
+    // How many commits this checkout's branch is behind its upstream, after a quiet fetch, as
+    // Omarchy's omarchy-update-available: 0 with no upstream or no network. Changes nothing in
+    // the checkout. git itself, not a PowerShell script around it (roadmap 2.11).
     static int UpdatesWaiting()
     {
         try
         {
-            var script = Path.Combine(MenuModel.Repo, @"bin\update-available.ps1");
-            var p = Process.Start(new ProcessStartInfo("pwsh", $"-NoProfile -NonInteractive -File \"{script}\"")
-            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true })!;
-            var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit();
-            return int.TryParse(output.Trim(), out var n) ? n : 0;
+            var (ok, upstream) = Git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}");
+            if (!ok || upstream.Length == 0 || !Git("fetch", "--quiet").Ok) return 0;
+            var (counted, behind) = Git("rev-list", "--count", "HEAD.." + upstream);
+            return counted && int.TryParse(behind, out var n) ? n : 0;
         }
         catch (Exception ex) { App.Log(ex); return 0; }
+    }
+
+    static (bool Ok, string Output) Git(params string[] args)
+    {
+        var info = new ProcessStartInfo("git") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        info.ArgumentList.Add("-C");
+        info.ArgumentList.Add(MenuModel.Repo);
+        foreach (var a in args) info.ArgumentList.Add(a);
+        using var p = Process.Start(info)!;
+        var err = p.StandardError.ReadToEndAsync();
+        var output = p.StandardOutput.ReadToEnd();
+        // A fetch that hangs (a network that half works) gives up rather than holding the thread.
+        if (!p.WaitForExit(120_000)) { try { p.Kill(); } catch (InvalidOperationException) { } return (false, ""); }
+        _ = err.Result;
+        return (p.ExitCode == 0, output.Trim());
     }
 
     // voice-meter (~/.local/bin) prints "1 <level>" while voice typing listens, "2 ..." for

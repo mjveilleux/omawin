@@ -81,7 +81,7 @@ dev remove | Take a development environment away again: omawin dev remove node |
 pkg find | The package picker, in the launcher: winget, Chocolatey or Scoop (Tab), fuzzy found, Enter installs; Ctrl+Space picks several | app --launcher packages
 pkg install | Install by name with whichever manager omawin picks (default/packages/names.txt; --from winget, scoop, choco or mise; --machine; --linux); no name: winget's catalogue, fuzzy found (fzf, Tab picks several) | builtin pkg install
 pkg remove | Remove through the manager that installed it: omawin pkg remove <name>; no name: what winget installed here, fuzzy found | builtin pkg remove
-pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path | pwsh bin/pkg-index.ps1
+pkg index | winget's catalog read off the PC into %LOCALAPPDATA%\launcher\winget-index.tsv (pkg install does it when it changed): its path; --force reads it again | builtin pkg index
 pkg update | Update what omawin put in, each through where it came from (the tools bundle, winget, Scoop, mise, its installer): [name], --all (every manager's everything), --from choco (Chocolatey's, one admin prompt) | builtin pkg update
 pkg list | What's installed and where from (%LOCALAPPDATA%\launcher\packages.tsv): --refresh asks each manager, --updates shows what's waiting, --linux your Linux's | builtin pkg list
 pkg info | Which managers have a package, at what version, which copy is here and which runs (PATH order) | builtin pkg info
