@@ -15,6 +15,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
 | `omawin classic-menu` | Explorer's full right-click menu back, or Windows 11's short one |
+| `omawin updates` | what Windows Update is waiting to install, and the restart when you choose |
 
 ## "The file is open in another program"
 
@@ -83,3 +84,12 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 ## The full right-click menu
 
 `omawin classic-menu` (**System menu › This PC › Full right-click menu**) gives Explorer back Windows 10's full right-click menu, without **Show more options**; again, and Windows 11's short one is back (`on`, `off`, `status` to say which). It's for your account only and needs no admin. Explorer restarts to show it: the taskbar blinks and open folder windows close (in a terminal it asks first; say no and it shows from Explorer's next start).
+
+## Windows Update without surprises
+
+`omawin updates` says whether Windows is waiting for a restart to finish installing updates, whether updates are paused and until when, your active hours (when Windows never restarts by itself), what's waiting to install (as of Windows Update's last check: nothing is downloaded or started by asking) and what was installed lately. **System menu › This PC › Windows Update** has the same, and the common changes:
+- `omawin updates restart tonight` restarts the PC at 03:00; `omawin updates restart 22:30` at another time; `omawin updates restart cancel` calls it off. Windows warns whoever is signed in before it happens. No admin.
+- `omawin updates pause` pauses updates for a week (`pause 14` for two; five weeks at most, as Settings allows); `omawin updates resume` is the undo. It's the same pause as Settings › Windows Update, which shows it and whose **Resume** works too.
+- `omawin updates hours 9-18` sets the active hours by hand (18 hours at most, Windows' limit); `omawin updates hours auto` lets Windows pick them from when you use the PC. They're also settings in the launcher (search *active hours*).
+
+Pausing and active hours are settings for the whole PC: it says what will change, then Windows asks once. Nothing here hides an update or turns Windows Update off.

@@ -313,6 +313,12 @@ pc.dns.cloudflare | 󰇺 | Cloudflare | task omawin dns cloudflare
 pc.dns.quad9 | 󰇺 | Quad9 (blocks known malware sites) | task omawin dns quad9
 pc.dns.google | 󰇺 | Google | task omawin dns google
 pc.dns.router | 󰇺 | Your router's (automatic) | task omawin dns router
+pc.updates | 󰚰 | Windows Update
+pc.updates.status | 󰚰 | What's waiting, and is a restart owed? | task omawin updates
+pc.updates.tonight | 󰜉 | Restart tonight at 03:00 | omawin updates restart tonight
+pc.updates.cancel | 󰜺 | Call off the restart | omawin updates restart cancel
+pc.updates.pause | 󰏤 | Pause updates for a week | task omawin updates pause
+pc.updates.resume | 󰐊 | Resume updates | task omawin updates resume
 pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
 pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
 pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu

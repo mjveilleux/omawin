@@ -19,6 +19,7 @@ namespace Omawin.Windows;
 //   clip [transform]       the clipboard's text converted in place (8.14)
 //   classic-menu [on|off|status]  the full right-click menu back (8.24)
 //   dns [preset] [adapter] the adapters' DNS, and Cloudflare / Quad9 / Google / your router's (8.19)
+//   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
 //   --version
 public static partial class Program
 {
@@ -45,6 +46,7 @@ public static partial class Program
                 "clip" => ClipCommand.Run(rest),
                 "classic-menu" => ClassicMenuCommand.Run(rest),
                 "dns" => DnsCommand.Run(rest),
+                "updates" => UpdatesCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -68,6 +70,7 @@ public static partial class Program
               omawin clip [transform]     the clipboard's text converted (clip lists them)
               omawin classic-menu         the full right-click menu, or Windows 11's short one (on, off, status)
               omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it
+              omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
             """);
         return 0;
     }

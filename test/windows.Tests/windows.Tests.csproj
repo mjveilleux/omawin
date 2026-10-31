@@ -23,6 +23,7 @@
     <Compile Include="../../src/windows/Top/ProcessGroups.cs" Link="windows/ProcessGroups.cs" />
     <Compile Include="../../src/windows/Clip/Transforms.cs" Link="windows/Transforms.cs" />
     <Compile Include="../../src/windows/Wifi/WifiShare.cs" Link="windows/WifiShare.cs" />
+    <Compile Include="../../src/windows/Updates/UpdatePlan.cs" Link="windows/UpdatePlan.cs" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
