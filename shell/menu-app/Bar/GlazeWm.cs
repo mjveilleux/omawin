@@ -17,12 +17,25 @@ public sealed class GlazeWm
     public event Action<State>? Changed;
     public State? Last { get; private set; }
 
+    // An `emit` from GlazeWM (our fork, roadmap 1.2): its name and words, on the socket's thread.
+    public event Action<string, string[]>? Custom;
+
     ClientWebSocket? socket;
     readonly SemaphoreSlim sending = new(1, 1);
+    int started;
 
     static int Port => int.TryParse(Environment.GetEnvironmentVariable("GLAZEWM_IPC_PORT"), out var p) ? p : 6123;
 
-    public void Start() => new Thread(Run) { IsBackground = true, Name = "glazewm" }.Start();
+    // Holds this process's id while GlazeWM has accepted the `custom` subscription, so omawin check
+    // can tell whether the menu keys (bound to `emit`) reach anyone.
+    public static string SubscribedFile => Path.Combine(MenuModel.StateDir, "emit-subscribed");
+    const string CustomSubscription = "sub --events custom";
+
+    // Once, however many callers (the bar, and App for the keys).
+    public void Start()
+    {
+        if (Interlocked.Exchange(ref started, 1) == 0) new Thread(Run) { IsBackground = true, Name = "glazewm" }.Start();
+    }
 
     // A command, as `glazewm command ...` takes it ("focus --workspace 2").
     public void Command(string command) => _ = SendAsync("command " + command);
@@ -38,6 +51,9 @@ public sealed class GlazeWm
                 socket = ws;
                 await SendAsync("sub --events workspace_activated workspace_deactivated workspace_updated focus_changed " +
                     "focused_container_moved monitor_added monitor_updated monitor_removed window_managed window_unmanaged");
+                // Its own subscription: the official GlazeWM doesn't know `custom` and refuses the
+                // whole `sub` that names it.
+                await SendAsync(CustomSubscription);
                 await RefreshAsync();
                 var buffer = new byte[64 * 1024];
                 var message = new MemoryStream();
@@ -53,6 +69,7 @@ public sealed class GlazeWm
             }
             catch (Exception) { } // not up yet, or gone: try again
             socket = null;
+            try { File.Delete(SubscribedFile); } catch (Exception) { } // no longer listening
             Thread.Sleep(1000);
         }
     }
@@ -83,9 +100,22 @@ public sealed class GlazeWm
             var kind = root.GetProperty("messageType").GetString();
             if (kind == "event_subscription")
             {
+                // A key GlazeWM sent on (`emit`): nothing on screen changed, so no refresh.
+                if (root.TryGetProperty("data", out var ev) && Emit.TryRead(ev, out var name, out var words))
+                {
+                    Custom?.Invoke(name, words);
+                    return;
+                }
                 // A burst of events (a window moved: several at once) is asked about once.
                 if (Interlocked.Exchange(ref refreshQueued, 1) == 0)
                     Task.Delay(15).ContinueWith(_ => { refreshQueued = 0; return RefreshAsync(); });
+                return;
+            }
+            if (kind == "client_response" && root.TryGetProperty("clientMessage", out var said) && said.GetString() == CustomSubscription)
+            {
+                // Refused by a GlazeWM without `emit`: then the keys start omawin.exe instead.
+                if (root.TryGetProperty("success", out var ok) && ok.ValueKind == JsonValueKind.True)
+                    try { File.WriteAllText(SubscribedFile, Environment.ProcessId.ToString()); } catch (Exception) { }
                 return;
             }
             if (kind != "client_response" || !root.TryGetProperty("data", out var data) || data.ValueKind != JsonValueKind.Object) return;

@@ -187,6 +187,11 @@ public partial class App : Application
         {
             window = new MainWindow();
             Program.Trace("window");
+            // Keys GlazeWM sends straight here (`emit omawin <command>`, roadmap 1.2): no omawin.exe,
+            // no request file, the same requests as the signal's (Emit.cs).
+            var ui = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            Bar.Wm.Custom += (name, words) => Emit.Handle(name, words, ui, HandleRequest);
+            Bar.Wm.Start(); // already started when the bar is up; once either way
             FileSearch.Start(); // the launcher's file indexes (fff), built in the background
             Background.Start(); // clipboard history, installed apps, reports (Background.cs)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
