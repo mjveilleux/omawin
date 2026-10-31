@@ -5,7 +5,7 @@
     Title="System Menu">
 
     <!-- Colors are set from the theme in code (MainWindow.xaml.cs, ApplyTheme). The window is
-         as tall as its rows (up to MaxRows, then they scroll). -->
+         as tall as its home screen (FitToRows); longer lists scroll. -->
     <Grid x:Name="Root">
         <Grid.RowDefinitions>
             <RowDefinition Height="56" />

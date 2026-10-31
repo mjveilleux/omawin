@@ -30,6 +30,7 @@
     <Compile Include="..\..\shell\menu-app\PackageLogo.cs" Link="Linked\PackageLogo.cs" />
     <Compile Include="..\..\shell\menu-app\ThemePictures.cs" Link="Linked\ThemePictures.cs" />
     <Compile Include="..\..\shell\menu-app\MotionTokens.cs" Link="Linked\MotionTokens.cs" />
+    <Compile Include="..\..\shell\menu-app\RowWindow.cs" Link="Linked\RowWindow.cs" />
   </ItemGroup>
 
   <ItemGroup>

@@ -44,7 +44,7 @@ public sealed partial class MainWindow : Window
     bool launching;                // the launcher (Win+Space): items + apps, not the menu
     bool menuFromLauncher;         // the menu was opened from the launcher (Esc goes back to it)
     List<LaunchItem> launchItems = [];
-    readonly List<(Border Row, Action Run)> rows = [];
+    readonly List<(Border? Row, Action Run)> rows = []; // Row: null for the launcher's rows not drawn yet (MainWindow.Virtual.cs)
     readonly List<RowView> pool = [];  // every row ever drawn, reused: a search changes their text
     int used;                          // how many of the pool this drawing uses
     int selected;
@@ -117,10 +117,10 @@ public sealed partial class MainWindow : Window
             // Letters typed while it fades out are dropped (Show clears the search anyway).
             if (leaving != null) return;
             // omawin profile menu -Typing: a key in the search to its list on screen.
-            Program.Trace("typed");
+            SystemMenu.Program.Trace("typed");
             selected = 0;
             Render();
-            Program.Trace("rendered");
+            SystemMenu.Program.Trace("rendered");
             TraceNextFrame("list-painted");
         };
         Input.PreviewKeyDown += OnKey;
@@ -267,7 +267,7 @@ public sealed partial class MainWindow : Window
         shownAt = DateTime.Now;
         previous = GetForegroundWindow();
         appWindow.Show();
-        Program.Trace("shown");
+        SystemMenu.Program.Trace("shown");
         TraceNextFrame("painted");
         SetForegroundWindow(hwnd);
         Input.Focus(FocusState.Programmatic);
@@ -318,9 +318,9 @@ public sealed partial class MainWindow : Window
     // drawing, well under a refresh).
     void TraceNextFrame(string label)
     {
-        if (!Program.Tracing) return;
+        if (!SystemMenu.Program.Tracing) return;
         EventHandler<object>? once = null;
-        once = (_, _) => { CompositionTarget.Rendering -= once; Program.Trace(label); };
+        once = (_, _) => { CompositionTarget.Rendering -= once; SystemMenu.Program.Trace(label); };
         CompositionTarget.Rendering += once;
     }
 
@@ -474,6 +474,7 @@ public sealed partial class MainWindow : Window
     void ScrollTo(double y, bool animate)
     {
         y = Math.Clamp(y, 0, Math.Max(0, ListLayer.ActualHeight - ViewHeight));
+        animate = EnsureBound(scrollY, y, animate); // the launcher's long list: its rows on the way, drawn first
         scrollY = y;
         var at = new Vector3(0, (float)-y, 0);
         if (animate) { ListLayer.Translation = at; return; }
@@ -503,9 +504,10 @@ public sealed partial class MainWindow : Window
         {
             // The row's own place, with its section title if it has one (a page's titles make
             // rows sit lower than their pitch); the first row shows the top of the list.
-            var slot = pool[selected].Slot;
+            // The launcher's long list: a row's place is its pitch (most rows aren't drawn to measure).
             if (selected == 0) ScrollTo(0, animate);
-            else ScrollIntoView(slot.ActualOffset.Y, slot.ActualHeight - 2, Pitch, animate);
+            else if (drawRow != null) ScrollIntoView(selected * Pitch, Pitch - 2, Pitch, animate);
+            else ScrollIntoView(pool[selected].Slot.ActualOffset.Y, pool[selected].Slot.ActualHeight - 2, Pitch, animate);
         }
         else ScrollTo(0, animate: false);
     }
@@ -588,6 +590,7 @@ public sealed partial class MainWindow : Window
     void Render()
     {
         rows.Clear();
+        EndVirtual();
         used = 0;
         liftedRow = null;
         TileLayout? home = null; // set: this view is tiles
@@ -658,23 +661,28 @@ public sealed partial class MainWindow : Window
         {
             // Your own items (items.txt: Projects, Reports, Files, ...; each its own color along
             // the theme's gradient), then Windows' apps with their real icons. Files have their
-            // own finder (the Files item). Drawn up to 150 rows: typing narrows it.
+            // own finder (the Files item). Every match is a row, but only the ones in view are
+            // drawn, as they scroll in (MainWindow.Virtual.cs): typing never waits on the list.
             SetCrumbs("", null);
             Placeholder.Text = "Search apps…";
             // A sum ("12*4.5", "sqrt(2)"): its value first; Enter copies it (Calc.cs).
             bool sum = Calc.TryEvaluate(query, out var value);
-            if (sum)
-            {
-                var result = Calc.Format(value);
-                AddRow(char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), () => { ClipboardHistory.SetText(result); Dismiss(); }, Tag.Text, "↵ copy", sub: query);
-            }
+            string result = sum ? Calc.Format(value) : "";
+            if (sum) rows.Add((null, () => { ClipboardHistory.SetText(result); Dismiss(); }));
             var list = Launcher.Search(launchItems, query);
-            foreach (var match in list.Take(150))
+            foreach (var match in list)
             {
                 var item = match.Item;
-                AddRow(item.Icon, item.Name, KindColor(item), () => Launch(item, query), Tag.Text, item.Hint, appId: item.IconKey, highlight: match.Positions);
+                rows.Add((null, () => Launch(item, query)));
             }
-            if (list.Count == 0 && !sum) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
+            int skip = sum ? 1 : 0;
+            if (rows.Count == 0) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
+            else Virtualize((v, i) =>
+            {
+                if (i < skip) { DrawRow(v, char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), Tag.Text, "↵ copy", sub: query); return; }
+                var item = list[i - skip].Item;
+                DrawRow(v, item.Icon, item.Name, KindColor(item), Tag.Text, item.Hint, appId: item.IconKey, highlight: list[i - skip].Positions);
+            });
             FooterLeft.Text = $"{launchItems.Count(i => i.IsApp)} apps";
             SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : "close"));
         }
@@ -998,6 +1006,15 @@ public sealed partial class MainWindow : Window
         bool dim = false, string? sub = null, Theme? swatch = null, string? appId = null, List<int>? highlight = null)
     {
         var v = NextRow(RowDip - 2, 28);
+        DrawRow(v, icon, label, color, tag, tagText, dim, sub, swatch, appId, highlight);
+        rows.Add((v.Row, run));
+    }
+
+    // What AddRow shows, into a pooled view (the launcher's long list draws its rows this way as
+    // they scroll into view: MainWindow.Virtual.cs).
+    void DrawRow(RowView v, string icon, string label, Color color, Tag tag = Tag.None, string tagText = "",
+        bool dim = false, string? sub = null, Theme? swatch = null, string? appId = null, List<int>? highlight = null)
+    {
         if (swatch != null)
         {
             // A theme: its background with three of its colors on it.
@@ -1024,7 +1041,6 @@ public sealed partial class MainWindow : Window
             case Tag.Current: SetRight(v, tag, "", pill: "Current", pillColor: theme.Accent); break;
             default: SetRight(v, tag, tagText); break;
         }
-        rows.Add((v.Row, run));
     }
 
     // One row of the list, made once and reused: a search or another submenu only changes what
@@ -1037,7 +1053,7 @@ public sealed partial class MainWindow : Window
         public StackPanel Bars = null!;
         public StackPanel Slot = null!; // the row, with room above it for a title
         public ColumnDefinition TileColumn = null!;
-        public int Index;
+        public int Index;       // the list row it shows (the launcher's long list: not its place in the pool)
         public string? IconKey; // the icon this row wants now (a late one for an old row is dropped)
         public Color Color;     // its icon's color (the lifted row's icon tile fills with it)
     }
@@ -1202,12 +1218,14 @@ public sealed partial class MainWindow : Window
         }
         if (liftedRow != null && liftedRow.Index != selected) LiftRow(liftedRow, false);
         liftedRow = null;
-        if (selected < rows.Count)
+        // The launcher's long list scrolls first, so the selected row is drawn to be lifted.
+        if (drawRow != null) ScrollToSelected(animate: !jump);
+        if (ViewAt(selected) is { } row)
         {
-            liftedRow = pool[selected];
-            LiftRow(liftedRow, true);
+            liftedRow = row;
+            LiftRow(row, true);
         }
-        ScrollToSelected(animate: !jump);
+        if (drawRow == null) ScrollToSelected(animate: !jump);
         if (finding) ShowPreview();
         else if (launching && page == "clipboard") ShowClipPreview();
         else if (launching && page == "packages") ShowPackagePreview();
