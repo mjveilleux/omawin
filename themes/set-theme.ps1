@@ -24,6 +24,14 @@
         .\set-theme.ps1 -NextBackground     the current theme's next background (Win+Ctrl+Space)
         .\set-theme.ps1 -Background leaves  one of the current theme's backgrounds; only the
                                             wallpaper changes (the background picker)
+        .\set-theme.ps1 nord -Preview -From <folder>
+                                            a theme for a moment (a community theme the picker
+                                            shows: theme.ps1 preview): its colours in GlazeWM and
+                                            the terminals, and its wallpaper; nothing remembered,
+                                            Windows' mode, the lock screen and the editors left
+                                            alone. -From: a folder laid out like themes/ to look
+                                            in first (the preview's own files)
+        .\set-theme.ps1 -Preview            the current theme's colours and wallpaper back
 
     `omawin theme set`, `omawin theme next-background` and `omawin theme background` run this.
 
@@ -32,7 +40,7 @@
     The colors go first, so they change within about a second; the wallpaper and the editors
     follow.
 #>
-param([string]$Name, [string]$Background, [switch]$NextBackground)
+param([string]$Name, [string]$Background, [switch]$NextBackground, [switch]$Preview, [string]$From)
 $ErrorActionPreference = 'Stop'
 # Runs under Windows PowerShell 5.1 too: install.ps1 (look step) applies the first theme before
 # pwsh exists. These stand in for what only pwsh has.
@@ -68,6 +76,7 @@ New-Item -ItemType Directory -Force $State | Out-Null
 # Omarchy's own here, as Omarchy prefers a theme you installed.
 $Installed = Join-Path $State 'themes'
 function Find-ThemeFile([string]$Relative) {
+    if ($From -and (Test-Path (Join-Path $From $Relative))) { return Join-Path $From $Relative }
     $mine = Join-Path $Installed $Relative
     if (Test-Path $mine) { $mine } else { Join-Path $PSScriptRoot $Relative }
 }
@@ -84,19 +93,22 @@ $theme = Get-Content $file -Raw | ConvertFrom-Json
 
 # --- the colors first: what you see change at once ----------------------------------------------
 if (-not $wallpaperOnly) {
-    Set-Content "$State\theme" $Name -NoNewline
-    Set-Content "$State\nvim-theme" $(if ($theme.nvimSpec) { $theme.nvimSpec } else { $Name }) -NoNewline
+    # A preview is remembered nowhere, and leaves Windows' mode as it is (all of Windows repaints).
+    if (-not $Preview) {
+        Set-Content "$State\theme" $Name -NoNewline
+        Set-Content "$State\nvim-theme" $(if ($theme.nvimSpec) { $theme.nvimSpec } else { $Name }) -NoNewline
 
-    # Windows dark / light.
-    $light = [int]($theme.mode -eq 'light')
-    $personalize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
-    Set-ItemProperty $personalize AppsUseLightTheme $light
-    Set-ItemProperty $personalize SystemUsesLightTheme $light
+        # Windows dark / light.
+        $light = [int]($theme.mode -eq 'light')
+        $personalize = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize'
+        Set-ItemProperty $personalize AppsUseLightTheme $light
+        Set-ItemProperty $personalize SystemUsesLightTheme $light
+    }
 
     # GlazeWM's borders, noctty and Windows Terminal: their copies of the palette, filled in
     # outside what git tracks (render.ps1); the bar reads the theme live. A running Windows
     # Terminal is nudged to reload (render.ps1).
-    & "$PSScriptRoot\render.ps1" -Name $Name
+    if ($From) { & "$PSScriptRoot\render.ps1" -Name $Name -From $From } else { & "$PSScriptRoot\render.ps1" -Name $Name }
     # Then, not waited for: GlazeWM reloads its config (~0.4 s), and noctty's running instance
     # (the one that opens every new window and tab) re-reads its config, so open windows
     # recolor and new ones start in the new theme; without that it keeps the colors it started
@@ -131,6 +143,10 @@ if ($Background) {
     if ($found -ge 0) { $index = $found }
     elseif ($wallpaperOnly) { throw "No background '$Background' in $Name ($($names -join ', '))." }
 }
+# Your theme again after a preview: on the background it was on.
+if ($Preview -and -not $Background -and $Name -eq $current) {
+    $index = [Math]::Max(0, [array]::IndexOf($backgrounds, [string](Get-Content "$State\background" -ErrorAction SilentlyContinue)))
+}
 if ($NextBackground) {
     $last = Get-Content "$State\background" -ErrorAction SilentlyContinue
     $index = ([Math]::Max(-1, [array]::IndexOf($backgrounds, $last)) + 1) % [Math]::Max(1, $backgrounds.Count)
@@ -138,7 +154,10 @@ if ($NextBackground) {
 if ($backgrounds) {
     $source = $backgrounds[$index]
     if ($source -match '^https?://') {
-        $image = Join-Path $State "backgrounds\$Name\$(Split-Path $source -Leaf)"
+        # A previewed theme's pictures go with its files, apart from the themes' own: it may
+        # share a name with one.
+        $folder = if ($From) { Join-Path $From "backgrounds\$Name" } else { Join-Path $State "backgrounds\$Name" }
+        $image = Join-Path $folder (Split-Path $source -Leaf)
         if (-not (Test-Path $image)) {
             New-Item -ItemType Directory -Force (Split-Path $image) | Out-Null
             Invoke-WebRequest $source -OutFile "$image.part" -UseBasicParsing
@@ -150,8 +169,10 @@ if ($backgrounds) {
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' WallpaperStyle '10' # fill
     Set-ItemProperty 'HKCU:\Control Panel\Desktop' TileWallpaper '0'
     $null = [Theme.Desktop]::SystemParametersInfo(20, 0, $image, 3) # SPI_SETDESKWALLPAPER, save + tell apps
-    Set-Content "$State\background" $source
     Write-Host "  wallpaper   $(Split-Path $image -Leaf)"
+}
+if ($backgrounds -and -not $Preview) {
+    Set-Content "$State\background" $source
     # The lock screen (and sign-in screen) gets the same picture, so logging back in matches.
     # Windows PowerShell does it (WinRT), in the background: the first time, converting a 4K
     # WebP to JPEG takes a few seconds.
@@ -162,6 +183,7 @@ if ($backgrounds) {
     Write-Host "  lock screen (same picture)"
 }
 if ($wallpaperOnly) { return }
+if ($Preview) { Write-Host "  preview     $($theme.name)"; return }
 
 # --- RStudio ------------------------------------------------------------------------------------
 # An editor theme (.rstheme: CSS for its Ace editor; RStudio colors its panes to match) made

@@ -26,17 +26,21 @@
         .\render.ps1                  the current theme
         .\render.ps1 -Name nord       another one (set-theme.ps1 passes the new pick)
         .\render.ps1 -Reload          and reload GlazeWM's config
+        .\render.ps1 -Name x -From <folder>   a theme whose files are in that folder (laid out
+                                      like themes/): a community theme's preview
 
     Runs under Windows PowerShell 5.1 too (install.ps1).
 #>
-param([string]$Name, [switch]$Reload)
+param([string]$Name, [switch]$Reload, [string]$From)
 
 $ErrorActionPreference = 'Stop'
 $Repo = Split-Path $PSScriptRoot
 $State = Join-Path $env:LOCALAPPDATA 'launcher'
 if (-not $Name) { $Name = if (Test-Path "$State\theme") { (Get-Content "$State\theme" -Raw).Trim() } else { 'starship' } }
-# An installed theme's files (%LOCALAPPDATA%\launcher\themes, theme.ps1) before Omarchy's own here.
+# An installed theme's files (%LOCALAPPDATA%\launcher\themes, theme.ps1) before Omarchy's own here;
+# -From's before both (a community theme's preview: set-theme.ps1 -Preview -From).
 function Find-ThemeFile([string]$Relative) {
+    if ($From -and (Test-Path (Join-Path $From $Relative))) { return Join-Path $From $Relative }
     $mine = Join-Path $State "themes\$Relative"
     if (Test-Path $mine) { $mine } else { Join-Path $PSScriptRoot $Relative }
 }

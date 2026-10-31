@@ -26,11 +26,14 @@ theme set | Apply a theme: omawin theme set gruvbox [-Background village-square]
 theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
 theme backgrounds | The background picker: a grid of the current theme's pictures, Enter sets one, Tab shows another theme's; or a theme's: omawin theme backgrounds gruvbox | app --open style.backgrounds
 theme background | One of the current theme's backgrounds, by name or part of it: omawin theme background village-square | pwsh themes/set-theme.ps1 -Background
-theme install | Install a theme from its git link, like Omarchy's: omawin theme install https://github.com/<someone>/omarchy-<name>-theme | pwsh themes/theme.ps1 install
-theme update | Update installed themes (git pull), or one: omawin theme update <name> | pwsh themes/theme.ps1 update
+theme add | Install a community theme by name (omawin theme search), at the commit the index checked, or any theme from its git link; applies it | pwsh themes/theme.ps1 add
+theme search | Community themes matching every word (name, author, light, dark), with their repos: omawin theme search nord | pwsh themes/theme.ps1 search
+theme preview | A community theme across the desktop for a moment, nothing installed: omawin theme preview <name>; omawin theme preview off puts yours back (the picker's Community chip does this as you move) | pwsh themes/theme.ps1 preview
+theme install | The same as theme add (the older name): a theme by name or git link, like Omarchy's | pwsh themes/theme.ps1 install
+theme update | Update installed themes, or one: omawin theme update <name>; shows what changed in each repo and asks first (-Yes doesn't) | pwsh themes/theme.ps1 update
 theme remove | Remove an installed theme: omawin theme remove <name> (asks which if left out) | pwsh themes/theme.ps1 remove
 theme list | Every theme, Omarchy's and installed ones; * is the one in use | pwsh themes/theme.ps1 list
-theme browse | Omarchy's page of extra themes, to find a link to install | pwsh themes/theme.ps1 browse
+theme browse | Omarchy's page of community themes (omarchy.org/themes) | pwsh themes/theme.ps1 browse
 theme import | Remake this repo's themes from Omarchy's own (for omawin's maintainers; rerun for new ones) | pwsh themes/import-omarchy.ps1
 theme lockscreen | The lock screen's next background | pwsh themes/set-lockscreen.ps1 -Next
 
