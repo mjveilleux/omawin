@@ -77,17 +77,32 @@ public static class UpdateAgent
                     pending.Add(new PendingUpdate(u.Get("Title") as string ?? "(untitled)", kbs, u.Get("IsDownloaded") is true, behaviour != 0));
                 }
 
+        return (pending, Installed(searcher, 50), restart);
+    }
+
+    // What Windows Update installed, newest first, from the last `max` entries of its history (8.44
+    // compares them with the crashes). No search: the history is the agent's own record.
+    public static IReadOnlyList<InstalledUpdate> History(int max) => Com.InStaThread(() =>
+    {
+        using var session = Dispatch.Create("Microsoft.Update.Session");
+        session.Set("ClientApplicationID", "omawin");
+        using var searcher = session.CallObject("CreateUpdateSearcher");
+        return (IReadOnlyList<InstalledUpdate>)Installed(searcher, max);
+    });
+
+    static List<InstalledUpdate> Installed(Dispatch searcher, int max)
+    {
         var installed = new List<InstalledUpdate>();
         int total = Convert.ToInt32(searcher.Call("GetTotalHistoryCount") ?? 0);
         if (total > 0)
-            using (var history = searcher.CallObject("QueryHistory", 0, Math.Min(50, total)))
+            using (var history = searcher.CallObject("QueryHistory", 0, Math.Min(max, total)))
                 foreach (var h in history.Items())
                     using (h)
                         // Operation 1 = installation, ResultCode 2 = succeeded. Date is UTC (check).
                         if (h.Get("Operation") is 1 && h.Get("ResultCode") is 2 && h.Get("Date") is DateTime when)
                             installed.Add(new InstalledUpdate(when, h.Get("Title") as string ?? ""));
         installed.Sort((a, b) => b.WhenUtc.CompareTo(a.WhenUtc));
-        return (pending, installed, restart);
+        return installed;
     }
 
     static T Use<T>(Dispatch d, Func<Dispatch, T> read)

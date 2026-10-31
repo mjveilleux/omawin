@@ -14,6 +14,8 @@
   <ItemGroup>
     <Compile Include="../../src/windows/Files/Holders.cs" Link="windows/Holders.cs" />
     <Compile Include="../../src/windows/Health/HealthEvents.cs" Link="windows/HealthEvents.cs" />
+    <Compile Include="../../src/windows/Health/DeviceHealth.cs" Link="windows/DeviceHealth.cs" />
+    <Compile Include="../../src/windows/Health/UpdateSuspects.cs" Link="windows/UpdateSuspects.cs" />
     <Compile Include="../../src/windows/Startup/StartupItems.cs" Link="windows/StartupItems.cs" />
     <Compile Include="../../src/windows/Admin/AdminScripts.cs" Link="windows/AdminScripts.cs" />
     <Compile Include="../../src/windows/Net/HostsFile.cs" Link="windows/HostsFile.cs" />

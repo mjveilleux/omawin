@@ -146,7 +146,10 @@ public static partial class AdminScripts
     // Windows Update's pause (8.18): the values Settings writes, each a UTC time checked here; or,
     // with none given, the pause removed (resume). The service reads them at its next check, and
     // Settings shows "Resume updates" as for its own pause.
-    public static string UpdatePause(IReadOnlyList<(string Name, string Value)> values, string status)
+    public static string UpdatePause(IReadOnlyList<(string Name, string Value)> values, string status) =>
+        Wrap(status, PauseBody(values));
+
+    static string PauseBody(IReadOnlyList<(string Name, string Value)> values)
     {
         var key = Quote(@"HKLM:\" + UpdatePlan.UxKey);
         var body = new StringBuilder($"$k = {key}\nif (-not (Test-Path -LiteralPath $k)) {{ New-Item -Path $k -Force | Out-Null }}\n");
@@ -159,8 +162,53 @@ public static partial class AdminScripts
             if (!Regex.IsMatch(value, @"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")) throw new ArgumentException($"not a UTC time: {value}", nameof(values));
             body.Append($"New-ItemProperty -LiteralPath $k -Name {Quote(name)} -Value {Quote(value)} -PropertyType String -Force | Out-Null\n");
         }
-        return Wrap(status, body.ToString().TrimEnd());
+        return body.ToString().TrimEnd();
     }
+
+    // An update taken off (8.44), in the order that keeps a way back: a restore point first (8.42,
+    // skipped when System Protection is off, never turned on), then Windows' own uninstaller for it
+    // (wusa, which shows its own window and asks), and when wusa can't (a cumulative update shipped
+    // with its servicing stack), DISM on the package whose details name that KB, never a guess; then
+    // updates paused so it isn't put straight back. A KB nothing on the PC names fails, with where to
+    // look instead. The restart that finishes it is left to the caller (asked).
+    public static string UpdateUninstall(string kb, IReadOnlyList<(string Name, string Value)> pause, string status)
+    {
+        if (UpdateSuspects.ParseKb(kb) is not { } n || n != kb) throw new ArgumentException("not a KB number", nameof(kb));
+        var body =
+            RestorePointBody($"omawin: before uninstalling KB{n}") + "\n" +
+            "$wusa = Join-Path $env:SystemRoot 'System32\\wusa.exe'\n" +
+            $"$p = Start-Process -FilePath $wusa -ArgumentList '/uninstall', '/kb:{n}', '/norestart' -Wait -PassThru\n" +
+            // 0 done, 3010 done once restarted; 1223 or 1602: you said no in wusa's own window.
+            "if ($p.ExitCode -in 1223, 1602) { throw 'you said no in the uninstaller; nothing changed' }\n" +
+            "if ($p.ExitCode -notin 0, 3010) {\n" +
+            "  $found = $null\n" +
+            "  foreach ($q in @(Get-WindowsPackage -Online | Where-Object { $_.PackageState -eq 'Installed' -and $_.PackageName -match 'RollupFix|Package_for_KB|Package_for_DotNetRollup' })) {\n" +
+            $"    if ($q.PackageName -match 'KB{n}(\\D|$)') {{ $found = $q.PackageName; break }}\n" +
+            "    $d = Get-WindowsPackage -Online -PackageName $q.PackageName\n" +
+            $"    if (\"$($d.Description) $($d.SupportInformation) $($d.DisplayName)\" -match 'KB{n}(\\D|$)|kbid={n}(\\D|$)') {{ $found = $q.PackageName; break }}\n" +
+            "  }\n" +
+            $"  if (-not $found) {{ throw ('Windows has no removable update KB{n} (wusa said ' + $p.ExitCode + '); Settings › Windows Update › Update history › Uninstall updates lists what can be removed') }}\n" +
+            "  Remove-WindowsPackage -Online -PackageName $found -NoRestart | Out-Null\n" +
+            "}\n" +
+            PauseBody(pause);
+        return Wrap(status, body);
+    }
+
+    // A restore point (8.42) inside a run you approved; never fatal, never turns System Protection
+    // on. Windows makes at most one a day unless SystemRestorePointCreationFrequency is 0: set for the
+    // call and put back as it was.
+    static string RestorePointBody(string description) =>
+        "$restoreKey = 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\SystemRestore'\n" +
+        "$oldFrequency = (Get-ItemProperty $restoreKey -ErrorAction SilentlyContinue).SystemRestorePointCreationFrequency\n" +
+        "try {\n" +
+        "  if (-not (Test-Path $restoreKey)) { New-Item $restoreKey -Force | Out-Null }\n" +
+        "  Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value 0 -Type DWord\n" +
+        $"  Checkpoint-Computer -Description {Quote(description)} -RestorePointType MODIFY_SETTINGS -ErrorAction Stop\n" +
+        "} catch { }\n" +
+        "finally {\n" +
+        "  if ($null -eq $oldFrequency) { Remove-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue }\n" +
+        "  else { Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value $oldFrequency -Type DWord }\n" +
+        "}";
 
     // Active hours (8.18): set by hand from start to end (Windows' automatic choice off), or, with
     // null, Windows choosing them again from when the PC is used.

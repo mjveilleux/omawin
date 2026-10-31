@@ -7,6 +7,7 @@ namespace Omawin.Windows;
 //   omawin updates pause [days]          pause for a week, or 1-35 days (admin: one prompt)
 //   omawin updates resume                the undo
 //   omawin updates hours <start>-<end>   active hours, when Windows never restarts itself; auto: Windows picks
+//   omawin updates uninstall [KB]        take off the update that broke something (8.44; admin: one prompt)
 static class UpdatesCommand
 {
     public static int Run(string[] args)
@@ -60,9 +61,74 @@ static class UpdatesCommand
                 var failed = Elevated.Run(status => AdminScripts.UpdateActiveHours(hours, status));
                 return failed == null ? Program.Say("Done.") : Program.Fail(failed);
             }
+            case "uninstall": return Uninstall(args.Length > 1 ? args[1] : null, now);
             default:
-                return Program.Fail("omawin updates [restart [tonight|<time>|now|cancel] | pause [days] | resume | hours <start>-<end>|auto]");
+                return Program.Fail("omawin updates [restart [tonight|<time>|now|cancel] | pause [days] | resume | hours <start>-<end>|auto | uninstall <KB>]");
         }
+    }
+
+    // Takes an update off (8.44): the KB given, or, with none, one picked from what was installed
+    // lately (the ones `omawin health` suspects marked). Says what happens, then one prompt runs it
+    // all: a restore point, the uninstall, a week's pause; the restart that finishes it is asked.
+    static int Uninstall(string? given, DateTimeOffset now)
+    {
+        string? kb;
+        if (given != null)
+        {
+            kb = UpdateSuspects.ParseKb(given);
+            if (kb == null) return Program.Fail("omawin updates uninstall <KB number, like KB5031234>");
+        }
+        else
+        {
+            if (!Program.CanAsk) return Program.Fail("omawin updates uninstall <KB number>: run it in a terminal");
+            IReadOnlyList<InstalledUpdate> recent;
+            try { recent = UpdateAgent.History(50); }
+            catch (InvalidOperationException ex) { return Program.Fail($"Windows Update's history couldn't be read ({ex.Message})"); }
+            var withKb = recent.Where(u => UpdateSuspects.Kb(u.Title) != null && !UpdateSuspects.Ignored(u.Title)).Take(15).ToList();
+            if (withKb.Count == 0) return Program.Say("Windows Update has installed nothing lately that can be taken off.");
+            var suspected = Suspected(recent, now);
+            Console.WriteLine("Installed lately (! = crashes or restarts started after it: omawin health says which):");
+            foreach (var u in withKb)
+            {
+                var when = TimeZoneInfo.ConvertTime(new DateTimeOffset(DateTime.SpecifyKind(u.WhenUtc, DateTimeKind.Utc)), TimeZoneInfo.Local);
+                var id = UpdateSuspects.Kb(u.Title)!;
+                Console.WriteLine($"  {(suspected.Contains(id) ? "!" : " ")} KB{id,-8} {when:yyyy-MM-dd}  {u.Title}");
+            }
+            kb = Program.Prompt("Which KB? (Enter for none)") is { } typed ? UpdateSuspects.ParseKb(typed) : null;
+            if (kb == null) return 0;
+        }
+
+        Console.WriteLine($"""
+            KB{kb} comes off this PC:
+              - a restore point first (when System Protection is on), so System Restore can go back to now;
+              - Windows' own uninstaller for it, which shows its own window and asks too (DISM for a
+                cumulative update that came with its servicing stack, which that uninstaller can't take off);
+              - Windows Update paused for a week, so it isn't put straight back (omawin updates resume ends that).
+            A restart finishes it.
+            """);
+        if (!Program.Ask("That changes the whole PC: Windows asks for an administrator once. Go ahead?")) return 0;
+        var failed = Elevated.Run(status => AdminScripts.UpdateUninstall(kb, UpdatePlan.PauseValues(now, 7), status));
+        if (failed != null)
+        {
+            Program.Fail(failed);
+            // Windows makes a restore point before most updates: System Restore can go back to before it.
+            if (Program.Ask("System Restore can take the PC back to before the update (your files stay). Open it?"))
+                try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "rstrui.exe")) { UseShellExecute = true })?.Dispose(); }
+                catch (System.ComponentModel.Win32Exception) { }
+            return 1;
+        }
+        Console.WriteLine($"KB{kb} is uninstalled once the PC restarts; updates are paused for a week.");
+        if (!Program.Ask("Restart now? Save your work first.")) return Program.Say("omawin updates restart tonight restarts it at 03:00.");
+        var error = UpdateAgent.ScheduleRestart(DateTime.Now, 0);
+        return error == null ? 0 : Program.Fail(error);
+    }
+
+    // The KBs `omawin health` would name for the last weeks' crashes: the same events, read the same way.
+    static HashSet<string> Suspected(IReadOnlyList<InstalledUpdate> recent, DateTimeOffset now)
+    {
+        var (events, since) = HealthCommand.ReadEvents(UpdateSuspects.DaysNeeded, now, []);
+        return UpdateSuspects.Find(recent, events, since, now)
+            .SelectMany(s => s.Updates).Select(u => UpdateSuspects.Kb(u.Title)).OfType<string>().ToHashSet();
     }
 
     static int Restart(string when)

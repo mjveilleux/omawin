@@ -10,7 +10,7 @@ namespace Omawin.Windows;
 // omawin-windows: Phase 8's fixes that answer in a terminal. You type the omawin names
 // (bin/commands.txt routes them here); the menu's rows run them in a small terminal you can read.
 //   who-has [path…]        which programs hold a file or folder open; close or end them (8.1)
-//   health [days]          why the PC restarted, crashed or woke up (8.15)
+//   health [days|hardware] why the PC restarted, crashed or woke up (8.15); disks, battery, devices (8.41); the update it began after (8.44)
 //   startup [off|on <name>]  everything that starts with Windows, and switches (8.16)
 //   top [name] | top end <pid>  processes by app, by CPU and memory (8.17)
 //   hosts [add|off|on …]   the hosts file (8.19)
@@ -19,7 +19,7 @@ namespace Omawin.Windows;
 //   clip [transform]       the clipboard's text converted in place (8.14)
 //   classic-menu [on|off|status]  the full right-click menu back (8.24)
 //   dns [preset] [adapter] the adapters' DNS, and Cloudflare / Quad9 / Google / your router's (8.19)
-//   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
+//   updates [restart|pause|resume|hours|uninstall]  Windows Update: what's coming, the restart when you say (8.18), the update that broke it off (8.44)
 //   proxy [set|on|off|script]  this account's system proxy (8.19)
 //   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
 //   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
@@ -73,7 +73,7 @@ public static partial class Program
         Console.WriteLine("""
             omawin-windows: run through omawin (omawin help lists everything):
               omawin who-has [path]       who holds a file or folder open (no path: the one on the clipboard)
-              omawin health [days]        why the PC restarted, crashed or woke up
+              omawin health [days]        why the PC restarted, crashed or woke up; the update it started after; disks, battery, devices (health hardware: those alone)
               omawin startup              what starts with Windows; startup off <name>, startup on <name>
               omawin top [name]           processes by app; top end <pid>
               omawin hosts                the hosts file; hosts add <address> <name>, hosts off <name>, hosts on <name>
@@ -82,7 +82,7 @@ public static partial class Program
               omawin clip [transform]     the clipboard's text converted (clip lists them)
               omawin classic-menu         the full right-click menu, or Windows 11's short one (on, off, status)
               omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it; dns encrypt [on|off] for DNS over HTTPS
-              omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
+              omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18, uninstall [KB]
               omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
               omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
               omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
