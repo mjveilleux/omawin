@@ -48,7 +48,8 @@ public abstract class BarWidget
         "power" => new PowerWidget(),
         "tray" => new TrayWidget(),
         "linux" => new LinuxWidget(),
-        _ => null, // media, agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
+        "media" => new MediaWidget(),
+        _ => null, // agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
     };
 
     public static readonly FontFamily Mono = new("JetBrainsMono Nerd Font, JetBrainsMono NF, Cascadia Mono, Consolas");
@@ -394,6 +395,57 @@ sealed class LinuxWidget : BarWidget
         cell.Tip = LinuxState.Tip(s);
     }
     public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+
+// What's playing, from Windows' media controls (Media.cs): play/pause, the title, next. Shown only
+// while something plays or is paused. The title: click plays or pauses, right click goes back,
+// the wheel skips (up: next, down: previous).
+sealed class MediaWidget : BarWidget
+{
+    const int Play = 0xF040A, Pause = 0xF03E4, Next = 0xF04AD; // nf-md-play, pause, skip_next
+    readonly StackPanel row = new() { Orientation = Orientation.Horizontal, Visibility = Visibility.Collapsed };
+    readonly Cell toggle = new(), title = new() { Padding = new Thickness(4, 0, 4, 0) }, next = new("Next");
+    Media.State? shown;
+    public override FrameworkElement Element => row;
+
+    public MediaWidget()
+    {
+        title.Text.FontSize = 11.5;
+        title.Text.MaxWidth = 260; // MediaText cuts it first; this only guards a very wide font
+        title.Text.TextTrimming = TextTrimming.CharacterEllipsis;
+        next.SetIcon(Glyph(Next));
+        toggle.Click = title.Click = Media.Toggle;
+        title.RightClick = Media.Previous;
+        title.Wheel = up => { if (up > 0) Media.Next(); else Media.Previous(); };
+        next.Click = Media.Next;
+        row.Children.Add(toggle);
+        row.Children.Add(title);
+        row.Children.Add(next);
+        if (!hooked)
+        {
+            hooked = true; // once for every bar: a monitor change makes the widgets again
+            Media.Changed += () => SystemMenu.Bar.Refresh();
+        }
+        Media.Start();
+    }
+    static bool hooked;
+
+    public override void Update(BarData data)
+    {
+        var now = Media.Now;
+        if (Equals(now, shown)) return;
+        shown = now;
+        if (now == null) { row.Visibility = Visibility.Collapsed; return; }
+        row.Visibility = Visibility.Visible;
+        toggle.SetIcon(Glyph(now.Playing ? Pause : Play));
+        toggle.Tip = now.Playing ? "Pause" : "Play";
+        toggle.Opacity = now.CanToggle ? 1 : 0.5;
+        next.Visibility = now.CanNext ? Visibility.Visible : Visibility.Collapsed;
+        title.SetText(MediaText.Label(now.Title, now.Artist, now.App));
+        title.Opacity = now.Playing ? 1 : 0.6; // paused: there, but quiet
+        title.Tip = MediaText.Tip(now.Title, now.Artist, now.App, now.Playing);
+    }
+
+    public override void Paint(Theme theme) { base.Paint(theme); toggle.Paint(theme); title.Paint(theme); next.Paint(theme); }
 }
 
 // The Bluetooth glyph; click: Quick settings (its radio and devices).

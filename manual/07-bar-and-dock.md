@@ -12,6 +12,7 @@ The bar is drawn by the menu app itself, with no web engine, so it's up within s
   - **The clock**: "Saturday 22:58". Right-click for the date and week; click for Windows' calendar.
   - **An update arrow**, red, only while an omawin update is waiting (checked every 6 hours). Click it to update.
 - **Right:**
+  - **What's playing**, from any app that reports to Windows' media controls (Spotify, a video in the browser, Media Player), only while something plays or is paused: play / pause, the title (dimmed while paused) and next. Click the title to play or pause, right-click it to go back, the mouse wheel skips; hover for the whole title, the artist and the app.
   - **The record**: the music, podcast and radio player (below), while it plays.
   - **The tray**: an arrow; hover it and the tray's icons slide out beside it.
   - **Agents**: a little robot, red when you've used 90% of a Claude limit. Click it for your Claude Code limits (the 5-hour session, the week, and any per-model week), each with a meter and when it resets, and a line that turns through this week's numbers (tokens, today, the model you use most, your busiest day, prompts and sessions). It reads your Claude Code sign-in on this PC and asks Anthropic every 15 minutes; middle-click to check now, right-click to start Claude Code. `omawin` runs `bin/agent-usage.ps1 -Print` for the same in a terminal.
