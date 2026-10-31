@@ -66,8 +66,8 @@ $UserIds = @(
 )
 $Repo = Split-Path $PSScriptRoot
 
-# A catalog line's values and their off value: "reg <HKCU|HKLM path> dword … off=<n>", each part
-# of a joined line ("… + reg …").
+# A catalog line's values and their off value: "reg <HKCU|HKLM path> dword ... off=<n>", each part
+# of a joined line ("... + reg ...").
 function Get-CatalogOff([string]$Id) {
     $line = [IO.File]::ReadAllLines((Join-Path $Repo 'default\launcher\settings.txt')) | Where-Object { $_ -like "$Id |*" } | Select-Object -First 1
     if (-not $line) { throw "'$Id' isn't in default/launcher/settings.txt" }

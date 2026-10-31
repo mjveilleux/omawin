@@ -110,7 +110,7 @@ foreach ($line in $lines) {
                 }
                 elseif ($target -match '^HKCU\\Software\\Policies\\[^\t]+\\[^\\]+$') {
                     # The account that asked, by its SID; never this run's own HKCU.
-                    # A local or domain account (S-1-5-21-…), or a Microsoft Entra one (S-1-12-1-…).
+                    # A local or domain account (S-1-5-21-...), or a Microsoft Entra one (S-1-12-1-...).
                     if ($User -notmatch '^S-1-(5-21|12-1)(-\d+){3,4}$') { throw 'no account to write its policies for' }
                     if (-not [Microsoft.Win32.Registry]::Users.OpenSubKey($User)) { throw "that account isn't signed in" }
                     $cut = $target.LastIndexOf('\')
@@ -163,7 +163,7 @@ foreach ($line in $lines) {
                         }
                     }
                     'firewall-dev' {
-                        # "<name>=<path>|…": each a dev runtime's own program, checked again here.
+                        # "<name>=<path>|...": each a dev runtime's own program, checked again here.
                         $made = 0
                         foreach ($pair in ($value -split '\|')) {
                             $name, $path = $pair -split '=', 2
