@@ -217,7 +217,7 @@ function Read-ToolBundle {
             $f = $line -split "`t"
             if ($f.Count -lt 6 -or $f[0] -notmatch '^[a-z0-9-]+$' -or $f[3] -notmatch '^[0-9a-f]{64}$') { continue }
             $dir = if ($f.Count -gt 6 -and $f[6]) { Join-Path $env:LOCALAPPDATA $f[6] } else { Join-Path $ToolsDir $f[0] }
-            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx')
+            [pscustomobject]@{ Name = $f[0]; Version = $f[1]; File = $f[2]; Sha = $f[3]; Bin = $f[4]; Provides = $f[5]; Dir = $dir; Base = $base; Later = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'later'); Merge = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'merge'); Sfx = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'sfx'); Optional = ($f.Count -gt 7 -and ($f[7] -split ' ') -contains 'optional')
                 Parts = $(if ($f.Count -gt 9 -and $f[8] -and $f[9]) {
                         $files = $f[8] -split ','; $shas = $f[9] -split ','
                         if ($files.Count -eq $shas.Count -and -not ($shas | Where-Object { $_ -notmatch '^[0-9a-f]{64}$' })) {
@@ -253,7 +253,12 @@ function Set-ToolItem($Tool, [string]$State) {
 # list) is used as it is.
 function Start-ToolBundle($Installed, [string[]]$Only) {
     if ($script:BundleStart) { return }
-    $tools = @(Read-ToolBundle | Where-Object { -not $Only -or $Only -contains $_.Name })
+    # An optional tool (the plugins' QML host) only when it's asked for by name, or already here
+    # (so an update updates it).
+    $tools = @(Read-ToolBundle | Where-Object {
+            if ($Only) { $Only -contains $_.Name }
+            else { -not $_.Optional -or (Test-Path -LiteralPath (Join-Path $_.Dir '.omawin-version')) }
+        })
     $script:BundleHave = @()
     $script:BundleTheirs = @()   # winget ids already here some other way: winget leaves them alone too
     $todo = @()

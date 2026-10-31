@@ -2,7 +2,7 @@
 
 One strip across the top of the screen, as in Omarchy 4: the theme's background, 26 pixels tall. There is no dock: the launcher (Win+Space) and the system menu (Win+Alt+Space) take its place, and the Windows taskbar auto-hides (the very bottom edge or the Win key still shows it).
 
-The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the record and the music player's panel, and the agents panel. They were in Zebar's bar, which omawin no longer uses (removed 2026-10-31), and come back as bar plugins; Win+M says so meanwhile.
+The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the agents panel. The music player is a bar plugin now: turn it on with `omawin plugin add music` (or Install › Plugins), which also downloads the small program that draws plugins (once; nothing is downloaded if you never turn one on).
 
 - **Left:**
   - **The menu**: Omarchy's logo. Click: the system menu; right-click: a terminal.

@@ -139,6 +139,52 @@ jobs:
           path: out/thumbs
           if-no-files-found: error
 
+  # The plugins' QML host (src/qs-host, roadmap 4.9.4): Rust and Qt, built here with Qt's own
+  # deploy tool beside it (the Qt it needs, ~40 MB) and published as one more tools bundle entry,
+  # optional: only a PC that turns a plugin on downloads it (build/release.ps1, `omawin plugin add`).
+  # Checked by loading the music plugin with --check (QML errors fail the job).
+  qs-host:
+    needs: meta
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: jurplel/install-qt-action@b344308e4483fc892e0d27b3cd1b173ebdd95f06 # v4.5.0
+        with:
+          version: '6.8.3'
+          arch: win64_msvc2022_64
+          cache: true
+      - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: |
+            ~/.cargo/registry
+            src/qs-host/target
+          key: qs-host-${{ hashFiles('src/qs-host/Cargo.lock') }}-v1
+      - name: Build
+        shell: pwsh
+        working-directory: src/qs-host
+        run: cargo build --release --locked
+      - name: Deploy (the exe, Qt beside it, the host's QML)
+        shell: pwsh
+        run: |
+          $out = 'out\qs-host\omawin-qs'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          Copy-Item src\qs-host\target\release\omawin-qs.exe $out
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --qmldir src\qs-host\qml --qmldir shell\plugins\omawin.music "$out\omawin-qs.exe"
+          Copy-Item -Recurse -Force src\qs-host\qml\* "$out\qml\"
+          & "$out\omawin-qs.exe" --plugin-dir shell\plugins\omawin.music --check 2>&1 | Tee-Object -Variable log
+          if ($LASTEXITCODE -ne 0 -or -not ($log -match 'omawin.music loaded')) { throw "the music plugin didn't load in the host" }
+          $size = (Get-ChildItem $out -Recurse -File | Measure-Object Length -Sum).Sum
+          Write-Host ("{0:N1} MB, {1} files" -f ($size / 1MB), (Get-ChildItem $out -Recurse -File).Count)
+          Compress-Archive -Path "$out\*" -DestinationPath out\qs-host\omawin-tool-qs-host.zip -CompressionLevel Optimal
+          Remove-Item -Recurse $out
+          git log -1 --format=%h -- src/qs-host | Set-Content out\qs-host\version.txt
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: qs-host
+          path: out/qs-host
+          if-no-files-found: error
+
   # Neovim's treesitter parsers, prebuilt: the ones LazyVim installs, from the nvim-treesitter commit
   # config/nvim/lazy-lock.json pins, so a PC needs no C compiler (it used to take zig: 98 MB, 19,500 files).
   # Built here with the runner's Visual Studio compiler, zipped from Neovim's data folder (site:
@@ -259,7 +305,7 @@ jobs:
   # Names the files the way the installer looks for them, hashes them into SHA256SUMS.txt (what
   # bin/release.ps1 checks a download against), and publishes.
   release:
-    needs: [meta, helpers, menu, music, tools, parsers, thumbs]
+    needs: [meta, helpers, menu, music, tools, parsers, thumbs, qs-host]
     if: needs.meta.outputs.publish == 'true'
     runs-on: windows-latest
     permissions:

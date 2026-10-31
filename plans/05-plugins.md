@@ -30,7 +30,7 @@ Constraints that shape every line below:
 | Admin verbs | `shell/menu-app/Plugins/AdminQueue.cs`, `bin/admin-verbs.ps1` | 8.0, 2.9 | with 8.x |
 | SDK + example | `plugins/sdk/Omawin.Plugin/`, `plugins/omawin.top/` | 8.0 | with 8.x |
 | Arch stand-ins | `wsl/omarchy-shims/`, `wsl/setup.sh`, `themes/set-theme.ps1` | 4.9.1 | v3 |
-| QML host | `qs-host/` (Qt 6, CMake) | 4.9.3-4 | later |
+| QML host | `src/qs-host/` (Rust with cxx-qt, Qt 6, QML) | 4.9.3-4 | first slice built 2026-10-31 |
 | Omadoro port | in Omadoro's repo: `omawin/service.ts`, `omawin/Panel.xaml`, `manifest.json` | plugins.md | proof |
 
 Order: §1-§4 and §6 (v1) → move the music and agents widgets to them (4.6) → §5 and §7 (v2; **prove `XamlReader.Load` and the attached properties under AOT first**, §5.0) → §9 with the first phase 8 plugin → §10. The full checklist is §13.
@@ -4038,6 +4038,8 @@ install_omarchy_shims() {
 No new code beyond a `shell.qml`: Quickshell from Omarchy's repositories in Arch (`pacman -S quickshell` *(check: package name in Omarchy's repo)*), Omarchy's `shell/Commons` and `shell/Ui` copied into `~/.config/omawin-qs/`, and a `shell.qml` that does what `PluginRegistry.qml` does for one plugin (load its `entryPoints`, inject `shell` and `manifest`, answer `IpcHandler` calls). A `PanelWindow` falls back to a plain window under WSLg; a GlazeWM window rule floats `omawin-qs` windows and places them under the bar. Its purpose is to prove Omadoro and Omastonk run unchanged, then it's replaced by 10.3.
 
 ### 10.3 Layer 2B: `omawin-qs.exe`, the native QML host (4.9.4)
+
+**Built differently, 2026-10-31:** in Rust with cxx-qt rather than C++ and CMake (AGENTS.md: Rust where C# isn't the tool), as [`src/qs-host/`](../src/qs-host/README.md). The native part is small (`Omawin.Native`: a process with its output, a few file helpers); `Quickshell`, `Quickshell.Io`, `qs.Commons` and `qs.Ui` are plain QML on top. The bar starts it per plugin with command-line arguments, not JSON lines yet (`--plugin-dir`, `--at`, `--parent`). The plan below stays the target for what's left: the protocol, panels from the bar, `Quickshell.Hyprland`.
 
 A Qt 6 program providing the module subset plugins import, implemented for Windows. **It is itself a plugin process**: the menu app starts `omawin-qs.exe --plugin <dir>` with the usual Job Object and JSON lines, so registry, enable/disable, hot reload, logs, `profile ram` and panels-from-the-bar all come for free. A QML plugin's manifest needs no `omawin` block; the registry treats "has `entryPoints`, no `omawin.command`, kind `bar-widget`/`panel`/`overlay`/`service`" as "run in the QML host" once the host is installed (downloaded on first need by `bin/install-binaries.ps1`).
 

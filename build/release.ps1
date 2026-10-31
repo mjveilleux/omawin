@@ -89,6 +89,17 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "theme-thumbs`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no theme pictures ($thumbs): left out of this release" }
+    # The plugins' QML host (release.yml's qs-host job): optional, so only a PC that turns a plugin
+    # on downloads it (install/software.ps1); in %LOCALAPPDATA%\omawin\tools\qs-host, not on the PATH.
+    $qs = Join-Path $InDir 'qs-host\omawin-tool-qs-host.zip'
+    if ((Test-Path $qs) -and (Test-Path $list)) {
+        Add-File $qs 'omawin-tool-qs-host.zip'
+        $version = (Get-Content (Join-Path $InDir 'qs-host\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $qs -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('qs-host', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-qs-host.zip', $sha, '-', '', '', 'optional') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "qs-host`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no plugin host ($qs): left out of this release" }
 }
 
 if (-not $NoManifest) {

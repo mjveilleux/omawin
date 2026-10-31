@@ -21,7 +21,7 @@
         omawin plugin remove music
 #>
 param(
-    [Parameter(Position = 0)][ValidateSet('list', 'add', 'remove', 'plugins', 'plugin-add', 'plugin-remove')][string]$Verb = 'list',
+    [Parameter(Position = 0)][ValidateSet('list', 'add', 'remove', 'plugins', 'plugin-add', 'plugin-remove', 'sync-plugins')][string]$Verb = 'list',
     [Parameter(Position = 1)][string]$Name,
     [switch]$NoInstall
 )
@@ -55,7 +55,18 @@ if ($Verb -in 'plugin-add', 'plugin-remove') {
 function Save-Presets([string[]]$Names) {
     New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
     Set-Content $PresetsFile (@('# omawin presets on this PC (install/packages.ps1); omawin preset add|remove <name>') + $Names) -Encoding utf8
+    Save-Plugins $Names
 }
+# The plugins that are on, for the bar (shell/menu-app/Bar/PluginSlot.cs): the ids of the picked
+# presets tagged with one.
+function Save-Plugins([string[]]$Names) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $PresetsFile) | Out-Null
+    $ids = @($Names | Where-Object { $Presets.Contains($_) -and $Presets[$_].Plugin } | ForEach-Object { $Presets[$_].Plugin })
+    Set-Content (Join-Path (Split-Path $PresetsFile) 'plugins.txt') (@('# omawin plugins that are on (shell/plugins/<id>); omawin plugin add|remove <id>') + $ids) -Encoding utf8
+}
+
+# plugins.txt written again from presets.txt (a migration: PCs that picked a plugin's preset first).
+if ($Verb -eq 'sync-plugins') { Save-Plugins $chosen; return }
 
 if ($Verb -eq 'list') {
     foreach ($preset in @($Presets.Keys | Where-Object { -not $Presets[$_].Plugin })) {
@@ -102,3 +113,6 @@ if ($Name -eq 'wsl' -and -not (Test-WslInstalled)) {
     $WslRestart = $f.Count -gt 2 -and $f[2] -eq 'restart'
 }
 Install-Extras @($Presets[$Name].Extras | Where-Object { $_ })
+# A plugin's QML runs in omawin's host (src/qs-host): from the release's tools bundle, with the
+# first plugin turned on (it isn't in the core install).
+if ($Presets[$Name].Plugin) { Install-ToolBundle $null @('qs-host') }

@@ -21,7 +21,7 @@ The layout follows Omarchy's ([`plans/repo-layout.md`](plans/repo-layout.md)). A
 | `config/` | the apps' configs, live-linked into place: `glazewm/` (a template), `nvim/`, `noctty/`, `powershell/`, `windows-terminal/`, `starship/`, `git/`, `bash/`, `herdr/`, `fastfetch/`, `neovide/`, `claude/`, `r/` |
 | `default/` | omawin's own data: `launcher/` (menus, items, sites, keys, settings), `bar/` (the bar's layout, the logo font) |
 | `shell/` | the desktop: `menu-app/` (bar, launcher, menus, screenshots); `plugins/<id>/` (Omarchy's plugin format) |
-| `src/` | the other compiled code and its scripts: `cli/` (the C# router), `music/`, `agent/`, `bundle/` (the tools bundle builder) |
+| `src/` | the other compiled code and its scripts: `cli/` (the C# router), `music/`, `agent/`, `bundle/` (the tools bundle builder), `qs-host/` (the plugins' QML host: Rust and Qt) |
 | `install/` | install steps, `steps.txt`, `packages.ps1`, `tools.txt` (the tools bundle's list) |
 | `migrations/` · `build/` · `themes/` · `wsl/` | one-time changes · CI's release scripts · themes · Linux in WSL |
 | `test/` | `cli.Tests/`, `menu-app.Tests/` (`dotnet test test/<name>`) |

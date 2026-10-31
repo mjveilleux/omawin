@@ -125,6 +125,15 @@ public static class Bar
                     bar.Widgets.Add(widget);
                 }
         }
+        // The plugins that are on (Bar/PluginSlot.cs), on the primary monitor's bar: each a cell its
+        // QML host draws over. (Screens() lists the primary first; one host each for now.)
+        if (windows.Count == 0)
+            foreach (var (place, slot) in PluginSlot.On())
+            {
+                slot.Attach(bar);
+                bar.Place(place).Children.Insert(0, slot.Element);
+                bar.Widgets.Add(slot);
+            }
         bar.Paint(theme);
         bar.PlaceOn(screen, Scale(screen));
         bar.ShowBar();
