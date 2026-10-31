@@ -87,8 +87,20 @@ public static class FileSearch
     // The folders searched, for the finder's scope chips: (path, name).
     public static List<(string Root, string Label)> Scopes()
     {
-        lock (gate) return [.. indexes.Select(i => (i.Root, Label(i.Root)))];
+        List<(string Root, string Label)> scopes;
+        lock (gate) scopes = [.. indexes.Select(i => (i.Root, Label(i.Root)))];
+        if (Linux() is { } linux) scopes.Add((LinuxRoot(linux), LinuxFiles.Label(linux.Distro)));
+        return scopes;
     }
+
+    // Linux's files (LinuxFiles), when Linux keeps the index; its scope is the distro's folder as
+    // Windows sees it (\\wsl.localhost\<distro>).
+    static LinuxFiles.Index? Linux() => LinuxFiles.Load(Path.Combine(MenuModel.StateDir, "linux-files.tsv"));
+    static string LinuxRoot(LinuxFiles.Index linux) => $@"\\wsl.localhost\{linux.Distro}";
+    public static bool IsLinux(string path) => path.StartsWith('/');
+    // A Linux hit's path as Windows reaches it (for Explorer).
+    public static string LinuxWindowsPath(string path) =>
+        Linux() is { } linux ? LinuxFiles.WindowsPath(linux.Distro, path) : path;
 
     static string Label(string root) => Path.GetFileName(root) switch
     {
@@ -147,6 +159,15 @@ public static class FileSearch
                 if (result != IntPtr.Zero) fff_free_mixed_search_result(result);
                 if (envelope != IntPtr.Zero) fff_free_result(envelope);
             }
+        }
+        // Linux's (files only; nothing for an empty query: fff's frecency is Windows').
+        if (!foldersOnly && query.Length > 0 && Linux() is { } linux && (scope == null || scope == LinuxRoot(linux)))
+        {
+            var label = LinuxFiles.Label(linux.Distro);
+            foreach (var f in LinuxFiles.Search(linux, query, 4 * limit))
+                hits.Add(new Hit(f.Row.Path, f.Name, label, f.RelativeDir, false, f.Row.Size,
+                    f.Row.Time > 0 ? DateTimeOffset.FromUnixTimeSeconds(f.Row.Time).LocalDateTime : null, null, false,
+                    (int)Math.Round(f.Score * 100)));
         }
         if (query.Length == 0)
             return [.. hits.OrderByDescending(h => h.Score).ThenByDescending(h => h.Modified).Take(limit)];

@@ -1447,6 +1447,18 @@ public sealed partial class MainWindow : Window
     {
         HideMenu();
         if (!hit.IsDir) FileSearch.Opened(hit.Path, query);
+        // A Linux file (roadmap 3.7): opened in Linux (omawin launch editor takes Linux paths), or
+        // shown in Explorer through \\wsl.localhost.
+        if (FileSearch.IsLinux(hit.Path))
+        {
+            try
+            {
+                if (reveal) Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{FileSearch.LinuxWindowsPath(hit.Path)}\"") { UseShellExecute = true });
+                else MenuModel.Omawin("launch", "editor", hit.Path);
+            }
+            catch (Exception ex) { App.Log(ex); }
+            return;
+        }
         try
         {
             if (reveal) Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{hit.Path}\"") { UseShellExecute = true });

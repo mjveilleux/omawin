@@ -20,6 +20,7 @@
   <ItemGroup>
     <!-- The pure files, linked from the menu app. Keep them free of WinUI and Windows calls. -->
     <Compile Include="..\..\shell\menu-app\Fuzzy.cs" Link="Linked\Fuzzy.cs" />
+    <Compile Include="..\..\shell\menu-app\LinuxFiles.cs" Link="Linked\LinuxFiles.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Result.cs" Link="Linked\Search\Result.cs" />
     <Compile Include="..\..\shell\menu-app\Search\QueryParser.cs" Link="Linked\Search\QueryParser.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Merger.cs" Link="Linked\Search\Merger.cs" />
