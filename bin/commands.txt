@@ -126,7 +126,7 @@ setting set | Change a Windows setting (undoable; admin ones wait for one prompt
 setting toggle | Flip a Windows setting's switch, or step to its next choice: omawin setting toggle look.dark-apps | ask --setting toggle
 setting undo | Put back the last Windows setting changed through omawin (Ctrl+Z in the system menu) | ask --setting undo
 settings save | The Windows settings you've changed, into your account folder's settings.txt (-Shared: the PC's shared folder's), for a new PC | ask --settings save
-settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting) | ask --settings apply
+settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting); -Changed: only the lines changed since the last apply (what an update runs) | ask --settings apply
 settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin
 tune-up | omawin's recommended Windows settings (default/launcher/tune-up.txt): each one, applied or not, and why | ask --tune-up
 tune-up apply | Set the recommended Windows settings not yet applied: listed first, then set (each undoable), admin ones in one prompt; -Auto: only the ones that need no asking | ask --tune-up apply

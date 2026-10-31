@@ -48,12 +48,14 @@ else {
 # Your Windows settings, from a PC you set up before (omawin settings save wrote them to your
 # account folder's or the PC's shared folder's settings.txt, docs/work.md): set now, by the menu
 # app (built in the helpers step). Ones that need admin wait for `omawin settings admin`: this
-# step never prompts.
+# step never prompts. An update (-LinkOnly) sets only the lines that changed since they were last
+# applied (-Changed), so a setting you've changed on this PC since isn't put back.
 $settingsFiles = @((Join-Path (& "$Repo\bin\user-layer.ps1" -Shared) 'settings.txt'), (Join-Path $UserLayer 'settings.txt')) | Where-Object { Test-Path $_ }
 $omawinExe = "$HOME\.local\bin\omawin.exe"
 if ($settingsFiles -and (Test-Path $omawinExe)) {
     Invoke-InstallItem 'Desktop' 'your Windows settings' {
-        $said = & $omawinExe settings apply -NoAdmin 2>&1
+        $applyArgs = @('settings', 'apply', '-NoAdmin') + @(if ($LinkOnly) { '-Changed' })
+        $said = & $omawinExe @applyArgs 2>&1
         if ($LASTEXITCODE) { throw ($said -join '; ') }
         $said
     }
