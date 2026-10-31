@@ -23,6 +23,10 @@
         omawin profile menu -Typing              the launcher, typing "visual studio code"
         omawin profile menu -Hand -Surface launcher   3 runs, pressed by you
 
+    -Direct runs omawin.exe <surface> itself rather than through GlazeWM, for a PC or a CI runner
+    with no GlazeWM (.github/workflows/profile.yml): everything but GlazeWM's own share. -Json
+    prints the report and its headline numbers (MenuProfile.Numbers) as JSON, for CI to judge.
+
     The numbers are worked out by src/cli/Profile/MenuProfile.cs (tested in test/cli.Tests),
     compiled here with Add-Type until the C# omawin ships (roadmap 2.11).
 #>
@@ -31,8 +35,11 @@ param(
     [ValidateSet('all', 'launcher', 'menu', 'files')][string]$Surface = 'all',
     [switch]$Typing,
     [switch]$Hand,
+    [switch]$Direct,
+    [switch]$Json,
     [string]$Word = 'visual studio code'
 )
+if ($Hand -and $Direct) { throw '-Hand and -Direct: pick one (you press the keys, or omawin.exe is run)' }
 $ErrorActionPreference = 'Stop'
 $state = Join-Path $env:LOCALAPPDATA 'launcher'
 $traceOn = Join-Path $state 'trace-on'
@@ -59,14 +66,22 @@ function Send-Request([string]$Request) {
 # The key's command, the way GlazeWM's binding runs it: an emit when the rendered config uses
 # them (roadmap 1.2: the menu app hears it from GlazeWM, no process), else omawin.exe.
 $rendered = Get-Content (Join-Path $HOME '.glzr\glazewm\config.yaml') -Raw -ErrorAction SilentlyContinue
-$viaEmit = "$rendered" -match 'emit omawin '
+$viaEmit = -not $Direct -and "$rendered" -match 'emit omawin '
+# -Direct: omawin.exe from here, as GlazeWM's shell-exec would start it (the PATH's, else the
+# install's in ~/.local/bin); it exits once it has signalled the menu app.
+$omawinExe = if ($Direct) {
+    $found = Get-Command omawin.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($found) { $found.Source } else { Join-Path $HOME '.local\bin\omawin.exe' }
+}
 function Press([string]$Command) {
-    if ($viaEmit) { glazewm command emit omawin $Command | Out-Null }
+    if ($Direct) { & $omawinExe $Command | Out-Null }
+    elseif ($viaEmit) { glazewm command emit omawin $Command | Out-Null }
     else { glazewm command shell-exec --hide-window omawin.exe $Command | Out-Null }
 }
 
 if (-not (Get-Process SystemMenu -ErrorAction SilentlyContinue)) { throw 'the menu app is not running (omawin start)' }
-if (-not (Get-Command glazewm -ErrorAction SilentlyContinue) -and -not $Hand) { throw "glazewm's CLI isn't on the PATH: the keys can't be run the way GlazeWM runs them" }
+if ($Direct) { if (-not (Test-Path $omawinExe)) { throw "omawin.exe isn't on the PATH or in ~/.local/bin (build/helpers.ps1 builds it)" } }
+elseif (-not (Get-Command glazewm -ErrorAction SilentlyContinue) -and -not $Hand) { throw "glazewm's CLI isn't on the PATH: the keys can't be run the way GlazeWM runs them (or -Direct: omawin.exe without it)" }
 New-Item -ItemType Directory -Force $state | Out-Null
 Set-Content $traceOn ''
 Remove-Item $traceLog -ErrorAction SilentlyContinue
@@ -123,7 +138,18 @@ try {
 if (-not ('Omawin.Cli.Profile.MenuProfile' -as [type])) {
     Add-Type -Path (Join-Path (Split-Path $PSScriptRoot) 'src\cli\Profile\MenuProfile.cs')
 }
-$lines = [IO.File]::ReadAllLines($traceLog)
-Write-Host ([Omawin.Cli.Profile.MenuProfile]::Report([string[]]$lines, $freq, [bool]$Typing))
+$lines = [string[]]@(if (Test-Path $traceLog) { [IO.File]::ReadAllLines($traceLog) })
+$report = [Omawin.Cli.Profile.MenuProfile]::Report($lines, $freq, [bool]$Typing)
 $scale = [math]::Round((Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI -ErrorAction SilentlyContinue).AppliedDPI / 96 * 100)
-if ($scale) { Write-Host "Display scale $scale%. $(if ($viaEmit) { 'Keys emit to the menu app (no omawin.exe).' } else { 'Keys run omawin.exe.' })" }
+$how = if ($Direct) { 'Keys run omawin.exe directly (no GlazeWM).' } elseif ($viaEmit) { 'Keys emit to the menu app (no omawin.exe).' } else { 'Keys run omawin.exe.' }
+if ($Json) {
+    [pscustomobject]@{
+        Report  = $report
+        Numbers = [Omawin.Cli.Profile.MenuProfile]::Numbers($lines, $freq, [bool]$Typing)
+        Scale   = if ($scale) { $scale } else { $null }
+        Keys    = $how
+    } | ConvertTo-Json -Depth 4
+    return
+}
+Write-Host $report
+if ($scale) { Write-Host "Display scale $scale%. $how" }

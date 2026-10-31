@@ -35,6 +35,21 @@ namespace Omawin.Cli.Profile
         public double? At(string label) { double v; return Ms.TryGetValue(label, out v) ? v : (double?)null; }
     }
 
+    // MenuProfile.Numbers' answer; properties, so PowerShell's ConvertTo-Json writes them all.
+    public sealed class MenuNumbers
+    {
+        // Runs measured, and how many never reached their frame (3 s without it).
+        public int Runs { get; set; }
+        public int Missed { get; set; }
+        // Surfaces: each one's median key to first frame, by its name ("launcher"); null when no
+        // run of it got there.
+        public Dictionary<string, double?> KeyToFrameMs { get; } = new Dictionary<string, double?>();
+        // Typing: every key's median key to list on screen, and the prefix slowest by its median.
+        public double? TypingMs { get; set; }
+        public string? SlowestPrefix { get; set; }
+        public double? SlowestPrefixMs { get; set; }
+    }
+
     public static class MenuProfile
     {
         // The steps from a menu key to the menu on screen, in order, and what the table calls them.
@@ -147,6 +162,35 @@ namespace Omawin.Cli.Profile
             if (typing) Typing(text, runs);
             else Surfaces(text, runs);
             return text.ToString();
+        }
+
+        // The report's headline numbers, for a machine to read (`omawin profile menu -Json`; CI's
+        // profile workflow fails on them): per surface the median key to first frame, or, typing,
+        // the median key to list on screen over every key and the slowest prefix's median.
+        public static MenuNumbers Numbers(IEnumerable<string> lines, long frequency, bool typing)
+        {
+            var steps = typing ? TypingSteps : SurfaceSteps;
+            var runs = Runs(Parse(lines), frequency, steps.Select(s => s[0]));
+            var numbers = new MenuNumbers { Runs = runs.Count };
+            string end = typing ? "menu list-painted" : "menu painted";
+            numbers.Missed = runs.Count(r => r.At(end) == null);
+            if (typing)
+            {
+                numbers.TypingMs = Median(runs.Select(r => r.At(end)));
+                foreach (var p in runs.Select(r => r.Group).Distinct())
+                {
+                    var median = Median(runs.Where(r => r.Group == p).Select(r => r.At(end)));
+                    if (median != null && (numbers.SlowestPrefixMs == null || median.Value > numbers.SlowestPrefixMs.Value))
+                    {
+                        numbers.SlowestPrefix = p;
+                        numbers.SlowestPrefixMs = median;
+                    }
+                }
+            }
+            else
+                foreach (var g in runs.Select(r => r.Group).Distinct())
+                    numbers.KeyToFrameMs[g] = Median(runs.Where(r => r.Group == g).Select(r => r.At(end)));
+            return numbers;
         }
 
         static void Surfaces(StringBuilder text, List<TraceRun> runs)

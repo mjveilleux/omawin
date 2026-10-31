@@ -113,5 +113,38 @@ public class MenuProfileTests
     }
 
     [Fact]
+    public void NumbersGiveEachSurfacesMedianAndTheMisses()
+    {
+        var lines = new List<string> { M("driver surface launcher", 0) };
+        long t = 0;
+        foreach (var painted in new[] { 40, 30, 50 }) { t += 1000; lines.AddRange([M("driver key", t), M("menu painted", t + painted)]); }
+        lines.Add(M("driver surface files", t + 1));
+        t += 1000; lines.AddRange([M("driver key", t), M("menu shown", t + 20)]); // never painted
+        var n = MenuProfile.Numbers(lines, Freq, typing: false);
+        Assert.Equal(4, n.Runs);
+        Assert.Equal(1, n.Missed);
+        Assert.Equal(40, n.KeyToFrameMs["launcher"]);
+        Assert.Null(n.KeyToFrameMs["files"]);
+        Assert.Null(n.TypingMs);
+    }
+
+    [Fact]
+    public void TypingNumbersAreEveryKeysMedianAndTheSlowestPrefix()
+    {
+        var lines = new List<string>();
+        long t = 0;
+        foreach (var (typed, ms) in new[] { ("v", 9), ("vi", 12), ("vis", 30), ("v", 11), ("vi", 10), ("vis", 28) })
+        {
+            t += 1000;
+            lines.AddRange([M("driver type " + typed, t - 1), M("driver key", t), M("menu list-painted", t + ms)]);
+        }
+        var n = MenuProfile.Numbers(lines, Freq, typing: true);
+        Assert.Equal(11, n.TypingMs); // 9 10 11 12 28 30: the lower middle
+        Assert.Equal("vis", n.SlowestPrefix);
+        Assert.Equal(28, n.SlowestPrefixMs);
+        Assert.Empty(n.KeyToFrameMs);
+    }
+
+    [Fact]
     public void NoRunsSaysSo() => Assert.StartsWith("No runs", MenuProfile.Report(["menu painted\t5"], Freq, typing: false));
 }
