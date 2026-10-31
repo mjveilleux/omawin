@@ -32,10 +32,11 @@ foreach ($fork in 'glazewm-fork') {
         try { & "$Repo\install\$fork.ps1" -After @after } catch { Write-Log "    $fork -After: $_" }
     } else {
         $current = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
-        if ($current -ne 'needed') { Write-Note $current; Add-InstallItem 'Desktop' $fork $(if ($current -like 'ok*fork*') { "omawin's $name" } else { "official $name" }) 'have'; continue }
+        if ($current -ne 'needed') { Write-Note $current; Add-InstallItem 'Desktop' $fork $(if ($current -like 'ok*fork*') { "omawin's $name" } elseif ($current -like 'skip*not chosen*') { "$name, for this account" } else { "official $name" }) 'have'; continue }
         if ($env:OMAWIN_NO_ADMIN) {
-            Write-Note "official $name kept: omawin's takes admin (install.ps1 -Step desktop asks once)"
-            Add-InstallItem 'Desktop' $fork "official $name" 'have'
+            # (Only an opted-in PC gets here: -Check says "skip" until you choose it.)
+            Write-Note "$name for the whole PC left as it is: its update takes admin (omawin glazewm admin asks once)"
+            Add-InstallItem 'Desktop' $fork "omawin's $name" 'have'
             continue
         }
         Invoke-InstallItem 'Desktop' "omawin's $name" { & "$Repo\install\$fork.ps1" }

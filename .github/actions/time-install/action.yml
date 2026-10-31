@@ -85,6 +85,14 @@ runs:
             $bash = Join-Path (Split-Path (Split-Path (Get-Command git -CommandType Application | Select-Object -First 1).Source)) 'bin\bash.exe'
             $o = & $bash -lc 'echo bash $BASH_VERSION'; if ($LASTEXITCODE) { throw "exit $LASTEXITCODE" }; $o
           }
+          Smoke 'no admin prompt' {
+            # Roadmap 2.9: Enter through everything asks for admin nowhere. install/admin.ps1 logs
+            # this when its plan is empty, and starts no elevated process.
+            $log = "$env:LOCALAPPDATA\launcher\install.log"
+            if (Select-String -LiteralPath $log -SimpleMatch 'admin step started' -Quiet) { throw 'the install started its admin step' }
+            if (-not (Select-String -LiteralPath $log -SimpleMatch 'nothing needs admin' -Quiet)) { throw "the install planned something that needs admin (install.log)" }
+            'nothing asked for admin'
+          }
           Smoke "Neovim's plugins, from the install" {
             # Put in by the install in a hidden Neovim of its own (install/software.ps1,
             # Start-NeovimPlugins, roadmap 2.4): waited for, then counted.

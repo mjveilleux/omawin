@@ -91,6 +91,8 @@ start | Start the menu app in the background (GlazeWM does this at login) | app 
 start bar | The strip that holds the bar's place at sign-in until the bar is up (GlazeWM runs this at login) | builtin start-bar
 start terminal | Keep the default terminal running in the background, so new ones open fast (GlazeWM does this at login) | builtin terminal-warm
 start glazewm | Start GlazeWM once Windows' taskbar is up, again if it crashes at start (the sign-in task runs this) | builtin start-glazewm
+glazewm admin | Manage admin windows too: omawin's GlazeWM for the whole PC, signed on this PC; says what changes, then one admin prompt | pwsh install/glazewm-fork.ps1
+glazewm admin-off | Back to the per-user GlazeWM (or the official one you had before): one admin prompt | pwsh install/glazewm-fork.ps1 -Restore
 
 capture color | Colour picker: a loupe over the frozen screen; click copies the colour as #rrggbb | app --snip color
 capture qr | Read QR codes: drag over one (click a window, Enter for everything); the text is copied, not opened | app --snip qr

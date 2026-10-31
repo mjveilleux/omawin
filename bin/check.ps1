@@ -190,9 +190,9 @@ $mine = "$env:LOCALAPPDATA\omawin\tools\glazewm\glazewm.exe"
 if (Test-Path $wholePc) {
     $gsig = Get-AuthenticodeSignature $wholePc -ErrorAction SilentlyContinue
     if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
-    elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
-    else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
-} elseif (Test-Path $mine) { Pass 'GlazeWM build' "our fork, for this account ($mine); the signed whole-PC copy, which starts before Explorer, is opt-in" }
+    elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (omawin glazewm admin)' }
+    else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (omawin glazewm admin, or omawin glazewm admin-off)' }
+} elseif (Test-Path $mine) { Pass 'GlazeWM build' "our fork, for this account ($mine); the signed whole-PC copy, which also tiles programs running as admin, is opt-in: omawin glazewm admin" }
 else { Fail 'GlazeWM build' 'not installed (install.ps1 -Step software)' }
 # This account's port (bin/ports.ps1): its own once omawin's GlazeWM is in Program Files, which
 # omawin.exe decides at every sign-in. A saved one that doesn't match what's installed now means

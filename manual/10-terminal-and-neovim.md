@@ -22,7 +22,7 @@ The terminal is [noctty](https://noctty.com): Ghostty's terminal core in a nativ
 
 `omawin default terminal wt` makes Windows Terminal the default instead (System menu › Setup › Defaults); `omawin default terminal noctty` switches back. Everything that opens a terminal follows it. The editor works the same way: `omawin default editor nvim|neovide|code`, and so does the AI agent in Neovim: `omawin default agent opencode|claude`.
 
-Terminals don't run as admin, because GlazeWM can't tile admin windows. In Windows Terminal, use the `PowerShell (Admin)` profile when you need it.
+Terminals don't run as admin, because GlazeWM can't tile admin windows. In Windows Terminal, use the `PowerShell (Admin)` profile when you need it. If you often work in admin windows, `omawin glazewm admin` puts a GlazeWM for the whole PC in place that can tile them too: it says what it changes and asks for admin once (`omawin glazewm admin-off` undoes it). Nothing else in omawin needs admin.
 
 ## PowerShell
 
