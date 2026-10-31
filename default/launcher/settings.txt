@@ -13,8 +13,11 @@
 #                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
 #                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu
-#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs), and the
-#                     admin ones hibernate sudo windows-feature <feature>
+#                     caps-lock copilot-key (the keyboard hook's, KeyHook.cs),
+#                     disabled-hotkeys startup-item <app> layout-hotkey folder-type-general case-sensitive,
+#                     and the admin ones (read here, set in the one prompt by bin/settings-admin.ps1)
+#                     hibernate sudo windows-feature <feature> service <name> on=<mode> off=<mode>
+#                     ssh-agent utf8 ai-paint firewall-dev
 #   link <uri or program>   opens a page; omawin <command>   one of omawin's commands
 # notes: admin (one prompt for all of them, roadmap 2.9), signout, restart, minBuild=, maxBuild=, check.
 # CI sets and restores every reg, spi and powercfg line on a Windows runner (.github/workflows/test.yml).
@@ -130,7 +133,7 @@ developer.restart-explorer | - | Restart Explorer | explorer restart taskbar ref
 
 # --- Phase 8: faster and calmer (roadmap 8G-8J; plans/07-fixing-windows.md) -------------------
 # What omawin recommends for each, and why, is default/launcher/tune-up.txt (omawin tune-up).
-# A line naming a builtin, spi or powercfg handler the settings code doesn't have yet carries "check".
+# Every handler these lines name exists; "check" stays on each until it has been set and read back on a PC.
 
 # 8.26 Windows stops fighting the tiling manager
 system.snap-flyout | - | Snap layouts on the maximize button | snap layouts flyout maximize hover | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapAssistFlyout dword on=1 off=0 |
@@ -155,7 +158,7 @@ system.startup-onedrive | - | OneDrive starts at sign-in | onedrive startup logi
 system.startup-teams | - | Teams starts at sign-in | teams startup login | switch | builtin startup-item MSTeams | check
 
 # 8.29 accidents that don't happen
-input.layout-hotkey | - | Alt+Shift switches the keyboard layout | language hotkey alt shift layout input | switch | builtin layout-hotkey | signout check
+input.layout-hotkey | - | Alt+Shift switches the keyboard layout | language hotkey alt shift layout input | switch | builtin layout-hotkey | check
 input.narrator-shortcut | - | Win+Ctrl+Enter starts Narrator | narrator shortcut accessibility | switch | reg HKCU\Software\Microsoft\Narrator\NoRoam\WinEnterLaunchEnabled dword on=1 off=0 | check
 input.filter-shortcut | - | Holding Right Shift asks about Filter Keys | filter keys shortcut prompt | switch | spi filter-hotkey | check
 input.toggle-shortcut | - | Holding Num Lock asks about Toggle Keys | toggle keys shortcut prompt | switch | spi toggle-hotkey | check

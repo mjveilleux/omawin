@@ -74,6 +74,7 @@ public static class WinSettings
                     App.Log);
                 s.Watch = e => SettingWatch.Ensure(s, e);
                 s.RunAdmin = RunElevated;
+                s.ResolveAdmin = BuiltinHandler.ResolveAdmin;
                 return store = s;
             }
         }
@@ -186,8 +187,11 @@ public static class WinSettings
         File.Delete(resultFile);
         var script = Path.Combine(MenuModel.Repo, "bin", "settings-admin.ps1");
         var powershell = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe");
+        // This account's SID: the prompt may run as another account (an admin's password on a
+        // standard account), and this account's policies (HKCU\Software\Policies) go in its hive.
+        using var me = System.Security.Principal.WindowsIdentity.GetCurrent();
         var info = new ProcessStartInfo(powershell,
-            $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" -Plan \"{planFile}\" -Result \"{resultFile}\"")
+            $"-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"{script}\" -Plan \"{planFile}\" -Result \"{resultFile}\" -User {me.User?.Value}")
         { UseShellExecute = true, Verb = "runas", WindowStyle = ProcessWindowStyle.Hidden };
         try
         {

@@ -43,6 +43,11 @@ public sealed class SettingStore(
     // Unset (tests, or a PC where it can't run): admin changes stay queued.
     public Func<IReadOnlyList<string>, Task<AdminRun>>? RunAdmin { get; set; }
 
+    // An admin change whose value is worked out on this side before it's queued (the dev
+    // runtimes found on this account's PATH, which the elevated run, maybe another account,
+    // can't see). Returns the value to queue, or an error to show instead. Unset: queued as given.
+    public Func<SettingEntry, string, (string? Value, string? Error)>? ResolveAdmin { get; set; }
+
     public IReadOnlyList<SettingEntry> Entries() => entries();
 
     public SettingEntry? Find(string id) => Entries().FirstOrDefault(e => e.Id.Equals(id, StringComparison.OrdinalIgnoreCase));
@@ -141,8 +146,20 @@ public sealed class SettingStore(
         }
         if (e.Admin)
         {
+            if (ResolveAdmin != null)
+            {
+                (string? Value, string? Error) resolved;
+                try { resolved = ResolveAdmin(e, value); }
+                catch (Exception ex) { log?.Invoke(ex); resolved = (null, ex.Message); }
+                if (resolved.Value == null) return new(false, $"{e.Name}: {resolved.Error ?? "nothing to do"}");
+                value = resolved.Value;
+            }
             AdminQueue.Add(e.Id, value);
             int n = AdminQueue.Count;
+            var shown = SettingAdminQueue.DescribeValue(e, value) ?? SettingValues.Label(e, value, choices);
+            if (!HasValue(e))
+                return new(true, $"{e.Name}{(shown.Length > 0 ? $" ({shown})" : "")} needs admin; queued"
+                    + (n > 1 ? $" with {n - 1} other change{(n > 2 ? "s" : "")}" : "") + ". Apply in one prompt: omawin settings admin", Queued: true);
             return new(true, $"{e.Name}: {SettingValues.Label(e, value, choices)} needs admin; queued"
                 + (n > 1 ? $" with {n - 1} other change{(n > 2 ? "s" : "")}" : "") + ". Apply in one prompt: omawin settings admin", Queued: true);
         }
@@ -192,7 +209,7 @@ public sealed class SettingStore(
 
     // The words shown before the one prompt (2.9: it says exactly what it will change).
     public List<string> DescribeAdmin() => AdminQueue.Items().Select(i => Find(i.Id) is { } e
-        ? $"{e.Name}: {Label(e, i.Value)}" + (e.Takes.HasFlag(Takes.Restart) ? " (needs a restart)" : e.Takes.HasFlag(Takes.SignOut) ? " (after you sign out)" : "")
+        ? $"{e.Name}: {SettingAdminQueue.DescribeValue(e, i.Value) ?? Label(e, i.Value)}" + (e.Takes.HasFlag(Takes.Restart) ? " (needs a restart)" : e.Takes.HasFlag(Takes.SignOut) ? " (after you sign out)" : "")
         : $"{i.Id}: not in this omawin's catalog, skipped").ToList();
 
     // Apply everything queued in one elevated run, then read each back and record what changed.

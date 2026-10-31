@@ -43,6 +43,7 @@
     <Compile Include="..\..\shell\menu-app\Settings\Values.cs" Link="Linked\Settings\Values.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\History.cs" Link="Linked\Settings\History.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\AdminQueue.cs" Link="Linked\Settings\AdminQueue.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\BuiltinRules.cs" Link="Linked\Settings\BuiltinRules.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\Store.cs" Link="Linked\Settings\Store.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\Commands.cs" Link="Linked\Settings\Commands.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\ValueFile.cs" Link="Linked\Settings\ValueFile.cs" />

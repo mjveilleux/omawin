@@ -10,16 +10,24 @@
         <id> TAB <verb> TAB <target> TAB <type or arguments> TAB <value>
 
     Only fixed verbs, each checked here again: machine-wide registry values (HKLM\SOFTWARE or
-    HKLM\SYSTEM, DWORD or string), and a closed list of builtins (hibernation, sudo, a few
-    Windows features). Nothing in the plan is ever run as a command. Writes
-    "<id> TAB <done|fail> TAB <reason>" per line to -Result, then exits: nothing stays elevated.
+    HKLM\SYSTEM, DWORD or string), the policies of the account that asked (HKCU\Software\Policies,
+    written to its hive by -User, its SID: this run may be another account), and a closed list of
+    builtins (hibernation, sudo, a few Windows features, the search indexer's service, the SSH
+    agent, UTF-8 code pages, Paint's AI, firewall rules for dev runtimes). Nothing in the plan is
+    ever run as a command. Writes "<id> TAB <done|fail|skip> TAB <reason>" per line to -Result,
+    then exits: nothing stays elevated.
+
+    First, a restore point (roadmap 8.42): Windows' own undo for everything below, made only
+    here, inside a run you approved. With System Protection off it's skipped ("restore-point
+    skip"), never turned on: that's your choice.
 
     Windows PowerShell 5.1 on purpose (AGENTS.md): it's always there, and an elevated run of a
     per-user pwsh.exe could be swapped by anything that can write to the user's folder.
 #>
 param(
     [Parameter(Mandatory = $true)][string]$Plan,
-    [Parameter(Mandatory = $true)][string]$Result
+    [Parameter(Mandatory = $true)][string]$Result,
+    [string]$User
 )
 $ErrorActionPreference = 'Stop'
 
@@ -27,34 +35,86 @@ $ErrorActionPreference = 'Stop'
 $features = @('VirtualMachinePlatform', 'Microsoft-Windows-Subsystem-Linux', 'Containers-DisposableClientVM', 'Microsoft-Hyper-V-All')
 # sudo for Windows' modes, as its Enabled value (what `sudo config` writes).
 $sudoModes = @{ 'off' = 0; 'forceNewWindow' = 1; 'disableInput' = 2; 'normal' = 3 }
+# Services the catalog's `builtin service` lines may set (system.search-indexer), and the modes.
+$services = @('WSearch')
+$serviceModes = @('auto', 'delayed', 'manual', 'disabled')
+# Paint's AI policies (look.ai-paint): set to 1 to turn each off, deleted to give it back.
+$paintAi = @('DisableImageCreator', 'DisableCocreator', 'DisableGenerativeFill')
+# The dev runtimes a firewall rule may be made for (developer.firewall-dev), by program name.
+$runtimes = @('node', 'bun', 'python', 'dotnet', 'go')
 
 function Say([string]$Id, [string]$State, [string]$Text = '') {
     [IO.File]::AppendAllText($Result, "$Id`t$State`t$($Text -replace '[\r\n\t]+', ' ')" + [Environment]::NewLine)
 }
 
-foreach ($line in [IO.File]::ReadAllLines($Plan)) {
-    $p = $line -split "`t"
-    if ($p.Count -ne 5) { continue }
-    $id, $verb, $target, $arg, $value = $p
+# A registry value under an open root key: '-' deletes it, else a DWORD or a string.
+function Set-Value($Root, [string]$Path, [string]$Name, [string]$Type, [string]$Value) {
+    $key = $Root.CreateSubKey($Path)
+    try {
+        if ($Value -eq '-') { $key.DeleteValue($Name, $false) }
+        elseif ($Type -eq 'dword') {
+            $number = [uint32]0
+            if (-not [uint32]::TryParse($Value, [ref]$number)) { throw "not a number: $Value" }
+            $key.SetValue($Name, [BitConverter]::ToInt32([BitConverter]::GetBytes($number), 0), [Microsoft.Win32.RegistryValueKind]::DWord)
+        }
+        elseif ($Type -eq 'sz') { $key.SetValue($Name, $Value, [Microsoft.Win32.RegistryValueKind]::String) }
+        else { throw "value type $Type" }
+    }
+    finally { $key.Close() }
+}
+
+function Set-ServiceMode([string]$Name, [string]$Mode) {
+    if ($Mode -notin $serviceModes) { throw "start mode $Mode" }
+    $null = Get-Service -Name $Name -ErrorAction Stop
+    switch ($Mode) {
+        'delayed'  { & "$env:SystemRoot\System32\sc.exe" config $Name start= delayed-auto | Out-Null; if ($LASTEXITCODE) { throw "sc.exe exited $LASTEXITCODE" } }
+        'auto'     { Set-Service $Name -StartupType Automatic }
+        'manual'   { Set-Service $Name -StartupType Manual }
+        'disabled' { Set-Service $Name -StartupType Disabled; Stop-Service $Name -Force -ErrorAction SilentlyContinue }
+    }
+    if ($Mode -in 'auto', 'delayed') { Start-Service $Name -ErrorAction SilentlyContinue }
+}
+
+$lines = @([IO.File]::ReadAllLines($Plan) | Where-Object { ($_ -split "`t").Count -eq 5 })
+
+# --- a restore point first (8.42) -----------------------------------------------------------------
+# Windows makes at most one a day unless SystemRestorePointCreationFrequency (minutes) is 0: set
+# for this call and put back as it was.
+if ($lines.Count) {
+    $restoreKey = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'
+    $old = (Get-ItemProperty $restoreKey -ErrorAction SilentlyContinue).SystemRestorePointCreationFrequency
+    try {
+        if (-not (Test-Path $restoreKey)) { New-Item $restoreKey -Force | Out-Null }
+        Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value 0 -Type DWord
+        Checkpoint-Computer -Description "omawin: $($lines.Count) Windows setting$(if ($lines.Count -ne 1) { 's' })" -RestorePointType MODIFY_SETTINGS -ErrorAction Stop
+        Say 'restore-point' 'done'
+    }
+    catch { Say 'restore-point' 'skip' "no restore point (System Protection may be off): $($_.Exception.Message)" }
+    finally {
+        if ($null -eq $old) { Remove-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue }
+        else { Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value $old -Type DWord }
+    }
+}
+
+foreach ($line in $lines) {
+    $id, $verb, $target, $arg, $value = $line -split "`t"
+    $note = ''
     try {
         switch ($verb) {
             'reg' {
-                if ($target -notmatch '^HKLM\\(SOFTWARE|SYSTEM)\\[^\t]+\\[^\\]+$') { throw "not a machine-wide setting: $target" }
-                $cut = $target.LastIndexOf('\')
-                $path = $target.Substring(5, $cut - 5)
-                $name = $target.Substring($cut + 1)
-                $key = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey($path)
-                try {
-                    if ($value -eq '-') { $key.DeleteValue($name, $false) }
-                    elseif ($arg -eq 'dword') {
-                        $number = [uint32]0
-                        if (-not [uint32]::TryParse($value, [ref]$number)) { throw "not a number: $value" }
-                        $key.SetValue($name, [BitConverter]::ToInt32([BitConverter]::GetBytes($number), 0), [Microsoft.Win32.RegistryValueKind]::DWord)
-                    }
-                    elseif ($arg -eq 'sz') { $key.SetValue($name, $value, [Microsoft.Win32.RegistryValueKind]::String) }
-                    else { throw "value type $arg" }
+                if ($target -match '^HKLM\\(SOFTWARE|SYSTEM)\\[^\t]+\\[^\\]+$') {
+                    $cut = $target.LastIndexOf('\')
+                    Set-Value ([Microsoft.Win32.Registry]::LocalMachine) $target.Substring(5, $cut - 5) $target.Substring($cut + 1) $arg $value
                 }
-                finally { $key.Close() }
+                elseif ($target -match '^HKCU\\Software\\Policies\\[^\t]+\\[^\\]+$') {
+                    # The account that asked, by its SID; never this run's own HKCU.
+                    # A local or domain account (S-1-5-21-…), or a Microsoft Entra one (S-1-12-1-…).
+                    if ($User -notmatch '^S-1-(5-21|12-1)(-\d+){3,4}$') { throw 'no account to write its policies for' }
+                    if (-not [Microsoft.Win32.Registry]::Users.OpenSubKey($User)) { throw "that account isn't signed in" }
+                    $cut = $target.LastIndexOf('\')
+                    Set-Value ([Microsoft.Win32.Registry]::Users) "$User\$($target.Substring(5, $cut - 5))" $target.Substring($cut + 1) $arg $value
+                }
+                else { throw "not a machine-wide setting or a policy: $target" }
             }
             'builtin' {
                 switch ($target) {
@@ -75,12 +135,53 @@ foreach ($line in [IO.File]::ReadAllLines($Plan)) {
                         elseif ($value -eq 'off') { Disable-WindowsOptionalFeature -Online -FeatureName $arg -NoRestart | Out-Null }
                         else { throw "feature state $value" }
                     }
+                    'service' {
+                        # The value is the start mode, resolved from the line's on= / off= by the menu app.
+                        if ($arg -notin $services) { throw "service $arg" }
+                        Set-ServiceMode $arg $value
+                    }
+                    'ssh-agent' {
+                        # On: starts with Windows, and now. Off: starts when something asks for it.
+                        if ($value -notin 'on', 'off') { throw "ssh-agent $value" }
+                        Set-ServiceMode 'ssh-agent' $(if ($value -eq 'on') { 'auto' } else { 'manual' })
+                    }
+                    'utf8' {
+                        # On: the beta "Use Unicode UTF-8" (65001 for every code page). Off: the code
+                        # pages of this PC's system locale, as Windows' own switch puts them back.
+                        if ($value -notin 'on', 'off') { throw "utf8 $value" }
+                        $ti = (Get-WinSystemLocale).TextInfo
+                        $pages = if ($value -eq 'on') { @{ ACP = '65001'; OEMCP = '65001'; MACCP = '65001' } }
+                                 else { @{ ACP = [string]$ti.ANSICodePage; OEMCP = [string]$ti.OEMCodePage; MACCP = [string]$ti.MacCodePage } }
+                        foreach ($name in $pages.Keys) { Set-Value ([Microsoft.Win32.Registry]::LocalMachine) 'SYSTEM\CurrentControlSet\Control\Nls\CodePage' $name 'sz' $pages[$name] }
+                    }
+                    'ai-paint' {
+                        if ($value -notin 'on', 'off') { throw "ai-paint $value" }
+                        foreach ($name in $paintAi) {
+                            Set-Value ([Microsoft.Win32.Registry]::LocalMachine) 'SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Paint' $name 'dword' $(if ($value -eq 'off') { '1' } else { '-' })
+                        }
+                    }
+                    'firewall-dev' {
+                        # "<name>=<path>|…": each a dev runtime's own program, checked again here.
+                        $made = 0
+                        foreach ($pair in ($value -split '\|')) {
+                            $name, $path = $pair -split '=', 2
+                            if ($name -notin $runtimes) { throw "runtime $name" }
+                            if ($path -notmatch '^[A-Za-z]:\\[^"<>|?*]+$' -or [IO.Path]::GetFileName($path) -ne "$name.exe") { throw "not $name's program: $path" }
+                            if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "not found: $path" }
+                            $display = "omawin: $name on private networks ($path)"
+                            if (-not (Get-NetFirewallRule -DisplayName $display -ErrorAction SilentlyContinue)) {
+                                New-NetFirewallRule -DisplayName $display -Direction Inbound -Program $path -Action Allow -Profile Private | Out-Null
+                                $made++
+                            }
+                        }
+                        $note = "$made rule$(if ($made -ne 1) { 's' }) added"
+                    }
                     default { throw "builtin $target" }
                 }
             }
             default { throw "verb $verb" }
         }
-        Say $id 'done'
+        Say $id 'done' $note
     }
     catch { Say $id 'fail' $_.Exception.Message }
 }
