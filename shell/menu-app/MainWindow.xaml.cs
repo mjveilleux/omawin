@@ -175,7 +175,7 @@ public sealed partial class MainWindow : Window
             }
             if (!Showing) Show("");
             var parent = entries.TryGetValue(id, out var e) ? e.Parent : "";
-            if (pickingTheme || backgroundsOf != null || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
+            if (pickingTheme || backgroundsOf != null || galleryOpen || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
             selected = Math.Max(0, MenuModel.Children(entries, current).FindIndex(c => c.Id == id));
             Highlight();
         }
@@ -234,6 +234,8 @@ public sealed partial class MainWindow : Window
         if (pickingTheme) LeaveThemePicker();
         pickingTheme = false;
         backgroundsOf = null;
+        galleryOpen = false;
+        galleryAsking = null;
         Input.Text = "";
         selected = 0;
         // --open style.theme: straight to the theme list; --open style.backgrounds [theme]: to
@@ -248,6 +250,11 @@ public sealed partial class MainWindow : Window
         {
             current = picker.Parent;
             OpenBackgrounds(ThemeFileNamed(with) ?? themeName);
+        }
+        else if (picker is { Kind: "plugins" })
+        {
+            current = picker.Parent;
+            OpenGallery();
         }
         if (!showing)
         {
@@ -636,6 +643,10 @@ public sealed partial class MainWindow : Window
             FooterLeft.Text = $"{shown.Name} · {grid.Cells.Count} backgrounds";
             SetKeys(("←↑↓→", "move"), ("↵", "set"), ("tab", "another theme"), ("esc", "back"));
         }
+        else if (galleryOpen)
+        {
+            RenderGallery(query);
+        }
         else if (launching && page != null)
         {
             home = RenderPage(query);
@@ -696,7 +707,7 @@ public sealed partial class MainWindow : Window
                 // By kind: submenus purple, pages and the pickers cyan, actions yellow,
                 // ones that ask first (restart, shut down) red, what's installed gray.
                 var color = Hex(have ? theme.Comment : e.IsSubmenu ? theme.Purple : e.Confirm ? theme.Red
-                    : e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
+                    : e.Kind is "themes" or "backgrounds" or "plugins" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
                 var (tag, text) = TagFor(e, have);
                 string? sub = query.Length > 0 && e.Parent.Length > 0 ? MenuModel.PathLabel(entries, e.Parent) : null;
                 AddRow(e.Icon, e.Label, color, () => Pick(e), tag, text, dim: have, sub: sub);
@@ -936,7 +947,7 @@ public sealed partial class MainWindow : Window
 
     (Tag, string) TagFor(MenuEntry e, bool have)
     {
-        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
+        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" or "plugins" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
         if (have) return (Tag.Installed, "Installed");
         if (e.Kind == "omawin" && e.Argument == "toggle stay-awake") return StayAwake.On ? (Tag.Installed, "On") : (Tag.Text, "off");
         if (e.Kind == "omawin" && e.Argument == "toggle animations") return Motion.On ? (Tag.Installed, "On") : (Tag.Text, "off");
@@ -1241,7 +1252,7 @@ public sealed partial class MainWindow : Window
     }
 
     // A row and the gap under it.
-    double Pitch => finding ? FileRowDip : RowDip;
+    double Pitch => finding || galleryOpen ? FileRowDip : RowDip;
 
     // Tab / Shift+Tab in the file finder: the next / previous folder chip.
     void CycleScope(int by)
@@ -1352,7 +1363,7 @@ public sealed partial class MainWindow : Window
 
     void Back(bool hideAtTop)
     {
-        if (LeavePage()) return;
+        if (LeavePage() || LeaveGallery()) return;
         string from = current;
         if (finding)
         {
@@ -1395,6 +1406,7 @@ public sealed partial class MainWindow : Window
         if (e.Package != null && installed.Contains(e.Package)) return; // already installed
         if (e.Kind == "themes") { pickingTheme = true; selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == themeName)); Render(); Slide(1); return; }
         if (e.Kind == "backgrounds") { OpenBackgrounds(themeName); Render(); Slide(1); return; }
+        if (e.Kind == "plugins") { OpenGallery(); Render(); Slide(1); return; }
         if (e.Confirm) { confirming = e; selected = 1; Render(); return; }
         Run(e);
     }

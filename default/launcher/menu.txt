@@ -18,6 +18,8 @@
 #                    themes/set-theme.ps1)
 #   backgrounds      the background picker: a grid of a theme's pictures (set by
 #                    themes/set-theme.ps1 -Background)
+#   plugins          the plugin gallery: omawin's plugins and Omarchy's marketplace, on or
+#                    off with Enter (omawin plugin add|remove)
 # A ! in front of the action asks before doing it.
 
 learn | 󰧑 | Learn
@@ -108,6 +110,7 @@ install.preset.aiagents | 󱚤 | AI agents: Claude Code, opencode | task omawin 
 install.preset.dictation | 󰕾 | Dictation: Handy | task omawin preset add dictation
 install.preset.powerbi | 󰄨 | Power BI + Fabric | task omawin preset add powerbi-fabric
 install.plugin | 󰏗 | Plugins
+install.plugin.gallery | 󰐱 | Gallery: every plugin, and whether it runs here | plugins
 install.plugin.list | 󰆍 | Which are on | task omawin plugin list
 install.plugin.music | 󰓇 | Music: the music, podcast and radio player | task omawin plugin add music
 install.development | 󰵮 | Development

@@ -85,9 +85,10 @@ pkg update | Update packages each through where it came from (the tools bundle, 
 preset list |The presets: opt-in groups of tools on top of the core (install/packages.ps1), the picked ones marked | pwsh bin/preset.ps1 list
 preset add | Pick a preset and install it now: omawin preset add data | pwsh bin/preset.ps1 add
 preset remove | Unpick a preset (what it installed stays): omawin preset remove data | pwsh bin/preset.ps1 remove
-plugin list | The plugins (shell/plugins, Omarchy's format), the ones on marked | pwsh bin/preset.ps1 plugins
-plugin add | Turn a plugin on and install its programs: omawin plugin add music | pwsh bin/preset.ps1 plugin-add
-plugin remove | Turn a plugin off (what it installed stays): omawin plugin remove music | pwsh bin/preset.ps1 plugin-remove
+plugin list | The plugins here (shell/plugins, and ones from the gallery; Omarchy's format), the ones on marked | pwsh bin/preset.ps1 plugins
+plugin add | Turn a plugin on and install its programs, or download one from the gallery first: omawin plugin add music | pwsh bin/preset.ps1 plugin-add
+plugin remove | Turn a plugin off (its programs stay; a gallery plugin's download goes): omawin plugin remove music | pwsh bin/preset.ps1 plugin-remove
+plugin gallery | The plugin gallery: omawin's plugins and Omarchy's marketplace, whether each runs here; Enter turns one on or off | app --open install.plugin.gallery
 start | Start the menu app in the background (GlazeWM does this at login) | app --start-hidden
 start bar | The strip that holds the bar's place at sign-in until the bar is up (GlazeWM runs this at login) | builtin start-bar
 start terminal | Keep the default terminal running in the background, so new ones open fast (GlazeWM does this at login) | builtin terminal-warm

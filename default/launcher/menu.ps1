@@ -8,6 +8,8 @@
 #   menu.ps1 -Install "<source>:<id>;..."   the launcher's Packages page: install those, one
 #                                after another (sources: winget, choco, scoop)
 #   menu.ps1 -InstallManager winget|choco|scoop   the manager itself, when it isn't here
+#   menu.ps1 -Plugin "add <id>"  the plugin gallery's Enter: omawin plugin add (it may download
+#                                the plugin and the QML host, so you watch it)
 #
 # Install rows are winget (or Chocolatey) packages. Which ones this PC already has comes from
 # a list refreshed in the background (`winget export` takes ~20s, too slow to run
@@ -17,7 +19,7 @@
 # Longer jobs (installs, updates) run in their own small terminal window titled "menu-task",
 # so the menu is free again right away and you can watch them.
 param([string]$Run, [switch]$RefreshInstalled, [switch]$SetWallpaper, [switch]$SearchPackage, [string]$Install,
-    [ValidateSet('', 'winget', 'choco', 'scoop')][string]$InstallManager = '')
+    [ValidateSet('', 'winget', 'choco', 'scoop')][string]$InstallManager = '', [string]$Plugin)
 
 $MenuFile = Join-Path $PSScriptRoot 'menu.txt'
 $InstalledFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
@@ -173,6 +175,15 @@ if ($Install) {
     }
     $count = @($scripts).Count
     if ($count) { Start-MenuTask $(if ($count -eq 1) { "Install $(($Install -split ':', 2)[1])" } else { "Install $count packages" }) ($scripts -join "`n") }
+}
+
+# The plugin gallery (shell/menu-app/MainWindow.Plugins.cs): "add <id>" or "remove <id>". The id
+# is checked as GalleryIndex.IsSafeId does: nothing else reaches the command.
+if ($Plugin) {
+    $verb, $id = $Plugin -split ' ', 2
+    if ($verb -in 'add', 'remove' -and $id -cmatch '^[a-z0-9][a-z0-9_-]*(\.[a-z0-9][a-z0-9_-]*)*$') {
+        Start-MenuTask $(if ($verb -eq 'add') { "Turn on $id" } else { "Turn off $id" }) "omawin.exe plugin $verb $id"
+    } else { Write-Warning "skipped plugin $Plugin" }
 }
 
 if ($InstallManager -eq 'winget') {

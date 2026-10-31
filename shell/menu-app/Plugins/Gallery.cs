@@ -9,7 +9,7 @@ namespace SystemMenu.Plugins;
 //
 // Pure: no WinUI, no Windows calls (the folders are handed in), so menu-app.Tests runs it anywhere.
 public sealed record GalleryRow(string Id, string Name, string Author, string Description, string Category, int Stars,
-    bool Shipped, bool Downloaded, bool On, string Verdict, string Why)
+    bool Shipped, bool Downloaded, bool On, string Verdict, string Why, string Repo = "")
 {
     // Enter turns it off when it's on; else on, when the host can run it (and it's downloaded or
     // can be).
@@ -74,7 +74,7 @@ public static class Gallery
         foreach (var m in downloaded)
             rows.TryAdd(m.Id, Local(m, shipped: false));
         foreach (var p in listed.Values)
-            rows.TryAdd(p.Id, new GalleryRow(p.Id, p.Name, p.Author, p.Description, p.Category, p.Stars, false, false, on.Contains(p.Id), p.Verdict, p.Why));
+            rows.TryAdd(p.Id, new GalleryRow(p.Id, p.Name, p.Author, p.Description, p.Category, p.Stars, false, false, on.Contains(p.Id), p.Verdict, p.Why, p.Repo));
         return [.. rows.Values
             .OrderByDescending(r => r.On)
             .ThenByDescending(r => r.Shipped)
@@ -90,7 +90,7 @@ public static class Gallery
             var verdict = shipped || p == null ? Verdicts.Runs : p.Verdict;
             var why = shipped ? "comes with omawin" : p?.Why ?? "downloaded";
             return new GalleryRow(m.Id, p?.Name ?? (m.BarWidget?.DisplayName ?? (m.Name.Length > 0 ? m.Name : m.Id)), p?.Author ?? m.Author ?? "",
-                p?.Description ?? m.Description ?? "", p?.Category ?? m.BarWidget?.Category ?? "", p?.Stars ?? 0, shipped, !shipped, on.Contains(m.Id), verdict, why);
+                p?.Description ?? m.Description ?? "", p?.Category ?? m.BarWidget?.Category ?? "", p?.Stars ?? 0, shipped, !shipped, on.Contains(m.Id), verdict, why, p?.Repo ?? "");
         }
     }
 

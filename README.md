@@ -87,7 +87,7 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Plugins
 
-Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar, drawn by omawin's QML host (`omawin-qs`, downloaded the first time a plugin is turned on; nothing otherwise).
+Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar, drawn by omawin's QML host (`omawin-qs`, downloaded the first time a plugin is turned on; nothing otherwise). `omawin plugin gallery` (Install › Plugins › Gallery) lists Omarchy's marketplace too, with whether each plugin runs on Windows; Enter turns one on.
 
 ## Make it yours
 

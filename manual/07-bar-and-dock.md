@@ -2,7 +2,7 @@
 
 One strip across the top of the screen, as in Omarchy 4: the theme's background, 26 pixels tall. There is no dock: the launcher (Win+Space) and the system menu (Win+Alt+Space) take its place, and the Windows taskbar auto-hides (the very bottom edge or the Win key still shows it).
 
-The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the agents panel. The music player is a bar plugin now: turn it on with `omawin plugin add music` (or Install › Plugins), which also downloads the small program that draws plugins (once; nothing is downloaded if you never turn one on).
+The bar is drawn by the menu app itself, with no web engine, so it's up within seconds of signing in (a plain strip in its place until then). Not in it yet: the agents panel. The music player is a bar plugin now: turn it on with `omawin plugin add music` (or Install › Plugins), which also downloads the small program that draws plugins (once; nothing is downloaded if you never turn one on). A plugin shows on every monitor's bar, and its panel opens under it on that monitor; a key that opens a panel (Win+M for music) opens the one on the monitor you're working on. More plugins are in the gallery (Install › Plugins › Gallery in the system menu, `omawin plugin gallery`).
 
 - **Left:**
   - **The menu**: Omarchy's logo. Click: the system menu; right-click: a terminal.
