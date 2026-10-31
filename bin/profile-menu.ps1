@@ -47,9 +47,15 @@ $traceLog = Join-Path $state 'trace.log'
 $freq = [Diagnostics.Stopwatch]::Frequency
 
 function Mark([string]$Label) { [IO.File]::AppendAllText($traceLog, "driver $Label`t$([Diagnostics.Stopwatch]::GetTimestamp())`n") }
+# The trace as it is now. Shared: the menu app may be writing to it this very moment, and a plain
+# read would fail on that (it did on a CI runner while typing).
+function Read-Trace {
+    $stream = [IO.FileStream]::new($traceLog, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::ReadWrite -bor [IO.FileShare]::Delete)
+    try { $reader = [IO.StreamReader]::new($stream); $reader.ReadToEnd() -split "`n" } finally { $stream.Dispose() }
+}
 function Count([string]$Label) {
     if (-not (Test-Path $traceLog)) { return 0 }
-    @([IO.File]::ReadAllLines($traceLog) | Where-Object { $_.StartsWith("$Label`t") -or $_.StartsWith("$Label ") }).Count
+    @(Read-Trace | Where-Object { $_.StartsWith("$Label`t") -or $_.StartsWith("$Label ") }).Count
 }
 function WaitFor([string]$Label, [int]$Before, [int]$Ms = 3000) {
     $sw = [Diagnostics.Stopwatch]::StartNew()
@@ -138,7 +144,7 @@ try {
 if (-not ('Omawin.Cli.Profile.MenuProfile' -as [type])) {
     Add-Type -Path (Join-Path (Split-Path $PSScriptRoot) 'src\cli\Profile\MenuProfile.cs')
 }
-$lines = [string[]]@(if (Test-Path $traceLog) { [IO.File]::ReadAllLines($traceLog) })
+$lines = [string[]]@(if (Test-Path $traceLog) { Read-Trace | Where-Object { $_ } })
 $report = [Omawin.Cli.Profile.MenuProfile]::Report($lines, $freq, [bool]$Typing)
 $scale = [math]::Round((Get-ItemProperty 'HKCU:\Control Panel\Desktop\WindowMetrics' -Name AppliedDPI -ErrorAction SilentlyContinue).AppliedDPI / 96 * 100)
 $how = if ($Direct) { 'Keys run omawin.exe directly (no GlazeWM).' } elseif ($viaEmit) { 'Keys emit to the menu app (no omawin.exe).' } else { 'Keys run omawin.exe.' }
