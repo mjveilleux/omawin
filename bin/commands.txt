@@ -64,6 +64,7 @@ update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
+profile menu | Measure a menu key to its first frame, per surface (-Surface launcher, menu or files; -Runs 10), or typing in the launcher to the list on screen (-Typing); -Hand for runs pressed by you | pwsh bin/profile-menu.ps1
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
 profile ram | What's using the memory and the processor, the whole PC by group, memory in use apart from cached, omawin's desktop against its 600 MB (-Save keeps a history and shows what changed, -Quick skips the processor, -Json for agents) | pwsh bin/profile-ram.ps1
 check | Health check: is everything in place and running | pwsh bin/check.ps1

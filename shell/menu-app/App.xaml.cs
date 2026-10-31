@@ -32,6 +32,7 @@ namespace SystemMenu;
 //                              (--select theme:<name> in the theme list); for walkthroughs
 //   SystemMenu --type <text>   show it with that typed into the search; for walkthroughs too
 //   SystemMenu --key <key>     down / up / tab / shift-tab / pick, as if pressed; walkthroughs too
+//   SystemMenu --hide          hide it at once, no animation (omawin profile menu, between runs)
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a
@@ -47,13 +48,17 @@ public static class Program
 
     static Mutex? mutex;
 
-    // Timing marks for `omawin profile login`, as omawin.exe writes them: only while
-    // %LOCALAPPDATA%\launcher\trace-on exists.
+    // Timing marks for `omawin profile login` and `omawin profile menu`, as omawin.exe writes
+    // them: only while %LOCALAPPDATA%\launcher\trace-on exists. The stamp is taken first, so the
+    // file check doesn't count against the step being timed.
     static readonly string TraceLog = Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace.log");
+    static readonly string TraceOn = Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace-on");
+    internal static bool Tracing => File.Exists(TraceOn);
     internal static void Trace(string label)
     {
-        if (!File.Exists(Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace-on"))) return;
-        try { File.AppendAllText(TraceLog, "menu " + label + "\t" + Stopwatch.GetTimestamp() + "\n"); } catch (IOException) { }
+        long at = Stopwatch.GetTimestamp();
+        if (!Tracing) return;
+        try { File.AppendAllText(TraceLog, "menu " + label + "\t" + at + "\n"); } catch (IOException) { }
     }
     // What a `--render-about` run is drawing (App.OnLaunched reads it and exits when it's done).
     internal static (string Path, int Frame)? Render;
@@ -117,6 +122,7 @@ public static class Program
             {
                 while (signal.WaitOne())
                 {
+                    Trace("request");
                     // An empty request is a real one (plain `SystemMenu`: toggle the system menu),
                     // but no file, or one that couldn't be read (a second signal for a request
                     // already handled, or one another copy is still writing; its own signal
@@ -198,7 +204,11 @@ public partial class App : Application
 
     public void HandleRequest(string[] args)
     {
+        Program.Trace("handle " + (args.Length > 0 ? args[0] : "toggle"));
         if (window == null) return;
+        // `omawin profile menu` hides it between runs: at once, with no exit animation and no
+        // focus handed back, so the next run starts from the same place.
+        if (args is ["--hide"]) { window.HideForProfile(); return; }
         int open = Array.IndexOf(args, "--open");
         int select = Array.IndexOf(args, "--select");
         if (open >= 0 && open + 1 < args.Length) window.ShowMenu(args[open + 1], open + 2 < args.Length ? args[open + 2] : null);

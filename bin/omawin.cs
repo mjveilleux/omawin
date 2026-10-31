@@ -66,7 +66,7 @@ static class Omawin
 
     class Command { public string Name, Summary, Action; public int Section; }
 
-    // Timing, for profiling (omawin profile terminal): while %LOCALAPPDATA%\launcher\trace-on
+    // Timing, for profiling (omawin profile terminal, omawin profile menu): while %LOCALAPPDATA%\launcher\trace-on
     // exists, each step appends "<label> <QueryPerformanceCounter>" to trace.log there. Every
     // process on the PC shares that clock, so the PowerShell profile's marks line up with these.
     static readonly bool Tracing = File.Exists(Path.Combine(StateDir, "trace-on"));
@@ -191,10 +191,12 @@ static class Omawin
         EventWaitHandle signal;
         if (EventWaitHandle.TryOpenExisting(@"Local\dotfiles-system-menu-signal", out signal))
         {
+            Trace("send"); // omawin profile menu: from here to the menu app waking is the hand-off
             Directory.CreateDirectory(StateDir);
             File.WriteAllText(Path.Combine(StateDir, "system-menu-request"), request);
             AllowSetForegroundWindow(-1); // let it take focus
             signal.Set();
+            Trace("signalled");
             signal.Dispose();
             return 0;
         }

@@ -112,7 +112,15 @@ public sealed partial class MainWindow : Window
         SearchIcon.Text = char.ConvertFromUtf32(0xF0349); // magnify
 
         SetUpMotion();
-        Input.TextChanged += (_, _) => { selected = 0; Render(); };
+        Input.TextChanged += (_, _) =>
+        {
+            // omawin profile menu -Typing: a key in the search to its list on screen.
+            Program.Trace("typed");
+            selected = 0;
+            Render();
+            Program.Trace("rendered");
+            TraceNextFrame("list-painted");
+        };
         Input.PreviewKeyDown += OnKey;
         Activated += (_, e) =>
         {
@@ -255,6 +263,8 @@ public sealed partial class MainWindow : Window
         shownAt = DateTime.Now;
         previous = GetForegroundWindow();
         appWindow.Show();
+        Program.Trace("shown");
+        TraceNextFrame("painted");
         SetForegroundWindow(hwnd);
         Input.Focus(FocusState.Programmatic);
         Animate();
@@ -262,6 +272,21 @@ public sealed partial class MainWindow : Window
     }
 
     void HideMenu() => appWindow.Hide();
+
+    // For `omawin profile menu` (SystemMenu --hide): hidden now, no animation, no focus shuffle.
+    public void HideForProfile() => appWindow.Hide();
+
+    // Marks the next frame the compositor draws: what `omawin profile menu` calls "painted".
+    // CompositionTarget.Rendering is raised on the UI thread once per frame, just before it's
+    // composed, so this is the frame that has the change in it (to within that frame's own
+    // drawing, well under a refresh).
+    void TraceNextFrame(string label)
+    {
+        if (!Program.Tracing) return;
+        EventHandler<object>? once = null;
+        once = (_, _) => { CompositionTarget.Rendering -= once; Program.Trace(label); };
+        CompositionTarget.Rendering += once;
+    }
 
     // Closed without opening anything (Esc, the shortcut again): focus goes back to the window
     // you were in, or to the desktop. Left alone, Windows gives it to the taskbar, and a
