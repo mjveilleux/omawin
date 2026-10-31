@@ -348,8 +348,10 @@ public static unsafe partial class ClipboardHistory
     static void SavePicture(byte[] png)
     {
         Directory.CreateDirectory(Dir);
+        static bool Same(string f, byte[] png) { try { return new FileInfo(f).Length == png.Length && File.ReadAllBytes(f).AsSpan().SequenceEqual(png); } catch { return false; } }
         foreach (var f in Directory.GetFiles(Dir, "*.png"))
-            try { if (new FileInfo(f).Length == png.Length && File.ReadAllBytes(f).AsSpan().SequenceEqual(png)) File.Delete(f); } catch { }
+            if (Same(f, png)) try { File.Delete(f); } catch { }
+        if (Directory.Exists(PinnedDir) && Directory.GetFiles(PinnedDir, "*.png").Any(f => Same(f, png))) return; // pinned already
         File.WriteAllBytes(Path.Combine(Dir, DateTime.Now.ToString(ClipEntries.Stamp) + ".png"), png);
         TrimOld();
     }
