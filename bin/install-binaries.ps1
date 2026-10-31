@@ -218,18 +218,26 @@ $helpers = @(
     @{ Exe = 'omawin-uninstall'; Source = 'bin\uninstall.cs' }
 )
 # Each piece: its release file, the sources it's built from, whether it could be built here
-# instead (csc.exe is in Windows; the menu app and the player need the .NET SDK already here),
-# and whether what's here is current by date (before there's a record).
+# instead (csc.exe is in Windows; omawin-cli, the menu app, the player and omawin-windows need the
+# .NET SDK already here), and whether what's here is current by date (before there's a record).
+# omawin-cli.exe comes with the helpers (-What helpers): omawin.exe hands it the builtins that
+# moved there.
 $Pieces = [ordered]@{
     helpers = @{ Want = $WantHelpers; Pattern = 'omawin-helpers-*.zip'; Paths = @($helpers | ForEach-Object { $_.Source -replace '\\', '/' })
         CanBuild = { -not $NoBuild }
         ByDate = { -not @($helpers | Where-Object { -not (Test-Current (Join-Path $BinDir "$($_.Exe).exe") (Join-Path $Repo $_.Source)) }) } }
+    cli = @{ Want = $WantHelpers; Pattern = "omawin-cli-*-win-$Arch.exe"; Paths = @('src/cli')
+        CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
+        ByDate = { Test-Current (Join-Path $BinDir 'omawin-cli.exe') (Join-Path $Repo 'src\cli') } }
     menu = @{ Want = $WantMenu; Pattern = "SystemMenu-*-win-$Arch.zip"; Paths = @('shell/menu-app')
         CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
         ByDate = { Test-Current (Join-Path $MenuDir 'SystemMenu.exe') (Join-Path $Repo 'shell\menu-app') } }
     music = @{ Want = $WantMusic; Pattern = "omawin-music-*-win-$Arch.exe"; Paths = @('src/music')
         CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
         ByDate = { Test-Current (Join-Path $BinDir 'omawin-music.exe') (Join-Path $Repo 'src\music') } }
+    windows = @{ Want = $WantWindows; Pattern = "omawin-windows-*-win-$Arch.exe"; Paths = @('src/windows')
+        CanBuild = { -not $NoBuild -and (Test-DotNetSdk) }
+        ByDate = { Test-Current (Join-Path $BinDir 'omawin-windows.exe') (Join-Path $Repo 'src\windows') } }
 }
 
 # One trip to the release for every piece that will come from it (roadmap 2.5): the tag, the
@@ -305,11 +313,11 @@ try {
         # The compiled omawin (src/cli, .NET 9 Native AOT): omawin-cli.exe beside omawin.exe,
         # which hands it the builtins that moved there (omawin pkg). Built here only when the
         # .NET SDK is already on the PC, as the menu app; else the release's.
-        $key = Get-SourceKey @('src/cli')
+        $key = Get-SourceKey $Pieces.cli.Paths
         $dest = Join-Path $BinDir 'omawin-cli.exe'
-        if (Test-Installed 'cli' $key { Test-Current $dest (Join-Path $Repo 'src\cli') }) { Write-Note 'ok  omawin-cli.exe' }
+        if (Test-Installed 'cli' $key $Pieces.cli.ByDate) { Write-Note 'ok  omawin-cli.exe' }
         else {
-            $fromRelease = Get-PieceRelease "omawin-cli-*-win-$Arch.exe" @('src/cli') (-not $NoBuild -and (Test-DotNetSdk))
+            $fromRelease = Get-PieceRelease $Pieces.cli.Pattern $Pieces.cli.Paths (& $Pieces.cli.CanBuild)
             if ($fromRelease) {
                 # One in use (a pkg install running in another terminal) is renamed aside: it
                 # finishes on the old copy.
@@ -334,7 +342,7 @@ try {
 
     # --- the menu app (%LOCALAPPDATA%\system-menu; the WinUI app on Win+Space) -------------------
     if ($WantMenu) {
-        $key = Get-SourceKey @('shell/menu-app')
+        $key = Get-SourceKey $Pieces.menu.Paths
         if (Test-Installed 'menu' $key $Pieces.menu.ByDate) { Write-Note 'ok  the system menu' }
         else {
             # Built here only when the .NET SDK (1 GB) is already on the PC; else the release, and
@@ -365,7 +373,7 @@ try {
 
     # --- omawin-music (one exe in ~/.local/bin) -------------------------------------------------
     if ($WantMusic) {
-        $key = Get-SourceKey @('src/music')
+        $key = Get-SourceKey $Pieces.music.Paths
         if (Test-Installed 'music' $key $Pieces.music.ByDate) { Write-Note 'ok  omawin-music.exe' }
         else {
             # As the menu: built here only with the .NET SDK already on the PC.
@@ -399,10 +407,10 @@ try {
     # Nothing keeps it running (it lives for one command), so the new file simply replaces the old;
     # one open in a terminal is renamed aside, as the music player is.
     if ($WantWindows) {
-        $key = Get-SourceKey @('src/windows')
-        if (Test-Installed 'windows' $key { Test-Current (Join-Path $BinDir 'omawin-windows.exe') (Join-Path $Repo 'src\windows') }) { Write-Note 'ok  omawin-windows.exe' }
+        $key = Get-SourceKey $Pieces.windows.Paths
+        if (Test-Installed 'windows' $key $Pieces.windows.ByDate) { Write-Note 'ok  omawin-windows.exe' }
         else {
-            $fromRelease = Get-PieceRelease "omawin-windows-*-win-$Arch.exe" @('src/windows') (-not $NoBuild -and (Test-DotNetSdk))
+            $fromRelease = Get-PieceRelease $Pieces.windows.Pattern $Pieces.windows.Paths (& $Pieces.windows.CanBuild)
             if ($fromRelease) {
                 $dest = Join-Path $BinDir 'omawin-windows.exe'
                 Get-ChildItem $BinDir -Filter 'omawin-windows.exe.old-*' -ErrorAction SilentlyContinue | Remove-Item -ErrorAction SilentlyContinue
