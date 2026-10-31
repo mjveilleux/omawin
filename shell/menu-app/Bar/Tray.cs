@@ -20,7 +20,7 @@ public static unsafe class Tray
         public string Tip = "";
         public bool Hidden;
         public byte[]? Pixels; // Size x Size BGRA, premultiplied
-        public int Size;       // the icon's own size, up to 32: a 16-pixel icon isn't stretched
+        public int Size;       // its own size: up to 32, or the next one up from the app's file (never stretched)
         public int Stamp; // changes when the picture does
         public string Key => Guid?.ToString() ?? $"{Hwnd}:{Id}";
     }
@@ -150,14 +150,72 @@ public static unsafe class Tray
         if (changed) Changed?.Invoke();
     }
 
-    // The icon drawn at its own size (up to 32) into a BGRA picture, premultiplied (what
+    // The icon drawn at its own size (up to 32, or a bigger one from its file) into a BGRA picture, premultiplied (what
     // WriteableBitmap takes): an app's 16-pixel icon stays 16, never stretched (the bar shrinks a
     // bigger one well, roadmap 1.8). Old icons with no alpha of their own get it from their mask
     // (DrawIconEx leaves it at 0).
     static (byte[]?, int) Picture(IntPtr hicon)
     {
         if (hicon == IntPtr.Zero) return (null, 0);
-        int size = Math.Min(Size, NativeSize(hicon) ?? Size);
+        int own = NativeSize(hicon) ?? Size;
+        // The best source (roadmap 1.8 step 5): an icon the app loaded from its own file is read
+        // again from there at the size the bar needs, when that's bigger than the one it handed us.
+        if (own < Size && FromResource(hicon, own) is { } better) return better;
+        return Draw(hicon, Math.Min(Size, own));
+    }
+
+    // The app's icon group, from the module and resource Windows recorded when it loaded the icon
+    // (GetIconInfoEx; only icons loaded from a resource have them, so a picture an app draws
+    // itself, with an unread count or a battery level, is always its own). The module is opened
+    // as data only: nothing of it runs here.
+    static (byte[]?, int)? FromResource(IntPtr hicon, int own)
+    {
+        var info = new ICONINFOEX { cbSize = (uint)sizeof(ICONINFOEX) };
+        if (!GetIconInfoEx(hicon, ref info)) return null;
+        if (info.hbmColor != IntPtr.Zero) DeleteObject(info.hbmColor);
+        if (info.hbmMask != IntPtr.Zero) DeleteObject(info.hbmMask);
+        string module = new((char*)info.szModName);
+        string resName = new((char*)info.szResName);
+        if (module.Length == 0 || info.wResID == 0 && resName.Length == 0) return null;
+        var lib = LoadLibraryEx(module, IntPtr.Zero, 0x2 | 0x20); // LOAD_LIBRARY_AS_DATAFILE | AS_IMAGE_RESOURCE
+        if (lib == IntPtr.Zero) return null;
+        var name = info.wResID != 0 ? (IntPtr)info.wResID : Marshal.StringToHGlobalUni(resName);
+        try
+        {
+            var group = Resource(lib, name, 14); // RT_GROUP_ICON
+            if (group == null || IconGroup.Choose(IconGroup.Parse(group), Size) is not { } pick || pick.Width <= own) return null;
+            var bits = Resource(lib, (IntPtr)pick.Id, 3); // RT_ICON
+            if (bits == null) return null;
+            IntPtr icon;
+            fixed (byte* p = bits) icon = CreateIconFromResourceEx(p, (uint)bits.Length, true, 0x00030000, pick.Width, pick.Height, 0);
+            if (icon == IntPtr.Zero) return null;
+            try { return Draw(icon, pick.Width) is (byte[] pixels, int size) ? (pixels, size) : null; }
+            finally { DestroyIcon(icon); }
+        }
+        catch (Exception ex) { App.Log(ex); return null; }
+        finally
+        {
+            if (info.wResID == 0) Marshal.FreeHGlobal(name);
+            FreeLibrary(lib);
+        }
+    }
+
+    static byte[]? Resource(IntPtr lib, IntPtr name, int type)
+    {
+        var found = FindResource(lib, name, (IntPtr)type);
+        if (found == IntPtr.Zero) return null;
+        var loaded = LoadResource(lib, found);
+        uint length = SizeofResource(lib, found);
+        var at = loaded == IntPtr.Zero ? IntPtr.Zero : LockResource(loaded);
+        if (at == IntPtr.Zero || length == 0) return null;
+        var bytes = new byte[length];
+        Marshal.Copy(at, bytes, 0, (int)length);
+        return bytes;
+    }
+
+    // The icon drawn at size pixels into a BGRA picture, premultiplied.
+    static (byte[]?, int) Draw(IntPtr hicon, int size)
+    {
         var info = new BITMAPINFOHEADER { biSize = (uint)sizeof(BITMAPINFOHEADER), biWidth = size, biHeight = -size, biPlanes = 1, biBitCount = 32 };
         var dc = CreateCompatibleDC(IntPtr.Zero);
         var bitmap = CreateDIBSection(dc, ref info, 0, out var bits, IntPtr.Zero, 0);
@@ -248,6 +306,24 @@ public static unsafe class Tray
     [StructLayout(LayoutKind.Sequential)] struct ICONINFO { public int fIcon, xHotspot, yHotspot; public IntPtr hbmMask, hbmColor; }
     [StructLayout(LayoutKind.Sequential)] struct BITMAP { public int bmType, bmWidth, bmHeight, bmWidthBytes; public ushort bmPlanes, bmBitsPixel; public IntPtr bmBits; }
     [DllImport("user32.dll")] static extern bool GetIconInfo(IntPtr icon, out ICONINFO info);
+    [StructLayout(LayoutKind.Sequential)]
+    struct ICONINFOEX
+    {
+        public uint cbSize;
+        public int fIcon, xHotspot, yHotspot;
+        public IntPtr hbmMask, hbmColor;
+        public ushort wResID;
+        public fixed ushort szModName[260], szResName[260];
+    }
+    [DllImport("user32.dll", EntryPoint = "GetIconInfoExW")] static extern bool GetIconInfoEx(IntPtr icon, ref ICONINFOEX info);
+    [DllImport("user32.dll")] static extern IntPtr CreateIconFromResourceEx(byte* bits, uint size, bool icon, uint version, int cx, int cy, uint flags);
+    [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr icon);
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, EntryPoint = "LoadLibraryExW")] static extern IntPtr LoadLibraryEx(string file, IntPtr reserved, uint flags);
+    [DllImport("kernel32.dll")] static extern bool FreeLibrary(IntPtr module);
+    [DllImport("kernel32.dll", EntryPoint = "FindResourceW")] static extern IntPtr FindResource(IntPtr module, IntPtr name, IntPtr type);
+    [DllImport("kernel32.dll")] static extern IntPtr LoadResource(IntPtr module, IntPtr info);
+    [DllImport("kernel32.dll")] static extern IntPtr LockResource(IntPtr data);
+    [DllImport("kernel32.dll")] static extern uint SizeofResource(IntPtr module, IntPtr info);
     [DllImport("gdi32.dll")] static extern int GetObject(IntPtr obj, int size, ref BITMAP bitmap);
     [DllImport("kernel32.dll")] static extern IntPtr GetModuleHandle(IntPtr name);
     [DllImport("gdi32.dll")] static extern IntPtr CreateCompatibleDC(IntPtr dc);
