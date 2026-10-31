@@ -130,7 +130,7 @@ function AppOf($proc) {
     return $p
 }
 
-function GroupOf([string]$name, [string]$path) {
+function GroupFor([string]$name, [string]$path) {
     if ($PartOf[$name]) { return 'omawin' }
     if ($name -like 'svchost: *') { return 'Windows services' }
     if ($GroupOf[$name]) { return $GroupOf[$name] }
@@ -161,7 +161,7 @@ foreach ($proc in $procs.Values) {
     $app = if ($owner -is [string]) { $owner } else { $owner.Name }
     $path = if ($owner -is [string]) { $proc.Path } else { $owner.Path }
     if (-not $apps[$app]) {
-        $apps[$app] = [pscustomobject]@{ App = $app; Part = $PartOf[$app]; Group = (GroupOf $app $path); Procs = 0; MemoryMB = 0.0; CommitMB = 0.0; Cpu = 0.0 }
+        $apps[$app] = [pscustomobject]@{ App = $app; Part = $PartOf[$app]; Group = (GroupFor $app $path); Procs = 0; MemoryMB = 0.0; CommitMB = 0.0; Cpu = 0.0 }
     }
     $e = $apps[$app]
     $e.Procs++
@@ -189,19 +189,19 @@ $parts = foreach ($name in $Parts.Keys) {
     if ($Seconds -gt 0 -and $cpu -gt $budget.Cpu) { $over += "CPU over $($budget.Cpu)%" }
     [pscustomobject]@{
         Part = $name; Procs = [int]($mine | Measure-Object Procs -Sum).Sum
-        MemoryMB = [math]::Round($mem); CommitMB = [math]::Round(($mine | Measure-Object CommitMB -Sum).Sum)
+        MemoryMB = [int][math]::Round($mem); CommitMB = [int][math]::Round(($mine | Measure-Object CommitMB -Sum).Sum)
         Cpu = [math]::Round($cpu, 1); BudgetMB = $budget.MB; BudgetCpu = $budget.Cpu
         Desktop = [bool]$budget.Desktop; Over = $over -join ', '
     }
 }
 $others = $apps.Values | Where-Object { -not $_.Part } | Sort-Object MemoryMB -Descending | Select-Object -First $Top |
-    ForEach-Object { [pscustomobject]@{ App = $_.App; Group = $_.Group; Procs = $_.Procs; MemoryMB = [math]::Round($_.MemoryMB); CommitMB = [math]::Round($_.CommitMB); Cpu = [math]::Round($_.Cpu, 1) } }
+    ForEach-Object { [pscustomobject]@{ App = $_.App; Group = $_.Group; Procs = $_.Procs; MemoryMB = [int][math]::Round($_.MemoryMB); CommitMB = [int][math]::Round($_.CommitMB); Cpu = [math]::Round($_.Cpu, 1) } }
 $busy = $apps.Values | Where-Object { $_.Cpu -ge 1 } | Sort-Object Cpu -Descending | Select-Object -First 8 |
     ForEach-Object { [pscustomobject]@{ App = $_.App; Cpu = [math]::Round($_.Cpu, 1) } }
 $groups = $apps.Values | Group-Object Group | ForEach-Object {
     [pscustomobject]@{
         Group = $_.Name; Procs = [int]($_.Group | Measure-Object Procs -Sum).Sum
-        MemoryMB = [math]::Round(($_.Group | Measure-Object MemoryMB -Sum).Sum)
+        MemoryMB = [int][math]::Round(($_.Group | Measure-Object MemoryMB -Sum).Sum)
         Top = ($_.Group | Sort-Object MemoryMB -Descending | Select-Object -First 3 | ForEach-Object { "$($_.App) $([math]::Round($_.MemoryMB))" }) -join ', '
     }
 } | Sort-Object MemoryMB -Descending
@@ -237,7 +237,7 @@ $desktopMB = ($parts | Where-Object Desktop | Measure-Object MemoryMB -Sum).Sum
 $uptime = (Get-Date) - $os.LastBootUpTime
 $system = [pscustomobject]@{
     TotalMB = $memory.TotalMB; InUseMB = $memory.InUseMB; CachedMB = $memory.CachedMB; FreeMB = $memory.FreeMB
-    CommitMB = [math]::Round(($os.TotalVirtualMemorySize - $os.FreeVirtualMemory) / 1KB)
+    CommitMB = [int][math]::Round(($os.TotalVirtualMemorySize - $os.FreeVirtualMemory) / 1KB)
     CommitLimitMB = [math]::Round($os.TotalVirtualMemorySize / 1KB)
     CompressedMB = [math]::Round($compressed ?? 0)
     OmawinMB = [math]::Round(($parts | Measure-Object MemoryMB -Sum).Sum)
