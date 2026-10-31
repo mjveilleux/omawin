@@ -177,7 +177,7 @@ public static class WinSettings
     // Windows PowerShell 5.1 (always there, and an elevated per-user pwsh.exe could be swapped by
     // anything that can write to the user's folder, AGENTS.md), hidden, with fixed verbs: it reads
     // the plan and checks every line against its own allow-list. Declined: nothing ran.
-    static async Task<AdminRun> RunElevated(IReadOnlyList<string> plan)
+    internal static async Task<AdminRun> RunElevated(IReadOnlyList<string> plan)
     {
         var dir = MenuModel.StateDir;
         Directory.CreateDirectory(dir);
@@ -234,6 +234,7 @@ public static class WinSettings
         // Not a setting, but answered the same way: Windows' extra apps (roadmap 8.50, WindowsAppsStore.cs).
         ["--windows-apps", .. var rest] => WindowsAppsStore.Answer(rest, progress ?? (_ => { })),
         ["--shell-extensions", .. var rest] => ShellExtensionsWin.Answer(rest),
+        ["--env", .. var rest] => await EnvVars.Answer(EnvVarsWin.Instance, EnvVarsWin.History, rest),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

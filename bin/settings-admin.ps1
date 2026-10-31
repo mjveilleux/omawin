@@ -13,7 +13,8 @@
     HKLM\SYSTEM, DWORD or string), the policies of the account that asked (HKCU\Software\Policies,
     written to its hive by -User, its SID: this run may be another account), and a closed list of
     builtins (hibernation, sudo, a few Windows features, the search indexer's service, the SSH
-    agent, UTF-8 code pages, Paint's AI, firewall rules for dev runtimes). Nothing in the plan is
+    agent, UTF-8 code pages, Paint's AI, firewall rules for dev runtimes), and the PC's
+    environment variables (omawin env set -Machine). Nothing in the plan is
     ever run as a command. Writes "<id> TAB <done|fail|skip> TAB <reason>" per line to -Result,
     then exits: nothing stays elevated.
 
@@ -178,6 +179,22 @@ foreach ($line in $lines) {
                     }
                     default { throw "builtin $target" }
                 }
+            }
+            'env' {
+                # One of the PC's environment variables (omawin env set -Machine, roadmap 8.36):
+                # "=<value>" sets it (kept unexpanded when it names another variable), "-" removes it.
+                if ($target -notmatch '^[A-Za-z_(][A-Za-z0-9_().-]{0,254}$') { throw "variable name $target" }
+                $key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment', $true)
+                try {
+                    if ($value -eq '-') { $key.DeleteValue($target, $false) }
+                    elseif ($value.StartsWith('=')) {
+                        $text = $value.Substring(1)
+                        $kind = if ($text.Contains('%')) { [Microsoft.Win32.RegistryValueKind]::ExpandString } else { [Microsoft.Win32.RegistryValueKind]::String }
+                        $key.SetValue($target, $text, $kind)
+                    }
+                    else { throw "env value $value" }
+                }
+                finally { $key.Close() }
             }
             default { throw "verb $verb" }
         }
