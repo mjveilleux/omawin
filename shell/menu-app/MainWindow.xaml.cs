@@ -104,6 +104,10 @@ public sealed partial class MainWindow : Window
         appWindow.Title = "System Menu";
         int round = 2; // DWMWCP_ROUND
         DwmSetWindowAttribute(hwnd, 33, ref round, sizeof(int));
+        // Windows' own show and hide fade off: the menu has its own (Motion.cs), and with
+        // animations off it must appear in one frame (the CI motion check saw Windows' fade).
+        int noTransitions = 1; // DWMWA_TRANSITIONS_FORCEDISABLED
+        DwmSetWindowAttribute(hwnd, 3, ref noTransitions, sizeof(int));
         SystemBackdrop = new DesktopAcrylicBackdrop();
 
         foreach (var t in new[] { QueryText, Placeholder, FooterLeft }) t.FontFamily = textFont;
