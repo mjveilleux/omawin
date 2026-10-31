@@ -20,6 +20,7 @@ namespace SystemMenu;
 //                              wifi|bluetooth on|off|toggle|connect|disconnect,
 //                              brightness up|down|set <n>, power <mode|cycle>,
 //                              night-light | dnd (both open Settings: no public API)
+//   SystemMenu --icon-selftest   print each app icon's drawn, asked and received pixel sizes
 //   SystemMenu --qs-selftest   print what each Quick settings section sees (read only), for
 //                              comparison with netsh / Get-PnpDevice / powercfg; handled before
 //                              the single-copy check, so it works while the menu app runs
@@ -85,6 +86,7 @@ public static class Program
         // single-copy check, so it is never handed to a running copy (which couldn't print).
         if (args.Contains("--qs-selftest")) return QuickSettingsSelfTest.Run();
         if (args.Contains("--snip-selftest")) return QuickSettingsSelfTest.RunSnip();
+        if (args.Contains("--icon-selftest")) return QuickSettingsSelfTest.RunIcons();
 
         Trace("main");
         mutex = new Mutex(true, MutexName, out bool first);
@@ -182,6 +184,9 @@ public partial class App : Application
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
             Program.Trace("ready");
+            // The theme picker's pictures, decoded while nothing else is going on (ThemeThumbs.cs).
+            Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, ThemeThumbs.Preload);
+            ThemeThumbs.FetchBackgrounds(); // and every theme's backgrounds, on an unmetered connection
             if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
         });
     }

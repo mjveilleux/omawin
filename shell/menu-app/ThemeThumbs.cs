@@ -27,7 +27,7 @@ public static class ThemeThumbs
         // Named for the theme and its picture, so a theme whose first background changes gets
         // a new one.
         var source = theme.Backgrounds[0];
-        var key = $"{file}--{Path.GetFileNameWithoutExtension(source.Split('?')[0])}";
+        var key = Key(file, source);
         if (cache.TryGetValue(key, out var known)) { done(known); return; }
         var ui = DispatcherQueue.GetForCurrentThread();
         var thumb = Path.Combine(Dir, key + ".png");
@@ -36,16 +36,68 @@ public static class ThemeThumbs
             try
             {
                 if (!File.Exists(thumb)) await Make(file, source, thumb);
-                ui.TryEnqueue(() =>
+                ui.TryEnqueue(async () =>
                 {
-                    var image = new BitmapImage(new Uri(thumb)) { DecodePixelWidth = (int)Width };
-                    cache[key] = image;
-                    done(image);
+                    try
+                    {
+                        if (cache.TryGetValue(key, out var made)) { done(made); return; }
+                        // Decoded now, not when it's first drawn: what Preload is for.
+                        var image = new BitmapImage { DecodePixelWidth = (int)Width };
+                        using (var stream = await Windows.Storage.Streams.FileRandomAccessStream.OpenAsync(thumb, FileAccessMode.Read))
+                            await image.SetSourceAsync(stream);
+                        cache[key] = image;
+                        done(image);
+                    }
+                    catch (Exception ex) { App.Log(ex); }
                 });
             }
             catch (Exception ex) { App.Log(ex); }
         });
     }
+
+    // The picture's name: the theme and its picture's own, so a theme whose first background
+    // changes gets a new one (src/thumbs names CI's the same way).
+    static string Key(string file, string source) => $"{file}--{Path.GetFileNameWithoutExtension(source.Split('?')[0])}";
+
+    // Once the menu app is up and idle: every theme's picture that's already on this PC (the
+    // release brings them all: src/thumbs) read and decoded, so the picker's first open shows every
+    // tile's picture in its first frame (roadmap 1.9). Ones not here yet are left for the picker
+    // to make: nothing is downloaded at start-up.
+    public static void Preload()
+    {
+        foreach (var (file, theme) in MenuModel.Themes())
+            if (theme.Backgrounds.Length > 0 && File.Exists(Path.Combine(Dir, Key(file, theme.Backgrounds[0]) + ".png")))
+                Get(file, theme, _ => { });
+    }
+
+    // After start-up, every theme's backgrounds, one at a time, into launcher\backgrounds\<theme>
+    // (where themes/set-theme.ps1 looks first), so switching to any theme for the first time
+    // doesn't wait on a download (roadmap 1.9). Only on an unmetered connection: a metered one
+    // gets a theme's pictures when you pick it. Ones already here are skipped, so once they're all
+    // in, this is a look at each file and nothing more.
+    public static void FetchBackgrounds() => Task.Run(async () =>
+    {
+        try
+        {
+            var cost = Windows.Networking.Connectivity.NetworkInformation.GetInternetConnectionProfile()?.GetConnectionCost();
+            if (cost == null || cost.NetworkCostType != Windows.Networking.Connectivity.NetworkCostType.Unrestricted || cost.Roaming) return;
+            foreach (var (file, theme) in MenuModel.Themes())
+                foreach (var source in theme.Backgrounds.Where(s => s.StartsWith("https://") || s.StartsWith("http://")))
+                {
+                    var image = Path.Combine(MenuModel.StateDir, "backgrounds", file, Path.GetFileName(new Uri(source).LocalPath));
+                    if (File.Exists(image)) continue;
+                    try
+                    {
+                        Directory.CreateDirectory(Path.GetDirectoryName(image)!);
+                        var bytes = await http.GetByteArrayAsync(source);
+                        await File.WriteAllBytesAsync(image + ".part", bytes);
+                        File.Move(image + ".part", image, overwrite: true);
+                    }
+                    catch (Exception ex) { App.Log(ex); }
+                }
+        }
+        catch (Exception ex) { App.Log(ex); }
+    });
 
     static async Task Make(string file, string source, string thumb)
     {
