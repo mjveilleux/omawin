@@ -8,6 +8,23 @@ using Omawin.Bundle;
 // Downloads each tool's latest upstream build, repacks it (src/bundle/Tools.cs says how) and
 // writes omawin-tools.txt, the manifest the install reads. GITHUB_TOKEN, when set, lifts
 // GitHub's rate limit for anonymous API calls.
+// --pack <folder> <out dir> <n>: just the parts of one folder, as a tool with parts:<n> gets them
+// (to check them by hand: tar -xf on each, side by side).
+if (args is ["--pack", var packDir, var packOut, var packN])
+{
+    var root = Path.GetFullPath(packDir);
+    Directory.CreateDirectory(packOut);
+    var all = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(root, f).Replace('\\', '/'));
+    var folders = Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Select(d => Path.GetRelativePath(root, d).Replace('\\', '/')).Order(StringComparer.Ordinal).ToList();
+    var groups = Tools.Split(all, int.Parse(packN));
+    for (int k = 0; k < groups.Count; k++)
+    {
+        var part = Path.Combine(packOut, Tools.PartName(Path.GetFileName(root), k + 1));
+        await Pack(root, k == 0 ? folders : [], groups[k], part, CancellationToken.None);
+        Console.WriteLine($"  {Path.GetFileName(part)}  {groups[k].Count} files  {new FileInfo(part).Length / 1048576.0:0.0} MB");
+    }
+    return 0;
+}
 if (args.Length < 1) { Console.Error.WriteLine("usage: <out dir> [install/tools.txt]"); return 2; }
 var outDir = Path.GetFullPath(args[0]);
 var listFile = args.Length > 1 ? args[1] : Path.Combine(FindRepo(), "install", "tools.txt");
@@ -61,23 +78,41 @@ async Task Build(int i, CancellationToken ct)
     }
     var zip = Path.Combine(outDir, Tools.FileName(t.Name, t.Sfx));
     File.Delete(zip);
+    var stage = Path.Combine(dir, "stage");
+    if (Directory.Exists(stage)) Directory.Delete(stage, recursive: true);
+    Directory.CreateDirectory(stage);
     if (t.Sfx)
     {
         // A self-extractor goes out as it is: its LZMA is far smaller than a zip of what's
-        // inside (Git for Windows: ~60 MB against ~160), and the PC runs it to unpack.
+        // inside (Git for Windows: ~60 MB against ~160), and the PC runs it to unpack. With
+        // parts, it's the fallback, so it's opened here too (7-Zip opens it like an archive).
         File.Copy(download, zip);
+        if (t.Parts > 0) Extract7z(t, download, stage);
     }
     else
     {
-        var stage = Path.Combine(dir, "stage");
-        Directory.CreateDirectory(stage);
         Unpack(t, download, stage);
         ZipFile.CreateFromDirectory(stage, zip, CompressionLevel.Optimal, includeBaseDirectory: false);
     }
+    var parts = new List<(string, string)>();
+    if (t.Parts > 0)
+    {
+        var files = Directory.EnumerateFiles(stage, "*", SearchOption.AllDirectories).Select(f => Path.GetRelativePath(stage, f).Replace('\\', '/'));
+        var dirs = Directory.EnumerateDirectories(stage, "*", SearchOption.AllDirectories).Select(d => Path.GetRelativePath(stage, d).Replace('\\', '/')).Order(StringComparer.Ordinal).ToList();
+        var split = Tools.Split(files, t.Parts);
+        for (int k = 0; k < split.Count; k++)
+        {
+            var part = Path.Combine(outDir, Tools.PartName(t.Name, k + 1));
+            await Pack(stage, k == 0 ? dirs : [], split[k], part, ct);
+            await using var pf = File.OpenRead(part);
+            parts.Add((Path.GetFileName(part), Convert.ToHexStringLower(await SHA256.HashDataAsync(pf, ct))));
+        }
+    }
     await using var z = File.OpenRead(zip);
     var sha = Convert.ToHexStringLower(await SHA256.HashDataAsync(z, ct));
-    built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later, t.Sfx);
-    Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}");
+    built[i] = new Built(t.Name, version, Path.GetFileName(zip), sha, t.Bin, t.Provides, t.Home, t.Later, t.Sfx, parts);
+    var partsMb = parts.Sum(p => new FileInfo(Path.Combine(outDir, p.Item1)).Length) / 1048576.0;
+    Console.WriteLine($"  {t.Name,-12} {version,-16} {new FileInfo(zip).Length / 1048576.0,7:0.0} MB  {name}" + (parts.Count > 0 ? $"  (+ {parts.Count} tar.zst parts, {partsMb:0.0} MB)" : ""));
 }
 
 // Where a tool's build is: (url, version, file name).
@@ -146,6 +181,35 @@ static void Unpack(Tool t, string download, string stage)
         return;
     }
     File.Copy(download, target, overwrite: true);
+}
+
+// One part: the folders (first part only), then its files, as a tar (PAX) through zstd. Level 19
+// with a long window: built once in CI, unpacked on every PC, so smaller is worth the CPU here.
+static async Task Pack(string stage, IReadOnlyList<string> dirs, IReadOnlyList<string> files, string output, CancellationToken ct)
+{
+    File.Delete(output);
+    await using var outFile = File.Create(output);
+    using var zstd = new ZstdSharp.CompressionStream(outFile, 19);
+    zstd.SetParameter(ZstdSharp.Unsafe.ZSTD_cParameter.ZSTD_c_nbWorkers, Environment.ProcessorCount);
+    zstd.SetParameter(ZstdSharp.Unsafe.ZSTD_cParameter.ZSTD_c_enableLongDistanceMatching, 1);
+    zstd.SetParameter(ZstdSharp.Unsafe.ZSTD_cParameter.ZSTD_c_windowLog, 27);
+    await using (var tar = new System.Formats.Tar.TarWriter(zstd, System.Formats.Tar.TarEntryFormat.Pax, leaveOpen: true))
+    {
+        foreach (var d in dirs) await tar.WriteEntryAsync(new System.Formats.Tar.PaxTarEntry(System.Formats.Tar.TarEntryType.Directory, d + "/"), ct);
+        foreach (var f in files) await tar.WriteEntryAsync(Path.Combine(stage, f), f, ct);
+    }
+}
+
+// A 7-Zip self-extractor's contents, with the runner's 7z (CI's Linux has it).
+static void Extract7z(Tool t, string download, string stage)
+{
+    var psi = new System.Diagnostics.ProcessStartInfo("7z") { RedirectStandardOutput = true, RedirectStandardError = true };
+    foreach (var a in new[] { "x", "-y", "-o" + stage, download }) psi.ArgumentList.Add(a);
+    using var p = System.Diagnostics.Process.Start(psi) ?? throw new InvalidOperationException($"{t.Name}: 7z didn't start");
+    var err = p.StandardError.ReadToEndAsync();
+    p.StandardOutput.ReadToEnd();
+    p.WaitForExit();
+    if (p.ExitCode != 0) throw new InvalidOperationException($"{t.Name}: 7z exited {p.ExitCode}: {err.Result}");
 }
 
 static string FindRepo()
