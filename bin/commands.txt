@@ -64,6 +64,7 @@ claude sync | Claude Code's rules, skills, settings and plugins from the shared 
 reports index | Refresh the Reports list now (this account's reports script; docs/work.md) | pwsh {user}/reports/reports.ps1 -Index
 
 update | Pull this repo, relink, run new migrations | pwsh bin/update.ps1
+uninstall | All of omawin out of this account: shows everything first, lets you keep programs, asks once (--dry-run shows only; --yes asks nothing). No admin | run omawin-uninstall.exe
 update terminal | The default terminal's latest release (noctty: its latest release; Windows Terminal: winget) | builtin update-terminal
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1

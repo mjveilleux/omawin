@@ -40,6 +40,8 @@ $helpers = @(
     @{ Name = 'omawin-listen'; Source = "$Repo\src\agent\omawin-listen.cs"; Target = 'winexe' }
     # omawin-path: omawin path, the PATH doctor (roadmap 8.35).
     @{ Name = 'omawin-path'; Source = "$Repo\bin\path-doctor.cs"; Target = 'exe' }
+    # omawin-uninstall: omawin uninstall, all of omawin out of this account (roadmap 2.10).
+    @{ Name = 'omawin-uninstall'; Source = "$Repo\bin\uninstall.cs"; Target = 'exe' }
 )
 
 # The release stamp. Two things: a generated file with the assembly attributes every helper carries
