@@ -1,6 +1,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using ZXing;
+using ZXing.QrCode;
+using ZXing.QrCode.Internal;
 
 namespace Omawin.Windows;
 
@@ -54,6 +57,25 @@ public static partial class WifiShare
         if (!open) b.Append($"P:{E(n.Key!)};");
         if (n.Hidden) b.Append("H:true;");
         return b.Append(';').ToString();
+    }
+
+    // The code's modules (true: dark), its quiet zone included: ZXing's encoder, medium error
+    // correction, UTF-8 for a name with accents but without the ECI marker some phone cameras
+    // choke on.
+    public static bool[,] Modules(string text)
+    {
+        var matrix = new QRCodeWriter().encode(text, BarcodeFormat.QR_CODE, 0, 0, new Dictionary<EncodeHintType, object>
+        {
+            [EncodeHintType.MARGIN] = 2,
+            [EncodeHintType.ERROR_CORRECTION] = ErrorCorrectionLevel.M,
+            [EncodeHintType.CHARACTER_SET] = "UTF-8",
+            [EncodeHintType.DISABLE_ECI] = true,
+        });
+        var dark = new bool[matrix.Width, matrix.Height];
+        for (int x = 0; x < matrix.Width; x++)
+            for (int y = 0; y < matrix.Height; y++)
+                dark[x, y] = matrix[x, y];
+        return dark;
     }
 
     // A QR code drawn in a terminal, two modules per character with half blocks, dark on light

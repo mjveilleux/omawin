@@ -26,6 +26,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
+    <!-- The Wi-Fi code is checked by reading it back with the same library that drew it. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
   </ItemGroup>
   <ItemGroup>

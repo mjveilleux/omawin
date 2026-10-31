@@ -44,6 +44,28 @@ public class WifiTests
         Assert.Null(WifiShare.FromProfile("<not xml"));
     }
 
+    [Theory]
+    [InlineData(@"WIFI:T:WPA;S:Home\; 5G;P:pa\:ss\\word;;")]
+    [InlineData("WIFI:T:WPA;S:Café de la Gare;P:crème brûlée;;")]
+    public void TheCodeReadsBackAsItsText(string text)
+    {
+        var dark = WifiShare.Modules(text);
+        int w = dark.GetLength(0), h = dark.GetLength(1);
+        Assert.True(dark[2, 2]); // the finder pattern's corner, inside the two-module quiet zone
+        Assert.False(dark[0, 0]);
+        // Rendered 4 pixels a module, read with the decoder phones' apps share.
+        const int scale = 4;
+        var pixels = new byte[w * scale * h * scale];
+        for (int y = 0; y < h * scale; y++)
+            for (int x = 0; x < w * scale; x++)
+                pixels[y * w * scale + x] = dark[x / scale, y / scale] ? (byte)0 : (byte)255;
+        var source = new ZXing.RGBLuminanceSource(pixels, w * scale, h * scale, ZXing.RGBLuminanceSource.BitmapFormat.Gray8);
+        var result = new ZXing.QrCode.QRCodeReader().decode(new ZXing.BinaryBitmap(new ZXing.Common.HybridBinarizer(source)),
+            new Dictionary<ZXing.DecodeHintType, object> { [ZXing.DecodeHintType.CHARACTER_SET] = "UTF-8" });
+        Assert.NotNull(result);
+        Assert.Equal(text, result.Text);
+    }
+
     [Fact]
     public void DrawPutsTwoRowsInEachLine()
     {
