@@ -1,4 +1,4 @@
-# install.ps1 step: the theme, a clean desktop, no ads, the lock screen, the auto-hiding taskbar.
+# install.ps1 step: the theme, a clean desktop, no ads, the lock screen, the auto-hiding taskbar, your Windows settings.
 # Dot-sourced by install.ps1, so its functions (install/lib.ps1) and $Repo are in scope.
 
 Write-Step 'Windows look'
@@ -44,4 +44,17 @@ else {
     $null = [Dotfiles.AppBar]::SHAppBarMessage(10, [ref]$bar) # ABM_SETSTATE
     Write-Note 'taskbar set to auto-hide'
     Add-InstallItem 'Desktop' 'taskbar' 'taskbar hides' 'done'
+}
+# Your Windows settings, from a PC you set up before (omawin settings save wrote them to your
+# account folder's or the PC's shared folder's settings.txt, docs/work.md): set now, by the menu
+# app (built in the helpers step). Ones that need admin wait for `omawin settings admin`: this
+# step never prompts.
+$settingsFiles = @((Join-Path (& "$Repo\bin\user-layer.ps1" -Shared) 'settings.txt'), (Join-Path $UserLayer 'settings.txt')) | Where-Object { Test-Path $_ }
+$omawinExe = "$HOME\.local\bin\omawin.exe"
+if ($settingsFiles -and (Test-Path $omawinExe)) {
+    Invoke-InstallItem 'Desktop' 'your Windows settings' {
+        $said = & $omawinExe settings apply -NoAdmin 2>&1
+        if ($LASTEXITCODE) { throw ($said -join '; ') }
+        $said
+    }
 }

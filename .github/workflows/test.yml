@@ -1,5 +1,5 @@
 # Unit tests for the pure parts of the menu app (One Search, the settings catalog, plugins) and
-# of the omawin command (routing and actions, against the real bin/commands.txt). They need no Windows, so they run on Linux: quicker and cheaper.
+# of the omawin command (routing and actions, against the real bin/commands.txt). They need no Windows, so they run on Linux: quicker and cheaper. The settings round-trip needs a real Windows: its own job.
 name: Test
 
 on:
@@ -31,3 +31,21 @@ jobs:
       # parts the tests link; the release job runs it.
       - name: Plugin gallery builder builds
         run: dotnet build src/plugin-gallery -c Release
+
+  # Every reg, spi and powercfg line of default/launcher/settings.txt, on a real Windows: read,
+  # set another value, read it back, put the first one back (roadmap 1B "Testing"). The "check"
+  # lines too: this is where they get checked. GitHub's runners are elevated, so the
+  # machine-wide (admin) ones run as well; a SystemParametersInfo the runner's session refuses
+  # is listed as skipped with its reason.
+  settings-roundtrip:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Every reg / spi / powercfg setting, set and restored
+        shell: pwsh
+        env:
+          OMAWIN_ROUNDTRIP: '1'
+        run: dotnet test test/menu-app.Tests --filter "FullyQualifiedName~RoundTripTests" --logger "console;verbosity=detailed"
