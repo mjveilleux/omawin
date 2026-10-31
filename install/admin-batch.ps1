@@ -7,6 +7,8 @@
     May run as another account than the one installing (a standard account's prompt takes an
     admin's password), so it only does what's the same for every account:
 
+      0. a restore point first, when WSL or the fork is in it (roadmap 8.42; "restore-point",
+         skip when System Protection is off)
       1. the whole-PC winget packages it's given (-Packages), --scope machine, three at once
          (Windows runs one MSI at a time; one that finds another busy gets one more go, alone)
       2. WSL itself (-Wsl), for the wsl preset: `wsl --install --no-distribution`, which wants a
@@ -16,7 +18,7 @@
 
     It takes nothing from the account that started it but these arguments: package ids (checked
     against the shape of one) and a file to report to. Each line there is
-    "<item>`t<state>`t<text>": a package id, "packages", "wsl", "glazewm-fork" or
+    "<item>`t<state>`t<text>": a package id, "packages", "wsl", "glazewm-fork", "restore-point" or
     "end"; run, done, fail or skip. install/admin.ps1 reads it as it grows.
 
     Runs under Windows PowerShell 5.1.
@@ -34,6 +36,27 @@ function Say([string]$Item, [string]$State, [string]$Text = '') {
 }
 
 try {
+    # --- 0. a restore point (roadmap 8.42) -------------------------------------------------------
+    # Windows' own undo, before WSL's feature or the GlazeWM build for every account change the
+    # PC (packages make their own, through Windows Installer). Only here, inside a prompt you
+    # approved. At most one a day unless SystemRestorePointCreationFrequency (minutes) is 0: set
+    # for the call, put back after. System Protection off: skipped, never turned on (yours to choose).
+    if ($Wsl -or $Forks) {
+        Say 'restore-point' 'run'
+        $restoreKey = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore'
+        $old = (Get-ItemProperty $restoreKey -ErrorAction SilentlyContinue).SystemRestorePointCreationFrequency
+        try {
+            Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value 0 -Type DWord
+            Checkpoint-Computer -Description 'omawin install' -RestorePointType APPLICATION_INSTALL -ErrorAction Stop
+            Say 'restore-point' 'done'
+        }
+        catch { Say 'restore-point' 'skip' "no restore point (System Protection may be off): $($_.Exception.Message)" }
+        finally {
+            if ($null -eq $old) { Remove-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -ErrorAction SilentlyContinue }
+            else { Set-ItemProperty $restoreKey -Name SystemRestorePointCreationFrequency -Value $old -Type DWord }
+        }
+    }
+
     # --- 1. the whole-PC packages ----------------------------------------------------------------
     $ids = @(($Packages -split ',') | ForEach-Object { $_.Trim() } | Where-Object { $_ -match '^[A-Za-z0-9][A-Za-z0-9._+-]*$' })
     if ($ids) {
