@@ -70,7 +70,7 @@ public sealed partial class MainWindow
         else foreach (var e in shown) AddSettingRow(e, "", null, inArea: true);
         if (rows.Count == 0) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
         if (query.Length == 0 && Settings.History.LastUndoable() is { } last && Settings.Find(last.Id) is { } undoable)
-            AddRow(char.ConvertFromUtf32(0xF054C), $"Undo: {undoable.Name} back to {Settings.Label(undoable, last.Before)}", Hex(theme.Yellow),
+            AddRow(char.ConvertFromUtf32(0xF054C), $"Undo: {undoable.Name} back to {Settings.LabelNow(undoable, last.Before)}", Hex(theme.Yellow),
                 () => DoSetting(() => Settings.UndoLast(), null, query), Tag.Text, "ctrl z");
         FooterLeft.Text = NoteFor(query) ?? $"{shown.Count} settings · {label}";
         SetKeys(("↵", "change"), ("←→", "choose"), ("ctrl z", "undo"), ("esc", "back"));
@@ -120,7 +120,7 @@ public sealed partial class MainWindow
         bool reading = hasValue && value == null && !Settings.TryCached(e, out _);
         var notes = new List<string>();
         if (!inArea) notes.Add(Catalog.AreaLabel(e.Area));
-        if (e.Admin) notes.Add(queued != null ? $"admin: {Settings.Label(e, queued)} waiting" : "admin");
+        if (e.Admin) notes.Add(queued != null ? $"admin: {Settings.LabelNow(e, queued)} waiting" : "admin");
         if (e.Takes.HasFlag(Takes.Restart)) notes.Add("after a restart");
         else if (e.Takes.HasFlag(Takes.SignOut)) notes.Add("after sign-out");
         else if (e.How.Flags.Contains("restart-explorer")) notes.Add("restarts Explorer");
@@ -139,7 +139,7 @@ public sealed partial class MainWindow
             case SettingKind.Switch:
                 AddRow(Catalog.IconOf(e), e.Name, color, run, Tag.Text, reading ? "…" : value == null ? "?" : "Off", sub: sub, highlight: positions); break;
             case SettingKind.Choice or SettingKind.Slider:
-                AddRow(Catalog.IconOf(e), e.Name, color, run, Tag.Text, reading ? "…" : $"‹ {Settings.Label(e, value)} ›", sub: sub, highlight: positions); break;
+                AddRow(Catalog.IconOf(e), e.Name, color, run, Tag.Text, reading ? "…" : $"‹ {Settings.LabelNow(e, value)} ›", sub: sub, highlight: positions); break;
             default:
                 AddRow(Catalog.IconOf(e), e.Name, color, run, Tag.Text, e.Kind == SettingKind.Link ? "↗" : "run", sub: sub, highlight: positions); break;
         }

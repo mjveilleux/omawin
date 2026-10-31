@@ -50,13 +50,34 @@ public sealed class SettingStore(
     public ISettingHandler Handler(SettingEntry e) => handlerFor(e);
 
     // A choice's values: the handler's (refresh rates, audio devices: from the PC) or the catalog's.
+    // Asking the PC can take a moment (the audio devices), so its answer is kept for a while.
+    readonly ConcurrentDictionary<string, (long At, IReadOnlyList<Choice> List)> choices = new(StringComparer.OrdinalIgnoreCase);
+    const long ChoicesKeptMs = 30_000;
+
     public IReadOnlyList<Choice> Choices(SettingEntry e)
     {
-        try { return Handler(e).Choices(e); }
-        catch (Exception ex) { log?.Invoke(ex); return e.Choices; }
+        if (e.Kind != SettingKind.Choice) return e.Choices;
+        if (choices.TryGetValue(e.Id, out var kept) && Environment.TickCount64 - kept.At < ChoicesKeptMs) return kept.List;
+        IReadOnlyList<Choice> list;
+        try { list = Handler(e).Choices(e); }
+        catch (Exception ex) { log?.Invoke(ex); list = e.Choices; }
+        choices[e.Id] = (Environment.TickCount64, list);
+        return list;
     }
 
     public string Label(SettingEntry e, string? value) => SettingValues.Label(e, value, Choices(e));
+
+    // The same without waiting, for a row being drawn: the choices known so far (the catalog's
+    // until the PC's arrive, then Changed redraws it).
+    public string LabelNow(SettingEntry e, string? value)
+    {
+        if (e.Kind != SettingKind.Choice || choices.ContainsKey(e.Id)) return Label(e, value);
+        bool fast;
+        try { fast = Handler(e).Fast(e); } catch (Exception ex) { log?.Invoke(ex); fast = true; }
+        if (fast) return Label(e, value);
+        Task.Run(() => { Choices(e); Changed?.Invoke(e.Id); });
+        return SettingValues.Label(e, value, e.Choices);
+    }
 
     static bool HasValue(SettingEntry e) => e.Kind is SettingKind.Switch or SettingKind.Choice or SettingKind.Slider;
 
@@ -101,7 +122,7 @@ public sealed class SettingStore(
     public void Forget(Func<SettingEntry, bool>? which = null)
     {
         foreach (var e in Entries())
-            if (which == null || which(e)) values.TryRemove(e.Id, out _);
+            if (which == null || which(e)) { values.TryRemove(e.Id, out _); choices.TryRemove(e.Id, out _); }
     }
 
     // Every change: normalize, validate, queue it if it needs admin, write, record the value
