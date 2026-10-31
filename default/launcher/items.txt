@@ -19,6 +19,7 @@
 # Icons are Nerd Font glyphs (https://www.nerdfonts.com/cheat-sheet). Order here = order shown.
 󰆍 | Terminal | omawin.exe launch terminal
  | Linux (WSL) | omawin.exe launch terminal --wsl
+ | PowerShell | omawin.exe launch terminal --windows
  | Projects | @projects
 󰷊 | Files | @files
 󰒋 | Localhost | @localhost

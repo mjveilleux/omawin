@@ -36,6 +36,10 @@ src/bundle/bin/
 src/bundle/obj/
 src/thumbs/bin/
 src/thumbs/obj/
+src/community-themes/bin/
+src/community-themes/obj/
+src/plugin-gallery/bin/
+src/plugin-gallery/obj/
 
 # Links an older menu app still reads (migrations/2026-10-31-repo-layout.ps1), until the release after the move.
 /launcher
@@ -44,3 +48,8 @@ src/thumbs/obj/
 # The plugins' QML host's Rust build.
 src/qs-host/target/
 src/qs-host/.qmlls.ini
+# omawin-windows (Phase 8's fixes) and its tests, built.
+src/windows/bin/
+src/windows/obj/
+test/windows.Tests/bin/
+test/windows.Tests/obj/

@@ -1,0 +1,24 @@
+#!/bin/bash
+# Linux's files for omawin's finder (Win+F): fd over the home folder (honouring .gitignore, no hidden
+# folders, so .cache, .local and the like stay out) into ~/.cache/omawin/files.tsv, one file per
+# line: path, modified time (Unix seconds), size. A copy goes to Windows' %LOCALAPPDATA%\launcher
+# (OMAWIN_STATE) as linux-files.tsv, headed by "# <distro><TAB><home>", so the menu app reads one
+# local file and never crawls \\wsl.localhost (9P is slow). Run by the omawin-index-files timer and
+# path units (wsl/setup.sh); by hand any time. (Copied to ~/.local/bin by wsl/setup.sh.)
+set -euo pipefail
+
+out="${XDG_CACHE_HOME:-$HOME/.cache}/omawin/files.tsv"
+mkdir -p "${out%/*}"
+cd ~
+# A name with a tab or a newline in it would break the lines: left out.
+fd --type f --absolute-path --exclude node_modules --print0 |
+  grep -zv -P '[\t\n]' |
+  xargs -0 -r stat --printf '%n\t%Y\t%s\n' > "$out.tmp" || true
+mv -f "$out.tmp" "$out"
+
+state="${OMAWIN_STATE:-}"
+if [[ -n $state && -d $state ]]; then
+  name="${WSL_DISTRO_NAME:-$(. /etc/os-release && echo "$ID")}"
+  { printf '# %s\t%s\n' "$name" "$HOME"; cat "$out"; } > "$state/linux-files.tsv.tmp"
+  mv -f "$state/linux-files.tsv.tmp" "$state/linux-files.tsv"
+fi

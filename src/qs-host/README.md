@@ -5,8 +5,9 @@ Plugins in Omarchy's format are QML written for [Quickshell](https://quickshell.
 | Part | What |
 |---|---|
 | `src/main.rs` | the program: finds `qml/`, loads `Host.qml`; `--parent <pid>` ends it with the bar |
-| `src/io.rs` | `Omawin.Native`, the only native code: `ProcessCore` (a program, its output as it comes) and `IoHost` (start and let go, environment, files) |
-| `qml/Host.qml` | one plugin: its `manifest.json` read, its bar widget loaded with what Omarchy's bar hands a widget (`bar`, `settings`), in a borderless window at `--at x,y,w,h` |
+| `src/io.rs` | `Omawin.Native`: `ProcessCore` (a program, its output as it comes) and `IoHost` (start and let go, environment, files) |
+| `src/bar.rs` | `Omawin.Native`'s `BarLink`: what the bar tells the host over stdin (`focused 1\|0`: its monitor is GlazeWM's focused one), handed to the widget as `bar.screenFocused` |
+| `qml/Host.qml` | one plugin: its `manifest.json` read, its bar widget loaded with what Omarchy's bar hands a widget (`bar`, `settings`), in a borderless window at `--at x,y,w,h`, on the monitor those pixels are on (mapped with that monitor's scale) |
 | `qml/Quickshell/` | `Quickshell` (`execDetached`, `env`) and `Quickshell.Io` (`Process`, `SplitParser`, `StdioCollector`, `FileView`) |
 | `qml/qs/Commons/`, `qml/qs/Ui/` | Omarchy's `qs.Commons` (colours from omawin's palette, style, i18n) and `qs.Ui` (bar widget, buttons, panels, sliders) |
 
@@ -18,7 +19,9 @@ omawin-qs --plugin-dir <folder>                 its bar widget, in a small windo
           --shot <png> [--open]                 a picture of the widget (and its panel), then quit
 ```
 
-The bar (`shell/menu-app/Bar/PluginSlot.cs`) keeps a cell for each plugin in `%LOCALAPPDATA%\launcher\plugins.txt` and starts the host over it. The host lives in `%LOCALAPPDATA%\omawin\tools\qs-host`: an optional tools bundle entry, downloaded the first time a plugin is turned on (`omawin plugin add`).
+The bar (`shell/menu-app/Bar/PluginSlot.cs`) keeps a cell for each plugin in `%LOCALAPPDATA%\launcher\plugins.txt` on every monitor's bar and starts a host over each, so a plugin on two monitors runs in two hosts (as Omarchy draws a widget once per monitor). A panel opens under its widget, on that widget's monitor. The bar writes `focused 1` or `focused 0` to each host's stdin as GlazeWM's focus moves between monitors; a key that opens a plugin's panel (the music plugin's Win+M) uses it to pick the focused monitor's. A host started by hand counts as focused.
+
+`deploy/Qt.qml` is never loaded: it lists the Qt modules the host ships beyond its own needs (Controls, Layouts, Shapes, Effects: what community plugins import), for `windeployqt --qmldir` and for the plugin gallery's verdicts (`src/plugin-gallery`). The host lives in `%LOCALAPPDATA%\omawin\tools\qs-host`: an optional tools bundle entry, downloaded the first time a plugin is turned on (`omawin plugin add`).
 
 ## Building
 

@@ -32,17 +32,14 @@ function Get-AdminPlan([string[]]$Ids, [switch]$NoPackages) {
         }
     }
     $forks = @()
-    $programs = @{ 'glazewm-fork' = 'glzr.io\GlazeWM\glazewm.exe' }
     foreach ($fork in 'glazewm-fork') {
-        # -Check says "needed" for a program that isn't installed (on an install, this batch
-        # installs it first). An update installs no programs: asking for admin would end in
-        # "not installed".
-        if ($NoPackages -and -not (Test-Path (Join-Path $env:ProgramFiles $programs[$fork]))) {
-            Write-Log "    $($fork): skip  not installed"
-            continue
-        }
+        # -Check says "needed" only once you chose the whole-PC GlazeWM (omawin glazewm admin) and
+        # it has something to do: a new build, an old certificate to take away. An update never
+        # asks for admin (roadmap 2.9): it says what's waiting, and you run it when you choose.
         $answer = try { & "$Repo\install\$fork.ps1" -Check } catch { "skip  $_" }
-        if ($answer -eq 'needed') { $forks += $fork } else { Write-Log "    $($fork): $answer" }
+        if ($answer -ne 'needed') { Write-Log "    $($fork): $answer" }
+        elseif ($NoPackages) { Write-Warn "omawin's GlazeWM for the whole PC has an update, which takes admin: omawin glazewm admin (one prompt, when you choose)" }
+        else { $forks += $fork }
     }
     # An update installs no programs, WSL neither (omawin preset add wsl does, with its own prompt).
     $wsl = (-not $NoPackages) -and (@(Get-ChosenPresets) -contains 'wsl') -and -not (Test-WslInstalled)

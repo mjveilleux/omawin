@@ -43,7 +43,7 @@ $UserLayer = & "$Repo\bin\user-layer.ps1"   # your account folder (docs/work.md)
 $chosen = @(Get-Content "$env:LOCALAPPDATA\launcher\presets.txt" -ErrorAction SilentlyContinue | ForEach-Object { $_.Trim() } | Where-Object { $_ -and -not $_.StartsWith('#') })
 $tools = @('pwsh', 'git', 'gh', 'wt', 'starship', 'zoxide', 'fzf', 'fd', 'rg', 'eza', 'bat', 'jq', 'lazygit',
 'glazewm', 'nvim', 'node', 'uv', 'herdr',
-'omawin', 'voice-meter', 'omawin-music')
+'omawin', 'omawin-cli', 'voice-meter', 'omawin-music', 'omawin-windows')
 foreach ($name in $chosen) {
     if ($Presets.Contains($name)) { $tools += @($Presets[$name].Tools | Where-Object { $_ }) }
     else { Warn "preset $name" "picked, but install/packages.ps1 has no such preset (omawin preset remove $name)" }
@@ -69,10 +69,10 @@ if ($chosen -contains 'dictation' -and (Test-Path "$env:APPDATA\com.pais.handy\s
 if ($chosen -contains 'wsl') {
     $linux = @(foreach ($line in Get-Content "$Repo\bin\defaults.txt") { $p = @($line -split '\|' | ForEach-Object { $_.Trim() }); if ($p.Count -ge 5 -and $p[0] -eq 'linux') { , $p } })
     $picked = "$(Get-Content "$env:LOCALAPPDATA\launcher\defaults\linux" -TotalCount 1 -ErrorAction SilentlyContinue)".Trim()
-    $pick = @($linux | Where-Object { $_[1] -eq $picked }) + , $linux[0] | Select-Object -First 1
+    $linuxPick = @($linux | Where-Object { $_[1] -eq $picked }) + , $linux[0] | Select-Object -First 1
     $distros = @(Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue | ForEach-Object { $_.GetValue('DistributionName') })
-    $what = "$(($pick[2] -split ',')[0]) (WSL)"
-    if ($distros -contains $pick[4]) { Pass $what "wsl -d $($pick[4])" }
+    $what = "$(($linuxPick[2] -split ',')[0]) (WSL)"
+    if ($distros -contains $linuxPick[4]) { Pass $what "wsl -d $($linuxPick[4])" }
     elseif (Test-Path "$env:LOCALAPPDATA\launcher\wsl-restart") { Warn $what 'WSL is in; it finishes setting up after Windows restarts' }
     else { Fail $what 'not installed for this account (omawin preset add wsl)' }
 }
@@ -190,9 +190,9 @@ $mine = "$env:LOCALAPPDATA\omawin\tools\glazewm\glazewm.exe"
 if (Test-Path $wholePc) {
     $gsig = Get-AuthenticodeSignature $wholePc -ErrorAction SilentlyContinue
     if ($gsig.Status -eq 'Valid' -and $gsig.SignerCertificate.Subject -like 'CN=omawin code signing*') { Pass 'GlazeWM build' 'our fork, signed on this PC' }
-    elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (run install\glazewm-fork.ps1)' }
-    else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (run install\glazewm-fork.ps1, or -Restore)' }
-} elseif (Test-Path $mine) { Pass 'GlazeWM build' "our fork, for this account ($mine); the signed whole-PC copy, which starts before Explorer, is opt-in" }
+    elseif ($gsig.Status -eq 'Valid') { Warn 'GlazeWM build' 'official: waits for Explorer at sign-in (omawin glazewm admin)' }
+    else { Fail 'GlazeWM build' 'glazewm.exe is not signed by a trusted certificate: GlazeWM gets no uiAccess (omawin glazewm admin, or omawin glazewm admin-off)' }
+} elseif (Test-Path $mine) { Pass 'GlazeWM build' "our fork, for this account ($mine); the signed whole-PC copy, which also tiles programs running as admin, is opt-in: omawin glazewm admin" }
 else { Fail 'GlazeWM build' 'not installed (install.ps1 -Step software)' }
 # This account's port (bin/ports.ps1): its own once omawin's GlazeWM is in Program Files, which
 # omawin.exe decides at every sign-in. A saved one that doesn't match what's installed now means
@@ -205,6 +205,21 @@ if ($portsReady -and $havePort -eq $wantPorts.GLAZEWM_IPC_PORT) { Pass 'ports' "
 elseif ($portsReady) { Warn 'ports' "still the shared 6123, though omawin's GlazeWM is in: sign out and back in (or omawin install -Step desktop)" }
 elseif ($havePort) { Warn 'ports' "set to $havePort, but the official GlazeWM is back: sign out and back in" }
 else { Pass 'ports' 'the official 6123 (omawin''s GlazeWM not in: one account''s desktop at a time)' }
+# The menu keys come straight from GlazeWM where our fork knows emit (roadmap 1.2): then the menu
+# app must be listening, or those keys do nothing until it's back. It holds this file while
+# GlazeWM has accepted its subscription (shell/menu-app/Bar/GlazeWm.cs).
+$glazeFeatures = @(& "$Repo\bin\glazewm-features.ps1")
+if ($glazeFeatures -notcontains 'emit' -and (Test-Path $glazeLive) -and (Get-Content $glazeLive -Raw) -match "'emit ") {
+    Fail 'menu keys' "GlazeWM's config uses emit, which this GlazeWM doesn't know (omawin restart glazewm writes it again)"
+}
+elseif ($glazeFeatures -contains 'emit') {
+    $subFile = Join-Path $env:LOCALAPPDATA 'launcher\emit-subscribed'
+    $subPid = 0
+    if (Test-Path $subFile) { [void][int]::TryParse((Get-Content $subFile -Raw).Trim(), [ref]$subPid) }
+    if ($subPid -and (Get-Process -Id $subPid -ErrorAction SilentlyContinue | Where-Object ProcessName -eq 'SystemMenu')) { Pass 'menu keys' 'straight from GlazeWM (emit): the menu app is listening' }
+    elseif (Get-Process SystemMenu -ErrorAction SilentlyContinue) { Warn 'menu keys' "the menu app isn't subscribed to GlazeWM: Win+Space, Win+F and the launcher keys do nothing (omawin restart menu)" }
+    else { Warn 'menu keys' "the menu app isn't running: Win+Space, Win+F and the launcher keys do nothing (omawin start)" }
+}
 $stuck = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\StuckRects3' -ErrorAction SilentlyContinue).Settings
 if ($stuck -and ($stuck[8] -band 1)) { Pass 'taskbar auto-hides' } else { Warn 'taskbar auto-hides' 'off; install.ps1 turns it on' }
 # No ads (bin/no-ads.ps1): Windows' suggestions off, and the PC maker's upsells gone. The OEM ones
@@ -218,9 +233,10 @@ if ((Get-ItemProperty 'HKCU:\Software\Microsoft\Windows\CurrentVersion\ContentDe
 $lockTask = Get-ScheduledTask -TaskName "omawin lock screen ($([Environment]::UserName))" -ErrorAction SilentlyContinue
 if ($lockTask -and $lockTask.Actions[0].Arguments -match [regex]::Escape("$Repo\themes\set-lockscreen.ps1")) { Pass 'lock screen rotates on unlock' }
 else { Warn 'lock screen rotates on unlock' 'no task for this account (install.ps1 makes it)' }
-# Helper exes: present and built from the current source (the same list as install/helpers.ps1).
+# Helper exes: present and built from the current source (the same list as build/helpers.ps1).
 $helpers = [ordered]@{
-    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'
+    'omawin' = 'bin\omawin.cs'; 'voice-meter' = 'bin\voice-meter.cs'; 'omawin-listen' = 'src\agent\omawin-listen.cs'
+    'omawin-path' = 'bin\path-doctor.cs'; 'omawin-uninstall' = 'bin\uninstall.cs'
 }
 # Current as install has it (bin/install-binaries.ps1): the sources' git ids it recorded match
 # this checkout's. A pull gives the sources new dates, so the dates decide only without a
@@ -290,7 +306,7 @@ foreach ($line in Get-Content "$Repo\default\launcher\menu.txt" -Encoding utf8) 
     $ids[$id] = $true
     if ($id.Contains('.') -and -not $ids.ContainsKey($id.Substring(0, $id.LastIndexOf('.')))) { $menuProblems += "$id has no parent row above it" }
     if (-not $label) { $menuProblems += "$id has no label" }
-    if ($action -and $action.TrimStart('!').Trim() -notmatch '^(winget|choco|task|edit|run|omawin)\s|^@|^(themes|backgrounds)$') { $menuProblems += "$id has an unknown action" }
+    if ($action -and $action.TrimStart('!').Trim() -notmatch '^(winget|choco|task|edit|run|omawin|settings)\s|^@|^(themes|backgrounds)$') { $menuProblems += "$id has an unknown action" }
 }
 if ($menuProblems) { $menuProblems | ForEach-Object { Fail 'default/launcher/menu.txt' $_ } } else { Pass 'default/launcher/menu.txt' "$($ids.Count) rows" }
 # omawin's commands: known action kinds, the scripts they run exist, and every
@@ -311,9 +327,10 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
     elseif ($action -match '^builtin\s+(\S+)') {
         if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-bar', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
     }
-    elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
+    elseif ($action -notmatch '^(app|ask|run)\s') { $commandProblems += "$name has an unknown action" }
 }
-foreach ($m in [regex]::Matches((Get-Content "$Repo\config\glazewm\config.yaml" -Raw), "omawin\.exe ([a-z -]+?)'")) {
+# (`emit omawin <command>` too: the same words, sent to the menu app instead, roadmap 1.2.)
+foreach ($m in [regex]::Matches((Get-Content "$Repo\config\glazewm\config.yaml" -Raw), "(?:omawin\.exe|emit omawin) ([a-z -]+?)'")) {
     $words = $m.Groups[1].Value.Trim()
     if (-not ($commandNames | Where-Object { $words -eq $_ -or $words.StartsWith("$_ ") })) { $commandProblems += "config/glazewm/config.yaml runs unknown 'omawin $words'" }
 }
@@ -345,6 +362,43 @@ if ((Get-Command glazewm -ErrorAction SilentlyContinue) -and (Get-Process glazew
     Remove-Job $query -Force
     if ($state.success) { Pass 'GlazeWM answers' "$(@($state.data.monitors).Count) monitor(s)" }
     else { Fail 'GlazeWM answers' 'no answer to glazewm query in 5 s' }
+}
+# The always-on desktop against its memory budget (roadmap 8K), and the drivers' pool, where a
+# driver's leak shows. Only once the PC has been up 10 minutes: right after sign-in everything
+# is still loading and the numbers mean nothing.
+$ram = try { & "$Repo\bin\profile-ram.ps1" -Json -Quick | ConvertFrom-Json } catch { $null }
+if (-not $ram) { Warn 'memory' "couldn't read it (omawin profile ram)" }
+elseif ($ram.System.UptimeMinutes -lt 10) { Pass 'memory' "up $($ram.System.UptimeMinutes) min: measured after 10" }
+else {
+    $desktop = "omawin's desktop $($ram.System.DesktopMB) of $($ram.System.DesktopBudgetMB) MB; $([math]::Round($ram.Memory.InUseMB / 1KB, 1)) GB in use"
+    if ($ram.System.DesktopMB -gt $ram.System.DesktopBudgetMB) { Warn 'memory' "$desktop (omawin profile ram says which part)" } else { Pass 'memory' $desktop }
+    if ($ram.Kernel.NonPagedMB -gt 1024) { Warn 'drivers'' memory' "non-paged pool $($ram.Kernel.NonPagedMB) MB: a driver may be leaking (a driver update usually fixes it)" }
+}
+
+# --- Linux in WSL --------------------------------------------------------------------------
+# Its own checks (wsl/check.sh: systemd, Omarchy's repositories and packages, the tools, the
+# shell), only while it runs: check never starts WSL (~8 s cold). The pick and distros are the
+# wsl preset's check's, above.
+if ($chosen -contains 'wsl' -and $distros -contains $linuxPick[4]) {
+    Section "Linux ($($linuxPick[4]))"
+    $env:WSL_UTF8 = '1'
+    $running = @(& { $ErrorActionPreference = 'Continue'; & wsl.exe --list --running --quiet 2>$null } | ForEach-Object { "$_".Trim() }) -contains $linuxPick[4]
+    if (-not $running) { Warn 'Linux checks' "$($linuxPick[4]) isn't running, so they were skipped (a Linux terminal starts it)" }
+    else {
+        # The Linux user, named as wsl/install.ps1 names it.
+        $linuxUser = [Environment]::UserName.ToLower() -replace '[^a-z0-9_-]', ''
+        if ($linuxUser -notmatch '^[a-z_]') { $linuxUser = "u$linuxUser" }
+        $out = & { $ErrorActionPreference = 'Continue'; & wsl.exe -d $linuxPick[4] -u root --cd "$Repo\wsl" --exec bash ./check.sh $linuxUser 2>&1 }
+        foreach ($line in $out) {
+            $f = @("$line" -split "`t", 3)
+            switch ($f[0]) {
+                'ok' { Pass $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                'warn' { Warn $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                'fail' { Fail $f[1] $(if ($f.Count -gt 2) { $f[2] }) }
+                default { if ("$line".Trim()) { Warn 'wsl/check.sh' "$line" } }
+            }
+        }
+    }
 }
 
 Write-Host ''

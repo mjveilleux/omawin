@@ -217,7 +217,7 @@ sealed class ClockWidget : BarWidget
 sealed class IndicatorsWidget : BarWidget
 {
     readonly StackPanel row = new() { Orientation = Orientation.Horizontal };
-    readonly Cell mic = new("Listening"), mug = new("Stay awake");
+    readonly Cell mic = new("Listening"), mug = new("Stay awake"), muted = new("Microphones muted (omawin mic) · click to unmute");
     public override FrameworkElement Element => row;
     public IndicatorsWidget()
     {
@@ -225,30 +225,30 @@ sealed class IndicatorsWidget : BarWidget
         mic.Red = true;
         mug.SetIcon(Glyph(0xEF59));
         mug.Click = () => SystemMenu.Bar.Request(["--toggle", "stay-awake"]);
+        muted.SetIcon(Glyph(0xF036D)); // nf-md-microphone_off
+        muted.Red = true;
+        muted.Click = () => SystemMenu.Bar.Request(["--mic", "unmute"]);
+        muted.Visibility = Visibility.Collapsed; // until the first read says they're all muted
         row.Children.Add(mic);
+        row.Children.Add(muted);
         row.Children.Add(mug);
-        var pulse = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
-        {
-            From = 1, To = 0.45, Duration = TimeSpan.FromMilliseconds(600), AutoReverse = true,
-            RepeatBehavior = Microsoft.UI.Xaml.Media.Animation.RepeatBehavior.Forever,
-            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.SineEase(),
-        };
-        var board = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(pulse, mic.Icon);
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(pulse, "Opacity");
-        board.Children.Add(pulse);
-        mic.Loaded += (_, _) => board.Begin();
+        // The microphone breathes while it listens (on the compositor; still while animations are off).
+        var light = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(mic.Icon);
+        Action breathe = () => Motion.Breathe(light, 0.45f);
+        mic.Loaded += (_, _) => { Motion.Changed += breathe; breathe(); };
+        mic.Unloaded += (_, _) => Motion.Changed -= breathe; // a bar closed (monitors changed) lets go
     }
     public override void Update(BarData data)
     {
         mic.Visibility = data.Listening > 0 ? Visibility.Visible : Visibility.Collapsed;
         mic.Tip = data.Listening == 2 ? "omawin is listening" : "Listening";
         mug.Visibility = data.Awake ? Visibility.Visible : Visibility.Collapsed;
+        muted.Visibility = Audio.MicsMuted == true ? Visibility.Visible : Visibility.Collapsed;
     }
-    public override void Paint(Theme theme) { base.Paint(theme); mic.Paint(theme); mug.Paint(theme); }
+    public override void Paint(Theme theme) { base.Paint(theme); mic.Paint(theme); muted.Paint(theme); mug.Paint(theme); }
 }
 
-// An arrow in red while omawin updates are waiting (bin/update-available.ps1); click: update.
+// An arrow in red while omawin updates are waiting (Bar.UpdatesWaiting: git, every 6 hours); click: update.
 sealed class UpdateWidget : BarWidget
 {
     readonly Cell cell = new();
@@ -306,14 +306,7 @@ sealed class TrayWidget : BarWidget
     {
         if (open == (drawer.Visibility == Visibility.Visible)) return;
         drawer.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        if (!open) return;
-        drawer.Opacity = 0;
-        var fade = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = 1, Duration = TimeSpan.FromMilliseconds(200) };
-        var board = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(fade, drawer);
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(fade, "Opacity");
-        board.Children.Add(fade);
-        board.Begin();
+        if (open) Motion.FadeIn(Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(drawer));
     }
 
     public override void Update(BarData data)

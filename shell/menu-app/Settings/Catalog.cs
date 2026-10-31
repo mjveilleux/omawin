@@ -1,7 +1,8 @@
 // The Windows settings catalog (default/launcher/settings.txt): every setting omawin can read and
 // change itself, one line each (plans/02-settings-and-one-search.md §1-2, roadmap 1B).
 // This file only parses: no registry, no P/Invoke, no WinUI, so menu-app.Tests runs it anywhere.
-// The handlers that read and write each setting are separate (Settings/Switches.cs, to come).
+// The handlers that read and write each setting are separate (Settings/Switches.cs, Builtins.cs),
+// and so is the service that uses them (Settings/Store.cs).
 
 namespace SystemMenu;
 
@@ -41,6 +42,36 @@ public static class Catalog
     public static readonly string[] Areas =
         ["look", "explorer", "privacy", "input", "system", "display", "connections", "sound", "developer"];
     static readonly HashSet<string> Verbs = ["reg", "spi", "powercfg", "builtin", "link", "omawin"];
+
+    // Each area's name in the menu (the Windows submenu's rows, a result's second line) and its
+    // icon, for lines whose icon is "-" (Material Design glyphs of the Nerd Font).
+    public static string AreaLabel(string area) => area switch
+    {
+        "look" => "Look", "explorer" => "File Explorer and taskbar", "privacy" => "Privacy", "input" => "Mouse and keyboard",
+        "system" => "System", "display" => "Display", "connections" => "Connections", "sound" => "Sound", "developer" => "Developer",
+        _ => area,
+    };
+
+    public static string AreaIcon(string area) => char.ConvertFromUtf32(area switch
+    {
+        "look" => 0xF03D8,        // palette
+        "explorer" => 0xF024B,    // folder
+        "privacy" => 0xF0498,     // shield
+        "input" => 0xF030C,       // keyboard
+        "display" => 0xF0379,     // monitor
+        "connections" => 0xF05A9, // wifi
+        "sound" => 0xF057E,       // volume-high
+        "developer" => 0xF0169,   // code-braces
+        _ => 0xF0493,             // cog: system
+    });
+
+    public static string IconOf(SettingEntry e) => e.Icon is "-" or "" ? AreaIcon(e.Area) : e.Icon;
+
+    // What a PC shows: the entries for its Windows build, and the ones marked "check" only when
+    // asked for (OMAWIN_SETTINGS_UNVERIFIED=1, the round-trip in CI), so an unverified line can be
+    // merged without reaching anyone.
+    public static List<SettingEntry> Visible(IEnumerable<SettingEntry> entries, int build, bool unverified) =>
+        entries.Where(e => e.FitsBuild(build) && (unverified || !e.Unverified)).ToList();
 
     public sealed record Problem(string Origin, string Message);
 

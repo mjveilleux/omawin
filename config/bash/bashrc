@@ -1,51 +1,136 @@
-# Git Bash, and Linux in WSL (wsl/setup.sh sources it): same prompt, keys and colors as PowerShell
-# (starship, zoxide, fzf, eza, bat; Tokyo Night). Starship config: $STARSHIP_CONFIG (omawin/config/starship/starship.toml)
-# Init scripts are cached in ~/.cache/bash (starting processes is slow in Git Bash);
-# after upgrading config/starship/zoxide/fzf run: update-shell-cache
+# Git Bash, and Linux in WSL (wsl/setup.sh sources it): the same prompt, keys and colors as PowerShell
+# (starship, zoxide, fzf, eza, bat; the theme's). Starship config: $STARSHIP_CONFIG (omawin/config/starship/starship.toml)
+#
+# In Linux, Omarchy's shell defaults (its default/bash, sourced just before this by the block
+# wsl/setup.sh writes in ~/.bashrc) already set up starship, zoxide, fzf, eza, the history and the
+# keys; where they and omawin disagree, Omarchy wins. Git Bash has no Omarchy, so it gets omawin's
+# own (the part under `if [[ -z ${OMARCHY_PATH:-} ]]`).
+#
+# Git Bash: init scripts are cached in ~/.cache/bash (starting processes is slow there); after
+# upgrading starship/zoxide/fzf run: update-shell-cache
 
 [[ $- == *i* ]] || return  # scripts and tools get a plain shell
 
-shell_cache="$HOME/.cache/bash"
-update-shell-cache() {
-  mkdir -p "$shell_cache"
-  if command -v starship &> /dev/null; then
-    # Bake in the continuation prompt, and read the clock from bash's $EPOCHREALTIME
-    # instead of launching `starship time` before and after every command.
-    local ps2; ps2=$(starship prompt --continuation)
-    starship init bash --print-full-init |
-      sed -E "s|^(\s*)PS2=.*|\1PS2='${ps2//|/\\|}'|" |
-      sed -E 's|\$\([^)]*starship(\.exe)?'"'"'? time\)|$(( ${EPOCHREALTIME/[.,]/} / 1000 ))|g' |
-      sed -E 's|^(\s*)'"'"'[^'"'"']*starship(\.exe)?'"'"' time$|\1echo $(( ${EPOCHREALTIME/[.,]/} / 1000 ))|' \
-      > "$shell_cache/starship.bash"
-  fi
-  command -v zoxide &> /dev/null && zoxide init bash > "$shell_cache/zoxide.bash"
-  # key bindings only (Ctrl+R, Ctrl+T, Alt+C); fzf's tab completion is slow to load here
-  command -v fzf &> /dev/null && fzf --bash | sed '/^### completion.bash ###/,$d' > "$shell_cache/fzf.bash"
-  echo "shell cache rebuilt in $shell_cache (open a new tab)"
-}
-[[ -s $shell_cache/starship.bash ]] || update-shell-cache > /dev/null
-for f in starship zoxide fzf; do
-  [[ -s $shell_cache/$f.bash ]] && source "$shell_cache/$f.bash"
-done
+if [[ -z ${OMARCHY_PATH:-} ]]; then
+  shell_cache="$HOME/.cache/bash"
+  update-shell-cache() {
+    mkdir -p "$shell_cache"
+    if command -v starship &> /dev/null; then
+      # Bake in the continuation prompt, and read the clock from bash's $EPOCHREALTIME
+      # instead of launching `starship time` before and after every command.
+      local ps2; ps2=$(starship prompt --continuation)
+      starship init bash --print-full-init |
+        sed -E "s|^(\s*)PS2=.*|\1PS2='${ps2//|/\\|}'|" |
+        sed -E 's|\$\([^)]*starship(\.exe)?'"'"'? time\)|$(( ${EPOCHREALTIME/[.,]/} / 1000 ))|g' |
+        sed -E 's|^(\s*)'"'"'[^'"'"']*starship(\.exe)?'"'"' time$|\1echo $(( ${EPOCHREALTIME/[.,]/} / 1000 ))|' \
+        > "$shell_cache/starship.bash"
+    fi
+    command -v zoxide &> /dev/null && zoxide init bash > "$shell_cache/zoxide.bash"
+    # key bindings only (Ctrl+R, Ctrl+T, Alt+C); fzf's tab completion is slow to load here
+    command -v fzf &> /dev/null && fzf --bash | sed '/^### completion.bash ###/,$d' > "$shell_cache/fzf.bash"
+    echo "shell cache rebuilt in $shell_cache (open a new tab)"
+  }
+  [[ -s $shell_cache/starship.bash ]] || update-shell-cache > /dev/null
+  for f in starship zoxide fzf; do
+    [[ -s $shell_cache/$f.bash ]] && source "$shell_cache/$f.bash"
+  done
 
-# No visual bell: Git Bash's own /etc/inputrc sets `bell-style visible`, which flashes the whole
-# terminal on a failed completion or a backspace at an empty prompt.
-[[ $- == *i* ]] && bind 'set bell-style none' 2>/dev/null
+  # No visual bell: Git Bash's own /etc/inputrc sets `bell-style visible`, which flashes the whole
+  # terminal on a failed completion or a backspace at an empty prompt.
+  bind 'set bell-style none' 2>/dev/null
 
-# fzf in the terminal's 16 colors (its "16" base scheme), so it follows the theme.
+  alias ls='eza --icons --group-directories-first'
+  alias lt='eza --tree --level 2 --icons --git-ignore'
+
+  bind 'set completion-ignore-case on'
+  bind '"\e[A": history-search-backward'  # type a prefix, then Up/Down
+  bind '"\e[B": history-search-forward'
+  HISTCONTROL=ignoreboth:erasedups
+  HISTSIZE=10000
+fi
+
+# Both sides. fzf in the terminal's 16 colors (its "16" base scheme), so it follows the theme
+# (Omarchy sets no FZF_DEFAULT_OPTS).
 export FZF_DEFAULT_OPTS='--height 40% --layout reverse --border rounded --info inline-right --color=16,border:8,info:8,gutter:-1'
 export FZF_DEFAULT_COMMAND='fd --type f --hidden --strip-cwd-prefix --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=numbers --line-range :200 {}'"
 export BAT_THEME=ansi
 
-alias ls='eza --icons --group-directories-first'
+# omawin's own names, which Omarchy doesn't have
 alias ll='eza -la --icons --group-directories-first --git'
-alias lt='eza --tree --level 2 --icons --git-ignore'
 alias lg='lazygit'
 
-bind 'set completion-ignore-case on'
-bind '"\e[A": history-search-backward'  # type a prefix, then Up/Down
-bind '"\e[B": history-search-forward'
-HISTCONTROL=ignoreboth:erasedups
-HISTSIZE=10000
+# --- which side you're on (roadmap 3B), Windows' SSH agent, `open` --------------------------------
+# Starship's side mark (config/starship/starship.toml: env_var.OMAWIN_LINUX / OMAWIN_WINDOWS) is the
+# system's Nerd Font logo, written as UTF-8 bytes so it doesn't depend on the locale.
+if [[ -n ${WSL_DISTRO_NAME:-} ]]; then
+  export OMAWIN_SIDE=linux
+  omawin_os=linux
+  while IFS='=' read -r key value; do [[ $key == ID ]] && omawin_os=${value//\"/}; done < /etc/os-release
+  unset key value
+  case $omawin_os in
+    arch) export OMAWIN_LINUX=$'\xef\x8c\x83' ;;    # U+F303, Arch's logo
+    ubuntu) export OMAWIN_LINUX=$'\xef\x8c\x9b' ;;  # U+F31B, Ubuntu's
+    *) export OMAWIN_LINUX=$'\xef\x85\xbc' ;;       # U+F17C, Tux
+  esac
+  unset OMAWIN_WINDOWS
+
+  # The theme Windows rendered (themes/render.ps1 -> theme-linux.sh): read again when it's newer
+  # than what this shell last saw, which costs one stat over /mnt/c per prompt.
+  omawin_theme_file=${OMAWIN_STATE:+$OMAWIN_STATE/theme-linux.sh}
+  omawin_theme_seen=${XDG_RUNTIME_DIR:-/tmp}/omawin-theme.$$
+  # (Its marker goes with the shell, unless something else already holds the exit trap.)
+  [[ -n $(trap -p EXIT) ]] || trap 'rm -f "$omawin_theme_seen"' EXIT
+  _omawin_theme() {
+    [[ -n $omawin_theme_file && $omawin_theme_file -nt $omawin_theme_seen ]] || return 0
+    # (CRs out: a file written on Windows.)
+    source <(tr -d '\r' < "$omawin_theme_file")
+    : > "$omawin_theme_seen"
+    # Linux's own copies (btop), once per switch rather than once per shell.
+    if [[ ! -f ~/.config/omawin/theme || $(< ~/.config/omawin/theme) != "${OMAWIN_THEME:-}" ]]; then
+      (omawin-theme-sync > /dev/null 2>&1 &)
+    fi
+  }
+
+  # Each prompt: the folder (OSC 7: Win+Enter opens the next terminal here), the background (OSC 11:
+  # Linux's tint, again every prompt since some programs reset it when they exit) and the title
+  # (OSC 2: "arch · ~/src/app", which the bar and Windows Terminal's tabs show).
+  _omawin_prompt() {
+    _omawin_theme
+    local here=${PWD/#$HOME/\~} url=${PWD//%/%25}
+    url=${url// /%20}
+    printf '\e]7;file://%s%s\e\\' "${HOSTNAME:-localhost}" "$url"
+    [[ -n ${OMAWIN_LINUX_BG:-} ]] && printf '\e]11;%s\e\\' "$OMAWIN_LINUX_BG"
+    printf '\e]2;%s \xc2\xb7 %s\a' "$omawin_os" "$here"
+  }
+  # Omarchy's init set starship up just before this; starship runs this before each prompt.
+  if [[ $(type -t starship_precmd) == function ]]; then
+    # shellcheck disable=SC2034  # (read by starship's init)
+    starship_precmd_user_func=_omawin_prompt
+  else
+    PROMPT_COMMAND="_omawin_prompt${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+  fi
+
+  # Windows' SSH agent (or 1Password's): the bridge wsl/setup.sh writes when npiperelay is there,
+  # started in the background the first time a shell finds its socket missing.
+  if [[ -z ${SSH_AUTH_SOCK:-} ]] && command -v omawin-ssh-agent &> /dev/null; then
+    export SSH_AUTH_SOCK=${XDG_RUNTIME_DIR:-/tmp}/omawin-ssh-agent.sock
+    [[ -S $SSH_AUTH_SOCK ]] || (setsid omawin-ssh-agent "$SSH_AUTH_SOCK" > /dev/null 2>&1 &)
+  fi
+
+  # Omarchy's `open` calls xdg-open, which has nothing to open with here: Windows opens it (a
+  # Windows reason to differ).
+  open() {
+    local a
+    for a in "$@"; do
+      if [[ -e $a ]]; then explorer "$a"; else browser "$a"; fi
+    done
+  }
+
+  # Ubuntu: Omarchy's init looks for fzf's key bindings where Arch keeps them.
+  [[ $(type -t __fzf_history__) == function ]] || eval "$(fzf --bash 2> /dev/null)"
+else
+  # Git Bash is the Windows side.
+  export OMAWIN_SIDE=windows OMAWIN_WINDOWS=$'\xef\x85\xba'  # U+F17A, Windows' logo
+fi

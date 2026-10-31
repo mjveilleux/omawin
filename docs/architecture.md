@@ -11,19 +11,25 @@ key ──> GlazeWM (config/glazewm/config.yaml)
           └─ shell-exec --hide-window omawin.exe <group> <name>
                 └─ bin/commands.txt says what that is:
                      app <request>   → the menu app (shell/menu-app/, already running): instant
+                     ask <request>   → the same, and the menu app's answer is printed (omawin setting get)
                      pwsh <script>   → a PowerShell script in this repo (hidden from a key)
                      run <program>   → a program
 ```
 
 The same names work from a terminal (`omawin capture text`, `omawin theme set gruvbox`), from the system menu (`default/launcher/menu.txt` rows with an `omawin <command>` action) and from the bar.
 
+**The menu keys skip omawin.exe** where our GlazeWM fork runs (roadmap 1.2): Win+Space, Win+Shift+V, Win+A and Win+F are bound to `emit omawin <command>`, which the fork broadcasts as a `custom` event to its IPC subscribers. The menu app holds a connection to GlazeWM anyway (`Bar/GlazeWm.cs`), subscribes to `custom` on it, and resolves the words through `bin/commands.txt` as omawin.exe would (`Emit.cs`): an `app` row's request goes to `HandleRequest` on the UI thread, any other row runs through omawin.exe. No process starts and no file is written, and it works while GlazeWM is paused. `themes/render.ps1` writes `emit` only when `bin/glazewm-features.ps1` finds `emit` in the `omawin-features.txt` the fork's release ships beside `glazewm.exe`; with any other GlazeWM the same keys get `shell-exec --hide-window omawin.exe <command>`. While it listens, the menu app keeps `%LOCALAPPDATA%\launcher\emit-subscribed` (its process id); `omawin check` warns when the fork emits and nothing listens.
+
 ## omawin.exe
 
 `bin/omawin.cs`, compiled by the C# compiler that ships with Windows into `~/.local/bin` (C# 5). It reads `bin/commands.txt`, finds the longest command the words spell (`theme set gruvbox` = `theme set` + `gruvbox`), and runs its action with the remaining words appended. It starts in ~35 ms, much less than PowerShell's ~300 ms.
 
+Its successor is `src/cli/` (.NET 9 Native AOT, roadmap 2.11), shipped beside it as `omawin-cli.exe` (`bin/install-binaries.ps1`; the release's `omawin-cli-<tag>-win-<arch>.exe`). It reads the same `commands.txt` the same way; builtins move into it one at a time, and `omawin.exe` hands it the words of any builtin it doesn't run itself. `omawin pkg` is the first: `src/cli/Pkg/` (one package command over winget, Scoop, Chocolatey, mise and the Linux in WSL; names in `default/packages/names.txt`, what's installed in `%LOCALAPPDATA%\launcher\packages.tsv`), its decisions tested in `test/cli.Tests`.
+
 - **In a terminal** (it has a console or its output is redirected), scripts run in that terminal and it waits, returning their exit code.
 - **From a key** (no console), scripts run hidden and it returns at once.
 - `app` requests are written to `%LOCALAPPDATA%\launcher\system-menu-request`, and the named event `Local\dotfiles-system-menu-signal` wakes the menu app. If the app isn't running, it's started with the request as arguments.
+- `ask` requests go the same way with `--reply <pid>` in front; the menu app writes its answer to `%LOCALAPPDATA%\launcher\replies\<pid>.txt` (the exit code, then the text) and sets the event `Local\omawin-reply-<pid>` (`Reply.cs`), and omawin.exe prints it. An answer with code 3 is a question: omawin shows it, asks y/N, and on yes sends the request again with `--yes` (`omawin settings admin`).
 - The repo is `%DOTFILES%` if set, else `~/omawin`.
 
 ## Defaults and launching (`omawin default`, `omawin launch`)
@@ -31,12 +37,13 @@ The same names work from a terminal (`omawin capture text`, `omawin theme set gr
 Like Omarchy's defaults, what opens things is a per-PC choice, never named in keys or scripts:
 
 - `bin/defaults.txt` lists the supported terminals (noctty first, the default; Windows Terminal), editors (Neovim, Neovide, VS Code) and the AI agent in Neovim's split (OpenCode first, the default; Claude Code: `config/nvim/lua/plugins/ai.lua` reads the pick when it opens one, through LazyVim's sidekick extra). `omawin default <kind> <name>` saves a pick in `%LOCALAPPDATA%\launcher\defaults\<kind>`, installing it with winget first if it's missing.
-- Everything that opens a terminal goes through `omawin launch terminal [--dir] [--title] [--wsl] [-- command]`, `omawin launch project <folder> [--wsl]` and `omawin launch editor <path>`, native code in `omawin.exe` that knows how to drive each one.
+- Everything that opens a terminal goes through `omawin launch terminal [--dir] [--title] [--wsl or --windows] [-- command]`, `omawin launch project <folder> [--wsl or --windows]` and `omawin launch editor <path>`, native code in `omawin.exe` that knows how to drive each one.
+- **Which side** a terminal opens on is the `shell` default (`linux` first: your Linux in WSL once it's set up, else PowerShell, silently; `omawin default shell windows` brings PowerShell back). A command given without `--wsl` is a Windows program; a Linux path is always Linux; a project opens on the side its folder is on; a Linux file (`/…`) opens in Linux's editor. Linux windows are never handed to the running noctty with its spare PowerShell: what makes them quick is WSL kept warm (`omawin start terminal` holds the distro with a hidden `sleep infinity` while Linux is the default; `%LOCALAPPDATA%\launcher\linux-warm.pid`). Each side shows itself (roadmap 3B): Linux's shell sets its terminal's background to the theme's Linux tint (OSC 11, from `theme-linux.sh`, which `themes/render.ps1` writes), its title to `arch · <path>` and its folder (OSC 7); the prompt starts with the side's logo (`OMAWIN_LINUX` / `OMAWIN_WINDOWS`, starship's `env_var` modules).
 - Launched programs get a fresh environment from the registry (`FreshEnvironment`), not the stale one of whatever ran omawin (GlazeWM keeps the environment it started with).
 - **noctty** (the terminal; our fork, [mjveilleux/noctty](https://github.com/mjveilleux/noctty), installed per-user into `%LOCALAPPDATA%\Programs\noctty` by `bin/noctty.ps1`): `omawin start terminal` (at login) starts it with no window (`--initial-window=false`; its config keeps it running after the last window closes). A plain new terminal is `noctty.com +new-window --working-directory=…` handed to that running instance, so there's no start-up; the fork keeps one PowerShell started ahead of time (`windows-spare-shell`), so the prompt is ready ~0.3 s after the key. Anything that runs a command (a Linux shell, a project) is a one-off noctty process of its own, since the running instance refuses commands from outside.
 - **Projects** are [herdr](https://herdr.dev) sessions named after the folder (`config/herdr/config.toml`). A session that isn't running is started headless and, if empty, given a tab per `default/launcher/project-tabs.txt` line; then a noctty window attaches to it. Sessions keep running with no window, so opening the project again reattaches. Linux projects use the herdr in WSL, in the Linux `omawin default linux` picked (Arch or Ubuntu).
 - **Win+Enter** (`omawin terminal here`, native: PowerShell would add ~0.35 s): over noctty, the fork takes the folder `inherit` in the request as that of its window in front (the shell reports its folder with OSC 7). Otherwise it reads a Windows Terminal tab's title, or File Explorer's folder.
-- **Measuring**: `omawin profile terminal` presses Win+Enter through GlazeWM and prints a timeline from marks `omawin.exe`, our noctty fork and the profile write while `%LOCALAPPDATA%\launcher\trace-on` exists (QueryPerformanceCounter, shared by all processes). `omawin profile login` says how many seconds after sign-in each part was up, from process start times and those marks (`-Arm` turns them on for the next sign-in).
+- **Measuring**: `omawin profile terminal` presses Win+Enter through GlazeWM and prints a timeline from marks `omawin.exe`, our noctty fork and the profile write while `%LOCALAPPDATA%\launcher\trace-on` exists (QueryPerformanceCounter, shared by all processes). `omawin profile login` says how many seconds after sign-in each part was up, from process start times and those marks (`-Arm` turns them on for the next sign-in). `omawin profile menu` does the same for the menu keys (key → `omawin send` → `menu request` → `menu handle` → `menu shown` → `menu painted`, the next composed frame) and for typing in the launcher (`menu typed` → `rendered` → `list-painted`); its arithmetic is `src/cli/Profile/MenuProfile.cs`, tested in `cli.Tests`.
 
 ## The menu app (`shell/menu-app/`)
 
@@ -45,8 +52,10 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | File | What it is |
 |---|---|
 | `App.xaml.cs` | startup, the single-copy check, `HandleRequest` (which request opens what) |
-| `MainWindow.xaml(.cs)` | the one window: system menu, launcher and file finder are modes of it; theming, keys, running menu actions |
-| `MainWindow.Pages.cs` | launcher pages (Projects, Clipboard, Localhost, Audio, Reports, Shortcuts, VPN): how they're shown |
+| `MainWindow.xaml(.cs)` | the one window: One Search (`launching`), and the menu opened at a section by `--open`; theming, keys, rows, the finder, running menu actions |
+| `MainWindow.Search.cs` | One Search (roadmap 1C, [`plans/one-search.md`](../plans/one-search.md)): the filter tabs and token, the sources (apps, settings, commands and menu rows, files, windows, projects, clipboard, themes), the result rows and preview, Ctrl+K's actions, the bento home's tiles. Files, Clipboard, Projects, Themes and Browse (Commands with nothing typed) are the older views, kept whole as filters |
+| `Search/` | One Search's pure parts, tested in `menu-app.Tests`: `Result.cs` (the model), `QueryParser.cs` (filters and `/` `>` prefixes), `Merger.cs` (ranking, per-tag caps, late results kept below the selection), `CommandList.cs` (`bin/commands.txt` as results, how each runs), `WindowList.cs` (GlazeWM's `query windows`), `Keys.cs` (Tab / Esc / Backspace), `Request.cs` (`--search …`), `Home.cs` (the home's places), `Actions.cs` (Enter's and Ctrl+K's actions), `TagLook.cs` (each tag's colour, icon and word) |
+| `MainWindow.Pages.cs` | One Search's pages (Projects, Clipboard, Localhost, Audio, Reports, Shortcuts, VPN): how they're shown |
 | `Pages.cs` | the pages' data: repos, servers, clipboard history, reports, keys |
 | `Audio.cs` | the Audio page's data (Win+A): speakers and microphones through Windows' Core Audio, their volume and mute, and the default device |
 | `MenuModel.cs` | reads `default/launcher/menu.txt` and the theme; paths (`Repo`, `StateDir`) |
@@ -58,9 +67,15 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `Calc.cs` | the launcher's calculator: a small parser (no script engine), tried only when the query could be a sum |
 | `About.cs`, `MainWindow.About.cs` | the About page (`omawin about`): version and PC facts, read off the UI thread |
 | `StayAwake.cs` | `omawin toggle stay-awake`: `SetThreadExecutionState` held on the UI thread while on |
+| `Motion.cs`, `MotionTokens.cs` | every animation's numbers (Omarchy's: in within 200 ms, out in 130, ease-out-quint) and helpers on the compositor; `omawin toggle animations` writes `%LOCALAPPDATA%\launcher\animations`, which it watches with Windows' own Animation effects switch; off, every animation jumps to its end |
+| `Microphones.cs`, `MicMute.cs` | `omawin mic`: every microphone muted or unmuted at once (Core Audio's endpoint mute); the bar's red microphone while they're all muted |
 | `Tiling.cs` | Omarchy's window placement: on each focus change (GlazeWM's IPC socket) it sets the focused window's next split across the split it sits in, so new windows spiral like Hyprland's dwindle layout: A | B, then B over C, then C | D |
+| `Settings/` | Windows' settings (roadmap 1B): `Catalog.cs` parses `default/launcher/settings.txt`; `Store.cs` is the service (cached values, `Set` / `Toggle` / `Step` / `UndoLast`, the undo history, the admin queue), with its handlers handed in so it's tested on Linux; `Switches.cs` (reg, spi, powercfg) and `Builtins.cs` (radios, refresh rate, HDR, proxy, audio devices, …) touch Windows; `Watch.cs` follows registry keys and `WM_SETTINGCHANGE`; `Index.cs` reads Windows' own settings index and `default/launcher/settings-pages.txt`; `Search.cs` ranks them; `Commands.cs` answers `omawin setting` / `settings`; `WinSettings.cs` wires it all, and is what the window (and One Search) uses |
+| `TuneUp.cs` | omawin's recommended Windows settings (`default/launcher/tune-up.txt`, roadmap 8G): parsed, checked against the catalog, reported as applied or not, and what `omawin tune-up apply` sets |
+| `MainWindow.Settings.cs` | settings rows (Browse's search, a settings area): their values, Enter / Space / ← → / Ctrl+Z; One Search's setting results use the same keys and `DoSetting` |
+| `Reply.cs` | the menu app's half of `ask`: the answer file and event |
 
-Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--open <menu id>`, `--start-hidden`, no arguments (system menu); plus `--select`, `--type` and `--key`, used for walkthrough recordings.
+Requests it understands: `--search [filter|page] [text]` (One Search; `--browse [section]` for Commands' Browse, `--retired-key` for Win+Alt+Space's note; `Search/Request.cs`), `--launcher [page]` and `--files` (the same, for older callers), `--page <name>`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--toggle animations [on|off|status]`, `--open <menu id>`, `--start-hidden`, `--reply <pid> --setting|--settings …` (answered, `ask`), no arguments (Browse); plus `--select`, `--type` and `--key`, used for walkthrough recordings, and `--hide` (at once, no animation) for `omawin profile menu`.
 
 ### Screenshots and text (`Snip.cs`)
 
@@ -84,9 +99,9 @@ The bar is drawn by the menu app itself, natively, with no web engine ([native-b
 
 At sign-in, `omawin start bar` (`bin/omawin.cs`) first paints a plain strip in the theme's background (`%LOCALAPPDATA%\launcher\bar-background.txt`, written by `themes/render.ps1`), the bar's size, across every monitor, in ~50 ms; the menu app's bar draws over it within a few seconds.
 
-One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone.
+One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone. Beside it, `bin/path-doctor.cs` (`omawin-path.exe`, `omawin path`): both PATHs read raw, what's broken in them, which program wins for each command, and a fix of your PATH with undo.
 
-Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), drawn by the QML host (`src/qs-host`, `omawin-qs.exe`): the bar keeps an empty cell for each plugin that's on (`Bar/PluginSlot.cs`, from `%LOCALAPPDATA%\launcher\plugins.txt`) and starts the host over it with `--plugin-dir <folder> --at x,y,w,h --parent <bar's pid>` (roadmap 4.9.4).
+Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), drawn by the QML host (`src/qs-host`, `omawin-qs.exe`): the bar keeps an empty cell for each plugin that's on (`Bar/PluginSlot.cs`, from `%LOCALAPPDATA%\launcher\plugins.txt`) and starts the host over it with `--plugin-dir <folder> --at x,y,w,h --parent <bar's pid>` (roadmap 4.9.4), one host per plugin per monitor; it writes `focused 1|0` to each host's stdin as GlazeWM's focus moves between monitors, and makes the bars again when `plugins.txt` changes. The plugin gallery (Install › Plugins › Gallery, `MainWindow.Plugins.cs`, `Plugins/Gallery.cs`; roadmap 4.10) lists them with Omarchy's marketplace: an index made in CI (`src/plugin-gallery`: the marketplace's verified bar widgets, each scanned against what the host provides) and shipped as a tools bundle entry (`%LOCALAPPDATA%\launcher\plugin-gallery\plugin-gallery.json`). `omawin plugin add <id>` (`bin/preset.ps1`) downloads a marketplace plugin at its reviewed commit into `%LOCALAPPDATA%\omawin\plugins\<id>` before turning it on.
 
 ## The music player (`src/music/`)
 
@@ -108,13 +123,31 @@ Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell
 
 The library is files, not a database: `~/Music/omawin/<slug>.json` for music, `podcasts/<slug>.json` for podcasts, `radio/<slug>.json` for stations (title, source link, tracks; `Library.cs`). A station is one live stream (`Library.AddRadio`): adding one reads the stream's headers only — its content type (a web page is refused) and its `icy-name`, which names it (`NTS Radio`, `NTS Radio 2` when the address is a second channel) — and the player hands that address to mpv as it is, so `live` in the state tells the bar to show `LIVE` instead of a progress bar, and seeking does nothing. Readers: `YouTube.cs` (yt-dlp, with Bun) and `Feed.cs` (RSS, and Apple Podcasts links through Apple's lookup). Slugs are unique across every folder, so commands only need the slug.
 
+## Fixing Windows (`src/windows/`, `omawin-windows.exe`)
+
+Roadmap Phase 8's fixes that answer in a terminal: `omawin who-has`, `health`, `startup`, `top`, `connections`, `hosts`, `dns`, `wifi share`, `clip`, `classic-menu` are `run omawin-windows <verb>` rows. One .NET 9 exe (framework-dependent, one file, ~0.8 MB) in `~/.local/bin`, built by `src\windows\build.ps1` and shipped in the release like the music player. It's also the plan's shared library (`Omawin.Windows`), on Windows' documented APIs:
+
+| Folder | What it is |
+|---|---|
+| `Files/` | who holds a file: Restart Manager (`RmGetList`) and the wording of its answer |
+| `Health/` | the event logs through `wevtapi` (`EvtQuery`, `EvtRender` as XML) and the sentences they become |
+| `Startup/` | the Run keys, Startup folders and programs' services; Task Manager's `StartupApproved` switch |
+| `Top/` | every process in one `NtQuerySystemInformation` call (the documented `Process` list as the fallback), grouped by app |
+| `Net/` | `GetExtendedTcpTable` / `GetExtendedUdpTable` taken apart; the hosts file as entries; DNS presets |
+| `Wifi/` | the saved profile (`WlanGetProfile`) and the `WIFI:` QR text, drawn with ZXing in half blocks |
+| `Explorer/` | the full right-click menu (8.24): the per-user registration Explorer falls back on |
+| `Clip/`, `Native/` | the clipboard's transforms; the clipboard, process close / end (a pid is checked against its start time first) |
+| `Admin/` | the few changes that need admin, as a Windows PowerShell script built only from checked values, run by Windows' own `powershell.exe` after one prompt that's preceded by what will change |
+
+Each folder's parsing and wording is pure, with no Windows calls, and tested on Linux (`test/windows.Tests`); the calls sit in their own files. Run hidden (from a menu row with an `omawin` action), what it says goes to the menu app's note (`--say`) instead of a terminal.
+
 ## Scripts that remain
 
 - `default/launcher/menu.ps1`:
   - runs the system menu's longer jobs, which the menu app hands it as `-Run <row id>`, in a small floating "menu-task" terminal: installs, removals, `task` rows
   - keeps `installed.txt`
   - `-SetWallpaper` and `-SearchPackage`
-  - `-Install "<source>:<id>;..."` and `-InstallManager winget|choco|scoop` for the launcher's Packages page (`shell/menu-app/Packages.cs`, `MainWindow.Packages.cs`): winget's catalog from `bin/pkg-index.ps1`, Scoop's from its cloned buckets, Chocolatey's community feed asked as you type
+  - `-Install "<source>:<id>;..."` and `-InstallManager winget|choco|scoop` for the launcher's Packages page (`shell/menu-app/Packages.cs`, `MainWindow.Packages.cs`): winget's catalog from `omawin pkg index`, Scoop's from its cloned buckets, Chocolatey's community feed asked as you type
 - `default/launcher/common.ps1`: the fzf look and helpers for the terminal pieces that remain.
 - `default/launcher/rename-workspace.ps1`: Alt+N (`omawin workspace rename`), in a small terminal titled "rename".
 - Reports: the page is omawin's, the folders and the import are the account folder's (`~/omawin-account`, see [work.md](work.md)).
@@ -132,6 +165,9 @@ Never in the repo:
 | `installed.txt` | installed winget / choco / scoop packages |
 | `reports.tsv` | the reports index |
 | `wsl-projects.txt` | WSL repos, reused while WSL is off |
+| `theme-linux.sh` | the theme for Linux in WSL: its name and Linux's background tint (`themes/render.ps1`; read by `config/bash/bashrc`) |
+| `linux-files.tsv` | Linux's files for the finder, written inside Linux by `omawin-index-files` |
+| `linux-warm.pid` | the process holding Linux warm (`omawin start terminal`); `linux-warm-off` turns it off |
 | `fff\` | the file finder's indexes |
 | `dirs\` | PowerShell tab title → folder, for Win+Enter |
 | `theme`, `background`, `nvim-theme`, `lockscreen*` | the current theme, its background, and the lock screen |
@@ -140,5 +176,12 @@ Never in the repo:
 | `migrations.txt` | migrations already run on this PC |
 | `music.log` | the music player's errors (its playlists and podcasts are in `~/Music/omawin`) |
 | `system-menu-request` | the request being handed to the menu app |
+| `emit-subscribed` | the menu app's process id, while GlazeWM sends it the menu keys (`emit`) |
+| `animations` | `off` while `omawin toggle animations` has them off: the menu app's and GlazeWM's (`animations.enabled`, filled in by `themes/render.ps1`) |
+| `replies\` | answers to `ask` requests, each read and deleted by the omawin.exe waiting for it |
+| `settings-history.tsv` | every Windows setting changed through omawin, with the value before it (undo; `omawin settings save` reads which ids you've changed) |
+| `settings-admin-queue.tsv` | settings that need admin, waiting for the one prompt (`omawin settings admin`) |
+| `settings-index.tsv` | Windows' own settings index, read from `AllSystemSettings_*.xml` in this PC's language; rebuilt when Windows changes it |
+| `airplane` | while airplane mode is on: the radios it turned off, to turn back on |
 | `system-menu.log` | the menu app's errors |
 | `stay-awake` | present while stay awake is on (removed when it's turned off or the menu app starts) |

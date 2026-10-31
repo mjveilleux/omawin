@@ -8,6 +8,8 @@
 #   menu.ps1 -Install "<source>:<id>;..."   the launcher's Packages page: install those, one
 #                                after another (sources: winget, choco, scoop)
 #   menu.ps1 -InstallManager winget|choco|scoop   the manager itself, when it isn't here
+#   menu.ps1 -Plugin "add <id>"  the plugin gallery's Enter: omawin plugin add (it may download
+#                                the plugin and the QML host, so you watch it)
 #
 # Install rows are winget (or Chocolatey) packages. Which ones this PC already has comes from
 # a list refreshed in the background (`winget export` takes ~20s, too slow to run
@@ -17,7 +19,7 @@
 # Longer jobs (installs, updates) run in their own small terminal window titled "menu-task",
 # so the menu is free again right away and you can watch them.
 param([string]$Run, [switch]$RefreshInstalled, [switch]$SetWallpaper, [switch]$SearchPackage, [string]$Install,
-    [ValidateSet('', 'winget', 'choco', 'scoop')][string]$InstallManager = '')
+    [ValidateSet('', 'winget', 'choco', 'scoop')][string]$InstallManager = '', [string]$Plugin)
 
 $MenuFile = Join-Path $PSScriptRoot 'menu.txt'
 $InstalledFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
@@ -140,39 +142,27 @@ Write-Host "``n  done · press any key to close" -ForegroundColor DarkGray
 # What each manager's ids look like (the app checks the same): nothing else reaches a command.
 $SafeId = '^[A-Za-z0-9][A-Za-z0-9._+-]*(/[A-Za-z0-9][A-Za-z0-9._+-]*)?$'
 
-function Get-InstallScript([string]$Source, [string]$Id) {
-    $installed = $InstalledFile.Replace("'", "''")
-    switch ($Source) {
-        'winget' { @"
-Write-Host '  winget  $Id' -ForegroundColor Cyan
-winget install --id $Id --exact --accept-source-agreements --accept-package-agreements
-if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'winget:$($Id.ToLower())' }
-"@ }
-        # Chocolatey needs admin: Windows asks first.
-        'choco' { @"
-Write-Host '  Chocolatey  $Id' -ForegroundColor Cyan
-Start-Process choco -Verb RunAs -Wait -ArgumentList 'install', '$Id', '-y'
-if (choco list --limit-output --exact '$Id') { Add-Content '$installed' 'choco:$($Id.ToLower())' }
-"@ }
-        # Scoop: <bucket>/<app>, into your user folder, no admin.
-        'scoop' {
-            $app = ($Id -split '/')[-1]
-            @"
-Write-Host '  Scoop  $Id' -ForegroundColor Cyan
-scoop install $Id
-if (`$LASTEXITCODE -eq 0) { Add-Content '$installed' 'scoop:$($app.ToLower())' }
-"@ }
+# One `omawin pkg install <source>:<id> ...` for them all (src/cli/Pkg): each through its manager,
+# recorded in packages.tsv (so pkg remove and update know where it came from) and marked in
+# installed.txt; Chocolatey's together after one admin prompt; Scoop's into your user folder.
+if ($Install) {
+    $keys = @(foreach ($key in $Install -split ';') {
+        $source, $id = $key -split ':', 2
+        if ($source -notin 'winget', 'choco', 'scoop' -or $id -notmatch $SafeId) { Write-Warning "skipped $key"; continue }
+        "$source`:$id"
+    })
+    if ($keys.Count) {
+        Start-MenuTask $(if ($keys.Count -eq 1) { "Install $(($keys[0] -split ':', 2)[1])" } else { "Install $($keys.Count) packages" }) "omawin-cli.exe pkg install $($keys -join ' ')"
     }
 }
 
-if ($Install) {
-    $scripts = foreach ($key in $Install -split ';') {
-        $source, $id = $key -split ':', 2
-        if ($source -notin 'winget', 'choco', 'scoop' -or $id -notmatch $SafeId) { Write-Warning "skipped $key"; continue }
-        Get-InstallScript $source $id
-    }
-    $count = @($scripts).Count
-    if ($count) { Start-MenuTask $(if ($count -eq 1) { "Install $(($Install -split ':', 2)[1])" } else { "Install $count packages" }) ($scripts -join "`n") }
+# The plugin gallery (shell/menu-app/MainWindow.Plugins.cs): "add <id>" or "remove <id>". The id
+# is checked as GalleryIndex.IsSafeId does: nothing else reaches the command.
+if ($Plugin) {
+    $verb, $id = $Plugin -split ' ', 2
+    if ($verb -in 'add', 'remove' -and $id -cmatch '^[a-z0-9][a-z0-9_-]*(\.[a-z0-9][a-z0-9_-]*)*$') {
+        Start-MenuTask $(if ($verb -eq 'add') { "Turn on $id" } else { "Turn off $id" }) "omawin.exe plugin $verb $id"
+    } else { Write-Warning "skipped plugin $Plugin" }
 }
 
 if ($InstallManager -eq 'winget') {

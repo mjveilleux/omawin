@@ -11,6 +11,12 @@
 terminal | noctty | noctty (Ghostty for Windows) | bin/noctty.ps1 | noctty.exe
 terminal | wt | Windows Terminal | Microsoft.WindowsTerminal | wt.exe
 
+# The shell a new terminal opens: your Linux in WSL (the distro is `omawin default linux`), or
+# PowerShell. Without a Linux yet, PowerShell, silently. --wsl and --windows decide for one window;
+# a project opens on the side its folder is on.
+shell | linux | Linux (WSL) | wsl/install.ps1 | wsl.exe
+shell | windows | PowerShell | Microsoft.PowerShell | pwsh.exe
+
 editor | nvim | Neovim (in the terminal) | Neovim.Neovim | nvim.exe
 editor | neovide | Neovide | Neovide.Neovide | neovide.exe
 editor | code | VS Code | Microsoft.VisualStudioCode | code.cmd

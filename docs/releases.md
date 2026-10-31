@@ -2,7 +2,7 @@
 
 A new PC shouldn't need the .NET SDK (a 1 GB dependency) or a compile to get `omawin.exe`, the bar's helpers, the menu app and the music player. So GitHub Actions builds them when a version is tagged, publishes them with the hashes, and `install.ps1` downloads the ones for that PC, checking each against the published hash before it is used. No release, no network, no GitHub sign-in: it builds here instead, exactly as before.
 
-The build is not a second recipe. Every CI job runs the same script this PC runs — [`build/helpers.ps1`](../build/helpers.ps1), [`shell/menu-app/build.ps1`](../shell/menu-app/build.ps1), [`src/music/build.ps1`](../src/music/build.ps1) — with the tag added for the version stamp, so a release is the local build. The SDK is pinned once, in [`global.json`](../global.json) (9.0, any feature band), for CI and for this PC.
+The build is not a second recipe. Every CI job runs the same script this PC runs — [`build/helpers.ps1`](../build/helpers.ps1), [`shell/menu-app/build.ps1`](../shell/menu-app/build.ps1), [`src/music/build.ps1`](../src/music/build.ps1), [`src/windows/build.ps1`](../src/windows/build.ps1) — with the tag added for the version stamp, so a release is the local build. The SDK is pinned once, in [`global.json`](../global.json) (9.0, any feature band), for CI and for this PC.
 
 ## What a release holds
 
@@ -15,6 +15,8 @@ The build is not a second recipe. Every CI job runs the same script this PC runs
 | `SystemMenu-<tag>-win-arm64.zip` | the same for ARM64, once ARM64 CI runs | `%LOCALAPPDATA%\system-menu` |
 | `omawin-music-<tag>-win-x64.exe` | the music player, one exe | `~/.local/bin` |
 | `omawin-music-<tag>-win-arm64.exe` | the same for ARM64 | `~/.local/bin` |
+| `omawin-windows-<tag>-win-x64.exe` | Phase 8's fixes (`omawin who-has`, `health`, `startup`, `top`, `hosts`, `connections`, `wifi share`, `clip`), one exe | `~/.local/bin` |
+| `omawin-windows-<tag>-win-arm64.exe` | the same for ARM64 | `~/.local/bin` |
 | `SHA256SUMS.txt` | `<sha256>  <file>` per asset: what a download is checked against | (never copied) |
 
 The helpers are C# 5 from the in-box compiler: architecture-neutral IL, the same file on x64 and ARM64, so their ZIP is in every release. The menu app and the player are per architecture.

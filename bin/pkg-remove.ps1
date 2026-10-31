@@ -18,7 +18,8 @@ $e = [char]27
 if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) { throw 'fzf is missing (it is in the core: omawin install)' }
 
 Write-Host "  $e[90mwhat's installed ...$e[0m"
-$list = & "$PSScriptRoot\pkg-index.ps1"
+$list = omawin-cli.exe pkg index | Select-Object -Last 1
+if ($LASTEXITCODE) { throw "$list" }
 $installedFile = Join-Path $env:LOCALAPPDATA 'launcher\installed.txt'
 & (Join-Path (Split-Path $PSScriptRoot) 'default\launcher\menu.ps1') -RefreshInstalled
 $here = [Collections.Generic.HashSet[string]]::new()

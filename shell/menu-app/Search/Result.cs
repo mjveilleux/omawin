@@ -36,6 +36,17 @@ public sealed record Result(
     public string? Icon { get; init; }          // a Nerd Font glyph
     public string? IconKey { get; init; }       // an app's or file's real icon (AppIcons)
     public IReadOnlyList<int>? Positions { get; init; } // matched letters in Name, for highlighting (set by the merger)
+    public object? Data { get; init; }          // what it stands for (a file hit, a clipboard file, a theme), for the preview
+}
+
+// Result ids are "<kind>:<what>". The launcher's history (launch-history.json) keeps apps and
+// your items by their own key, as it always has, and everything else by its result id, so the
+// ranking learned before One Search carries over without rewriting the file.
+public static class ResultIds
+{
+    public const string App = "app:";
+
+    public static string HistoryKey(string id) => id.StartsWith(App, StringComparison.Ordinal) ? id[App.Length..] : id;
 }
 
 // Where results come from: one source per tag (apps, settings, commands, files, …). A source

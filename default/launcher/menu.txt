@@ -14,10 +14,15 @@
 #   run <command>    start a program, a URL or a settings page, like items.txt
 #   omawin <command> one of omawin's commands (bin/commands.txt), hidden
 #   @<page>          one of the launcher's pages (@keys, @clipboard, @localhost, ...)
+#   settings <area>  Windows' settings of one area, each switched in place (default/launcher/settings.txt:
+#                    look, explorer, privacy, input, system, display, connections, sound, developer);
+#                    settings undo puts the last change back, settings admin applies the queued admin ones
 #   themes           the theme picker (themes/*.json and installed themes, applied by
 #                    themes/set-theme.ps1)
 #   backgrounds      the background picker: a grid of a theme's pictures (set by
 #                    themes/set-theme.ps1 -Background)
+#   plugins          the plugin gallery: omawin's plugins and Omarchy's marketplace, on or
+#                    off with Enter (omawin plugin add|remove)
 # A ! in front of the action asks before doing it.
 
 learn | 󰧑 | Learn
@@ -52,11 +57,12 @@ style.theme | 󰸌 | Theme | themes
 style.backgrounds | 󰋩 | Backgrounds | backgrounds
 style.background | 󰸉 | Next background | omawin theme next-background
 style.themes-browse | 󰖟 | More themes (omarchy.org) | omawin theme browse
-style.themes-install | 󰏗 | Install a theme (git link) | task omawin.exe theme install
+style.themes-install | 󰏗 | Install a theme (name or link) | task omawin.exe theme install
 style.themes-update | 󰚰 | Update installed themes | task omawin.exe theme update
 style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme remove
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\default\launcher\menu.ps1" -SetWallpaper
 style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
+style.animations | 󰗘 | Animations: on / off | omawin toggle animations
 style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\config\glazewm\config.yaml
 style.terminal | 󰆍 | Terminal | edit ~\omawin\config\noctty\config.ghostty
 style.prompt | 󰘦 | Prompt (starship) | edit ~\omawin\config\starship\starship.toml
@@ -75,10 +81,28 @@ setup.bluetooth | 󰂯 | Bluetooth | run ms-settings:bluetooth
 setup.sound | 󰕾 | Sound | run ms-settings:sound
 setup.defaults | 󰄬 | Default apps | run ms-settings:defaultapps
 setup.startup | 󰐥 | Startup apps | run ms-settings:startupapps
+setup.windows | 󰒓 | Windows settings
+setup.windows.look | 󰏘 | Look | settings look
+setup.windows.explorer | 󰉋 | File Explorer and taskbar | settings explorer
+setup.windows.privacy | 󰒘 | Privacy | settings privacy
+setup.windows.input | 󰌌 | Mouse and keyboard | settings input
+setup.windows.system | 󰒓 | System | settings system
+setup.windows.display | 󰍹 | Display | settings display
+setup.windows.connections | 󰖩 | Connections | settings connections
+setup.windows.sound | 󰕾 | Sound | settings sound
+setup.windows.developer | 󰅩 | Developer | settings developer
+setup.windows.admin | 󰒘 | Admin changes waiting | settings admin
+setup.windows.undo | 󰕌 | Undo the last settings change | settings undo
+setup.windows.save | 󰆓 | Save my settings for a new PC | task omawin settings save
+setup.windows.app | 󰒓 | Windows' Settings app | run ms-settings:
 setup.default | 󰄬 | Defaults (terminal, editor, agent)
+setup.default | 󰄬 | Defaults (terminal, shell, editor, agent)
 setup.default.terminal | 󰆍 | Terminal
 setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty
 setup.default.terminal.wt | 󰆍 | Windows Terminal | omawin default terminal wt
+setup.default.shell | 󰆍 | Shell (what a new terminal opens)
+setup.default.shell.linux |  | Linux (WSL) | omawin default shell linux
+setup.default.shell.windows |  | PowerShell | omawin default shell windows
 setup.default.editor | 󰏫 | Editor
 setup.default.editor.nvim |  | Neovim (in the terminal) | omawin default editor nvim
 setup.default.editor.neovide |  | Neovide | omawin default editor neovide
@@ -107,6 +131,7 @@ install.preset.aiagents | 󱚤 | AI agents: Claude Code, opencode | task omawin 
 install.preset.dictation | 󰕾 | Dictation: Handy | task omawin preset add dictation
 install.preset.powerbi | 󰄨 | Power BI + Fabric | task omawin preset add powerbi-fabric
 install.plugin | 󰏗 | Plugins
+install.plugin.gallery | 󰐱 | Gallery: every plugin, and whether it runs here | plugins
 install.plugin.list | 󰆍 | Which are on | task omawin plugin list
 install.plugin.music | 󰓇 | Music: the music, podcast and radio player | task omawin plugin add music
 install.development | 󰵮 | Development
@@ -275,5 +300,32 @@ trigger.color | 󰈊 | Colour picker | omawin capture color
 trigger.qr | 󰐲 | Read a QR code | omawin capture qr
 trigger.toggle | 󰔡 | Toggle
 trigger.toggle.stayawake | 󰅶 | Stay awake | omawin toggle stay-awake
+
+pc | 󰌢 | This PC
+pc.health | 󰗶 | Why it restarted, crashed or woke up | task omawin health
+pc.startup | 󱓞 | What starts with Windows | task omawin startup
+pc.top | 󰊚 | Processes by app | task omawin top
+pc.connections | 󰖟 | Apps on the internet | task omawin connections
+pc.whohas | 󰌾 | Who has this file? (its path on the clipboard) | task omawin who-has
+pc.hosts | 󰇺 | Hosts file | task omawin hosts
+pc.dns | 󰇺 | DNS
+pc.dns.status | 󰇺 | Which DNS each network uses | task omawin dns
+pc.dns.cloudflare | 󰇺 | Cloudflare | task omawin dns cloudflare
+pc.dns.quad9 | 󰇺 | Quad9 (blocks known malware sites) | task omawin dns quad9
+pc.dns.google | 󰇺 | Google | task omawin dns google
+pc.dns.router | 󰇺 | Your router's (automatic) | task omawin dns router
+pc.wifi | 󰐲 | Share the Wi-Fi (QR code) | task omawin wifi share
+pc.mic | 󰍭 | Microphones: mute / unmute | omawin mic
+pc.classicmenu | 󰍜 | Full right-click menu: on / off (Explorer restarts) | omawin classic-menu
+trigger.clip | 󰘦 | Change the clipboard's text
+trigger.clip.json | 󰘦 | JSON, indented | omawin clip json
+trigger.clip.jsonline | 󰘦 | JSON on one line | omawin clip json-line
+trigger.clip.base64 | 󰅌 | Base64 encode | omawin clip base64
+trigger.clip.unbase64 | 󰅌 | Base64 decode | omawin clip unbase64
+trigger.clip.url | 󰌷 | URL encode | omawin clip url
+trigger.clip.unurl | 󰌷 | URL decode | omawin clip unurl
+trigger.clip.date | 󰃭 | Timestamp to a date | omawin clip date
+trigger.clip.path | 󰉋 | Path: Windows / WSL | omawin clip path
+trigger.clip.trim | 󰅌 | Trim trailing spaces | omawin clip trim
 
 about | 󰋽 | About | omawin about

@@ -1,0 +1,28 @@
+#!/bin/bash
+# Windows' theme into Linux's own copies (roadmap 3.8). Starship, fzf, bat, herdr and lazygit use
+# the terminal's colours and Neovim reads the palette itself, so btop is the one with a file of its
+# own: the theme's btop.theme as ~/.config/btop/themes/current.theme (Omarchy's btop.conf picks
+# "current"), then running btops reload it (SIGUSR2, as omarchy-restart-btop does). The theme is
+# the one Windows rendered last (themes/render.ps1 writes theme-linux.sh into OMAWIN_STATE).
+# Run by config/bash/bashrc at the first prompt after a switch, and by themes/set-theme.ps1 while
+# Linux runs. (Copied to ~/.local/bin by wsl/setup.sh.)
+set -u
+
+state="${OMAWIN_STATE:-}"
+[[ -n $state && -f $state/theme-linux.sh ]] || exit 0
+# shellcheck source=/dev/null
+. <(tr -d '\r' < "$state/theme-linux.sh")
+[[ -n ${OMAWIN_THEME:-} ]] || exit 0
+
+# An installed theme's file (%LOCALAPPDATA%\launcher\themes) before omawin's own, as render.ps1 does.
+for src in "$state/themes/btop/$OMAWIN_THEME.theme" "${OMAWIN:-}/themes/btop/$OMAWIN_THEME.theme"; do
+  if [[ -f $src ]]; then
+    mkdir -p ~/.config/btop/themes
+    tr -d '\r' < "$src" > ~/.config/btop/themes/current.theme
+    break
+  fi
+done
+
+mkdir -p ~/.config/omawin
+printf '%s\n' "$OMAWIN_THEME" > ~/.config/omawin/theme
+pkill -USR2 -x btop 2> /dev/null || true

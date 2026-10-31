@@ -5,14 +5,18 @@
 # fake release (docs/releases.md, scratch) are laid out identically:
 #   omawin-helpers-<tag>.zip                 omawin.exe and the bar's helpers (any architecture)
 #   SystemMenu-<tag>-win-<arch>.zip          the menu app, unpacked into %LOCALAPPDATA%\system-menu
+#   omawin-cli-<tag>-win-<arch>.exe          the compiled omawin (src/cli), into ~/.local/bin
 #   omawin-music-<tag>-win-<arch>.exe        the music player, into ~/.local/bin
+#   omawin-windows-<tag>-win-<arch>.exe      Phase 8's fixes (who-has, health, …), into ~/.local/bin
 #   omawin-tools.txt, omawin-tool-<name>.zip the tools bundle (build/bundle), as built
 #   SHA256SUMS.txt                           `<sha256>  <file>` per asset
 #
 # The input layout is what the jobs produce:
 #   <InDir>\helpers\*.exe          build/helpers.ps1 -OutDir <InDir>\helpers
 #   <InDir>\menu-<arch>\           shell/menu-app/build.ps1 -BuildOnly -OutDir <InDir>\menu-<arch>
+#   <InDir>\cli-<arch>\omawin-cli.exe       src/cli/build.ps1 -OutDir <InDir>\cli-<arch>
 #   <InDir>\music-<arch>\omawin-music.exe   src/music/build.ps1 -BuildOnly -OutDir <InDir>\music-<arch>
+#   <InDir>\windows-<arch>\omawin-windows.exe   src/windows/build.ps1 -BuildOnly -OutDir <InDir>\windows-<arch>
 #
 #   .\build\release.ps1 -Tag v0.1.0 -InDir scratch\built -OutDir scratch\release
 #   .\build\release.ps1 -Tag v0.1.0 -InDir out -OutDir dist -Arch x64   (one architecture)
@@ -26,7 +30,8 @@ param(
     # Signing sits between the two: the ZIPs are built, signed, and only then hashed, so the
     # manifest describes the signed bytes (docs/releases.md).
     [switch]$NoManifest,           # pack only
-    [switch]$OnlyManifest          # hash what is in -OutDir, pack nothing
+    [switch]$OnlyManifest,         # hash what is in -OutDir, pack nothing
+    [switch]$AllowJit              # pack a menu app that isn't the native build (a local test release)
 )
 $ErrorActionPreference = 'Stop'
 if ($InDir -and -not [IO.Path]::IsPathRooted($InDir)) { $InDir = Join-Path (Get-Location).Path $InDir }
@@ -54,12 +59,26 @@ if (-not $OnlyManifest) {
 
     foreach ($a in $Arch) {
         $menu = Join-Path $InDir "menu-$a"
-        if (Test-Path (Join-Path $menu 'SystemMenu.exe')) { Add-Zip $menu "SystemMenu-$Tag-win-$a.zip" }
+        if (Test-Path (Join-Path $menu 'SystemMenu.exe')) {
+            # Releases ship the native build only (roadmap 1.3); CI checks it too, this is the second
+            # guard, so a locally packed release can't carry the slower JIT one by accident.
+            $kind = "$(Get-Content (Join-Path $menu 'build-kind.txt') -Raw -ErrorAction SilentlyContinue)".Trim()
+            if ($kind -ne 'native' -and -not $AllowJit) { throw "menu-$a is a '$kind' build; releases ship the native one (build.ps1 -Aot), or -AllowJit for a test release" }
+            Add-Zip $menu "SystemMenu-$Tag-win-$a.zip"
+        }
         else { Write-Warning "no menu app for win-$a ($menu): left out of this release" }
+
+        $cli = Join-Path $InDir "cli-$a\omawin-cli.exe"
+        if (Test-Path $cli) { Add-File $cli "omawin-cli-$Tag-win-$a.exe" }
+        else { Write-Warning "no omawin-cli for win-$a ($cli): left out of this release" }
 
         $music = Join-Path $InDir "music-$a\omawin-music.exe"
         if (Test-Path $music) { Add-File $music "omawin-music-$Tag-win-$a.exe" }
         else { Write-Warning "no music player for win-$a ($music): left out of this release" }
+
+        $fixes = Join-Path $InDir "windows-$a\omawin-windows.exe"
+        if (Test-Path $fixes) { Add-File $fixes "omawin-windows-$Tag-win-$a.exe" }
+        else { Write-Warning "no omawin-windows for win-$a ($fixes): left out of this release" }
     }
 
     # The tools bundle (build/bundle): its zips and list, published as they are.
@@ -89,6 +108,17 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "theme-thumbs`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no theme pictures ($thumbs): left out of this release" }
+    # The plugin gallery's index (release.yml's plugin-gallery job): merged into the folder the
+    # gallery page reads, not waited for (later).
+    $gallery = Join-Path $InDir 'plugin-gallery\omawin-tool-plugin-gallery.zip'
+    if ((Test-Path $gallery) -and (Test-Path $list)) {
+        Add-File $gallery 'omawin-tool-plugin-gallery.zip'
+        $version = (Get-Content (Join-Path $InDir 'plugin-gallery\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $gallery -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('plugin-gallery', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-plugin-gallery.zip', $sha, '-', '', 'launcher\plugin-gallery', 'merge later') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "plugin-gallery`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no plugin gallery ($gallery): left out of this release" }
     # The plugins' QML host (release.yml's qs-host job): optional, so only a PC that turns a plugin
     # on downloads it (install/software.ps1); in %LOCALAPPDATA%\omawin\tools\qs-host, not on the PATH.
     $qs = Join-Path $InDir 'qs-host\omawin-tool-qs-host.zip'

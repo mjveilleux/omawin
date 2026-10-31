@@ -2,6 +2,21 @@
 #   id | icon | name | keywords | kind | how | notes
 # Layered: the shared folder's and this account's launcher/settings.txt add lines or replace one
 # by id. "check" in notes: not yet verified on a PC, hidden from users.
+#
+# how, by verb (shell/menu-app/Settings/):
+#   reg <HIVE\key\value> <dword|qword|sz|expand_sz> on= off= | values= | range= [default=] [broadcast=<area>]
+#       [refresh-explorer] [restart-explorer]     a registry value; off=- deletes it (Windows' default)
+#   spi <name>        SystemParametersInfo (Switches.cs): animations mouse-accel pointer-speed key-repeat
+#                     key-delay sticky-hotkey swap-buttons scroll-lines double-click drag-full-windows
+#                     font-smoothing snap focus-follows-mouse menu-delay min-animate filter-hotkey toggle-hotkey
+#   powercfg <name> <ac|dc|both>   the active power plan (Switches.cs): screen-off sleep hibernate-after
+#                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
+#   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
+#                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer classic-menu, and the
+#                     admin ones hibernate sudo windows-feature <feature>
+#   link <uri or program>   opens a page; omawin <command>   one of omawin's commands
+# notes: admin (one prompt for all of them, roadmap 2.9), signout, restart, minBuild=, maxBuild=, check.
+# CI sets and restores every reg, spi and powercfg line on a Windows runner (.github/workflows/test.yml).
 
 # --- look -------------------------------------------------------------------------------------
 look.dark-apps | - | Dark mode for apps | dark theme black night light | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\AppsUseLightTheme dword on=0 off=1 broadcast=ImmersiveColorSet |
@@ -11,6 +26,9 @@ look.animations | - | Animation effects | motion reduce animate | switch | spi a
 look.accent-taskbar | - | Accent colour on Start and taskbar | color colour accent | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize\ColorPrevalence dword on=1 off=0 broadcast=ImmersiveColorSet |
 look.accent-titlebars | - | Accent colour on title bars | color colour accent window border | switch | reg HKCU\Software\Microsoft\Windows\DWM\ColorPrevalence dword on=1 off=0 broadcast=ImmersiveColorSet |
 look.desktop-icons | - | Desktop icons | desktop icons show hide | switch | builtin desktop-icons |
+look.drag-full-windows | - | Window contents while dragging | drag move window outline | switch | spi drag-full-windows |
+look.font-smoothing | - | ClearType font smoothing | cleartype font smooth text blurry | switch | spi font-smoothing |
+look.taskbar-alignment | - | Taskbar alignment | taskbar left centre center start position | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarAl dword values="0:Left,1:Centre" default=1 | minBuild=22000 check
 
 # --- explorer ---------------------------------------------------------------------------------
 explorer.extensions | - | File name extensions | ext extension .txt suffix | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\HideFileExt dword on=0 off=1 refresh-explorer |
@@ -21,6 +39,16 @@ explorer.compact | - | Compact view | density spacing compact | switch | reg HKC
 explorer.open-to | - | File Explorer opens to | home this pc quick access start | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\LaunchTo dword values="1:This PC,2:Home,3:Downloads" default=2 |
 explorer.end-task | - | End task on the taskbar's menu | kill end task taskbar right-click | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarDeveloperSettings\TaskbarEndTask dword on=1 off=0 | minBuild=22631 check
 explorer.clock-seconds | - | Seconds on the taskbar clock | clock time seconds | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowSecondsInSystemClock dword on=1 off=0 restart-explorer | minBuild=22621 check
+explorer.task-view | - | Task view button on the taskbar | task view desktops taskbar button | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowTaskViewButton dword on=1 off=0 default=1 |
+explorer.taskbar-search | - | Search on the taskbar | search box icon taskbar | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Search\SearchboxTaskbarMode dword values="0:Hidden,1:Icon,2:Search box" default=2 | check
+explorer.taskbar-combine | - | Combine taskbar buttons | group combine labels taskbar | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\TaskbarGlomLevel dword values="0:Always,1:When the taskbar is full,2:Never" default=0 | minBuild=22631 check
+explorer.recent-files | - | Recent files in Home (Quick access) | recent quick access home | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ShowRecent dword on=1 off=0 default=1 |
+explorer.frequent-folders | - | Frequent folders in Home (Quick access) | frequent quick access home | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ShowFrequent dword on=1 off=0 default=1 |
+explorer.recent-start | - | Recently opened items in Start and jump lists | recent start jump list | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_TrackDocs dword on=1 off=0 default=1 |
+explorer.checkboxes | - | Item check boxes | checkbox select | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\AutoCheckSelect dword on=1 off=0 refresh-explorer |
+explorer.empty-drives | - | Empty drives | drives card reader removable | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\HideDrivesWithNoMedia dword on=0 off=1 default=1 refresh-explorer |
+explorer.sync-ads | - | Sync provider notifications (ads in File Explorer) | ads onedrive notifications sync | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowSyncProviderNotifications dword on=1 off=0 default=1 refresh-explorer |
+explorer.classic-menu | - | The full right-click menu (no "Show more options") | context menu right click classic show more options windows 10 | switch | builtin classic-menu restart-explorer | minBuild=22000 check
 
 # --- privacy ----------------------------------------------------------------------------------
 privacy.camera | - | Camera for apps | webcam camera permission | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\CapabilityAccessManager\ConsentStore\webcam\Value sz on=Allow off=Deny |
@@ -29,6 +57,10 @@ privacy.location | - | Location for apps | gps location permission | switch | re
 privacy.ad-id | - | Advertising ID | ads tracking advertising | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\AdvertisingInfo\Enabled dword on=1 off=0 |
 privacy.tailored | - | Tailored experiences | diagnostic tailored tips | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Privacy\TailoredExperiencesWithDiagnosticDataEnabled dword on=1 off=0 |
 privacy.online-speech | - | Online speech recognition | speech voice cloud | switch | reg HKCU\Software\Microsoft\Speech_OneCore\Settings\OnlineSpeechPrivacy\HasAccepted dword on=1 off=0 | check
+privacy.app-tracking | - | Most used apps in Start (launch tracking) | tracking launch most used start | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\Start_TrackProgs dword on=1 off=0 default=1 |
+privacy.language-list | - | Websites see my language list | language http accept websites | switch | reg "HKCU\Control Panel\International\User Profile\HttpAcceptLanguageOptOut" dword on=0 off=1 default=0 | check
+privacy.settings-suggestions | - | Suggested content in Settings | suggestions ads settings recommended | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338393Enabled dword on=1 off=0 default=1 | check
+privacy.tips | - | Tips and suggestions when using Windows | tips suggestions tricks | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\ContentDeliveryManager\SubscribedContent-338389Enabled dword on=1 off=0 default=1 | check
 
 # --- input ------------------------------------------------------------------------------------
 input.mouse-accel | - | Enhance pointer precision (mouse acceleration) | acceleration accel mouse | switch | spi mouse-accel |
@@ -38,6 +70,11 @@ input.key-delay | - | Key repeat delay | keyboard delay | choice | spi key-delay
 input.sticky-shortcut | - | Sticky keys shortcut (Shift five times) | sticky shift accessibility | switch | spi sticky-hotkey |
 input.tap-to-click | - | Touchpad: tap to click | touchpad tap click | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad\TapsEnabled dword on=4294967295 off=0 | check
 input.scroll-direction | - | Touchpad: down motion scrolls down | natural scroll reverse touchpad | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\PrecisionTouchPad\ScrollDirection dword on=4294967295 off=0 | check
+input.swap-buttons | - | Swap the primary mouse button | left handed swap buttons | switch | spi swap-buttons |
+input.scroll-lines | - | Lines to scroll per wheel notch | scroll wheel lines | slider | spi scroll-lines range=1..100 default=3 |
+input.double-click | - | Double-click speed (milliseconds) | double click speed | slider | spi double-click range=200..900 default=500 |
+input.focus-follows-mouse | - | Focus follows the mouse | x-mouse focus hover activate tracking | switch | spi focus-follows-mouse |
+input.scroll-inactive | - | Scroll inactive windows on hover | scroll hover inactive | switch | reg "HKCU\Control Panel\Desktop\MouseWheelRouting" dword on=2 off=0 | check
 
 # --- system -----------------------------------------------------------------------------------
 system.clipboard-history | - | Windows' clipboard history (Win+V) | clipboard history paste | switch | reg HKCU\Software\Microsoft\Clipboard\EnableClipboardHistory dword on=1 off=0 |
@@ -51,6 +88,13 @@ system.sleep | - | Sleep after (minutes, plugged in) | sleep standby timeout | s
 system.lid | - | Closing the lid (on battery) | lid laptop close | choice | powercfg lid dc values="0:Do nothing,1:Sleep,2:Hibernate,3:Shut down" |
 system.hibernate | - | Hibernate | hibernation hiberfil | switch | builtin hibernate | admin
 system.fast-startup | - | Fast startup | hiberboot boot fast | switch | reg "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled" dword on=1 off=0 | admin restart
+system.shake | - | Title bar window shake | aero shake minimize title bar | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\DisallowShaking dword on=0 off=1 default=1 | minBuild=22000 check
+system.storage-sense | - | Storage Sense | cleanup disk storage temp | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy\01 dword on=1 off=0 | check
+system.screen-off-battery | - | Turn off the screen after (minutes, on battery) | display timeout screen off battery | slider | powercfg screen-off dc range=0..240 |
+system.sleep-battery | - | Sleep after (minutes, on battery) | sleep standby timeout battery | slider | powercfg sleep dc range=0..240 |
+system.hibernate-after | - | Hibernate after (minutes, plugged in) | hibernate timeout | slider | powercfg hibernate-after ac range=0..1440 |
+system.lid-plugged | - | Closing the lid (plugged in) | lid laptop close | choice | powercfg lid ac values="0:Do nothing,1:Sleep,2:Hibernate,3:Shut down" |
+system.power-button | - | Pressing the power button | power button shut down sleep | choice | powercfg power-button ac values="0:Do nothing,1:Sleep,2:Hibernate,3:Shut down,4:Turn off the display" |
 
 # --- display ----------------------------------------------------------------------------------
 display.refresh-rate | - | Refresh rate | hz refresh 120 144 60 | choice | builtin refresh-rate |
@@ -68,11 +112,96 @@ connections.hotspot | - | Mobile hotspot | hotspot tether share | switch | built
 # --- sound ------------------------------------------------------------------------------------
 sound.mono | - | Mono audio | mono stereo accessibility | switch | reg HKCU\Software\Microsoft\Multimedia\Audio\AccessibilityMonoMixState dword on=1 off=0 | check
 sound.output | - | Sound output | speakers headphones default output | choice | builtin audio-output |
+sound.input | - | Sound input (microphone) | microphone mic input default recording | choice | builtin audio-input |
+sound.ducking | - | During calls, other sounds | ducking calls communications volume reduce | choice | reg HKCU\Software\Microsoft\Multimedia\Audio\UserDuckingPreference dword values="0:Mute,1:Reduce by 80%,2:Reduce by 50%,3:Do nothing" default=1 | check
 
 # --- developer --------------------------------------------------------------------------------
 developer.dev-mode | - | Developer mode | developer sideload symlink | switch | reg HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock\AllowDevelopmentWithoutDevLicense dword on=1 off=0 | admin
 developer.long-paths | - | Long paths (over 260 characters) | maxpath long path 260 | switch | reg HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled dword on=1 off=0 | admin
-developer.sudo | - | sudo for Windows | sudo elevate admin | choice | builtin sudo values="off:Off,forceNewWindow:In a new window,disableInput:Input closed,normal:Inline" | admin minBuild=26052
+developer.sudo | - | sudo for Windows | sudo elevate admin | choice | builtin sudo values="off:Off,forceNewWindow:In a new window,disableInput:Input closed,normal:Inline" | admin minBuild=26052 check
 developer.vm-platform | - | Virtual Machine Platform (WSL) | wsl hyper-v virtualization feature | switch | builtin windows-feature VirtualMachinePlatform | admin restart
+developer.wsl | - | Windows Subsystem for Linux (the feature) | wsl linux feature | switch | builtin windows-feature Microsoft-Windows-Subsystem-Linux | admin restart
+developer.sandbox | - | Windows Sandbox | sandbox disposable vm feature | switch | builtin windows-feature Containers-DisposableClientVM | admin restart check
+developer.hyper-v | - | Hyper-V | hyper-v virtualization vm feature | switch | builtin windows-feature Microsoft-Hyper-V-All | admin restart check
+developer.script-policy | - | PowerShell 5.1 script policy (this account) | execution policy scripts ps1 | choice | reg HKCU\Software\Microsoft\PowerShell\1\ShellIds\Microsoft.PowerShell\ExecutionPolicy sz values="RemoteSigned,Unrestricted,Bypass,Restricted" default=Undefined | check
 developer.env-vars | - | Environment variables | path env variables | link | link "rundll32.exe sysdm.cpl,EditEnvironmentVariables" |
 developer.restart-explorer | - | Restart Explorer | explorer restart taskbar refresh | action | builtin restart-explorer |
+
+# --- Phase 8: faster and calmer (roadmap 8G-8J; plans/07-fixing-windows.md) -------------------
+# What omawin recommends for each, and why, is default/launcher/tune-up.txt (omawin tune-up).
+# A line naming a builtin, spi or powercfg handler the settings code doesn't have yet carries "check".
+
+# 8.26 Windows stops fighting the tiling manager
+system.snap-flyout | - | Snap layouts on the maximize button | snap layouts flyout maximize hover | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapAssistFlyout dword on=1 off=0 |
+system.snap-drag | - | Snap windows by dragging them to an edge | snap drag edge arrange aero | switch | spi snap | check
+system.snap-assist | - | Suggest other windows after snapping one | snap assist suggest | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\SnapAssist dword on=1 off=0 |
+system.snap-bar | - | Snap bar at the top of the screen while dragging | snap bar top drag | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapBar dword on=1 off=0 | minBuild=22621 check
+input.win-hotkeys | - | Windows' own Win+key shortcuts that clash with omawin's | disabled hotkeys win key conflict | switch | builtin disabled-hotkeys restart-explorer | check
+
+# 8.27 snappier menus and switching
+look.menu-delay | - | How fast classic menus open | menu show delay submenu speed | choice | spi menu-delay values="400:Windows default,100:Fast,0:Instant" default=400 | check
+system.alt-tab-tabs | - | Alt+Tab shows Edge's tabs | alt tab edge tabs browser | choice | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\MultiTaskingAltTabFilter dword values="3:Windows only,2:3 recent tabs,1:5 recent tabs,0:20 recent tabs" | check
+look.min-max-animation | - | Minimize and maximize animations | animation minimize maximize window | switch | spi min-animate | check
+
+# 8.28 less running in the background
+system.edge-startup-boost | - | Edge preloads at sign-in (startup boost) | edge startup boost preload | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Edge\StartupBoostEnabled dword on=- off=0 | admin
+system.edge-background | - | Edge keeps running after it's closed | edge background continue running | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Edge\BackgroundModeEnabled dword on=- off=0 | admin
+system.widgets | - | Widgets (the news board) | widgets news interests board | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Dsh\AllowNewsAndInterests dword on=- off=0 | admin
+system.game-dvr | - | Game bar records in the background | xbox game dvr background record | switch | reg HKCU\System\GameConfigStore\GameDVR_Enabled dword on=1 off=0 |
+system.delivery-optimization | - | Upload updates to other PCs (Delivery Optimization) | delivery optimization peer upload | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\DeliveryOptimization\DODownloadMode dword on=- off=0 | admin
+system.maintenance-wake | - | Wake the PC at night for maintenance | automatic maintenance wake night | switch | reg "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\Maintenance\WakeUp" dword on=1 off=0 | admin check
+system.startup-onedrive | - | OneDrive starts at sign-in | onedrive startup login | switch | builtin startup-item OneDrive | check
+system.startup-teams | - | Teams starts at sign-in | teams startup login | switch | builtin startup-item MSTeams | check
+
+# 8.29 accidents that don't happen
+input.layout-hotkey | - | Alt+Shift switches the keyboard layout | language hotkey alt shift layout input | switch | builtin layout-hotkey | signout check
+input.narrator-shortcut | - | Win+Ctrl+Enter starts Narrator | narrator shortcut accessibility | switch | reg HKCU\Software\Microsoft\Narrator\NoRoam\WinEnterLaunchEnabled dword on=1 off=0 | check
+input.filter-shortcut | - | Holding Right Shift asks about Filter Keys | filter keys shortcut prompt | switch | spi filter-hotkey | check
+input.toggle-shortcut | - | Holding Num Lock asks about Toggle Keys | toggle keys shortcut prompt | switch | spi toggle-hotkey | check
+privacy.finish-setup | - | "Let's finish setting up your device" after updates | scoobe finish setting up | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\UserProfileEngagement\ScoobeSystemSettingEnabled dword on=1 off=0 |
+look.spotlight-icon | - | "Learn about this picture" icon on the desktop | spotlight desktop icon learn picture | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel\{2cc5ca98-6485-489a-920e-b3e88a6ccce3} dword on=0 off=1 refresh-explorer | check
+
+# 8.30 sleep that doesn't drain the battery
+system.hibernate-after-battery | - | Hibernate after this long asleep (on battery) | hibernate standby sleep battery drain | choice | powercfg hibernate-after dc values="0:Never,60:1 hour,180:3 hours,360:6 hours" |
+system.wake-timers | - | Wake timers on battery | wake timers sleep battery | switch | powercfg wake-timers dc on=1 off=0 | check
+system.standby-network | - | Network stays connected in standby (battery) | modern standby network connectivity | choice | powercfg standby-network dc values="0:Off,1:On,2:Managed by Windows" | check
+
+# 8.31 Windows' file indexer (offered once the finder replaces it)
+system.search-indexer | - | Windows Search indexer | indexer search service wsearch indexing | switch | builtin service WSearch on=delayed off=disabled | admin check
+
+# 8.37-8.40 developer (long paths, developer mode and sudo are above)
+developer.utf8 | - | Use UTF-8 for programs that aren't Unicode (beta) | utf8 code page 65001 encoding acp | switch | builtin utf8 | admin restart check
+developer.firewall-dev | - | Dev servers may listen on private networks | firewall node bun python dotnet go prompt allow | action | builtin firewall-dev | admin check
+developer.ssh-agent | - | SSH agent starts with Windows | ssh agent openssh keys | switch | builtin ssh-agent | admin check
+developer.case-sensitive | - | Make a folder case-sensitive (for Linux tools) | case sensitive folder fsutil wsl | action | builtin case-sensitive | check
+
+# 8.43 drivers on your terms
+system.update-no-drivers | - | Windows Update leaves drivers alone | update driver exclude quality | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\ExcludeWUDriversInQualityUpdate dword on=1 off=- | admin
+
+# 8.45 every AI feature in one place (Look › AI)
+look.ai-copilot-button | - | Copilot button on the taskbar | ai copilot taskbar button | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\ShowCopilotButton dword on=1 off=0 refresh-explorer |
+look.ai-copilot | - | Windows Copilot (policy) | ai copilot turn off | switch | reg HKCU\Software\Policies\Microsoft\Windows\WindowsCopilot\TurnOffWindowsCopilot dword on=- off=1 | admin check
+look.ai-recall | - | Recall saves snapshots of the screen | ai recall snapshots copilot+ | switch | reg HKCU\Software\Policies\Microsoft\Windows\WindowsAI\DisableAIDataAnalysis dword on=- off=1 | admin
+look.ai-recall-remove | - | Recall can be turned on at all | ai recall remove feature | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\WindowsAI\AllowRecallEnablement dword on=- off=0 | admin restart check
+look.ai-click-to-do | - | Click to Do (act on what's on screen) | ai click to do screen | switch | reg HKCU\Software\Policies\Microsoft\Windows\WindowsAI\DisableClickToDo dword on=- off=1 | admin check
+look.ai-paint | - | AI in Paint (Image Creator, Cocreator, generative fill) | ai paint image creator cocreator | switch | builtin ai-paint | admin check
+look.ai-edge | - | Copilot and the sidebar in Edge | ai edge copilot sidebar | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Edge\HubsSidebarEnabled dword on=- off=0 | admin
+
+# 8.46 Explorer's slow paths
+explorer.folder-type | - | Explorer guesses folder types (slow on big folders) | folder type discovery downloads slow general items | switch | builtin folder-type-general restart-explorer | check
+explorer.home-recent | - | Recent files in Explorer's Home | quick access recent files | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ShowRecent dword on=1 off=0 refresh-explorer |
+explorer.home-frequent | - | Frequent folders in Explorer's Home | quick access frequent folders | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ShowFrequent dword on=1 off=0 refresh-explorer |
+explorer.home-cloud | - | Files from Office.com in Explorer's Home | quick access cloud microsoft 365 | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\ShowCloudFilesInQuickAccess dword on=1 off=0 refresh-explorer | check
+explorer.gallery | - | Gallery in Explorer's side pane | gallery navigation pane | switch | reg HKCU\Software\Classes\CLSID\{e88865ea-0e1c-4e20-9aa6-edcd0212c87c}\System.IsPinnedToNameSpaceTree dword on=1 off=0 restart-explorer |
+explorer.separate-process | - | Folder windows in their own process | separate process explorer hang crash | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\SeparateProcess dword on=1 off=0 restart-explorer |
+
+# 8.48 web results out of Windows search
+system.search-web | - | Web results in Windows search | bing web search start | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Search\BingSearchEnabled dword on=- off=0 | check
+system.search-suggestions | - | Web suggestions in the search box (policy) | search box suggestions bing policy | switch | reg HKCU\Software\Policies\Microsoft\Windows\Explorer\DisableSearchBoxSuggestions dword on=- off=1 restart-explorer | admin
+system.search-highlights | - | Search highlights | search highlights dynamic bing promo | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\SearchSettings\IsDynamicSearchBoxEnabled dword on=1 off=0 |
+
+# 8.51 diagnostic data at the minimum (Windows Update and Defender untouched)
+privacy.diagnostic-data | - | Optional diagnostic data (off: Required only) | telemetry diagnostic data optional | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\DataCollection\AllowTelemetry dword on=- off=1 | admin
+privacy.feedback | - | Windows asks for feedback | feedback frequency siuf | switch | reg HKCU\Software\Microsoft\Siuf\Rules\NumberOfSIUFInPeriod dword on=- off=0 | check
+privacy.activity-history | - | Activity history | activity history timeline | switch | reg HKLM\SOFTWARE\Policies\Microsoft\Windows\System\PublishUserActivities dword on=- off=0 | admin
+privacy.inking-typing | - | Send inking and typing data | inking typing personalization | switch | reg HKCU\Software\Microsoft\Input\TIPC\Enabled dword on=1 off=0 | check

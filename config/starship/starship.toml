@@ -1,6 +1,18 @@
 add_newline = true
 command_timeout = 200
-format = "[$directory$git_branch$git_status]($style)$character"
+# The side mark first: Arch's, Ubuntu's or Windows' logo, coloured by side, so a Linux prompt never
+# looks like a PowerShell one (roadmap 3B). Each env_var module shows only where its variable is
+# set: OMAWIN_LINUX by config/bash/bashrc in Linux, OMAWIN_WINDOWS by the PowerShell profile and
+# Git Bash. Nothing is started per prompt.
+format = "${env_var.OMAWIN_LINUX}${env_var.OMAWIN_WINDOWS}[$directory$git_branch$git_status]($style)$character"
+
+[env_var.OMAWIN_LINUX]
+format = "[$env_value ]($style)"
+style = "bold green"
+
+[env_var.OMAWIN_WINDOWS]
+format = "[$env_value ]($style)"
+style = "bold blue"
 
 [character]
 error_symbol = "[✗](bold cyan)"

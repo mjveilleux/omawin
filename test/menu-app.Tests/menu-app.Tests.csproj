@@ -11,22 +11,56 @@
     <RootNamespace>SystemMenu.Tests</RootNamespace>
     <!-- Runs on a newer .NET when 9 isn't installed (a cloud session with only .NET 10). -->
     <RollForward>Major</RollForward>
+    <!-- Settings/Native.cs and Switches.cs (P/Invoke with pointers), for the round-trip. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <!-- Their registry calls are Windows-only; the round-trip runs them only on Windows. -->
+    <NoWarn>$(NoWarn);CA1416</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
     <!-- The pure files, linked from the menu app. Keep them free of WinUI and Windows calls. -->
     <Compile Include="..\..\shell\menu-app\Fuzzy.cs" Link="Linked\Fuzzy.cs" />
+    <Compile Include="..\..\shell\menu-app\LinuxFiles.cs" Link="Linked\LinuxFiles.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Result.cs" Link="Linked\Search\Result.cs" />
     <Compile Include="..\..\shell\menu-app\Search\QueryParser.cs" Link="Linked\Search\QueryParser.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Merger.cs" Link="Linked\Search\Merger.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\CommandList.cs" Link="Linked\Search\CommandList.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\WindowList.cs" Link="Linked\Search\WindowList.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Actions.cs" Link="Linked\Search\Actions.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Keys.cs" Link="Linked\Search\Keys.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Request.cs" Link="Linked\Search\Request.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Home.cs" Link="Linked\Search\Home.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\TagLook.cs" Link="Linked\Search\TagLook.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
+    <Compile Include="..\..\shell\menu-app\TuneUp.cs" Link="Linked\TuneUp.cs" />
+    <Compile Include="..\..\shell\menu-app\ReservedPorts.cs" Link="Linked\ReservedPorts.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Values.cs" Link="Linked\Settings\Values.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\History.cs" Link="Linked\Settings\History.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\AdminQueue.cs" Link="Linked\Settings\AdminQueue.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Store.cs" Link="Linked\Settings\Store.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Commands.cs" Link="Linked\Settings\Commands.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\ValueFile.cs" Link="Linked\Settings\ValueFile.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Search.cs" Link="Linked\Settings\Search.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Index.cs" Link="Linked\Settings\Index.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\RoundTrip.cs" Link="Linked\Settings\RoundTrip.cs" />
+    <!-- Windows calls, compiled here so the settings round-trip (RoundTripTests, a Windows CI job)
+         runs the real reg / spi / powercfg handlers; the other tests never call them. -->
+    <Compile Include="..\..\shell\menu-app\Settings\Native.cs" Link="Linked\Settings\Native.cs" />
+    <Compile Include="..\..\shell\menu-app\Settings\Switches.cs" Link="Linked\Settings\Switches.cs" />
     <Compile Include="..\..\shell\menu-app\Plugins\Manifest.cs" Link="Linked\Plugins\Manifest.cs" />
     <Compile Include="..\..\shell\menu-app\Plugins\ManifestCheck.cs" Link="Linked\Plugins\ManifestCheck.cs" />
     <Compile Include="..\..\shell\menu-app\Plugins\Protocol.cs" Link="Linked\Plugins\Protocol.cs" />
+    <Compile Include="..\..\shell\menu-app\Plugins\GalleryIndex.cs" Link="Linked\Plugins\GalleryIndex.cs" />
+    <Compile Include="..\..\shell\menu-app\Plugins\Gallery.cs" Link="Linked\Plugins\Gallery.cs" />
     <Compile Include="..\..\shell\menu-app\Contrast.cs" Link="Linked\Contrast.cs" />
     <Compile Include="..\..\shell\menu-app\IconScale.cs" Link="Linked\IconScale.cs" />
     <Compile Include="..\..\shell\menu-app\PackageLogo.cs" Link="Linked\PackageLogo.cs" />
     <Compile Include="..\..\shell\menu-app\ThemePictures.cs" Link="Linked\ThemePictures.cs" />
+    <Compile Include="..\..\shell\menu-app\MotionTokens.cs" Link="Linked\MotionTokens.cs" />
+    <Compile Include="..\..\shell\menu-app\RowWindow.cs" Link="Linked\RowWindow.cs" />
+    <Compile Include="..\..\shell\menu-app\Community.cs" Link="Linked\Community.cs" />
+    <Compile Include="..\..\shell\menu-app\Emit.cs" Link="Linked\Emit.cs" />
+    <Compile Include="..\..\shell\menu-app\MicMute.cs" Link="Linked\MicMute.cs" />
   </ItemGroup>
 
   <ItemGroup>

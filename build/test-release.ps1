@@ -56,6 +56,7 @@ try {
         foreach ($a in $Arch) {
             & "$Repo\shell\menu-app\build.ps1" -OutDir "$Built\menu-$a" -BuildOnly -Release $Tag -Arch $a
             & "$Repo\src\music\build.ps1" -OutDir "$Built\music-$a" -BuildOnly -Release $Tag -Arch $a
+            & "$Repo\src\windows\build.ps1" -OutDir "$Built\windows-$a" -BuildOnly -Release $Tag -Arch $a
         }
     } elseif (-not (Test-Path "$Built\helpers\omawin.exe")) { throw "-SkipBuild: nothing built yet in $Built (run without it once)" }
 
@@ -64,11 +65,12 @@ try {
     Remove-Item -Recurse -Force $Release -ErrorAction SilentlyContinue
     # The workflow's order: pack, (sign), then the manifest - so a signature can sit in between and
     # the hashes still describe the files that are published.
-    & "$Repo\build\release.ps1" -Tag $Tag -InDir $Built -OutDir $Release -Arch $Arch -NoManifest
+    # -AllowJit: this PC may not have the C++ tools for the native build; CI insists on it.
+    & "$Repo\build\release.ps1" -Tag $Tag -InDir $Built -OutDir $Release -Arch $Arch -NoManifest -AllowJit
     & "$Repo\build\release.ps1" -Tag $Tag -OutDir $Release -OnlyManifest
     Check 'a manifest with every asset' {
         $names = (Get-Content "$Release\SHA256SUMS.txt") | ForEach-Object { ($_ -split '\s+')[1] }
-        foreach ($want in @("omawin-helpers-$Tag.zip") + ($Arch | ForEach-Object { "SystemMenu-$Tag-win-$_.zip", "omawin-music-$Tag-win-$_.exe" })) {
+        foreach ($want in @("omawin-helpers-$Tag.zip") + ($Arch | ForEach-Object { "SystemMenu-$Tag-win-$_.zip", "omawin-music-$Tag-win-$_.exe", "omawin-windows-$Tag-win-$_.exe" })) {
             if ($names -notcontains $want) { throw "no $want in SHA256SUMS.txt" }
         }
         $true
@@ -81,7 +83,7 @@ try {
     & "$Repo\bin\install-binaries.ps1" -BaseUrl $Release -BinDir "$into\bin" -MenuDir "$into\menu" `
         -StateFile "$into\release.txt" -NoBuild -NoStart -Release $Tag
     Check 'the helpers, the menu app and the player are all there' {
-        foreach ($f in 'omawin.exe', 'omawin-music.exe') { if (-not (Test-Path "$into\bin\$f")) { throw "no $f" } }
+        foreach ($f in 'omawin.exe', 'omawin-music.exe', 'omawin-windows.exe') { if (-not (Test-Path "$into\bin\$f")) { throw "no $f" } }
         if (-not (Test-Path "$into\menu\SystemMenu.exe")) { throw 'no SystemMenu.exe' }
         if (-not (Test-Path "$into\menu\fff_c.dll")) { throw 'no fff_c.dll (file search)' }
         $true
@@ -111,6 +113,11 @@ try {
     Check 'the downloaded omawin-music.exe answers --version' {
         $v = & "$into\bin\omawin-music.exe" --version
         if ($v -ne "omawin-music $Tag") { throw "--version said '$v'" }
+        $true
+    }
+    Check 'the downloaded omawin-windows.exe answers --version' {
+        $v = & "$into\bin\omawin-windows.exe" --version
+        if ($v -ne "omawin-windows $Tag") { throw "--version said '$v'" }
         $true
     }
     Check "the downloaded menu app carries the release ($Tag)" {

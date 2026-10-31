@@ -138,6 +138,8 @@ function Initialize-InstallUI([string]$Caller) {
 # Put the console back as it was (its encoding) once the install is over.
 function Close-InstallUI {
     Stop-InstallBoard
+    # The window's title, changed while the desktop started (install/start.ps1).
+    if ($UI.Title) { try { [Console]::Title = $UI.Title } catch { }; $UI.Title = $null }
     if (-not $UI.Fancy) { return }
     try { if ($UI.Encoding) { [Console]::OutputEncoding = $UI.Encoding } } catch { }
 }
@@ -433,6 +435,22 @@ function Write-InstallLogPath {
     if ($UI.Fancy) { Write-UILine ("`n  {0}log  {1}{2}`n" -f $UI.C.Dim, $UI.Log, $UI.C.Reset) }
 }
 
+# What's next after an install that went through: the desktop is already up when the start step
+# could start it (install/start.ps1); otherwise (no Windows desktop in this session, or it didn't
+# come up) it starts at the next sign-in, and that's the first thing to do.
+# Returns one array of (key, what) pairs.
+function Get-InstallNext {
+    $next = New-Object System.Collections.ArrayList
+    if ($UI.DesktopUp) { [void]$next.Add(@('Win+Space', 'the launcher: the desktop is running')) }
+    else {
+        [void]$next.Add(@('Sign out and back in', 'the desktop (GlazeWM, the bar, the launcher) starts at sign-in'))
+        [void]$next.Add(@('Win+Space', 'the launcher'))
+    }
+    [void]$next.Add(@('Win+Enter', $(if ($UI.NvimPlugins) { "a terminal; Neovim's plugins are going in, in the background" } else { 'a terminal; nvim for LazyVim' })))
+    [void]$next.Add(@('omawin check', '0 failed, 0 warnings is the bar; omawin help lists every command'))
+    , $next.ToArray()
+}
+
 # What the install did and what's next, or which step stopped it.
 function Write-InstallSummary {
     $Failed = @($UI.Steps | Where-Object { $_.State -eq 'failed' } | ForEach-Object { $_.Name }) | Select-Object -First 1
@@ -451,11 +469,12 @@ function Write-InstallSummary {
         if ($null -ne $UI.FinaleSection) { Send-Board 'section' $UI.FinaleSection }
         $next = if ($Failed) {
             @(@('Fix what it says', 'the error above'), @('install.ps1 again', "it skips what's done; -Step $Failed runs just that one"))
-        } elseif ($null -ne $UI.FinaleNext) { , @($UI.FinaleNext) } else {
-            @(@('Sign out and back in', 'the desktop starts at sign-in'), @('Win+Space', 'the launcher'),
-                @('Win+Enter', 'a terminal; the first nvim start installs its plugins'), @('omawin check', '0 failed, 0 warnings is the bar'))
-        }
+        } elseif ($null -ne $UI.FinaleNext) { , @($UI.FinaleNext) } else { Get-InstallNext }
         foreach ($n in $next) { Send-Board 'next' $n[0] $n[1] }
+        # The screen's last line: what to do now, or where the log is.
+        if (-not $Failed -and $null -eq $UI.FinaleNext) {
+            Send-Board 'foot' $(if ($UI.DesktopUp) { 'the desktop is running: Win+Space for the launcher' } else { 'sign out and back in: the desktop starts at sign-in' })
+        }
         $line = "$done steps $($UI.G.Dot) $elapsed" + $(if ($skipped) { " $($UI.G.Dot) $skipped skipped" })
         Send-Board 'final' $Failed ((Get-Date) - $Started).TotalSeconds.ToString([Globalization.CultureInfo]::InvariantCulture) $line $failure
         # The screen plays its finale (about 4.5 s) before it closes; Stop-InstallBoard waits for it.
@@ -465,8 +484,7 @@ function Write-InstallSummary {
     if (-not $UI.Fancy) {
         if ($Failed) { return }  # the error says it
         Write-Step 'done'
-        Write-Note 'Sign out and back in: the desktop (GlazeWM, the bar, the launcher) starts at sign-in.'
-        Write-Note 'Then Win+Enter for a terminal; the first nvim start installs its plugins. `omawin help` lists every command.'
+        foreach ($n in Get-InstallNext) { Write-Note "$($n[0]): $($n[1])" }
         if ($UI.Warnings.Count) { Write-Note "$($UI.Warnings.Count) warning(s) above" }
         Write-Note "log: $($UI.Log)"
         return
@@ -508,12 +526,7 @@ function Write-InstallSummary {
         Write-UILine ("    {0}1{1}  fix what the error above says" -f $c.Accent, $c.Reset)
         Write-UILine ("    {0}2{1}  run install.ps1 again {2}(it skips what's done; -Step {3} runs just that one){1}" -f $c.Accent, $c.Reset, $c.Dim, $Failed)
     } else {
-        $next = @(
-            @('Sign out and back in', 'the desktop (GlazeWM, the bar, the launcher) starts at sign-in'),
-            @('Win+Space', 'the launcher'),
-            @('Win+Enter', 'a terminal; the first nvim start installs its plugins'),
-            @('omawin check', '0 failed, 0 warnings is the bar; omawin help lists every command')
-        )
+        $next = @(Get-InstallNext)
         Write-UILine ("  {0}Next{1}" -f $c.Bold, $c.Reset)
         for ($i = 0; $i -lt $next.Count; $i++) {
             Write-UILine ("    {0}{1}{2}  {3}{4}{2}  {5}{6}{2}" -f $c.Accent, ($i + 1), $c.Reset, $c.Bold, $next[$i][0].PadRight(20), $c.Dim, $next[$i][1])

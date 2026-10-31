@@ -122,6 +122,10 @@ Set-PSReadLineKeyHandler -Chord Ctrl+t -BriefDescription FzfFile -ScriptBlock {
 # recorded here.
 $TermDirs = Join-Path $env:LOCALAPPDATA 'launcher\dirs'
 if (-not (Test-Path $TermDirs)) { New-Item -ItemType Directory -Path $TermDirs -Force | Out-Null }
+# Which side you're on (roadmap 3B): starship's side mark (env_var.OMAWIN_WINDOWS: Windows' logo,
+# coloured apart from Linux's) and the "pwsh · " title prefix below.
+$env:OMAWIN_SIDE = 'windows'
+$env:OMAWIN_WINDOWS = [string][char]0xf17a
 function Invoke-Starship-PreCommand {
     # (Checked now, not at start-up: a spare shell started long before the profiling did.)
     if (-not $script:OmawinPrompted) {
@@ -129,7 +133,9 @@ function Invoke-Starship-PreCommand {
         if (Test-Path "$env:LOCALAPPDATA\launcher\trace-on") { [IO.File]::AppendAllText("$env:LOCALAPPDATA\launcher\trace.log", "pwsh first-prompt`t$([Diagnostics.Stopwatch]::GetTimestamp())`n") }
     }
     $leaf = Split-Path -Leaf $PWD
-    $host.UI.RawUI.WindowTitle = $leaf  # tab title = current folder
+    # Tab title "pwsh · <folder>", as Linux's are "arch · <path>"; omawin's terminal-here takes
+    # the prefix off before looking the folder name up in dirs\ (bin/omawin.cs StripSide).
+    $host.UI.RawUI.WindowTitle = "pwsh $([char]0xb7) $leaf"
     if ($PWD.Provider.Name -ne 'FileSystem') { return }
     if ($env:TERM_PROGRAM -eq 'ghostty') {
         $uri = 'file://' + $env:COMPUTERNAME + '/' + ($PWD.ProviderPath -replace '\\', '/')
@@ -161,6 +167,30 @@ function reload { . $PROFILE }
 if (Test-Path Alias:iex) { Remove-Item Alias:iex -Force }
 function iex {
     if ($MyInvocation.ExpectingInput) { $input | Invoke-Expression } else { iex.bat @args }
+}
+
+# --- omawin setting: Tab completes a Windows setting's id (default/launcher/settings.txt) -------
+# Read from the catalog's files the first time Tab is pressed after `omawin setting get|set|toggle`,
+# so the profile itself reads nothing.
+Register-ArgumentCompleter -Native -CommandName omawin, omawin.exe -ScriptBlock {
+    param($word, $ast, $cursor)
+    $words = @($ast.CommandElements | ForEach-Object { $_.ToString() })
+    if ($words.Count -lt 2 -or $words[1] -ne 'setting') { return }
+    $at = if ($word) { $words.Count - 1 } else { $words.Count } # which word is being completed
+    $candidates = if ($at -eq 2) {
+        'list', 'get', 'set', 'toggle', 'undo'
+    } elseif ($at -eq 3 -and $words[2] -eq 'list') {
+        'look', 'explorer', 'privacy', 'input', 'system', 'display', 'connections', 'sound', 'developer'
+    } elseif ($at -eq 3 -and $words[2] -in 'get', 'set', 'toggle') {
+        if (-not $script:OmawinSettingIds) {
+            $repo = if ($env:DOTFILES) { $env:DOTFILES } else { Join-Path $HOME 'omawin' }
+            $script:OmawinSettingIds = @("$repo\default\launcher\settings.txt", "$env:ProgramData\omawin\shared\launcher\settings.txt", "$OmawinUserLayer\launcher\settings.txt") |
+                Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Encoding utf8 } |
+                Where-Object { $_ -match '^\s*([a-z]+\.[a-z0-9-]+)\s*\|' } | ForEach-Object { $Matches[1] } | Sort-Object -Unique
+        }
+        $script:OmawinSettingIds
+    }
+    $candidates | Where-Object { $_ -like "$word*" } | ForEach-Object { [Management.Automation.CompletionResult]::new($_) }
 }
 
 # --- your own additions ---------------------------------------------------------------

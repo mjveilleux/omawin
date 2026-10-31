@@ -6,6 +6,25 @@
 # [wsl2] memory is left at WSL's default, half of this PC's RAM. To cap it lower, put a copy of
 # this file with `memory=6GB` (say) under [wsl2] in your account folder.
 
+[wsl2]
+# localhost both ways: a server in Linux is localhost:<port> for Windows' browser, and the other
+# way round; VPNs behave. A VPN client that breaks with it: networkingMode=nat in your account's copy.
+networkingMode=mirrored
+# DNS answered by Windows, so a VPN's names resolve in Linux too.
+dnsTunneling=true
+# Windows' (Hyper-V) firewall rules apply to the VM (Omarchy's ufw is left out: wsl/omarchy-skip.txt).
+firewall=true
+# Windows' proxy settings in Linux.
+autoProxy=true
+# The VM stays up 10 minutes (in ms) after its last process, so the next terminal doesn't wait
+# for it; while Linux is the default shell, omawin's keep-warm holds the distro itself (omawin
+# start terminal, bin/omawin.cs WarmLinux).
+vmIdleTimeout=600000
+
 [experimental]
 # Hand cached memory back to Windows right away (the current default, made explicit).
 autoMemoryReclaim=dropCache
+# The disk image shrinks as files are deleted.
+sparseVhd=true
+# With mirrored networking: Windows reaches a Linux server on the PC's own addresses too.
+hostAddressLoopback=true

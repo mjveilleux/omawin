@@ -19,18 +19,32 @@ Omarchy's themes, applied to everything at once. For picking one, see [manual/08
 
 ## Installed themes
 
-Like Omarchy's `omarchy theme install`, any theme made for Omarchy installs from its git link (`themes\theme.ps1`: `omawin theme install|update|remove|list|browse`; Style › Install a theme). Omarchy keeps installed themes in `~/.config/omarchy/themes`; here:
+Like Omarchy's `omarchy theme install`, any theme made for Omarchy installs from its git link, and a community theme by its name (`themes\theme.ps1`: `omawin theme add|install|search|preview|update|remove|list|browse`; Style › Theme › Community, Style › Install a theme). Omarchy keeps installed themes in `~/.config/omarchy/themes`; here:
 
 | Path | What it is |
 |---|---|
-| `%LOCALAPPDATA%\launcher\themes\sources\<name>` | the theme's git clone (`theme update` pulls it) |
+| `%LOCALAPPDATA%\launcher\themes\sources\<name>` | the theme's git clone (`theme update` fetches its repo's default branch, shows the commits and files that changed, asks in a terminal, then fast-forwards) |
 | `%LOCALAPPDATA%\launcher\themes\<name>.json`, `colors\`, `nvim\`, `btop\`, `vscode\` | its files, made by `convert-theme.ps1 -Untrusted`, in the same layout as `themes/` |
 
 Every reader looks there first, then in `themes/` (`set-theme.ps1` and `render.ps1`'s `Find-ThemeFile`, the menu app's `MenuModel.ThemeFile`, `default/launcher/common.ps1`, `config/nvim/lua/live_theme.lua`), so an installed theme with one of Omarchy's names replaces it, as in Omarchy. Its wallpapers are used from the clone.
 
 As Omarchy does with installed themes, nothing that runs code is taken from them: their `neovim.lua` is replaced by one made from the palette (Neovim runs Lua) and their `vscode.json` (an extension to install) is left out; `btop.theme` keeps only its `theme[...]` color lines. The theme's name comes from the link (`omarchy-` and `-theme` dropped) and is held to `[a-z0-9_][a-z0-9._+-]*`; the link must be a network git URL (no options, local paths or transport helpers).
 
-The catalog is a web page (omarchy.org/themes), not a list a program can read, so `theme browse` opens it rather than listing it.
+## Community themes (the index)
+
+The catalog is a web page (omarchy.org/themes, static HTML), so CI reads it once a week and publishes what the picker needs as a list a program can read (roadmap 1.10):
+
+| Piece | What it does |
+|---|---|
+| `src/community-themes` (C#, SkiaSharp) | reads the page's cards (`shell/menu-app/Community.cs`, `CommunityList.Parse`) and `themes/community-extra.txt` (hand-kept repos); for each repo, at its default branch's current commit (GitHub's API; when that refuses, `git ls-remote` and raw files, without stars, licence or backgrounds): the palette from `colors.toml` or `alacritty.toml`, read and filled in exactly as `convert-theme.ps1` does (`ThemePalette`, unit-tested against every theme this repo ships), `light.mode`, the backgrounds' names, owner, licence and stars; a 320-pixel JPEG of omarchy.org's screenshot (else the repo's `preview.png`, else its first background). Writes `index.json` + `thumbs\` and `community-themes.zip` with its SHA-256 |
+| `.github/workflows/community-themes.yml` | runs it every Monday and uploads both files to the release `community-themes` (a pre-release, never "latest", so `omawin update` never sees it; `release.yml`'s drop-old keeps it) |
+| `shell/menu-app/CommunityThemes.cs` | fetches the checksum a minute after start-up and daily, and the zip when it changed (not on a metered connection once there's an index), checks it, unpacks it aside and swaps it into `%LOCALAPPDATA%\launcher\community` |
+| `shell/menu-app/MainWindow.Community.cs` | the picker's Community chip (below) |
+| `themes\theme.ps1` | `add <name>` installs at the index's commit (`git init` + `fetch --depth 1 origin <commit>`, origin kept for `update`), `search`, `preview` |
+
+The index holds only data: names, the palette (each value a `#rrggbb`), raw URLs of pictures at the pinned commit. Installing re-reads the theme from its repo at that commit, through the same `convert-theme.ps1 -Untrusted` as any link.
+
+**Preview without installing.** The picker writes the theme it rests on into `%LOCALAPPDATA%\launcher\theme-preview` (or deletes it to end) and runs `omawin theme preview`, which applies whatever that file says, one at a time (a named mutex), so the last one asked for is what stays however fast you move. Applying: a `colors.toml` of the index's palette goes through `convert-theme.ps1` into `%LOCALAPPDATA%\launcher\community-preview` (apart from installed themes, so it never shows as one), then `set-theme.ps1 <name> -Preview -From <that folder>`: `render.ps1 -From` (GlazeWM, noctty, Windows Terminal), their reloads, and the wallpaper (downloaded into the preview folder). Nothing is remembered (`launcher\theme`, `background`), and Windows' mode, the lock screen, editors and btop are left alone. Ending runs `set-theme.ps1 -Preview`: your theme's colours and the background you were on. `community-preview\applied` names what's on screen; the menu app puts yours back at start-up if a preview was left there.
 
 ## Applying one
 

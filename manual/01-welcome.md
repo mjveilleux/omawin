@@ -14,8 +14,8 @@ Everything wears one theme: Starship by default, or any of Omarchy's themes from
 
 1. [The omawin command](02-omawin-command.md)
 2. [Keys](03-keys.md)
-3. [The launcher and file finder](04-launcher.md)
-4. [The system menu](05-system-menu.md)
+3. [One Search and the file finder](04-launcher.md)
+4. [The system menu (Browse, in One Search)](05-system-menu.md)
 5. [Screenshots and text from the screen](06-screenshots.md)
 6. [The bar and dock](07-bar-and-dock.md)
 7. [Themes](08-themes.md)

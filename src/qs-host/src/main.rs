@@ -7,6 +7,7 @@
 //   omawin-qs --plugin-dir <folder> --at x,y,w,h     ... at that place (the bar's slot for it)
 //   omawin-qs --plugin-dir <folder> --check          load it, print any QML errors, exit 1 if there were
 //   ... --parent <pid>                               end when that process does (the bar that started it)
+mod bar;
 mod io;
 
 use cxx_qt_lib::{QGuiApplication, QQmlApplicationEngine, QString, QUrl};

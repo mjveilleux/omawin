@@ -51,8 +51,11 @@ static partial class Program
     static int Run(Plan plan) => plan switch
     {
         SendToApp s => Send(s.Request),
+        AskApp a => Ask(a.Request),
         StartProcess p => Start(p.File, p.Arguments),
-        // Builtins move here one at a time (roadmap 2.11); until then bin/omawin.cs runs them.
+        // Builtins move here one at a time (roadmap 2.11): bin/omawin.cs hands this exe (shipped
+        // beside it as omawin-cli.exe) the ones it doesn't have, and still runs the rest itself.
+        RunBuiltin { Name: "pkg" } b => new Omawin.Cli.Pkg.PkgCommand(new Omawin.Cli.Pkg.WindowsHost(Repo, StateDir)).Run(b.Args),
         RunBuiltin b => Fail($"builtin {b.Name} isn't in this omawin yet; bin/omawin.cs runs it"),
         BadAction bad => Fail(bad.Message),
         _ => Fail("unreachable"),
@@ -101,6 +104,39 @@ static partial class Program
         if (!File.Exists(exe)) return Fail($"the menu app isn't built: {exe} (omawin restart menu builds it)");
         Process.Start(new ProcessStartInfo(exe, request) { UseShellExecute = false })?.Dispose();
         return 0;
+    }
+
+    // A request whose answer is printed (omawin setting get ...): the menu app writes it to a file
+    // named for this process and sets an event named the same way (shell/menu-app/Reply.cs). The
+    // wait covers a cold start of the menu app. Code 3 is a question: the text is shown, and on
+    // yes the request goes again with --yes (omawin settings admin: the list, then the prompt).
+    static int Ask(string request)
+    {
+        if (!OperatingSystem.IsWindows()) return Fail("the menu app runs on Windows only");
+        var id = Environment.ProcessId.ToString();
+        var reply = Path.Combine(StateDir, "replies", id + ".txt");
+        Directory.CreateDirectory(Path.GetDirectoryName(reply)!);
+        File.Delete(reply);
+        using (var done = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\omawin-reply-" + id))
+        {
+            if (Send($"--reply {id} {request}") is var sent and not 0) return sent;
+            if (!done.WaitOne(TimeSpan.FromSeconds(20))) return Fail("the menu app didn't answer (omawin restart menu)");
+        }
+        string[] lines;
+        try { lines = File.ReadAllLines(reply, Encoding.UTF8); File.Delete(reply); }
+        catch (IOException ex) { return Fail("no answer: " + ex.Message); }
+        int code = lines.Length > 0 && int.TryParse(lines[0], out var c) ? c : 1;
+        var text = string.Join(Environment.NewLine, lines.Skip(1));
+        if (code == 3)
+        {
+            if (!InTerminal) return 1; // from a key there's no one to ask
+            Console.WriteLine(text);
+            Console.Write("Apply these? [y/N] ");
+            if (Console.ReadLine()?.Trim().StartsWith('y') != true) { Console.WriteLine("Nothing changed."); return 1; }
+            return Ask(request + " --yes");
+        }
+        if (InTerminal && text.Length > 0) (code == 0 ? Console.Out : Console.Error).WriteLine(text);
+        return code;
     }
 
     static int Say(string text, bool newline = true)

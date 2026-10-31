@@ -6,7 +6,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Hosting;
 
 namespace SystemMenu;
 
@@ -87,6 +87,7 @@ public static class Bar
             Wm.Start();
             StartLoops();
             WatchTheme();
+            WatchPlugins();
         }
         // The widgets fade in once GlazeWM has said where things are, or after 0.6 s anyway.
         Task.Delay(600).ContinueWith(_ => ui?.TryEnqueue(Arrive));
@@ -95,6 +96,9 @@ public static class Bar
 
     static void Hide()
     {
+        // The plugins' hosts end with their cells (not left drawing over a bar that's gone).
+        foreach (var w in windows)
+            foreach (var slot in w.Widgets.OfType<PluginSlot>()) slot.Close();
         foreach (var w in windows) w.Close();
         windows.Clear();
         arrived = false;
@@ -125,15 +129,14 @@ public static class Bar
                     bar.Widgets.Add(widget);
                 }
         }
-        // The plugins that are on (Bar/PluginSlot.cs), on the primary monitor's bar: each a cell its
-        // QML host draws over. (Screens() lists the primary first; one host each for now.)
-        if (windows.Count == 0)
-            foreach (var (place, slot) in PluginSlot.On())
-            {
-                slot.Attach(bar);
-                bar.Place(place).Children.Insert(0, slot.Element);
-                bar.Widgets.Add(slot);
-            }
+        // The plugins that are on (Bar/PluginSlot.cs), on every monitor's bar: each a cell its own
+        // QML host draws over.
+        foreach (var (place, slot) in PluginSlot.On())
+        {
+            slot.Attach(bar);
+            bar.Place(place).Children.Insert(0, slot.Element);
+            bar.Widgets.Add(slot);
+        }
         bar.Paint(theme);
         bar.PlaceOn(screen, Scale(screen));
         bar.ShowBar();
@@ -166,6 +169,7 @@ public static class Bar
             while (true)
             {
                 speaker = Audio.DefaultSpeaker();
+                Audio.ReadMicsMuted(); // the red mic while every microphone is muted (omawin mic)
                 ui?.TryEnqueue(Push);
                 Thread.Sleep(1000 - DateTime.Now.Millisecond); // on the second, so the minute turns on time
             }
@@ -242,18 +246,34 @@ public static class Bar
         return null;
     }
 
+    // How many commits this checkout's branch is behind its upstream, after a quiet fetch, as
+    // Omarchy's omarchy-update-available: 0 with no upstream or no network. Changes nothing in
+    // the checkout. git itself, not a PowerShell script around it (roadmap 2.11).
     static int UpdatesWaiting()
     {
         try
         {
-            var script = Path.Combine(MenuModel.Repo, @"bin\update-available.ps1");
-            var p = Process.Start(new ProcessStartInfo("pwsh", $"-NoProfile -NonInteractive -File \"{script}\"")
-            { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true })!;
-            var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit();
-            return int.TryParse(output.Trim(), out var n) ? n : 0;
+            var (ok, upstream) = Git("rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}");
+            if (!ok || upstream.Length == 0 || !Git("fetch", "--quiet").Ok) return 0;
+            var (counted, behind) = Git("rev-list", "--count", "HEAD.." + upstream);
+            return counted && int.TryParse(behind, out var n) ? n : 0;
         }
         catch (Exception ex) { App.Log(ex); return 0; }
+    }
+
+    static (bool Ok, string Output) Git(params string[] args)
+    {
+        var info = new ProcessStartInfo("git") { UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
+        info.ArgumentList.Add("-C");
+        info.ArgumentList.Add(MenuModel.Repo);
+        foreach (var a in args) info.ArgumentList.Add(a);
+        using var p = Process.Start(info)!;
+        var err = p.StandardError.ReadToEndAsync();
+        var output = p.StandardOutput.ReadToEnd();
+        // A fetch that hangs (a network that half works) gives up rather than holding the thread.
+        if (!p.WaitForExit(120_000)) { try { p.Kill(); } catch (InvalidOperationException) { } return (false, ""); }
+        _ = err.Result;
+        return (p.ExitCode == 0, output.Trim());
     }
 
     // voice-meter (~/.local/bin) prints "1 <level>" while voice typing listens, "2 ..." for
@@ -308,6 +328,8 @@ public static class Bar
     }
 
     // Each widget fades down into place, left to right, the first time (Zebar's bar did the same).
+    // On the compositor (Motion.cs), so it runs off the UI thread; with animations off they're
+    // simply there.
     static void Arrive()
     {
         if (arrived || windows.Count == 0) return;
@@ -317,21 +339,12 @@ public static class Bar
             int i = 0;
             foreach (var w in bar.Widgets)
             {
-                var el = w.Element;
-                var move = new TranslateTransform { Y = -4 };
-                el.RenderTransform = move;
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                var begin = TimeSpan.FromMilliseconds(25 * i++);
-                var board = new Storyboard();
-                var fade = new DoubleAnimation { From = 0, To = 1, Duration = TimeSpan.FromMilliseconds(280), BeginTime = begin, EasingFunction = ease };
-                var drop = new DoubleAnimation { From = -4, To = 0, Duration = TimeSpan.FromMilliseconds(280), BeginTime = begin, EasingFunction = ease };
-                Storyboard.SetTarget(fade, el);
-                Storyboard.SetTargetProperty(fade, "Opacity");
-                Storyboard.SetTarget(drop, move);
-                Storyboard.SetTargetProperty(drop, "Y");
-                board.Children.Add(fade);
-                board.Children.Add(drop);
-                board.Begin();
+                ElementCompositionPreview.SetIsTranslationEnabled(w.Element, true);
+                var visual = ElementCompositionPreview.GetElementVisual(w.Element);
+                w.Element.Opacity = 1; // the visual's opacity, below, is what hides it until now
+                var delay = Motion.Stagger * i++;
+                Motion.FadeIn(visual, delay);
+                Motion.MoveIn(visual, new System.Numerics.Vector3(0, -Motion.DropPx, 0), delay);
             }
         }
     }
@@ -348,6 +361,47 @@ public static class Bar
             themeWatcher.Created += (_, _) => ui?.TryEnqueue(() => ApplyTheme(force: false));
         }
         catch (Exception ex) { App.Log(ex); }
+    }
+
+    // plugins.txt changed (omawin plugin add|remove, the gallery's Enter): the bars made again
+    // with the plugins now on, once the writing has settled, and only when what they'd draw
+    // really moved (`omawin plugin add` writes the file again once the host is installed).
+    static FileSystemWatcher? pluginsWatcher;
+    static string pluginsOn = "";
+    static CancellationTokenSource? pluginsSettle;
+    static void WatchPlugins()
+    {
+        pluginsOn = PluginSlot.State();
+        try
+        {
+            Directory.CreateDirectory(MenuModel.StateDir);
+            pluginsWatcher = new FileSystemWatcher(MenuModel.StateDir, Path.GetFileName(PluginSlot.OnFile))
+            {
+                NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName | NotifyFilters.Size,
+                EnableRaisingEvents = true,
+            };
+            FileSystemEventHandler changed = (_, _) =>
+            {
+                pluginsSettle?.Cancel();
+                var settle = pluginsSettle = new CancellationTokenSource();
+                Task.Delay(300, settle.Token).ContinueWith(t => { if (!t.IsCanceled) ui?.TryEnqueue(ReloadPlugins); }, TaskScheduler.Default);
+            };
+            pluginsWatcher.Changed += changed;
+            pluginsWatcher.Created += changed;
+            pluginsWatcher.Deleted += changed;
+            pluginsWatcher.Renamed += (s, e) => changed(s, e);
+        }
+        catch (Exception ex) { App.Log(ex); }
+    }
+
+    static void ReloadPlugins()
+    {
+        var now = PluginSlot.State();
+        if (now == pluginsOn) return;
+        pluginsOn = now;
+        if (windows.Count == 0) return;
+        Hide();
+        try { Show(); } catch (Exception ex) { App.Log(ex); }
     }
 
     static void ApplyTheme(bool force)

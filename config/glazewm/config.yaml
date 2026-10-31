@@ -52,6 +52,9 @@ gaps:
 # instant, as in Omarchy. ('move' and 'popin' animate the real windows instead, as Hyprland
 # does, but on Windows apps can't redraw fast enough while they resize, so they judder.)
 animations:
+  # `omawin toggle animations` (the menu app's and these together); themes/render.ps1 fills it in
+  # from %LOCALAPPDATA%\launcher\animations. Off keeps the settings below.
+  enabled: {{ animations }}
   window_move:
     effect_type: 'slide'
     duration_ms: 200
@@ -62,6 +65,12 @@ animations:
     effect_type: 'fade'
     duration_ms: 200
     easing: 'ease_out_cubic'
+  # A window closed with the key (Alt+Shift+Q) fades out where it was, shrinking a little (Omarchy's
+  # windowsOut). A window that closes itself just goes.
+  window_close:
+    effect_type: 'popin'
+    duration_ms: 160
+    easing: 'ease_out_quint'
 
 window_effects:
   focused_window:
@@ -291,33 +300,38 @@ keybindings:
   - commands: ['shell-exec --hide-window omawin.exe workspace rename']
     bindings: ['alt+n']
 
-  # The launcher, like Omarchy's Super+Space: default/launcher/items.txt's items, then every installed
-  # app, in the same native window as the system menu (shell/menu-app/, running hidden, so it's
-  # instant).
-  - commands: ['shell-exec --hide-window omawin.exe launcher']
+  # `emit omawin <command>`: GlazeWM tells the menu app directly over the connection it already
+  # holds (our fork; shell/menu-app/Emit.cs), the same words as `omawin <command>`, with no process
+  # started. With any other GlazeWM, themes/render.ps1 writes `shell-exec --hide-window omawin.exe
+  # <command>` instead: the same keys, the same actions.
+  #
+  # One Search, like Omarchy's Super+Space grown: apps, settings, commands, files, windows, projects,
+  # clipboard and themes in one bar, a bento home when nothing's typed (shell/menu-app/, running
+  # hidden, so it's instant; plans/one-search.md). The system menu is its Commands filter, Browse.
+  - commands: ['emit omawin launcher']
     bindings: ['lwin+space']
-  # The launcher straight on the clipboard history (Win+V stays Windows' own).
-  - commands: ['shell-exec --hide-window omawin.exe launcher clipboard']
+  # One Search on Clipboard, the history (Win+V stays Windows' own).
+  - commands: ['emit omawin launcher clipboard']
     bindings: ['lwin+shift+v']
   # The launcher on Audio: every speaker and microphone, its volume and mute (shell/menu-app/Audio.cs);
   # Quick settings' switches are `launcher quick`.
   # For keyboards without volume keys Windows understands (some compact keyboards). Windows' own
   # Win+A (quick settings) gives way, as Win+M does.
-  - commands: ['shell-exec --hide-window omawin.exe launcher audio']
+  - commands: ['emit omawin launcher audio']
     bindings: ['lwin+a']
   # The music player's panel in the bar (src/music/): Space plays / pauses, Esc or Win+M again closes
   # it. It lived in Zebar's bar, removed 2026-10-31; until the native bar has it (roadmap 1.6, 4.6)
   # this says so. (Windows' own Win+M, minimize everything, means little with tiling.)
   - commands: ['shell-exec --hide-window omawin.exe music open']
     bindings: ['lwin+m']
-  # The system menu, like Omarchy's: install / remove, themes, setup, power (default/launcher/menu.txt,
-  # drawn natively by shell/menu-app/; the launcher's Menu item opens it too).
-  - commands: ['shell-exec --hide-window omawin.exe menu']
+  # Win+Alt+Space was the system menu; it's One Search now (Win+Space), for one release with a
+  # note, then removed by a migration (plans/one-search.md, guardrail 10).
+  - commands: ['shell-exec --hide-window omawin.exe search --retired-key']
     bindings: ['lwin+alt+space']
-  # The file finder: files and folders in Desktop, Documents, Downloads and your repos (fff),
+  # One Search on Files: files and folders in Desktop, Documents, Downloads and your repos (fff),
   # with a preview; also the launcher's Files item. Win+F (Windows' Feedback Hub gives way);
   # Win+Shift+F, its old key, still works.
-  - commands: ['shell-exec --hide-window omawin.exe files']
+  - commands: ['emit omawin files']
     bindings: ['lwin+f', 'lwin+shift+f']
   # Screenshots, nearly instant (shell/menu-app/Snip.cs, always running) instead of Windows' Snipping
   # Tool, which starts up each time: drag a region (click: a window; Enter: everything); it's

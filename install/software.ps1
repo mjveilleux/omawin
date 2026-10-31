@@ -547,14 +547,26 @@ function Initialize-Presets {
         $picked = @($answer -split '[\s,]+' | Where-Object { $_ } | ForEach-Object {
                 if ($Presets.Contains($_)) { $_ } else { Write-Warn "no preset '$_'" } })
         $picked = @($picked | Where-Object { $_ -ne 'wsl' })
-        # Linux in WSL (the wsl preset): Arch unless this account already has one of the others.
+        # Linux in WSL (the wsl preset), on by default (roadmap 3.1): Arch unless this account
+        # already has one of the others. Enter takes it only when that needs no admin (WSL is on
+        # this PC already); otherwise WSL goes in with the one admin prompt and a restart, so it's
+        # yours to type, and Enter leaves it out (plans/roadmap.md 2.9: Enter through every
+        # question, no admin prompt). Without virtualization in the firmware it isn't offered.
         $choices = @(Get-LinuxChoices)
         $have = @(Get-WslDistros)
         $default = $choices | Where-Object { $have -contains $_.Distro } | Select-Object -First 1
         if (-not $default) { $default = $choices[0] }
         $names = @($choices | ForEach-Object Name) + 'none'
-        $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? (Enter for $($default.Name))").Trim().ToLower()
-        if (-not $answer) { $answer = $default.Name }
+        if (-not (Test-Virtualization)) {
+            Write-Warn 'Linux in WSL needs virtualization, which is off in this PC''s firmware (UEFI/BIOS: Intel VT-x or AMD SVM). Turn it on, then: omawin preset add wsl'
+            $answer = 'none'
+        } elseif (Test-WslInstalled) {
+            $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? (Enter for $($default.Name))").Trim().ToLower()
+            if (-not $answer) { $answer = $default.Name }
+        } else {
+            $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? WSL itself takes admin once, then a restart (Enter for none; omawin preset add wsl later)").Trim().ToLower()
+            if (-not $answer) { $answer = 'none' }
+        }
         $linux = $choices | Where-Object Name -eq $answer | Select-Object -First 1
         if ($linux) {
             $picked += 'wsl'
@@ -611,6 +623,41 @@ function Install-NerdFont {
     Add-InstallItem 'Tools' 'font' $font 'done'
 }
 
+# Neovim ready on its first open (roadmap 2.4): lazy.nvim puts LazyVim's plugins in at the
+# lockfile's versions (config/nvim/lazy-lock.json, seeded into nvim-data), in a hidden Neovim of
+# its own, so the install doesn't wait for it and the first `nvim` doesn't either. Only on a PC
+# whose Neovim has no plugins yet: once lazy.nvim is there, they're yours (:Lazy update), and
+# omawin leaves them alone. A wrapper gives it 15 minutes: offline, lazy.nvim's own bootstrap
+# (config/nvim/lua/config/lazy.lua) waits for a key nobody presses. What it did goes in
+# %LOCALAPPDATA%\launcher\nvim-plugins.log.
+function Start-NeovimPlugins {
+    Write-Step "Neovim's plugins"
+    $data = Join-Path $env:LOCALAPPDATA 'nvim-data'
+    if (Test-Path (Join-Path $data 'lazy\lazy.nvim')) { Write-Note "ok  Neovim's plugins are here"; Add-InstallItem 'Tools' 'nvim-plugins' "Neovim's plugins" 'have'; return }
+    $nvim = Get-Command nvim -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $git = Get-Command git -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $nvim -or -not $git) { Write-Note "skipped: $(if (-not $nvim) { 'no nvim' } else { 'no git' }) on the PATH yet; the first nvim start puts them in"; return }
+    $log = Join-Path $env:LOCALAPPDATA 'launcher\nvim-plugins.log'
+    $quote = { param($s) "'" + ($s -replace "'", "''") + "'" }
+    $script = @"
+`$log = $(& $quote $log)
+`$clock = [Diagnostics.Stopwatch]::StartNew()
+Set-Content -LiteralPath `$log "started `$(Get-Date -Format s)"
+`$p = Start-Process $(& $quote $nvim.Source) -ArgumentList '--headless', '"+Lazy! restore"', '+qa' -WindowStyle Hidden -PassThru -RedirectStandardOutput "`$log.out" -RedirectStandardError "`$log.err"
+if (`$p.WaitForExit(900000)) { `$result = "exit `$(`$p.ExitCode)" } else { `$p.Kill(`$true); `$result = 'gave up after 15 minutes (offline?): the first nvim start tries again' }
+Get-Content "`$log.out", "`$log.err" -ErrorAction SilentlyContinue | Add-Content -LiteralPath `$log
+Remove-Item "`$log.out", "`$log.err" -ErrorAction SilentlyContinue
+Add-Content -LiteralPath `$log ("{0} after {1:0} s" -f `$result, `$clock.Elapsed.TotalSeconds)
+"@
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+    try {
+        $null = Start-Process (Join-Path $PSHOME 'pwsh.exe') -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded
+        $UI.NvimPlugins = $true
+        Write-Note "going in, in the background (lazy-lock.json's versions; $log)"
+        Add-InstallItem 'Tools' 'nvim-plugins' "Neovim's plugins" 'done'
+    } catch { Write-Warn "Neovim's plugins: $($_.Exception.Message); the first nvim start puts them in" }
+}
+
 if (-not $SoftwareFunctionsOnly) {
     if (-not $LinkOnly) {
         Start-EarlyExtras @($CoreExtras)
@@ -625,7 +672,7 @@ if (-not $SoftwareFunctionsOnly) {
         # The bundle keeps unpacking through the next steps: the shell, desktop and helpers steps
         # wait for the tools they need (Wait-BundleTools), the tools step collects the rest and
         # puts in the font (install/tools.ps1). Run alone (-Step software), it's all collected here.
-        if ($Step) { Complete-ToolBundle; Install-NerdFont }
+        if ($Step) { Complete-ToolBundle; Install-NerdFont; Start-NeovimPlugins }
     } else {
         # An update installs nothing, but a tool a package moved off the PATH still goes back on.
         Add-ToolPaths @(Get-WantedTools)

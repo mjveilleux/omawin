@@ -9,13 +9,17 @@ namespace SystemMenu;
 // One copy runs all the time, hidden, so the menu shows instantly. Starting SystemMenu.exe
 // again just passes its arguments to that copy and exits; so does `omawin` (bin/omawin.cs,
 // the `app` rows of bin/commands.txt), more quickly:
-//   SystemMenu                 show / hide
-//   SystemMenu --launcher      the launcher (Win+Space): items.txt + every installed app
-//   SystemMenu --launcher <page>  the same as --page
-//   SystemMenu --files         the file finder (Win+F): files and folders, with a preview
+//   SystemMenu                 One Search on Commands, browsing (what the system menu was)
+//   SystemMenu --search [filter|page] [text]  One Search (Win+Space; MainWindow.Search.cs): on a
+//                              filter (file: Win+F, clipboard: Win+Shift+V, settings, …) or a page;
+//                              --browse [section]: Commands, browsing the menu (omawin menu);
+//                              --retired-key: Win+Alt+Space, with its note (Search/Request.cs)
+//   SystemMenu --launcher [page]  the same as --search (older omawin.exe copies, the bar)
+//   SystemMenu --files         the same as --search file
 //   SystemMenu --snip [text]   a screenshot (Win+Shift+S), or its text (Win+Shift+T): drag a region (Snip.cs)
 //   SystemMenu --snip color    the colour picker; --snip qr: read QR codes in a region
 //   SystemMenu --toggle stay-awake  keep the PC awake, or stop (StayAwake.cs)
+//   SystemMenu --toggle animations [on|off|status]  every animation on or off (Motion.cs)
 //   SystemMenu --qs <section> [action]  one Quick settings toggle without showing anything:
 //                              wifi|bluetooth on|off|toggle|connect|disconnect,
 //                              brightness up|down|set <n>, power <mode|cycle>,
@@ -25,6 +29,7 @@ namespace SystemMenu;
 //                              comparison with netsh / Get-PnpDevice / powercfg; handled before
 //                              the single-copy check, so it works while the menu app runs
 //   SystemMenu --about         About omawin and this PC, in its own window (AboutWindow.xaml.cs)
+//   SystemMenu --mic [toggle|mute|unmute|status]  every microphone at once (Microphones.cs)
 //   SystemMenu --page <name>   the launcher on one of its pages: projects, clipboard (Win+Shift+V),
 //                              localhost, reports, keys, packages, vpn <connection>
 //   SystemMenu --open <id>     show it on a submenu, e.g. --open install
@@ -32,7 +37,10 @@ namespace SystemMenu;
 //                              (--select theme:<name> in the theme list); for walkthroughs
 //   SystemMenu --type <text>   show it with that typed into the search; for walkthroughs too
 //   SystemMenu --key <key>     down / up / tab / shift-tab / pick, as if pressed; walkthroughs too
+//   SystemMenu --hide          hide it at once, no animation (omawin profile menu, between runs)
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
+//   SystemMenu --reply <pid> --setting|--settings|--tune-up …  `omawin setting` / `settings` / `tune-up`: the
+//                              answer is written for the waiting omawin.exe (Reply.cs)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a
 //                              report's screenshots, never in normal use
@@ -47,13 +55,17 @@ public static class Program
 
     static Mutex? mutex;
 
-    // Timing marks for `omawin profile login`, as omawin.exe writes them: only while
-    // %LOCALAPPDATA%\launcher\trace-on exists.
+    // Timing marks for `omawin profile login` and `omawin profile menu`, as omawin.exe writes
+    // them: only while %LOCALAPPDATA%\launcher\trace-on exists. The stamp is taken first, so the
+    // file check doesn't count against the step being timed.
     static readonly string TraceLog = Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace.log");
+    static readonly string TraceOn = Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace-on");
+    internal static bool Tracing => File.Exists(TraceOn);
     internal static void Trace(string label)
     {
-        if (!File.Exists(Path.Combine(Path.GetDirectoryName(RequestFile)!, "trace-on"))) return;
-        try { File.AppendAllText(TraceLog, "menu " + label + "\t" + Stopwatch.GetTimestamp() + "\n"); } catch (IOException) { }
+        long at = Stopwatch.GetTimestamp();
+        if (!Tracing) return;
+        try { File.AppendAllText(TraceLog, "menu " + label + "\t" + at + "\n"); } catch (IOException) { }
     }
     // What a `--render-about` run is drawing (App.OnLaunched reads it and exits when it's done).
     internal static (string Path, int Frame)? Render;
@@ -117,6 +129,7 @@ public static class Program
             {
                 while (signal.WaitOne())
                 {
+                    Trace("request");
                     // An empty request is a real one (plain `SystemMenu`: toggle the system menu),
                     // but no file, or one that couldn't be read (a second signal for a request
                     // already handled, or one another copy is still writing; its own signal
@@ -170,6 +183,8 @@ public partial class App : Application
         }
         if (Program.BarPreview) { Bar.Preview(); return; }
         Program.Trace("launched");
+        // Before anything moves: every animation asks it whether to (Motion.cs).
+        Motion.Start(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         // The bar first (when it's the one picked, Bar/Bar.cs): at sign-in it's what you see. Its
         // windows draw once this returns, so the rest comes after, queued behind that first frame.
         Bar.Start(HandleRequest);
@@ -178,8 +193,14 @@ public partial class App : Application
         {
             window = new MainWindow();
             Program.Trace("window");
+            // Keys GlazeWM sends straight here (`emit omawin <command>`, roadmap 1.2): no omawin.exe,
+            // no request file, the same requests as the signal's (Emit.cs).
+            var ui = Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread();
+            Bar.Wm.Custom += (name, words) => Emit.Handle(name, words, ui, HandleRequest);
+            Bar.Wm.Start(); // already started when the bar is up; once either way
             FileSearch.Start(); // the launcher's file indexes (fff), built in the background
             Background.Start(); // clipboard history, installed apps, reports (Background.cs)
+            WinSettings.Start(); // the settings history trimmed, Windows' settings index read if it changed (Settings/)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
@@ -187,6 +208,7 @@ public partial class App : Application
             // The theme picker's pictures, decoded while nothing else is going on (ThemeThumbs.cs).
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, ThemeThumbs.Preload);
             ThemeThumbs.FetchBackgrounds(); // and every theme's backgrounds, on an unmetered connection
+            CommunityThemes.Start(); // the theme picker's Community chip: its index, fetched in the background
             if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
         });
     }
@@ -198,7 +220,22 @@ public partial class App : Application
 
     public void HandleRequest(string[] args)
     {
+        Program.Trace("handle " + (args.Length > 0 ? args[0] : "toggle"));
+        // `omawin setting …` and other requests that print an answer (Reply.cs): they need no
+        // window, so one that comes early at sign-in is answered too.
+        if (args is ["--reply", var pid, _, ..]) { Reply.Answer(pid, args[2..]); return; }
         if (window == null) return;
+        // `omawin profile menu` hides it between runs: at once, with no exit animation and no
+        // focus handed back, so the next run starts from the same place.
+        if (args is ["--hide"]) { window.HideForProfile(); return; }
+        if (args.Length > 0 && args[0] == "--search")
+        {
+            var search = Search.SearchRequest.Parse(args);
+            if (search.Page == "about") (about ??= new AboutWindow()).ShowAbout();
+            else if (search.Page != null) window.OpenPage((search.Page + " " + search.PageArg).Trim());
+            else window.OpenSearch(search.Filter, search.Text, search.Section, search.RetiredKey);
+            return;
+        }
         int open = Array.IndexOf(args, "--open");
         int select = Array.IndexOf(args, "--select");
         if (open >= 0 && open + 1 < args.Length) window.ShowMenu(args[open + 1], open + 2 < args.Length ? args[open + 2] : null);
@@ -209,9 +246,11 @@ public partial class App : Application
         else if (args.Contains("--snip"))
         {
             var mode = args.Contains("text") ? SnipMode.Text : args.Contains("color") ? SnipMode.Color : args.Contains("qr") ? SnipMode.Qr : SnipMode.Picture;
+            window.FinishHiding(); // a menu still fading out isn't in the picture
             try { Snip.Start(mode); } catch (Exception ex) { Log(ex); }
         }
         else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "stay-awake") StayAwake.Toggle();
+        else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "animations") Motion.Toggle(args.Length > 2 ? args[2] : null);
         else if (args.Length > 1 && args[0] == "--bar") Bar.Set(args[1]);
         else if (args.Length > 1 && args[0] == "--say") Snip.Say(string.Join(' ', args[1..])); // the note, for other programs (the music player)
         else if (args.Length > 1 && args[0] == "--qs")
@@ -221,6 +260,12 @@ public partial class App : Application
             var section = args[1];
             var rest = args[2..];
             Task.Run(() => QuickSettings.Command(section, rest)).ContinueWith(t => Snip.Say(t.Result));
+        }
+        // Every microphone muted or not (Microphones.cs), answered with the note; the bar's red mic follows.
+        else if (args.Length > 0 && args[0] == "--mic")
+        {
+            var action = args.Length > 1 ? args[1] : "toggle";
+            Task.Run(() => Audio.SetMics(action)).ContinueWith(t => { Snip.Say(t.Result); Bar.Refresh(); });
         }
         else if (args.Contains("--about")) (about ??= new AboutWindow()).ShowAbout();
         else if (args.Contains("--launcher")) window.ToggleLauncher();

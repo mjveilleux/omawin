@@ -18,16 +18,23 @@ public sealed partial class MainWindow
     string pageArg = "";           // the VPN connection's name
     List<Project>? projects;       // null while they're being found
     List<Server>? servers;         // null while ports are being asked
+    string? reservedPorts;         // dev ports Windows reserved at start-up (8.34), said on the page
     Server? stopping;              // asking "Stop this server?"
-    bool Wide => finding || (launching && page is "clipboard" or "packages");
+    // One Search is wide (a preview beside its list); Audio and the VPN keep the narrow window.
+    bool Wide => finding || (launching && page is not ("audio" or "vpn"));
 
-    // --page <name> / --launcher <name> (Win+Shift+V: clipboard): the launcher, on that page
-    // (just the launcher for a name that isn't one).
+    // --page <name> / --launcher <name>: One Search, on that page (just One Search for a name that
+    // isn't one). Clipboard and Projects are filters now: One Search on them.
     public void OpenPage(string name)
     {
         try
         {
             var parts = name.Split(' ', 2);
+            if (parts[0] is "clipboard" or "projects")
+            {
+                OpenSearch(parts[0] == "clipboard" ? SystemMenu.Search.Tag.Clipboard : SystemMenu.Search.Tag.Project);
+                return;
+            }
             Show("", asLauncher: true);
             if (IsPage(parts[0])) EnterPage(parts[0], parts.Length > 1 ? parts[1] : "");
         }
@@ -67,6 +74,8 @@ public sealed partial class MainWindow
     {
         servers = null;
         Task.Run(Localhost.FindAsync).ContinueWith(t => DispatcherQueue.TryEnqueue(() => { servers = t.IsCompletedSuccessfully ? t.Result : []; if (page == "localhost") Render(); }));
+        Task.Run(() => ReservedPorts.Describe(ReservedPorts.Blocked(ReservedPorts.Read(), ReservedPorts.DevPorts)))
+            .ContinueWith(t => DispatcherQueue.TryEnqueue(() => { reservedPorts = t.IsCompletedSuccessfully ? t.Result : null; if (page == "localhost") Render(); }));
     }
 
     // Esc on a page: back to the launcher's list, on that page's item.
@@ -153,6 +162,10 @@ public sealed partial class MainWindow
                             sub: $":{sv.Port} · {Program(sv)}", highlight: hits);
                         pageRows[rows.Count - 1] = sv;
                     }
+                // Why a dev server on 3000 or 8080 fails though nothing listens there (8.34).
+                if (reservedPorts != null && query.Length == 0)
+                    AddRow(Glyph(0xF0026), reservedPorts, Hex(theme.Yellow), () => { }, dim: true,
+                        sub: "for good, in an admin terminal: netsh int ipv4 set dynamicport tcp start=49152 num=16384, then restart");
                 foreach (var (site, hits) in Filter(Localhost.Sites(), query, x => x.Name))
                 {
                     var url = site.Url;
@@ -266,8 +279,13 @@ public sealed partial class MainWindow
     void ShowClipPreview()
     {
         if (selected >= clipFiles.Count) { Preview.Visibility = Visibility.Collapsed; return; }
+        ShowClipPreviewOf(clipFiles[selected]);
+    }
+
+    void ShowClipPreviewOf(string file)
+    {
+        ++previewToken; // a slow preview of something else no longer lands here
         Preview.Visibility = Visibility.Visible;
-        var file = clipFiles[selected];
         string text;
         try { text = File.ReadAllText(file); } catch { text = ""; }
         Preview.Background = Brush(Hex(theme.Surface), 0xB0);

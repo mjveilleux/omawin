@@ -66,7 +66,7 @@ static class Omawin
 
     class Command { public string Name, Summary, Action; public int Section; }
 
-    // Timing, for profiling (omawin profile terminal): while %LOCALAPPDATA%\launcher\trace-on
+    // Timing, for profiling (omawin profile terminal, omawin profile menu): while %LOCALAPPDATA%\launcher\trace-on
     // exists, each step appends "<label> <QueryPerformanceCounter>" to trace.log there. Every
     // process on the PC shares that clock, so the PowerShell profile's marks line up with these.
     static readonly bool Tracing = File.Exists(Path.Combine(StateDir, "trace-on"));
@@ -114,6 +114,7 @@ static class Omawin
             if (InTerminal) Console.WriteLine("omawin " + Version);
             return 0;
         }
+        Typed = args;
         List<Command> commands;
         try { commands = Load(); }
         catch (Exception ex) { return Fail("can't read bin/commands.txt in " + Repo + ": " + ex.Message); }
@@ -150,6 +151,8 @@ static class Omawin
         {
             case "app":
                 return Send((rest + " " + string.Join(" ", extra)).Trim());
+            case "ask":
+                return Ask((rest + " " + string.Join(" ", extra)).Trim());
             case "pwsh":
                 // A script of this repo, path from the repo root (or from your account folder, {user}/...),
                 // then its fixed arguments. {user} is filled in after the split: the path may have spaces.
@@ -191,10 +194,12 @@ static class Omawin
         EventWaitHandle signal;
         if (EventWaitHandle.TryOpenExisting(@"Local\dotfiles-system-menu-signal", out signal))
         {
+            Trace("send"); // omawin profile menu: from here to the menu app waking is the hand-off
             Directory.CreateDirectory(StateDir);
             File.WriteAllText(Path.Combine(StateDir, "system-menu-request"), request);
             AllowSetForegroundWindow(-1); // let it take focus
             signal.Set();
+            Trace("signalled");
             signal.Dispose();
             return 0;
         }
@@ -202,6 +207,46 @@ static class Omawin
         if (!File.Exists(exe)) return Fail("the menu app isn't built: " + exe + " (omawin restart menu builds it)");
         Process.Start(new ProcessStartInfo(exe, request) { UseShellExecute = false });
         return 0;
+    }
+
+    // A request whose answer is printed (omawin setting get ...): the menu app writes it to a file
+    // named for this process and sets an event named the same way (shell/menu-app/Reply.cs). The
+    // wait covers a cold start of the menu app. Code 3 is a question: the text is shown, and on
+    // yes the request goes again with --yes (omawin settings admin: the list, then the prompt).
+    static int Ask(string request)
+    {
+        string id = Process.GetCurrentProcess().Id.ToString();
+        string dir = Path.Combine(StateDir, "replies");
+        string reply = Path.Combine(dir, id + ".txt");
+        Directory.CreateDirectory(dir);
+        if (File.Exists(reply)) File.Delete(reply);
+        using (var done = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\omawin-reply-" + id))
+        {
+            int sent = Send("--reply " + id + " " + request);
+            if (sent != 0) return sent;
+            if (!done.WaitOne(20000)) return Fail("the menu app didn't answer (omawin restart menu)");
+        }
+        string[] lines;
+        try { lines = File.ReadAllLines(reply, Encoding.UTF8); File.Delete(reply); }
+        catch (IOException ex) { return Fail("no answer: " + ex.Message); }
+        int code = 1;
+        if (lines.Length > 0) int.TryParse(lines[0], out code);
+        var text = string.Join(Environment.NewLine, lines.Skip(1));
+        if (code == 3)
+        {
+            if (!InTerminal) return 1; // from a key there's no one to ask
+            Console.WriteLine(text);
+            Console.Write("Apply these? [y/N] ");
+            var answer = Console.ReadLine();
+            if (answer == null || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase)) { Console.WriteLine("Nothing changed."); return 1; }
+            return Ask(request + " --yes");
+        }
+        if (InTerminal && text.Length > 0)
+        {
+            if (code == 0) Console.WriteLine(text);
+            else Console.Error.WriteLine(text);
+        }
+        return code;
     }
 
     static int Builtin(string name, string[] args)
@@ -223,8 +268,22 @@ static class Omawin
                     return Start("winget", "upgrade --id " + t.Winget + " --exact --accept-source-agreements --accept-package-agreements");
                 }
             case "default": return Default(args);
-            default: return Fail("no builtin \"" + name + "\"");
+            case "linux": return Linux(args);
+            default: return Compiled(name);
         }
+    }
+
+    // Builtins that moved to the compiled omawin (src/cli/, .NET 9 Native AOT, roadmap 2.11):
+    // omawin pkg, so far. It ships beside this exe as omawin-cli.exe (bin/install-binaries.ps1)
+    // and routes the same words through the same commands.txt, so it's handed them as typed.
+    static string[] Typed = new string[0];
+    static int Compiled(string name)
+    {
+        var dir = Path.GetDirectoryName(Process.GetCurrentProcess().MainModule.FileName);
+        var exe = Path.Combine(dir, "omawin-cli.exe");
+        if (!File.Exists(exe))
+            return Fail("\"" + name + "\" is done by omawin-cli.exe, which isn't in " + dir + " yet (omawin install -LinkOnly puts it there)");
+        return Start(exe, string.Join(" ", Typed.Select(Quote)));
     }
 
     // --- defaults: what omawin opens things with (bin/defaults.txt) ---------------------------
@@ -293,7 +352,8 @@ static class Omawin
             foreach (var kind in choices.Select(c => c.Kind).Distinct())
             {
                 var c = Current(kind);
-                Say("  " + kind.PadRight(10) + c.Name + "  (" + c.Label + ")");
+                var note = kind == "shell" && c.Name == "linux" && !LinuxIsDefault() ? "; no Linux yet, so PowerShell" : "";
+                Say("  " + kind.PadRight(10) + c.Name + "  (" + c.Label + note + ")");
             }
             return 0;
         }
@@ -307,16 +367,21 @@ static class Omawin
         }
         var pick = ofKind.FirstOrDefault(c => c.Name == args[1]);
         if (pick == null) return Fail("no " + args[0] + " \"" + args[1] + "\"; the choices: " + string.Join(", ", ofKind.Select(c => c.Name)));
-        // A Linux is there when WSL has the distro; anything else when its program is found.
+        // A Linux is there when WSL has the distro; Linux as the shell, when the picked Linux is;
+        // anything else when its program is found.
         var linux = args[0] == "linux";
-        Func<bool> installed = () => linux ? DistroRegistered(pick.Program) : Find(pick.Program) != null;
+        var linuxShell = args[0] == "shell" && pick.Name == "linux";
+        Func<bool> installed = () => linux ? DistroRegistered(pick.Program)
+            : linuxShell ? DistroRegistered(Distro)
+            : Find(pick.Program) != null;
         if (!installed())
         {
             // Install it where you can watch: here in a terminal, or in a small one from a key.
             if (!InTerminal) return LaunchTerminal(new[] { "--title", "menu-task", "--", "pwsh", "-NoLogo", "-NoExit", "-Command", "omawin default " + args[0] + " " + pick.Name });
             Say("installing " + pick.Label);
             var code = pick.Winget.EndsWith(".ps1")
-                ? Start("pwsh", "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, pick.Winget.Replace('/', '\\'))) + (linux ? " -Linux " + pick.Name : ""))
+                ? Start("pwsh", "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, pick.Winget.Replace('/', '\\')))
+                    + (linux ? " -Linux " + pick.Name : linuxShell ? " -Linux " + Current("linux").Name : ""))
                 : Start("winget", "install --id " + pick.Winget + " --exact --accept-source-agreements --accept-package-agreements");
             if (code != 0 || !installed()) return Fail(pick.Label + " didn't install; the default stays " + Current(args[0]).Name);
         }
@@ -347,9 +412,9 @@ static class Omawin
         return false;
     }
 
-    class Launch { public string Dir, Title; public bool Wsl; public string[] Command = new string[0]; }
+    class Launch { public string Dir, Title; public bool Wsl, Windows; public string[] Command = new string[0]; }
 
-    //   [--dir <folder>] [--title <title>] [--wsl] [-- <command> <args>]
+    //   [--dir <folder>] [--title <title>] [--wsl | --windows] [-- <command> <args>]
     static Launch ParseLaunch(string[] args)
     {
         var l = new Launch();
@@ -359,9 +424,56 @@ static class Omawin
             if (args[i] == "--dir" && i + 1 < args.Length) l.Dir = args[++i];
             else if (args[i] == "--title" && i + 1 < args.Length) l.Title = args[++i];
             else if (args[i] == "--wsl") l.Wsl = true;
+            else if (args[i] == "--windows") l.Windows = true;
             else if (l.Dir == null) l.Dir = args[i];
         }
         return l;
+    }
+
+    // --- which side: Linux or Windows (omawin default shell) ---------------------------------------
+    // Linux is the default shell and the picked distro is there (WSL's registry: WSL isn't started).
+    // Without a Linux yet, PowerShell, silently.
+    static bool LinuxIsDefault()
+    {
+        var shell = Current("shell");
+        return shell != null && shell.Name == "linux" && DistroRegistered(Distro);
+    }
+
+    static bool IsLinuxPath(string path)
+    {
+        return path != null && (path.StartsWith("/") || path == "~" || path.StartsWith("~/"));
+    }
+
+    // Which side a terminal opens on. A command given without --wsl is a Windows program (a key's
+    // pwsh script, nvim on a Windows file, an install in a terminal), so only a plain shell follows
+    // the default; a Linux folder is always Linux.
+    static bool OnLinux(Launch l)
+    {
+        if (l.Windows) return false;
+        if (l.Wsl || IsLinuxPath(l.Dir)) return true;
+        if (l.Command.Length > 0) return false;
+        return LinuxIsDefault();
+    }
+
+    // A path as Linux sees it: C:\x\y -> /mnt/c/x/y (WSL's automount root), \\wsl.localhost\<distro>\home\u
+    // (or \\wsl$\...) -> /home/u; a Linux path as it is.
+    static string LinuxPath(string path)
+    {
+        if (path == null || IsLinuxPath(path)) return path;
+        var unc = System.Text.RegularExpressions.Regex.Match(path, @"^\\\\wsl(?:\.localhost|\$)\\[^\\]+(\\.*)?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (unc.Success) return unc.Groups[1].Value.Length == 0 ? "/" : unc.Groups[1].Value.Replace('\\', '/');
+        var drive = System.Text.RegularExpressions.Regex.Match(path, @"^([A-Za-z]):[\\/]?(.*)$");
+        if (!drive.Success) return path;
+        var rest = drive.Groups[2].Value.Replace('\\', '/').TrimEnd('/');
+        return "/mnt/" + drive.Groups[1].Value.ToLowerInvariant() + (rest.Length > 0 ? "/" + rest : "");
+    }
+
+    // A terminal title without its side prefix (roadmap 3B): "arch \u00B7 ~/src/app" -> "~/src/app",
+    // "pwsh \u00B7 omawin" -> "omawin" (the folder name the PowerShell profile recorded in dirs\).
+    static string StripSide(string title)
+    {
+        var m = System.Text.RegularExpressions.Regex.Match(title, "^[\\w.-]+ \u00B7 (.*)$");
+        return m.Success ? m.Groups[1].Value : title;
     }
 
     static string Terminal(out Choice choice)
@@ -375,6 +487,7 @@ static class Omawin
     static int LaunchTerminal(string[] args)
     {
         var l = ParseLaunch(args);
+        l.Wsl = OnLinux(l);
         Choice terminal;
         var exe = Terminal(out terminal);
         if (exe == null) return Fail("no terminal found (omawin default terminal noctty installs one)");
@@ -384,8 +497,8 @@ static class Omawin
         if (l.Title != null) { a.AddRange(new[] { "--title", l.Title, "--suppressApplicationTitle" }); }
         if (l.Wsl)
         {
-            a.AddRange(new[] { "wsl.exe", "-d", Distro });
-            if (l.Dir != null) { a.Add("--cd"); a.Add(l.Dir); }
+            // No folder: Linux's home, not the Windows folder WSL would otherwise translate.
+            a.AddRange(new[] { "wsl.exe", "-d", Distro, "--cd", l.Dir ?? "~" });
             if (l.Command.Length > 0) { a.Add("--"); a.AddRange(l.Command); }
         }
         else
@@ -474,7 +587,8 @@ static class Omawin
             if (tabs.Contains("\"result\"")) break;
             Thread.Sleep(50);
         }
-        if (System.Text.RegularExpressions.Regex.IsMatch(tabs, "\"tabs\":\\s*\\[\\s*\\]")) SetUpHerdrProject(call, l.Dir, session);
+        // herdr in Linux takes Linux paths (--cwd).
+        if (System.Text.RegularExpressions.Regex.IsMatch(tabs, "\"tabs\":\\s*\\[\\s*\\]")) SetUpHerdrProject(call, l.Wsl ? LinuxPath(l.Dir) : l.Dir, session);
         Trace("herdr-ready");
 
         var attach = l.Wsl ? new[] { "bash", "-lc", "herdr --session " + ShellQuote(session) } : new[] { herdr, "--session", session };
@@ -525,12 +639,15 @@ static class Omawin
         return m.Success ? m.Groups[1].Value : null;
     }
 
-    //   <folder> [--wsl]: a window with a tab per default/launcher/project-tabs.txt line (noctty: a herdr
-    //   session named after the project, reattached if it's already running).
+    //   <folder> [--wsl | --windows]: a window with a tab per default/launcher/project-tabs.txt line
+    //   (noctty: a herdr session named after the project, reattached if it's already running). A
+    //   project opens on the side its folder is on (a Linux path in Linux, a Windows one in
+    //   PowerShell: git over /mnt/c is slow), unless --wsl or --windows says otherwise.
     static int LaunchProject(string[] args)
     {
         var l = ParseLaunch(args);
-        if (l.Dir == null) return Fail("which folder? omawin launch project <folder> [--wsl]");
+        if (l.Dir == null) return Fail("which folder? omawin launch project <folder> [--wsl | --windows]");
+        l.Wsl = !l.Windows && (l.Wsl || IsLinuxPath(l.Dir));
         Choice terminal;
         var exe = Terminal(out terminal);
         if (exe == null) return Fail("no terminal found");
@@ -575,6 +692,8 @@ static class Omawin
     // noctty: a plain shell is a new window of the running instance (+new-window: fast, no
     // start-up); anything that runs a command (a Linux shell, a project's nvim) is a window
     // of its own process, since the running one refuses commands from outside by design.
+    // A Linux window is never a hand-off to the running instance with its spare pwsh: bash in a
+    // warm WSL starts in milliseconds, and what makes it fast is WSL kept warm (WarmLinux).
     static int NocttyWindow(string exe, Launch l)
     {
         var a = new List<string>();
@@ -592,8 +711,8 @@ static class Omawin
         if (l.Title != null) a.Add("--title=" + l.Title);
         if (l.Wsl)
         {
-            a.AddRange(new[] { "-e", "wsl.exe", "-d", Distro });
-            if (l.Dir != null) { a.Add("--cd"); a.Add(l.Dir); }
+            // wsl --cd takes Windows folders too (C:\x is /mnt/c/x); no folder is Linux's home.
+            a.AddRange(new[] { "-e", "wsl.exe", "-d", Distro, "--cd", l.Dir ?? "~" });
             if (l.Command.Length > 0) { a.Add("--"); a.AddRange(l.Command); }
         }
         else
@@ -890,6 +1009,7 @@ static class Omawin
     // of that warm process, so no start-up, and closing your last terminal doesn't shut it down.
     static int TerminalWarm()
     {
+        WarmLinux();
         Choice terminal;
         var exe = Terminal(out terminal);
         if (exe == null || terminal.Name != "noctty") return 0;
@@ -899,6 +1019,123 @@ static class Omawin
         string ignored;
         if (Capture(Path.Combine(Path.GetDirectoryName(exe), "noctty.com"), new List<string> { "+list-windows", "--timeout=1000" }, out ignored) == 0) return 0;
         return Detach(exe, new List<string> { "--initial-window=false" });
+    }
+
+    // --- Linux kept warm (roadmap 3.5) ------------------------------------------------------------
+    // A cold WSL takes ~8 s (the VM, then the distro and systemd). While Linux is the default shell,
+    // one hidden process holds the distro up for the whole sign-in, so a Linux window opens as fast
+    // as PowerShell's. It costs the VM's idle memory; a file %LOCALAPPDATA%\launcher\linux-warm-off
+    // turns it off. `omawin linux stop` ends it with the distro; the next `omawin start terminal`
+    // (or sign-in) starts it again.
+    static string WarmPidFile { get { return Path.Combine(StateDir, "linux-warm.pid"); } }
+
+    static void WarmLinux()
+    {
+        if (!LinuxIsDefault() || File.Exists(Path.Combine(StateDir, "linux-warm-off"))) return;
+        try
+        {
+            int pid;
+            if (File.Exists(WarmPidFile) && int.TryParse(File.ReadAllText(WarmPidFile).Trim(), out pid)
+                && Process.GetProcessById(pid).ProcessName.Equals("wsl", StringComparison.OrdinalIgnoreCase)) return;
+        }
+        catch (ArgumentException) { }  // that process is gone
+        catch (IOException) { }
+        try
+        {
+            // `sleep infinity` in the distro: no shell, no files touched.
+            var keeper = StartQuietly(new ProcessStartInfo("wsl.exe", "-d " + Quote(Distro) + " --exec /bin/sleep infinity") { CreateNoWindow = true });
+            Directory.CreateDirectory(StateDir);
+            File.WriteAllText(WarmPidFile, keeper.Id.ToString());
+            Trace("linux-warm");
+        }
+        catch (Exception) { }
+    }
+
+    // --- omawin linux: stop, backup, reset (roadmap 3.10) -------------------------------------------
+    //   stop     the distro (and the keep-warm with it); it starts again with the next Linux terminal
+    //   backup   wsl --export to ~/omawin-backups/linux/<distro>-<date>.tar, kept until you delete it
+    //   reset    a backup, then (only for a Linux omawin made, /etc/omawin, and only once you type its
+    //            name) a fresh one set up again, with ~/src brought back from the backup if you say so
+    // Backup and reset run where you can watch: here in a terminal, or in a small one from a key.
+    static int Linux(string[] args)
+    {
+        var action = args.Length > 0 ? args[0] : "";
+        if (action != "stop" && action != "backup" && action != "reset") return Fail("omawin linux stop | backup | reset");
+        if (!DistroRegistered(Distro)) return Fail(Distro + " isn't installed for this account (omawin preset add wsl)");
+        if (action != "stop" && !InTerminal)
+            return LaunchTerminal(new[] { "--windows", "--title", "menu-task", "--", "pwsh", "-NoLogo", "-NoExit", "-Command", "omawin linux " + action });
+        if (action == "stop") return LinuxStop();
+        if (action == "backup") { string file; return LinuxBackup(out file); }
+        return LinuxReset();
+    }
+
+    // wsl.exe, waited for; its exit code. Its own messages in UTF-8 (WSL_UTF8), shown in a terminal.
+    static int Wsl(params string[] args)
+    {
+        try
+        {
+            var info = new ProcessStartInfo("wsl.exe", string.Join(" ", args.Select(Quote))) { UseShellExecute = false, CreateNoWindow = !InTerminal };
+            info.EnvironmentVariables["WSL_UTF8"] = "1";
+            var p = Process.Start(info);
+            p.WaitForExit();
+            return p.ExitCode;
+        }
+        catch (Exception ex) { return Fail("wsl.exe: " + ex.Message); }
+    }
+
+    static int LinuxStop()
+    {
+        var code = Wsl("--terminate", Distro);
+        try { File.Delete(WarmPidFile); } catch (IOException) { }
+        if (code == 0) Say(Distro + " stopped");
+        return code;
+    }
+
+    static int LinuxBackup(out string file)
+    {
+        var dir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "omawin-backups", "linux");
+        Directory.CreateDirectory(dir);
+        file = Path.Combine(dir, Distro + "-" + DateTime.Now.ToString("yyyy-MM-dd-HHmm") + ".tar");
+        Say("exporting " + Distro + " to " + file + " (minutes, for a big one)");
+        var code = Wsl("--export", Distro, file);
+        long size = File.Exists(file) ? new FileInfo(file).Length : 0;
+        if (code != 0 || size < 1024 * 1024) return Fail("the backup " + file + " didn't work (wsl --export: " + code + "); nothing else was done");
+        Say("backed up: " + file + " (" + size / (1024 * 1024) + " MB)");
+        return 0;
+    }
+
+    static int LinuxReset()
+    {
+        // Only a Linux omawin made (wsl/setup.sh writes /etc/omawin). Yours is never reset.
+        if (Wsl("-d", Distro, "-u", "root", "--exec", "test", "-f", "/etc/omawin") != 0)
+            return Fail(Distro + " wasn't set up by omawin (no /etc/omawin), so it's never reset; omawin linux backup still works");
+        string user;
+        Capture("wsl.exe", new List<string> { "-d", Distro, "-u", "root", "--exec", "awk", "-F=", "/^default=/ { print $2 }", "/etc/wsl.conf" }, out user);
+        user = user.Trim();
+        Console.WriteLine("This replaces " + Distro + " with a fresh one, set up again. A backup is made first, and kept.");
+        Console.Write("Type " + Distro + " to go ahead: ");
+        if (Console.ReadLine() != Distro) { Say("nothing changed"); return 1; }
+        string file;
+        if (LinuxBackup(out file) != 0) return 1;
+        try { File.Delete(WarmPidFile); } catch (IOException) { }
+        if (Wsl("--unregister", Distro) != 0) return Fail("wsl --unregister " + Distro + " didn't work; the backup is " + file);
+        var code = Start("pwsh", "-NoLogo -NoProfile -ExecutionPolicy Bypass -File " + Quote(Path.Combine(Repo, @"wsl\install.ps1")) + " -Linux " + Current("linux").Name);
+        if (code != 0) return Fail("setting " + Distro + " up again stopped; run omawin default linux " + Current("linux").Name + " to try again. The backup is " + file);
+        if (user.Length > 0)
+        {
+            Console.Write("Bring ~/src back from the backup? [Y/n] ");
+            var answer = (Console.ReadLine() ?? "").Trim();
+            if (!answer.StartsWith("n", StringComparison.OrdinalIgnoreCase))
+            {
+                // wsl --export's paths may start with ./ or not: the first under home/ says which.
+                var script = "f=" + ShellQuote(LinuxPath(file)) + "; u=" + ShellQuote(user) + "; "
+                    + "p=$(tar -tf \"$f\" | grep -m1 -E '^(\\./)?home/') && tar -xpf \"$f\" -C / \"${p%%home/*}home/$u/src\"";
+                if (Wsl("-d", Distro, "-u", "root", "--exec", "bash", "-c", script) == 0) Say("~/src is back");
+                else Say("~/src couldn't be brought back; it's in the backup, under home/" + user + "/src");
+            }
+        }
+        Say("the backup stays at " + file);
+        return 0;
     }
 
     // Started without our console handles: a program that keeps running (a terminal, an editor)
@@ -945,8 +1182,10 @@ static class Omawin
             string json;
             Trace("found-noctty");
             // Our noctty fork takes "inherit" in a request as the folder of its window in
-            // front: one request, no folder query first (~70 ms less).
-            if (exe != null && terminal.Name == "noctty") return NocttyWindow(exe, new Launch { Dir = "inherit" });
+            // front: one request, no folder query first (~70 ms less). It opens its own shell
+            // (PowerShell) there, so only while PowerShell is the default; with Linux the folder
+            // is asked for and a Linux window opens there.
+            if (exe != null && terminal.Name == "noctty" && !LinuxIsDefault()) return NocttyWindow(exe, new Launch { Dir = "inherit" });
             if (exe != null && Capture(Path.Combine(Path.GetDirectoryName(exe), "noctty.com"), new List<string> { "+list-windows" }, out json) == 0)
             {
                 Trace("noctty-listed");
@@ -955,6 +1194,7 @@ static class Omawin
                 {
                     var folder = pane.Groups[1].Value.Replace("\\\\", "\\");
                     if (folder.StartsWith("/")) return LaunchTerminal(new[] { "--wsl", "--dir", folder });
+                    // A Windows folder: the default shell there (Linux opens it as /mnt/c/...).
                     if (Directory.Exists(folder)) return LaunchTerminal(new[] { "--dir", folder });
                 }
             }
@@ -964,7 +1204,8 @@ static class Omawin
         {
             var text = new StringBuilder(512);
             GetWindowText(hwnd, text, text.Capacity);
-            var title = text.ToString().Trim();
+            // Without the side prefix omawin's shells put in front ("arch · ", "pwsh · ").
+            var title = StripSide(text.ToString().Trim());
             // Linux: "~/apps/myapp" or "/etc", maybe after "user@host: " (a distro's own prompt).
             var linux = System.Text.RegularExpressions.Regex.Match(title, @"^(?:[\w.-]+@[\w.-]+:\s*)?((?:~|/)\S*)$");
             if (linux.Success) return LaunchTerminal(new[] { "--wsl", "--dir", linux.Groups[1].Value });
@@ -986,9 +1227,13 @@ static class Omawin
         if (process == "explorer")
         {
             var folder = ExplorerFolder(hwnd);
+            // A Linux folder (\\wsl.localhost\<distro>\...), which wsl --cd doesn't take as it is.
+            if (folder != null && folder.StartsWith(@"\\wsl", StringComparison.OrdinalIgnoreCase)) return LaunchTerminal(new[] { "--wsl", "--dir", LinuxPath(folder) });
             if (folder != null && Directory.Exists(folder)) return LaunchTerminal(new[] { "--dir", folder });
         }
 
+        // Nothing with a folder in front: the default shell's home (Linux's, or Windows').
+        if (LinuxIsDefault()) return LaunchTerminal(new string[0]);
         return LaunchTerminal(new[] { "--dir", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) });
     }
 
@@ -1021,9 +1266,20 @@ static class Omawin
     {
         if (args.Length == 0) return Fail("which file or folder? omawin launch editor <path>");
         var path = args[0];
-        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
         var editor = Current("editor");
         var exe = Find(editor.Program);
+        // A Linux file (the finder's Linux results, a Linux project): opened in Linux. VS Code
+        // through its wrapper there (wsl/setup.sh: Windows' Code over its WSL extension);
+        // anything else as Neovim in a Linux terminal, in the file's folder.
+        if (path.StartsWith("/"))
+        {
+            var slash = path.TrimEnd('/').LastIndexOf('/');
+            var parent = slash > 0 ? path.Substring(0, slash) : "/";
+            if (editor.Name == "code")
+                return Detach("wsl.exe", new List<string> { "-d", Distro, "--cd", parent, "--exec", "bash", "-lc", "code " + ShellQuote(path) });
+            return LaunchTerminal(new[] { "--wsl", "--dir", parent, "--", "nvim", path });
+        }
+        var dir = Directory.Exists(path) ? path : Path.GetDirectoryName(path);
         if (editor.Name == "nvim" || exe == null)
             return LaunchTerminal(new[] { "--dir", dir, "--", "nvim", path });
         if (editor.Name == "code")

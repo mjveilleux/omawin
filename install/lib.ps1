@@ -83,6 +83,15 @@ function Get-GitHome {
     $null
 }
 function Test-WslInstalled { Test-Path "$env:ProgramFiles\WSL\wsl.exe" }
+# WSL 2 needs virtualization turned on in the firmware. With Hyper-V (or WSL) already running,
+# Windows itself is the hypervisor and the processor reports it off, so that counts too. Asked of
+# WMI, which needs no admin; when it can't tell, $true (wsl --install says why if it fails).
+function Test-Virtualization {
+    try {
+        if ((Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).HypervisorPresent) { return $true }
+        @(Get-CimInstance Win32_Processor -ErrorAction Stop | Where-Object { $_.VirtualizationFirmwareEnabled }).Count -gt 0
+    } catch { $true }
+}
 function Get-WslDistros {
     Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
         ForEach-Object { $_.GetValue('DistributionName') } | Where-Object { $_ }
@@ -120,10 +129,12 @@ function Add-UserPath([string]$Dir, [switch]$Prepend) {
 }
 
 # Where each package on this PC came from, so `omawin pkg update` updates it the same way
-# (bin/pkg-update.ps1): %LOCALAPPDATA%\launcher\packages.tsv, a row each,
-#   <name> <TAB> <source> <TAB> <id> <TAB> <version> <TAB> <folder>
+# (src/cli/Pkg): %LOCALAPPDATA%\launcher\packages.tsv, a row each,
+#   <name> <TAB> <source> <TAB> <id> <TAB> <version> <TAB> <folder> [<TAB> <scope> <TAB> <by>]
 # source: bundle (the release's tools bundle), winget, scoop, choco, mise, npm, script (its own
-# installer, run again), found (yours, from somewhere omawin can't tell: left alone).
+# installer, run again), found (yours, from somewhere omawin can't tell: left alone). scope and
+# by are omawin pkg's (by: found for what a manager listed that omawin didn't put in); they're
+# carried along here untouched, so a row omawin pkg wrote keeps them.
 $PackagesFile = Join-Path $env:LOCALAPPDATA 'launcher\packages.tsv'
 function Get-PackageSources {
     $rows = [ordered]@{}
@@ -131,7 +142,8 @@ function Get-PackageSources {
         foreach ($line in Get-Content -LiteralPath $PackagesFile) {
             if ($line -match '^\s*(#|$)') { continue }
             $f = $line -split "`t"
-            $rows[$f[0]] = [pscustomobject]@{ Name = $f[0]; Source = $f[1]; Id = $f[2]; Version = $(if ($f.Count -gt 3) { $f[3] }); Where = $(if ($f.Count -gt 4) { $f[4] }) }
+            $rows[$f[0]] = [pscustomobject]@{ Name = $f[0]; Source = $f[1]; Id = $f[2]; Version = $(if ($f.Count -gt 3) { $f[3] }); Where = $(if ($f.Count -gt 4) { $f[4] })
+                Rest = $(if ($f.Count -gt 5) { $f[5..($f.Count - 1)] -join "`t" } else { '' }) }
         }
     }
     $rows
@@ -140,10 +152,12 @@ function Set-PackageSource([string]$Name, [string]$Source, [string]$Id, [string]
     $rows = Get-PackageSources
     $was = $rows[$Name]
     if ($was -and $was.Source -eq $Source -and $was.Id -eq $Id -and $was.Version -eq $Version -and $was.Where -eq $Where) { return }
-    $rows[$Name] = [pscustomobject]@{ Name = $Name; Source = $Source; Id = $Id; Version = $Version; Where = $Where }
+    # omawin pkg's columns stay with the row while it's the same package from the same place.
+    $rest = if ($was -and $was.Source -eq $Source -and $was.Id -eq $Id) { $was.Rest } else { '' }
+    $rows[$Name] = [pscustomobject]@{ Name = $Name; Source = $Source; Id = $Id; Version = $Version; Where = $Where; Rest = $rest }
     New-Item -ItemType Directory -Force (Split-Path $PackagesFile) | Out-Null
-    $lines = @('# where each package came from (omawin pkg update updates it there): name, source, id, version, folder') +
-        @($rows.Values | ForEach-Object { (@($_.Name, $_.Source, $_.Id, $_.Version, $_.Where) -join "`t") })
+    $lines = @('# where each package came from (omawin pkg update updates it there): name, source, id, version, folder, scope, by') +
+        @($rows.Values | ForEach-Object { $row = @($_.Name, $_.Source, $_.Id, $_.Version, $_.Where); if ($_.Rest) { $row += $_.Rest }; $row -join "`t" })
     Set-Content -LiteralPath $PackagesFile -Value $lines -Encoding utf8
 }
 

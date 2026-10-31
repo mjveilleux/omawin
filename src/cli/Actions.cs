@@ -6,15 +6,17 @@ namespace Omawin.Cli;
 // What a command's action asks for, worked out before anything runs (so it's tested anywhere).
 public abstract record Plan;
 public sealed record SendToApp(string Request) : Plan;                       // app <request>
+public sealed record AskApp(string Request) : Plan;                          // ask <request>: the answer is printed
 public sealed record StartProcess(string File, string Arguments) : Plan;     // pwsh <script>, run <program>
 public sealed record RunBuiltin(string Name, string[] Args) : Plan;          // builtin <name>
 public sealed record BadAction(string Message) : Plan;
 
 public static partial class Actions
 {
-    // Done by omawin itself (bin/omawin.cs's Builtin); commands.txt may only name these.
+    // Done by omawin itself (bin/omawin.cs's Builtin; pkg by this exe, which omawin.cs hands it
+    // to); commands.txt may only name these.
     public static readonly string[] Builtins =
-        ["launch-terminal", "launch-project", "launch-editor", "terminal-here", "terminal-warm", "start-glazewm", "start-bar", "update-terminal", "default"];
+        ["launch-terminal", "launch-project", "launch-editor", "terminal-here", "terminal-warm", "start-glazewm", "start-bar", "update-terminal", "default", "pkg", "linux"];
 
     // repo: this repo's folder ({repo}); user: this account's folder ({user}, docs/work.md).
     public static Plan Plan(Command command, string[] extra, string repo, string user)
@@ -29,6 +31,8 @@ public static partial class Actions
             case "app":
                 // The menu app splits the request itself, so extra words go as typed.
                 return new SendToApp((rest + " " + string.Join(' ', extra)).Trim());
+            case "ask":
+                return new AskApp((rest + " " + string.Join(' ', extra)).Trim());
             case "pwsh":
             {
                 // The script's path from the repo root (or {user}/...), then its fixed arguments.

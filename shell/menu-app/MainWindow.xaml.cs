@@ -23,10 +23,10 @@ namespace SystemMenu;
 // hides instead of closing: when you pick something, press Esc at the top, or click elsewhere.
 public sealed partial class MainWindow : Window
 {
-    // Width; each row's height (with the gap under it); rows that cascade in on opening; and the
-    // search line, hairline and footer around the body (MainWindow.Tiles.cs, HomeBodyDip).
-    const double WidthDip = 560, RowDip = 44, MaxRows = 10, ChromeDip = 56 + 1 + 38;
-    // The file finder is wider (a preview beside the list) and a fixed height.
+    // Width; each row's height (with the gap under it); and the search line, hairline and footer
+    // around the body (MainWindow.Tiles.cs, HomeBodyDip). How many rows cascade in: Motion.CascadeRows.
+    const double WidthDip = 560, RowDip = 44, ChromeDip = 56 + 1 + 38;
+    // One Search and its file finder are wider (a preview beside the list), at least this tall.
     const double FinderWidthDip = 980, FinderHeightDip = 620, FileRowDip = 54;
 
     readonly IntPtr hwnd;
@@ -42,9 +42,8 @@ public sealed partial class MainWindow : Window
     string? backgroundsOf;         // showing this theme's backgrounds (the background picker, MainWindow.Tiles.cs)
     (string Theme, string Source)? pickedBackground; // the one just picked here, checked before set-theme.ps1 has written it down
     bool launching;                // the launcher (Win+Space): items + apps, not the menu
-    bool menuFromLauncher;         // the menu was opened from the launcher (Esc goes back to it)
     List<LaunchItem> launchItems = [];
-    readonly List<(Border Row, Action Run)> rows = [];
+    readonly List<(Border? Row, Action Run)> rows = []; // Row: null for the launcher's rows not drawn yet (MainWindow.Virtual.cs)
     readonly List<RowView> pool = [];  // every row ever drawn, reused: a search changes their text
     int used;                          // how many of the pool this drawing uses
     int selected;
@@ -112,7 +111,20 @@ public sealed partial class MainWindow : Window
         SearchIcon.Text = char.ConvertFromUtf32(0xF0349); // magnify
 
         SetUpMotion();
-        Input.TextChanged += (_, _) => { selected = 0; Render(); };
+        Input.TextChanged += (_, _) =>
+        {
+            // Letters typed while it fades out are dropped (Show clears the search anyway).
+            if (leaving != null) return;
+            // One Search: "/" or ">" typed first is the Files or Commands filter (MainWindow.Search.cs).
+            if (PrefixToFilter()) return;
+            actionsFor = null; // typing goes on searching; Ctrl+K's list closes
+            // omawin profile menu -Typing: a key in the search to its list on screen.
+            SystemMenu.Program.Trace("typed");
+            selected = 0;
+            Render();
+            SystemMenu.Program.Trace("rendered");
+            TraceNextFrame("list-painted");
+        };
         Input.PreviewKeyDown += OnKey;
         Activated += (_, e) =>
         {
@@ -124,13 +136,8 @@ public sealed partial class MainWindow : Window
     }
 
     // --- showing and hiding -----------------------------------------------------------------
-    public void Toggle()
-    {
-        bool menu = !launching && !finding;
-        if (appWindow.IsVisible && GetForegroundWindow() == hwnd && menu) Dismiss();
-        else if (appWindow.IsVisible && menu) { shownAt = DateTime.Now; SetForegroundWindow(hwnd); Input.Focus(FocusState.Programmatic); }
-        else ShowMenu(""); // hidden, or showing the launcher / finder: the menu
-    }
+    // Plain `SystemMenu`: what the system menu was, Browse in One Search (its Commands filter).
+    public void Toggle() => OpenSearch(SystemMenu.Search.Tag.Command);
 
     // `with`: what follows the row id (--open style.backgrounds gruvbox: that theme's backgrounds).
     public void ShowMenu(string at, string? with = null)
@@ -138,16 +145,8 @@ public sealed partial class MainWindow : Window
         try { Show(at, with: with); } catch (Exception ex) { App.Log(ex); }
     }
 
-    // Win+Space: the launcher, or hide it if it's in front.
-    public void ToggleLauncher()
-    {
-        try
-        {
-            if (appWindow.IsVisible && GetForegroundWindow() == hwnd && launching) Dismiss();
-            else Show("", asLauncher: true);
-        }
-        catch (Exception ex) { App.Log(ex); }
-    }
+    // Win+Space: One Search, or hide it if it's in front (MainWindow.Search.cs).
+    public void ToggleLauncher() => OpenSearch(null);
 
     // Shows the submenu a row is in, with that row picked out (--select install.development,
     // or --select theme:gruvbox in the theme list). For scripted walkthroughs.
@@ -155,17 +154,17 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            if (appWindow.IsVisible && ApplyTheme(MenuModel.CurrentThemeName())) Render();
+            if (Showing && ApplyTheme(MenuModel.CurrentThemeName())) Render();
             if (id.StartsWith("theme:"))
             {
-                if (!pickingTheme || !appWindow.IsVisible) Show("style.theme");
+                if (!pickingTheme || !Showing) Show("style.theme");
                 selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == id[6..]));
                 Highlight();
                 return;
             }
-            if (!appWindow.IsVisible) Show("");
+            if (!Showing) Show("");
             var parent = entries.TryGetValue(id, out var e) ? e.Parent : "";
-            if (pickingTheme || backgroundsOf != null || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
+            if (pickingTheme || backgroundsOf != null || galleryOpen || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
             selected = Math.Max(0, MenuModel.Children(entries, current).FindIndex(c => c.Id == id));
             Highlight();
         }
@@ -175,7 +174,7 @@ public sealed partial class MainWindow : Window
     // Types into the search (--type <text>); for scripted walkthroughs.
     public void TypeText(string text)
     {
-        if (!appWindow.IsVisible) Show("");
+        if (!Showing) Show("");
         Input.Text = text;
         Input.SelectionStart = text.Length;
     }
@@ -184,7 +183,7 @@ public sealed partial class MainWindow : Window
     // Packages page): as if pressed; for scripted walkthroughs.
     public void PressKey(string key)
     {
-        if (!appWindow.IsVisible) return;
+        if (!Showing) return;
         switch (key)
         {
             case "down": if (tileMode) NavTile(0, 1); else Move(1); break;
@@ -193,8 +192,8 @@ public sealed partial class MainWindow : Window
             case "right": if (tileMode) NavTile(1, 0); else RunSelected(); break;
             case "enter": RunSelected(); break;
             case "esc": if (Input.Text.Length > 0) Input.Text = ""; else Back(hideAtTop: true); break;
-            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else if (backgroundsOf != null) CycleBackgroundTheme(1); else Move(1); break;
-            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else if (backgroundsOf != null) CycleBackgroundTheme(-1); else Move(-1); break;
+            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else if (backgroundsOf != null) CycleBackgroundTheme(1); else if (pickingTheme) ToggleCommunity(); else Move(1); break;
+            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else if (backgroundsOf != null) CycleBackgroundTheme(-1); else if (pickingTheme) ToggleCommunity(); else Move(-1); break;
             case "pick": if (launching && page == "packages") TogglePackagePick(); break; // Ctrl+Space
         }
     }
@@ -202,6 +201,8 @@ public sealed partial class MainWindow : Window
     // Shows the menu at a submenu; when it's already showing, just goes there.
     void Show(string at, bool asLauncher = false, bool asFinder = false, string? with = null)
     {
+        // A key during the exit animation ends it and shows afresh: nothing waits on an animation.
+        if (leaving != null) HideNow();
         bool showing = appWindow.IsVisible;
         if (!showing)
         {
@@ -209,20 +210,30 @@ public sealed partial class MainWindow : Window
             entries = MenuModel.Load(installed);
             RefreshInstalledIfOld();
             pickedBackground = null; // by now set-theme.ps1 has written down the one picked last time
+            ForgetSources(); // One Search's file-backed sources, read again
         }
         launching = asLauncher;
         page = null;
         finding = asFinder;
         findFromLauncher = false;
-        menuFromLauncher = false;
         if (asLauncher) launchItems = Launcher.Load();
         ApplyTheme(MenuModel.CurrentThemeName());
         current = entries.TryGetValue(at, out var e) && e.IsSubmenu ? at : "";
         confirming = null;
+        if (pickingTheme) LeaveThemePicker();
         pickingTheme = false;
         backgroundsOf = null;
+        galleryOpen = false;
+        galleryAsking = null;
+        settingsArea = null; // Windows' settings by area (MainWindow.Settings.cs)
+        confirmingAdmin = false;
+        settingNote = null;
         Input.Text = "";
         selected = 0;
+        // One Search opens on All, or on the filter it was asked for (OpenSearch).
+        if (asLauncher) EnterFilter(openFilter);
+        else { searchFilter = null; actionsFor = null; }
+        openFilter = null;
         // --open style.theme: straight to the theme list; --open style.backgrounds [theme]: to
         // that theme's backgrounds (yours when it's left out or isn't one).
         if (entries.TryGetValue(at, out var picker) && picker.Kind == "themes")
@@ -235,6 +246,11 @@ public sealed partial class MainWindow : Window
         {
             current = picker.Parent;
             OpenBackgrounds(ThemeFileNamed(with) ?? themeName);
+        }
+        else if (picker is { Kind: "plugins" })
+        {
+            current = picker.Parent;
+            OpenGallery();
         }
         if (!showing)
         {
@@ -255,13 +271,63 @@ public sealed partial class MainWindow : Window
         shownAt = DateTime.Now;
         previous = GetForegroundWindow();
         appWindow.Show();
+        SystemMenu.Program.Trace("shown");
+        TraceNextFrame("painted");
         SetForegroundWindow(hwnd);
         Input.Focus(FocusState.Programmatic);
         Animate();
         Cascade();
     }
 
-    void HideMenu() => appWindow.Hide();
+    // On screen and staying: not hidden, and not on its way out.
+    bool Showing => appWindow.IsVisible && leaving == null;
+
+    Motion.Leaving? leaving; // the exit animation, while it runs
+
+    // Hides it: a short fade and sink (Motion.Exit) unless `instant` or animations are off.
+    // Whatever captures the screen next (a screenshot, the colour picker, text from the screen)
+    // passes instant, so the fading menu isn't in the picture.
+    void HideMenu(bool instant = false)
+    {
+        if (!appWindow.IsVisible) return;
+        if (pickingTheme) LeaveThemePicker(); // a community theme being shown: yours back
+        if (leaving != null) { if (instant) HideNow(); return; }
+        if (instant || !Motion.Enabled) { HideNow(); return; }
+        Root.IsHitTestVisible = false; // clicks during the fade go nowhere
+        var exit = Motion.Leave(ElementCompositionPreview.GetElementVisual(Root), Motion.DropPx, HideNow);
+        if (!exit.Over) leaving = exit;
+    }
+
+    // Hidden now, the exit animation (if any) cut short and undone for the next showing.
+    void HideNow()
+    {
+        var exit = leaving;
+        leaving = null;
+        exit?.Cancel();
+        Root.IsHitTestVisible = true;
+        appWindow.Hide();
+    }
+
+    // A screen capture is about to start (SystemMenu --snip): a menu still fading out goes now.
+    public void FinishHiding()
+    {
+        if (leaving != null) HideNow();
+    }
+
+    // For `omawin profile menu` (SystemMenu --hide): hidden now, no animation, no focus shuffle.
+    public void HideForProfile() => HideMenu(instant: true);
+
+    // Marks the next frame the compositor draws: what `omawin profile menu` calls "painted".
+    // CompositionTarget.Rendering is raised on the UI thread once per frame, just before it's
+    // composed, so this is the frame that has the change in it (to within that frame's own
+    // drawing, well under a refresh).
+    void TraceNextFrame(string label)
+    {
+        if (!SystemMenu.Program.Tracing) return;
+        EventHandler<object>? once = null;
+        once = (_, _) => { CompositionTarget.Rendering -= once; SystemMenu.Program.Trace(label); };
+        CompositionTarget.Rendering += once;
+    }
 
     // Closed without opening anything (Esc, the shortcut again): focus goes back to the window
     // you were in, or to the desktop. Left alone, Windows gives it to the taskbar, and a
@@ -270,8 +336,9 @@ public sealed partial class MainWindow : Window
     {
         var target = previous != IntPtr.Zero && IsWindowVisible(previous) && ClassOf(previous) != "Shell_TrayWnd"
             ? previous : FindWindow("Progman", null);
-        HideMenu();
+        // Focus first, then the fade: your next key goes to that window at once.
         if (target != IntPtr.Zero) SetForegroundWindow(target);
+        HideMenu();
     }
 
     static string ClassOf(IntPtr window)
@@ -290,8 +357,9 @@ public sealed partial class MainWindow : Window
         int w, h;
         if (Wide)
         {
+            // One Search: as tall as its home (with the filter tabs), at least the finder's height.
             w = (int)(FinderWidthDip * scale);
-            h = Math.Min(maxHeight, (int)(FinderHeightDip * scale));
+            h = Math.Min(maxHeight, (int)((launching ? Math.Max(FinderHeightDip, ChromeDip + TabsDip + bodyDip) : FinderHeightDip) * scale));
         }
         else
         {
@@ -307,30 +375,19 @@ public sealed partial class MainWindow : Window
     void Animate()
     {
         ElementCompositionPreview.SetIsTranslationEnabled(Root, true);
-        var visual = ElementCompositionPreview.GetElementVisual(Root);
-        var compositor = visual.Compositor;
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1);
-        fade.Duration = TimeSpan.FromMilliseconds(140);
-        var rise = compositor.CreateVector3KeyFrameAnimation();
-        rise.InsertKeyFrame(0, new Vector3(0, 10, 0)); rise.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.8f), new(0.2f, 1f)));
-        rise.Duration = TimeSpan.FromMilliseconds(180);
-        visual.StartAnimation("Opacity", fade);
-        visual.StartAnimation("Translation", rise);
+        Motion.Arrive(ElementCompositionPreview.GetElementVisual(Root));
     }
 
     // --- motion -------------------------------------------------------------------------------
     // All of it runs on the compositor (off the UI thread), so it stays smooth while the list
     // is being filled: scrolling, the selected row or tile lifting, the light drifting along the
-    // hairline, rows arriving, levels sliding.
-    static readonly TimeSpan ScrollGlide = TimeSpan.FromMilliseconds(200);
-
+    // hairline, rows arriving, levels sliding. The numbers are Motion's (Motion.cs), and with
+    // animations off every one of these is a jump to its end.
     void SetUpMotion()
     {
-        var compositor = ElementCompositionPreview.GetElementVisual(Root).Compositor;
         // Scrolling: setting ListLayer's Translation glides it there, and a new target set while
         // it's moving (a held key, the wheel) carries on from where it is.
-        ListLayer.TranslationTransition = new Vector3Transition { Duration = ScrollGlide };
+        ListLayer.TranslationTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) };
         ElementCompositionPreview.SetIsTranslationEnabled(Pane, true);
         Viewport.SizeChanged += (_, e) =>
         {
@@ -351,63 +408,70 @@ public sealed partial class MainWindow : Window
         DividerLine.SizeChanged += (_, e) =>
         {
             DividerLine.Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, e.NewSize.Width, e.NewSize.Height) };
-            var drift = compositor.CreateScalarKeyFrameAnimation();
-            drift.InsertKeyFrame(0f, -180f);
-            drift.InsertKeyFrame(0.55f, (float)e.NewSize.Width, compositor.CreateCubicBezierEasingFunction(new(0.4f, 0f), new(0.6f, 1f)));
-            drift.InsertKeyFrame(1f, (float)e.NewSize.Width);
-            drift.Duration = TimeSpan.FromSeconds(7);
-            drift.IterationBehavior = AnimationIterationBehavior.Forever;
-            ElementCompositionPreview.GetElementVisual(Sheen).StartAnimation("Translation.X", drift);
+            Drift();
+        };
+
+        // Turned on or off (omawin toggle animations, or Windows' own switch) while running.
+        Motion.Changed += () =>
+        {
+            ListLayer.TranslationTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) };
+            foreach (var v in pool) v.Row.BackgroundTransition = new BrushTransition { Duration = Motion.Or0(Motion.Quick) };
+            Drift();
         };
     }
 
-    // The first screenful of rows or tiles fades and rises in, a few ms apart.
+    // The hairline's light: decoration, so it doesn't move at all while animations are off.
+    void Drift()
+    {
+        var sheen = ElementCompositionPreview.GetElementVisual(Sheen);
+        sheen.StopAnimation("Translation.X");
+        float width = (float)DividerLine.ActualWidth;
+        if (!Motion.Enabled || width <= 0) { sheen.Properties.InsertVector3("Translation", new Vector3(-180, 0, 0)); return; }
+        var compositor = sheen.Compositor;
+        var drift = compositor.CreateScalarKeyFrameAnimation();
+        drift.InsertKeyFrame(0f, -180f);
+        // Across in the first half of the pass, then a rest.
+        drift.InsertKeyFrame(0.55f, width, Motion.EaseInOut(compositor));
+        drift.InsertKeyFrame(1f, width);
+        drift.Duration = Motion.Drift;
+        drift.IterationBehavior = AnimationIterationBehavior.Forever;
+        sheen.StartAnimation("Translation.X", drift);
+    }
+
+    // The first screenful of rows or tiles fades and rises in, Motion.Stagger apart.
     void Cascade()
     {
-        var compositor = ElementCompositionPreview.GetElementVisual(Root).Compositor;
         int first = tileMode ? 0 : (int)Math.Round(scrollY / Pitch);
         int count = tileMode ? tiles.Count : used;
         for (int i = 0; i < count; i++)
         {
             // A tile's inside moves, not the tile: the tile's own Translation is its lift.
             var visual = ElementCompositionPreview.GetElementVisual(tileMode ? tiles[i].Inner : pool[i].Slot);
-            int step = i - first;
-            if (step < 0 || step > (tileMode ? 18 : MaxRows)) { visual.Opacity = 1; continue; }
-            var delay = TimeSpan.FromMilliseconds(28 + step * (tileMode ? 16 : 18));
-            var fade = compositor.CreateScalarKeyFrameAnimation();
-            fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1);
-            fade.Duration = TimeSpan.FromMilliseconds(200);
-            fade.DelayTime = delay;
-            fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-            var rise = compositor.CreateVector3KeyFrameAnimation();
-            rise.InsertKeyFrame(0, new Vector3(0, 8, 0)); rise.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.8f), new(0.2f, 1f)));
-            rise.Duration = TimeSpan.FromMilliseconds(260);
-            rise.DelayTime = delay;
-            rise.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-            visual.StartAnimation("Opacity", fade);
-            visual.StartAnimation("Translation", rise);
+            // A row's place in the list (pool[i].Index: the launcher's search binds only the rows
+            // in view, so the pool's first row may stand for one further down).
+            int step = (tileMode ? i : pool[i].Index) - first;
+            if (Motion.CascadeDelay(step, tileMode ? Motion.CascadeTiles : Motion.CascadeRows) is { } delay) Motion.Arrive(visual, delay);
+            else
+            {
+                visual.StopAnimation("Opacity");
+                visual.StopAnimation("Translation");
+                visual.Opacity = 1;
+                visual.Properties.InsertVector3("Translation", Vector3.Zero);
+            }
         }
     }
 
     // Into a submenu or page the new level slides in from the right; back out, from the left.
-    void Slide(int direction) => SlideIn(new Vector3(44 * direction, 0, 0), 280);
+    void Slide(int direction) => SlideIn(new Vector3(Motion.SlidePx * direction, 0, 0));
 
     // Typing on a home screen turns its tiles into a list (and clearing it, back): a quick fade.
-    void Swap() => SlideIn(new Vector3(0, 4, 0), 170);
+    void Swap() => SlideIn(new Vector3(0, Motion.DropPx, 0));
 
-    void SlideIn(Vector3 from, int ms)
+    void SlideIn(Vector3 from)
     {
         var visual = ElementCompositionPreview.GetElementVisual(Pane);
-        var compositor = visual.Compositor;
-        var move = compositor.CreateVector3KeyFrameAnimation();
-        move.InsertKeyFrame(0, from);
-        move.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.9f), new(0.25f, 1f)));
-        move.Duration = TimeSpan.FromMilliseconds(ms);
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.9f), new(0.25f, 1f)));
-        fade.Duration = TimeSpan.FromMilliseconds(ms * 0.8);
-        visual.StartAnimation("Translation", move);
-        visual.StartAnimation("Opacity", fade);
+        Motion.MoveIn(visual, from);
+        Motion.FadeIn(visual, duration: Motion.Enter * 0.8);
     }
 
     // --- scrolling ------------------------------------------------------------------------------
@@ -416,6 +480,7 @@ public sealed partial class MainWindow : Window
     void ScrollTo(double y, bool animate)
     {
         y = Math.Clamp(y, 0, Math.Max(0, ListLayer.ActualHeight - ViewHeight));
+        animate = EnsureBound(scrollY, y, animate); // the launcher's long list: its rows on the way, drawn first
         scrollY = y;
         var at = new Vector3(0, (float)-y, 0);
         if (animate) { ListLayer.Translation = at; return; }
@@ -445,9 +510,10 @@ public sealed partial class MainWindow : Window
         {
             // The row's own place, with its section title if it has one (a page's titles make
             // rows sit lower than their pitch); the first row shows the top of the list.
-            var slot = pool[selected].Slot;
+            // The launcher's long list: a row's place is its pitch (most rows aren't drawn to measure).
             if (selected == 0) ScrollTo(0, animate);
-            else ScrollIntoView(slot.ActualOffset.Y, slot.ActualHeight - 2, Pitch, animate);
+            else if (drawRow != null) ScrollIntoView(selected * Pitch, Pitch - 2, Pitch, animate);
+            else ScrollIntoView(pool[selected].Slot.ActualOffset.Y, pool[selected].Slot.ActualHeight - 2, Pitch, animate);
         }
         else ScrollTo(0, animate: false);
     }
@@ -530,6 +596,10 @@ public sealed partial class MainWindow : Window
     void Render()
     {
         rows.Clear();
+        EndVirtual();
+        settingRows.Clear();
+        lastResults = results; // One Search's rows before this drawing (MainWindow.Search.cs)
+        results = [];
         used = 0;
         liftedRow = null;
         TileLayout? home = null; // set: this view is tiles
@@ -540,11 +610,9 @@ public sealed partial class MainWindow : Window
         Placeholder.Visibility = Input.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         FooterLeft.Text = theme.Name;
         pageRows.Clear();
-        // Folder chips are the file finder's (and source chips the Packages page's); the preview
-        // theirs and the clipboard page's.
-        Scopes.Visibility = finding || (launching && page == "packages") ? Visibility.Visible : Visibility.Collapsed;
-        Preview.Visibility = Wide ? Visibility.Visible : Visibility.Collapsed;
-        PreviewColumn.Width = new GridLength(Wide ? 400 : 0);
+        // Folder chips are the file finder's (source chips the Packages page's, Built in |
+        // Community the theme picker's).
+        Scopes.Visibility = finding || (launching && page == "packages") || pickingTheme ? Visibility.Visible : Visibility.Collapsed;
 
         if (finding)
         {
@@ -560,11 +628,7 @@ public sealed partial class MainWindow : Window
         }
         else if (pickingTheme)
         {
-            SetCrumbs("style", "Theme");
-            Placeholder.Text = "Search themes…";
-            home = ThemePicker(query);
-            FooterLeft.Text = $"{home.Cells.Count} themes";
-            SetKeys(("←↑↓→", "move"), ("↵", "apply"), ("esc", "back"));
+            home = RenderThemePicker(query); // MainWindow.Community.cs: Built in | Community
         }
         else if (backgroundsOf is { } of)
         {
@@ -577,81 +641,56 @@ public sealed partial class MainWindow : Window
             FooterLeft.Text = $"{shown.Name} · {grid.Cells.Count} backgrounds";
             SetKeys(("←↑↓→", "move"), ("↵", "set"), ("tab", "another theme"), ("esc", "back"));
         }
+        else if (RenderSettingsViews(query))
+        {
+            // Setup › Windows › an area, or the admin changes waiting (MainWindow.Settings.cs)
+        }
+        else if (galleryOpen)
+        {
+            RenderGallery(query);
+        }
+        else if (launching && actionsFor != null)
+        {
+            RenderActions(); // Ctrl+K (MainWindow.Search.cs)
+        }
         else if (launching && page != null)
         {
             home = RenderPage(query);
         }
-        else if (launching && query.Length == 0)
+        else if (launching)
         {
-            SetCrumbs("", null);
-            Placeholder.Text = "Search apps…";
-            home = Home(launcher: true, built);
-            FooterLeft.Text = $"{launchItems.Count(i => i.IsApp)} apps · {theme.Name}";
-            SetKeys(("←↑↓→", "move"), ("↵", "open"), ("esc", "close"));
+            // One Search: the home, a filter's list or view, or every source's results ranked
+            // together (MainWindow.Search.cs).
+            home = RenderOneSearch(built);
         }
-        else if (!launching && query.Length == 0 && current.Length == 0)
+        else if (query.Length == 0 && current.Length == 0)
         {
+            // A submenu opened by --open / --select (a walkthrough, a picker's command) whose
+            // Esc went back to the top.
             SetCrumbs("", null);
             Placeholder.Text = "Search the menu…";
             home = Home(launcher: false, built);
-            SetKeys(("←↑↓→", "move"), ("↵", "open"), ("esc", menuFromLauncher ? "back" : "close"));
+            SetKeys(("←↑↓→", "move"), ("↵", "open"), ("esc", "close"));
         }
-        else if (launching)
-        {
-            // Your own items (items.txt: Projects, Reports, Files, ...; each its own color along
-            // the theme's gradient), then Windows' apps with their real icons. Files have their
-            // own finder (the Files item). Drawn up to 150 rows: typing narrows it.
-            SetCrumbs("", null);
-            Placeholder.Text = "Search apps…";
-            // A sum ("12*4.5", "sqrt(2)"): its value first; Enter copies it (Calc.cs).
-            bool sum = Calc.TryEvaluate(query, out var value);
-            if (sum)
-            {
-                var result = Calc.Format(value);
-                AddRow(char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), () => { ClipboardHistory.SetText(result); Dismiss(); }, Tag.Text, "↵ copy", sub: query);
-            }
-            var list = Launcher.Search(launchItems, query);
-            foreach (var match in list.Take(150))
-            {
-                var item = match.Item;
-                AddRow(item.Icon, item.Name, KindColor(item), () => Launch(item, query), Tag.Text, item.Hint, appId: item.IconKey, highlight: match.Positions);
-            }
-            if (list.Count == 0 && !sum) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
-            FooterLeft.Text = $"{launchItems.Count(i => i.IsApp)} apps";
-            SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : "close"));
-        }
-        else
-        {
-            var list = query.Length > 0 ? MenuModel.Search(entries, query) : MenuModel.Children(entries, current);
-            SetCrumbs(current, null);
-            Placeholder.Text = current.Length > 0 ? $"Search {entries[current].Label}…" : "Search the menu…";
-            for (int i = 0; i < list.Count; i++)
-            {
-                var e = list[i];
-                bool have = e.Package != null && installed.Contains(e.Package);
-                // By kind: submenus purple, pages and the pickers cyan, actions yellow,
-                // ones that ask first (restart, shut down) red, what's installed gray.
-                var color = Hex(have ? theme.Comment : e.IsSubmenu ? theme.Purple : e.Confirm ? theme.Red
-                    : e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
-                var (tag, text) = TagFor(e, have);
-                string? sub = query.Length > 0 && e.Parent.Length > 0 ? MenuModel.PathLabel(entries, e.Parent) : null;
-                AddRow(e.Icon, e.Label, color, () => Pick(e), tag, text, dim: have, sub: sub);
-            }
-            if (list.Count == 0)
-                AddRow(char.ConvertFromUtf32(0xF0156), current == "remove" ? "Nothing from Install is on this PC" : "No matches", Hex(theme.Comment), () => { }, dim: true);
-            SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : current.Length > 0 ? "back" : "close"));
-        }
+        else RenderMenuList(query);
         // Rows this drawing didn't need stay in the pool, hidden.
         for (int i = used; i < pool.Count; i++) pool[i].Slot.Visibility = Visibility.Collapsed;
         bool wasTiles = tileMode;
         tileMode = home != null;
+        // The preview beside the list: the finder's, the clipboard's and the Packages page's, and
+        // One Search's for its selected result.
+        bool preview = finding || launching && (page is "clipboard" or "packages" || actionsFor != null || page == null && !tileMode && results.Count > 0);
+        Preview.Visibility = preview ? Visibility.Visible : Visibility.Collapsed;
+        PreviewColumn.Width = new GridLength(preview ? 400 : 0);
+        DrawTabs();
+        FilterViewKeys();
         Rows.Visibility = tileMode ? Visibility.Collapsed : Visibility.Visible;
         Tiles.Visibility = tileMode ? Visibility.Visible : Visibility.Collapsed;
         if (home != null)
         {
             RenderTiles(home);
             if (selectKey != null && tiles.FindIndex(t => t.Spec.Key == selectKey) is var at and >= 0) selected = at;
-            if (launching && page == null) LoadHomeDetails();
+            if (launching && page == null && searchFilter == null) LoadHomeDetails();
         }
         else tiles.Clear();
         selectKey = null;
@@ -660,6 +699,33 @@ public sealed partial class MainWindow : Window
         Highlight(jump: true);
         if (wasTiles != tileMode && query != lastQuery) Swap();
         lastQuery = query;
+        resultsUpdate = false;
+    }
+
+    // The menu's rows: a submenu's, or (typed) every row that matches, then Windows' settings.
+    // The system menu's list, now One Search's Browse sections and --open's submenus.
+    void RenderMenuList(string query)
+    {
+        var list = query.Length > 0 ? MenuModel.Search(entries, query) : MenuModel.Children(entries, current);
+        SetCrumbs(current, null);
+        Placeholder.Text = current.Length > 0 ? $"Search {entries[current].Label}…" : "Search the menu…";
+        for (int i = 0; i < list.Count; i++)
+        {
+            var e = list[i];
+            bool have = e.Package != null && installed.Contains(e.Package);
+            // By kind: submenus purple, pages and the pickers cyan, actions yellow,
+            // ones that ask first (restart, shut down) red, what's installed gray.
+            var color = Hex(have ? theme.Comment : e.IsSubmenu ? theme.Purple : e.Confirm ? theme.Red
+                : e.Kind is "themes" or "backgrounds" or "plugins" or "settings" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
+            var (tag, text) = TagFor(e, have);
+            string? sub = query.Length > 0 && e.Parent.Length > 0 ? MenuModel.PathLabel(entries, e.Parent) : null;
+            AddRow(e.Icon, e.Label, color, () => Pick(e), tag, text, dim: have, sub: sub);
+        }
+        // Typing also finds every Windows setting, under the menu's own rows (MainWindow.Settings.cs).
+        int settingsFound = query.Length > 0 ? AddSettingResults(query, 12) : 0;
+        if (list.Count == 0 && settingsFound == 0)
+            AddRow(char.ConvertFromUtf32(0xF0156), current == "remove" ? "Nothing from Install is on this PC" : "No matches", Hex(theme.Comment), () => { }, dim: true);
+        SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : current.Length > 0 ? "back" : "close"));
     }
 
     void RunSelected()
@@ -769,10 +835,14 @@ public sealed partial class MainWindow : Window
     // lines, for folders what's in them.
     void ShowPreview()
     {
+        if (selected >= findHits.Count) { ++previewToken; Preview.Visibility = Visibility.Collapsed; return; }
+        ShowFilePreview(findHits[selected]);
+    }
+
+    void ShowFilePreview(FileSearch.Hit hit)
+    {
         int token = ++previewToken;
-        if (selected >= findHits.Count) { Preview.Visibility = Visibility.Collapsed; return; }
         Preview.Visibility = Visibility.Visible;
-        var hit = findHits[selected];
         Preview.Background = Brush(Hex(theme.Surface), 0xB0);
         Preview.BorderBrush = Brush(Hex(theme.Border), 0x80);
 
@@ -872,9 +942,10 @@ public sealed partial class MainWindow : Window
 
     (Tag, string) TagFor(MenuEntry e, bool have)
     {
-        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
+        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" or "plugins" or "settings" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
         if (have) return (Tag.Installed, "Installed");
         if (e.Kind == "omawin" && e.Argument == "toggle stay-awake") return StayAwake.On ? (Tag.Installed, "On") : (Tag.Text, "off");
+        if (e.Kind == "omawin" && e.Argument == "toggle animations") return Motion.On ? (Tag.Installed, "On") : (Tag.Text, "off");
         if (e.Package != null) return (Tag.Text, e.Kind);
         return e.Kind switch
         {
@@ -890,6 +961,14 @@ public sealed partial class MainWindow : Window
     void SetCrumbs(string id, string? extra)
     {
         Crumbs.Children.Clear();
+        // One Search's filter, as a token at the start of the bar (MainWindow.Search.cs): alone
+        // on a filter's own view, before the path in Browse's sections.
+        if (TabsShown && searchFilter is SystemMenu.Search.Tag filter)
+        {
+            Crumbs.Children.Add(Token(filter));
+            Crumbs.Visibility = Visibility.Visible;
+            if (!(filter == SystemMenu.Search.Tag.Command && current.Length > 0)) return;
+        }
         var labels = new List<string>();
         var parts = id.Split('.', StringSplitOptions.RemoveEmptyEntries);
         for (int i = 1; i <= parts.Length; i++)
@@ -912,12 +991,15 @@ public sealed partial class MainWindow : Window
                 },
             });
         }
-        Crumbs.Visibility = labels.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        Crumbs.Visibility = Crumbs.Children.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
     }
 
     // The footer's keys: ↵ open   esc back.
+    (string Key, string Label)[] keysShown = [];
+
     void SetKeys(params (string Key, string Label)[] keys)
     {
+        keysShown = keys;
         Keys.Children.Clear();
         foreach (var (key, label) in keys)
         {
@@ -939,6 +1021,15 @@ public sealed partial class MainWindow : Window
         bool dim = false, string? sub = null, Theme? swatch = null, string? appId = null, List<int>? highlight = null)
     {
         var v = NextRow(RowDip - 2, 28);
+        DrawRow(v, icon, label, color, tag, tagText, dim, sub, swatch, appId, highlight);
+        rows.Add((v.Row, run));
+    }
+
+    // What AddRow shows, into a pooled view (the launcher's long list draws its rows this way as
+    // they scroll into view: MainWindow.Virtual.cs).
+    void DrawRow(RowView v, string icon, string label, Color color, Tag tag = Tag.None, string tagText = "",
+        bool dim = false, string? sub = null, Theme? swatch = null, string? appId = null, List<int>? highlight = null)
+    {
         if (swatch != null)
         {
             // A theme: its background with three of its colors on it.
@@ -965,7 +1056,6 @@ public sealed partial class MainWindow : Window
             case Tag.Current: SetRight(v, tag, "", pill: "Current", pillColor: theme.Accent); break;
             default: SetRight(v, tag, tagText); break;
         }
-        rows.Add((v.Row, run));
     }
 
     // One row of the list, made once and reused: a search or another submenu only changes what
@@ -978,7 +1068,7 @@ public sealed partial class MainWindow : Window
         public StackPanel Bars = null!;
         public StackPanel Slot = null!; // the row, with room above it for a title
         public ColumnDefinition TileColumn = null!;
-        public int Index;
+        public int Index;       // the list row it shows (the launcher's long list: not its place in the pool)
         public string? IconKey; // the icon this row wants now (a late one for an old row is dropped)
         public Color Color;     // its icon's color (the lifted row's icon tile fills with it)
     }
@@ -1042,7 +1132,7 @@ public sealed partial class MainWindow : Window
         {
             Child = grid, CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 0, 9, 0), BorderThickness = new Thickness(1),
             Background = new SolidColorBrush(Colors.Transparent), BorderBrush = new SolidColorBrush(Colors.Transparent),
-            BackgroundTransition = new BrushTransition { Duration = TimeSpan.FromMilliseconds(120) },
+            BackgroundTransition = new BrushTransition { Duration = Motion.Or0(Motion.Quick) },
         };
         v.Row.PointerEntered += (_, _) => { if (!tileMode && !RecentlyMovedByKey && v.Index < rows.Count && selected != v.Index) { selected = v.Index; Highlight(); } };
         v.Row.Tapped += (_, _) => { if (v.Index < rows.Count) { selected = v.Index; Highlight(); rows[v.Index].Run(); } };
@@ -1101,6 +1191,7 @@ public sealed partial class MainWindow : Window
         v.Pill.Visibility = Visibility.Collapsed;
         v.RightText.Visibility = tag is Tag.Chevron or Tag.Text ? Visibility.Visible : Visibility.Collapsed;
         v.RightText.Foreground = Brush(theme.Comment);
+        v.RightText.CharacterSpacing = 0; // One Search widens its tag words (DrawResult); pooled rows reset
         if (tag == Tag.Chevron) { v.RightText.Text = char.ConvertFromUtf32(0xF0142); v.RightText.FontFamily = iconFont; v.RightText.FontSize = 14; }
         else { v.RightText.Text = text; v.RightText.FontFamily = monoFont; v.RightText.FontSize = 11; }
     }
@@ -1139,19 +1230,28 @@ public sealed partial class MainWindow : Window
         {
             for (int i = 0; i < tiles.Count; i++) LiftTile(tiles[i], i == selected);
             ScrollToSelected(animate: !jump);
+            if (pickingTheme) ThemeHighlighted(); // a community theme's credit and preview
             return;
         }
         if (liftedRow != null && liftedRow.Index != selected) LiftRow(liftedRow, false);
         liftedRow = null;
-        if (selected < rows.Count)
+        // The launcher's long list scrolls first, so the selected row is drawn to be lifted.
+        if (drawRow != null) ScrollToSelected(animate: !jump);
+        if (ViewAt(selected) is { } row)
         {
-            liftedRow = pool[selected];
-            LiftRow(liftedRow, true);
+            liftedRow = row;
+            LiftRow(row, true);
         }
-        ScrollToSelected(animate: !jump);
+        if (drawRow == null) ScrollToSelected(animate: !jump);
         if (finding) ShowPreview();
         else if (launching && page == "clipboard") ShowClipPreview();
         else if (launching && page == "packages") ShowPackagePreview();
+        else if (launching && actionsFor != null) ShowResultPreview(actionsFor);
+        else if (launching && page == null && selected < results.Count)
+        {
+            ShowResultPreview(results[selected]);
+            SetResultKeys(); // Enter's word is the selected row's
+        }
     }
 
     // The selected row: lighter, ringed in the accent, its icon tile filled with its color.
@@ -1165,7 +1265,7 @@ public sealed partial class MainWindow : Window
     }
 
     // A row and the gap under it.
-    double Pitch => finding ? FileRowDip : RowDip;
+    double Pitch => finding || galleryOpen ? FileRowDip : RowDip;
 
     // Tab / Shift+Tab in the file finder: the next / previous folder chip.
     void CycleScope(int by)
@@ -1181,11 +1281,18 @@ public sealed partial class MainWindow : Window
     // --- keys -------------------------------------------------------------------------------
     void OnKey(object sender, KeyRoutedEventArgs e)
     {
+        // On its way out (the exit animation): keys do nothing here, so a second Enter can't
+        // start a thing twice.
+        if (leaving != null) { e.Handled = true; return; }
         bool ctrl = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
         bool shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
         // Quick settings asked "Press again to turn Wi-Fi off": only Space or Enter (the press
         // that asked, repeated) can confirm it; any other key drops it.
         if (e.Key is not (VirtualKey.Space or VirtualKey.Enter)) ForgetOff();
+        // One Search's bar: Tab, Esc, Backspace, Ctrl+K (MainWindow.Search.cs).
+        if (SearchKey(e.Key, ctrl, shift)) { e.Handled = true; return; }
+        // Windows' settings rows: Space, ← / → and Ctrl+Z (MainWindow.Settings.cs).
+        if (SettingKey(e.Key, ctrl, shift)) { e.Handled = true; return; }
         switch (e.Key)
         {
             case VirtualKey.X when ctrl && launching && page is "clipboard" or "localhost":
@@ -1222,6 +1329,12 @@ public sealed partial class MainWindow : Window
             // The background picker: Tab shows the next theme's backgrounds.
             case VirtualKey.Tab when backgroundsOf != null:
                 CycleBackgroundTheme(shift ? -1 : 1); break;
+            // The theme picker: Tab moves between Built in and Community; Ctrl+Enter opens a
+            // community theme's repo (MainWindow.Community.cs).
+            case VirtualKey.Tab when pickingTheme:
+                ToggleCommunity(); break;
+            case VirtualKey.Enter when pickingTheme && communityThemes && ctrl:
+                OpenCommunityRepo(); break;
             // Tiles: the arrows move in two dimensions.
             case VirtualKey.Down when tileMode: NavTile(0, 1); break;
             case VirtualKey.Up when tileMode: NavTile(0, -1); break;
@@ -1267,33 +1380,19 @@ public sealed partial class MainWindow : Window
 
     void Back(bool hideAtTop)
     {
-        if (LeavePage()) return;
+        if (LeavePage() || LeaveGallery() || LeaveSettings()) return;
         string from = current;
         if (finding)
         {
-            // The finder, opened from the launcher's Files item: back to the launcher, on Files.
-            if (!findFromLauncher) { if (hideAtTop) Dismiss(); return; }
-            finding = false;
-            launching = true;
-            selectKey = launchItems.FirstOrDefault(i => i.BuiltIn == "files")?.Key;
-            Render();
-            Slide(-1);
+            // The finder is One Search's Files filter: back to All.
+            if (launching) SetFilter(null, "");
+            else if (hideAtTop) Dismiss();
             return;
         }
         if (confirming != null) confirming = null;
-        else if (pickingTheme) { pickingTheme = false; from = entries.Values.FirstOrDefault(e => e.Kind == "themes")?.Id ?? ""; }
+        else if (pickingTheme) { LeaveThemePicker(); pickingTheme = false; from = entries.Values.FirstOrDefault(e => e.Kind == "themes")?.Id ?? ""; }
         else if (backgroundsOf != null) { backgroundsOf = null; from = entries.Values.FirstOrDefault(e => e.Kind == "backgrounds")?.Id ?? ""; }
         else if (current.Length > 0 && current != start) current = entries.TryGetValue(current, out var e) ? e.Parent : "";
-        else if (menuFromLauncher)
-        {
-            // The menu's top, opened from the launcher: back to the launcher, on Menu.
-            menuFromLauncher = false;
-            launching = true;
-            selectKey = launchItems.FirstOrDefault(i => i.BuiltIn == "menu")?.Key;
-            Render();
-            Slide(-1);
-            return;
-        }
         else { if (hideAtTop) Dismiss(); return; }
         // Back on the row (or tile) you came from.
         selected = Math.Max(0, MenuModel.Children(entries, current).FindIndex(c => c.Id == from));
@@ -1305,11 +1404,13 @@ public sealed partial class MainWindow : Window
     // --- doing things -----------------------------------------------------------------------
     void Pick(MenuEntry e)
     {
+        if (e.Kind == "settings") { OpenSettings(e); return; } // Setup › Windows (MainWindow.Settings.cs)
         Input.Text = "";
         if (e.IsSubmenu) { current = e.Id; selected = 0; Render(); Slide(1); return; }
         if (e.Package != null && installed.Contains(e.Package)) return; // already installed
         if (e.Kind == "themes") { pickingTheme = true; selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == themeName)); Render(); Slide(1); return; }
         if (e.Kind == "backgrounds") { OpenBackgrounds(themeName); Render(); Slide(1); return; }
+        if (e.Kind == "plugins") { OpenGallery(); Render(); Slide(1); return; }
         if (e.Confirm) { confirming = e; selected = 1; Render(); return; }
         Run(e);
     }
@@ -1319,6 +1420,18 @@ public sealed partial class MainWindow : Window
     {
         HideMenu();
         if (!hit.IsDir) FileSearch.Opened(hit.Path, query);
+        // A Linux file (roadmap 3.7): opened in Linux (omawin launch editor takes Linux paths), or
+        // shown in Explorer through \\wsl.localhost.
+        if (FileSearch.IsLinux(hit.Path))
+        {
+            try
+            {
+                if (reveal) Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{FileSearch.LinuxWindowsPath(hit.Path)}\"") { UseShellExecute = true });
+                else MenuModel.Omawin("launch", "editor", hit.Path);
+            }
+            catch (Exception ex) { App.Log(ex); }
+            return;
+        }
         try
         {
             if (reveal) Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{hit.Path}\"") { UseShellExecute = true });
@@ -1328,16 +1441,8 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) { App.Log(ex); }
     }
 
-    // Win+F (omawin files): the file finder, or hide it if it's in front.
-    public void ToggleFinder()
-    {
-        try
-        {
-            if (appWindow.IsVisible && GetForegroundWindow() == hwnd && finding) Dismiss();
-            else Show("", asFinder: true);
-        }
-        catch (Exception ex) { App.Log(ex); }
-    }
+    // Win+F (omawin files): One Search on Files, or hide it if it's in front.
+    public void ToggleFinder() => OpenSearch(SystemMenu.Search.Tag.File);
 
     // A launcher row: Menu turns this window into the system menu, Files into the file finder,
     // Projects, Clipboard, Localhost, Reports and Shortcuts into their page (MainWindow.Pages.cs);
@@ -1346,24 +1451,14 @@ public sealed partial class MainWindow : Window
     {
         Launcher.Remember(item, query); // so it ranks higher next time, most of all for this query
         Input.Text = "";
-        if (item.BuiltIn == "files")
+        // Files, Clipboard, Projects and the menu are One Search's filters now (Browse for the menu).
+        if (item.BuiltIn is "files" or "clipboard" or "projects" or "menu")
         {
-            launching = false;
-            finding = true;
-            findFromLauncher = true;
-            selected = 0;
-            Render();
-            Slide(1);
-            return;
-        }
-        if (item.BuiltIn == "menu")
-        {
-            launching = false;
-            menuFromLauncher = true;
-            start = current = "";
-            selected = 0;
-            Render();
-            Slide(1);
+            SetFilter(item.BuiltIn switch
+            {
+                "files" => SystemMenu.Search.Tag.File, "clipboard" => SystemMenu.Search.Tag.Clipboard,
+                "projects" => SystemMenu.Search.Tag.Project, _ => SystemMenu.Search.Tag.Command,
+            }, "");
             return;
         }
         if (IsPage(item.BuiltIn))
@@ -1373,7 +1468,7 @@ public sealed partial class MainWindow : Window
             if (page != null) Slide(1);
             return;
         }
-        HideMenu();
+        HideMenu(instant: !item.IsApp && CapturesScreen(item.Command));
         try
         {
             if (item.IsApp)
@@ -1384,9 +1479,13 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) { App.Log(ex); }
     }
 
+    // A command that captures the screen (omawin capture ..., SystemMenu --snip): the menu goes at
+    // once instead of fading, so it isn't in the picture.
+    static bool CapturesScreen(string command) => Regex.IsMatch(command, @"(^|\s)(capture\s|--snip\b)", RegexOptions.IgnoreCase);
+
     void Run(MenuEntry e)
     {
-        HideMenu();
+        HideMenu(instant: CapturesScreen(e.Argument));
         try
         {
             switch (e.Kind)

@@ -1,0 +1,45 @@
+<!--
+  omawin-windows: the fixes for Windows' everyday annoyances that answer in a terminal (roadmap
+  Phase 8, plans/07-fixing-windows.md): who holds a file, why the PC restarted, what starts with
+  Windows, which app is online, the hosts file, processes by app, clipboard transforms, a Wi-Fi
+  QR code. Each is an omawin command (bin/commands.txt: run omawin-windows <verb>).
+
+  It is also the plan's shared library (Omawin.Windows): the menu app and first-party plugins
+  link these files rather than copy them. The pure parts (parsing, wording, the hosts file's
+  rules) make no Windows calls and are tested on Linux (test/windows.Tests); the Windows calls
+  sit in their own files, written against Microsoft's documented headers.
+
+  net9.0, not net9.0-windows: it compiles anywhere (CI on Linux builds it), and runs only on
+  Windows (Program.cs says so for the analyzers). Framework-dependent and one file, like
+  omawin-music: the core install has the .NET runtime. Built by build.ps1 into ~/.local/bin.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <AssemblyName>omawin-windows</AssemblyName>
+    <RootNamespace>Omawin.Windows</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks> <!-- LibraryImport's generated stubs, fixed buffers -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <SelfContained>false</SelfContained>
+    <!-- Trim- and AOT-safe code only (no reflection, no dynamic COM), so a plugin or the menu app's
+         native build can take these files as they are. -->
+    <IsAotCompatible>true</IsAotCompatible>
+    <!-- The release this build is from (what its version flag prints); CI passes -p:OmawinRelease=<tag>. -->
+    <OmawinRelease Condition="'$(OmawinRelease)' == ''">(dev)</OmawinRelease>
+    <InformationalVersion>$(OmawinRelease)</InformationalVersion>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+  </PropertyGroup>
+  <!-- One file when published for Windows (build.ps1 passes the runtime). -->
+  <PropertyGroup Condition="'$(RuntimeIdentifier)' != ''">
+    <PublishSingleFile>true</PublishSingleFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- QR codes (wifi-qr): the encoder of the library the menu app already reads them with. -->
+    <PackageReference Include="ZXing.Net" Version="0.16.9" />
+  </ItemGroup>
+</Project>

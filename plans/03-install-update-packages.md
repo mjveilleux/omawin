@@ -1519,6 +1519,8 @@ Notes:
 
 ### 6.1 PowerShell, not C#
 
+**Superseded (2026-10-31):** built in compiled C# instead, per the 2026-10-30 rule (2.11): `src/cli/Pkg/`, run by `omawin-cli.exe` (the install's PowerShell can call it as a program). The names file is `default/packages/names.txt` (`|`-separated like the repo's other lists; no new top-level folder); the sketch below is kept for its reasoning and the backends' details.
+
 A PowerShell module (`bin/pkg/Pkg.psm1`) with a thin entry script (`bin/pkg.ps1`), **Windows PowerShell 5.1-compatible**. Why:
 - every backend is a command-line program; the work is starting processes and reading their text: PowerShell's home ground;
 - the install (5.1, before pwsh exists), the background queue's `preset`/`pkg` verbs and `install/packages.ps1` all need it, and they can dot-source or import a module but not call into the menu app;

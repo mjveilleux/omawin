@@ -12,3 +12,26 @@
 	# Neovim run from an admin window leaves its plugin folders owned by Administrators,
 	# which git refuses to touch from a normal shell (Lazy: "dubious ownership").
 	directory = ~/AppData/Local/nvim-data/lazy/*
+[core]
+	# Git for Windows walks the whole working tree for every `git status`, and Windows' file
+	# system makes that walk slow on big repos (roadmap 8.33). These are its own speed-ups: cache
+	# file data in memory during a command, read the index in parallel, remember which folders
+	# had no untracked files, and let Git's built-in watcher (fsmonitor, Git 2.37+) tell it what
+	# changed so status doesn't walk at all. The watcher is one small process per repo you run
+	# git in (`git fsmonitor--daemon stop` ends one); network drives and \\wsl$ paths go without.
+	fscache = true
+	preloadindex = true
+	untrackedCache = true
+	fsmonitor = true
+	# Paths past Windows' old 260-character limit (deep node_modules) work in git too.
+	longpaths = true
+[feature]
+	# A newer index format and the untracked cache for every repo, not only ones set up for it.
+	manyFiles = true
+[index]
+	# manyFiles also skips the index's checksum (Git 2.40+), which older tools built on libgit2
+	# read as a corrupt index; keeping it costs little.
+	skipHash = false
+[fetch]
+	# Keep the commit graph current on fetch, so log, blame and merge-base stay fast.
+	writeCommitGraph = true

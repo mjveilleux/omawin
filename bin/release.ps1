@@ -138,27 +138,51 @@ try {
         $wanted += $match
     }
 
-    $files = @()
-    foreach ($name in $wanted) {
+    # What's here and verifies is kept; the rest is fetched, all at once in PowerShell 7 (one
+    # file at a time in Windows PowerShell), then each checked before anything uses it.
+    $get = [ordered]@{}
+    foreach ($name in ($wanted | Select-Object -Unique)) {
         $dest = Join-Path $OutDir $name
-        $here = Test-Path -LiteralPath $dest
-        if ($here -and -not $Force -and (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash -eq $sums[$name]) {
-            Note "ok  $name"; $files += $dest; continue
+        if ((Test-Path -LiteralPath $dest) -and -not $Force -and (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash -eq $sums[$name]) {
+            Note "ok  $name"; continue
         }
         $url = if ($BaseUrl -and $BaseUrl -match '^[a-z]+://') { "$($BaseUrl.TrimEnd('/'))/$name" }
                elseif ($BaseUrl) { Join-Path $BaseUrl $name }
                else { ($release.assets | Where-Object name -eq $name | Select-Object -First 1).url }
         if (-not $url) { throw "$name is in $Manifest but not in the release" }
-        $dest = Save-Entry $name $url
+        $get[$name] = $url
+    }
+    if ($get.Count -gt 1 -and $PSVersionTable.PSVersion.Major -ge 7) {
+        $headers = $assetHeaders
+        $failed = @($get.GetEnumerator() | ForEach-Object -ThrottleLimit 4 -Parallel {
+                # (Save-Entry's steps: the runspaces here don't see this script's functions.)
+                $dest = Join-Path $using:OutDir $_.Key
+                $part = "$dest.part"
+                $ProgressPreference = 'SilentlyContinue'
+                try {
+                    if ($_.Value -match '^https://api\.github\.com/') { Invoke-WebRequest -Uri $_.Value -OutFile $part -Headers $using:headers -UseBasicParsing | Out-Null }
+                    elseif ($_.Value -match '^[a-z]+://') { Invoke-WebRequest -Uri $_.Value -OutFile $part -UseBasicParsing | Out-Null }
+                    else { Copy-Item -LiteralPath $_.Value -Destination $part -Force }
+                    Move-Item -LiteralPath $part -Destination $dest -Force
+                } catch { "$($_.Exception.Message)" }
+                finally { if (Test-Path -LiteralPath $part) { Remove-Item -LiteralPath $part -Force -ErrorAction SilentlyContinue } }
+            })
+        if ($failed) { throw "a download failed: $($failed[0])" }
+    } else {
+        foreach ($e in $get.GetEnumerator()) { $null = Save-Entry $e.Key $e.Value }
+    }
+    foreach ($name in $get.Keys) {
         # The check before the file is ever used: the manifest is the release's own word for it.
+        $dest = Join-Path $OutDir $name
         $have = (Get-FileHash -LiteralPath $dest -Algorithm SHA256).Hash
         if ($have -ne $sums[$name]) {
             Remove-Item -LiteralPath $dest -Force
             throw "$name doesn't match its published SHA-256 (published $($sums[$name]), got $have): the download is not the release's file"
         }
         Note "got $name  ($($sums[$name].Substring(0, 12))...)"
-        $files += $dest
     }
+    # In the order asked for, as before.
+    $files = @($wanted | Select-Object -Unique | ForEach-Object { Join-Path $OutDir $_ })
 } finally {
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
 }

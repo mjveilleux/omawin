@@ -8,13 +8,13 @@
 irm https://raw.githubusercontent.com/mjveilleux/omawin/main/bootstrap.ps1 | iex
 ```
 
-Run it from **Windows PowerShell**, then sign out and back in. It takes about a minute: every core tool comes prebuilt in one release bundle, downloaded and unpacked in parallel, with no admin prompt. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
+Run it from **Windows PowerShell**; the desktop starts as it ends, no sign-out. It takes about a minute: every core tool comes prebuilt in one release bundle, downloaded and unpacked in parallel, with no admin prompt. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
 
 ## What you get
 
 - **Tiling**: [GlazeWM](https://github.com/glzr-io/glazewm) (our [fork](https://github.com/mjveilleux/glazewm), which starts the moment you sign in). Win+1..9 workspaces, Alt+H J K L focus.
-- **Launcher** (`Win+Space`): your items and every app, projects, clipboard, servers on localhost, the key cheat sheet. A native app that's always running, so it opens instantly.
-- **System menu** (`Win+Alt+Space`): themes, install or remove apps and presets, update, settings, power.
+- **One Search** (`Win+Space`): one bar for apps, Windows settings (switched in place), omawin's commands, files, open windows, projects, clipboard and themes, each result tagged, filters by tag, a bento home. A native app that's always running, so it opens instantly.
+- **System menu**: themes, install or remove apps and presets, update, settings, power, as One Search's Browse view (`Win+Alt+Space`, its old key, is retired).
 - **Screen tools**: screenshot (`Win+Shift+S`), text from the screen (`Win+Shift+T`), colour picker, QR reader.
 - **File finder** (`Win+F`), **clipboard history** (`Win+Shift+V`), **audio** (`Win+A`).
 - **A bar like Omarchy 4's**, drawn natively by the menu app, in the theme's colours: the menu, workspaces, the clock, the tray and quick settings, network, battery. The Windows taskbar hides.
@@ -47,7 +47,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 & $HOME\omawin\install.ps1
 ```
 
-Then sign out and back in. Every step is safe to run again; `omawin install -Step <name>` reruns one. Details: [docs/install.md](docs/install.md).
+The desktop starts as it ends. Every step is safe to run again; `omawin install -Step <name>` reruns one. Details: [docs/install.md](docs/install.md).
 
 ## What it changes on your PC
 
@@ -68,8 +68,8 @@ There's no `omawin uninstall` yet. [Undoing it](docs/install.md#undoing-it) list
 
 | Keys | Does |
 |---|---|
-| `Win+Space` | launcher |
-| `Win+Alt+Space` | system menu |
+| `Win+Space` | One Search: everything (Tab: filters; Browse: the system menu) |
+| `Win+Alt+Space` | retired: opens One Search, for this release |
 | `Win+Enter` / `Alt+Enter` | terminal in the focused window's folder / in ~ |
 | `Win+F` · `Win+Shift+V` · `Win+A` | files · clipboard history · audio |
 | `Win+Shift+S` · `Win+Shift+T` | screenshot · text from the screen |
@@ -87,7 +87,7 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Plugins
 
-Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar, drawn by omawin's QML host (`omawin-qs`, downloaded the first time a plugin is turned on; nothing otherwise).
+Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar, drawn by omawin's QML host (`omawin-qs`, downloaded the first time a plugin is turned on; nothing otherwise). `omawin plugin gallery` (Install › Plugins › Gallery) lists Omarchy's marketplace too, with whether each plugin runs on Windows; Enter turns one on.
 
 ## Make it yours
 

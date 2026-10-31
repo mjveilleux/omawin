@@ -24,8 +24,17 @@
     Anything failing leaves the official GlazeWM, which works the same, only starting a few
     seconds later at sign-in. Safe to run again.
 
+    Opt-in (roadmap 2.9, "manage admin windows too"): by default omawin runs the tools bundle's
+    per-user GlazeWM, with no admin at all; its one loss is windows of programs running as admin,
+    which it can't tile or move. `omawin glazewm admin` runs this, which says what it will change
+    and asks once. On a PC with no GlazeWM in Program Files it puts the fork there on its own
+    (the newest fork release; nothing official to keep), and -Restore takes those files away
+    again, so the per-user one takes over. -Check only ever answers "needed" once the fork is in
+    (its state file), so neither the install's admin prompt nor a migration offers it unasked,
+    and an update never asks: it says so instead (install/admin.ps1).
+
         .\glazewm-fork.ps1              the fork in (asks for admin), GlazeWM restarted on it
-        .\glazewm-fork.ps1 -Restore     the official one back (asks for admin)
+        .\glazewm-fork.ps1 -Restore     the official one back, or the per-user one (asks for admin)
         .\glazewm-fork.ps1 -Check       whether the admin part has anything to do ("needed" or why not)
         .\glazewm-fork.ps1 -Machine     the admin part, run elevated; -Out <file> gets its last line
         .\glazewm-fork.ps1 -After       this account's part once the admin part is done: the winget
@@ -45,6 +54,10 @@ $subject = "CN=omawin code signing ($env:COMPUTERNAME)"
 $state = Join-Path $env:ProgramData 'omawin\glazewm-fork.txt'
 # What the fork's release holds, laid out as in Program Files.
 $Files = 'glazewm.exe', 'glazewm-watcher.exe', 'cli\glazewm.exe'
+# Says the fork went in on its own, with no official GlazeWM under it: -Restore removes its files.
+$alone = Join-Path $dir '.omawin-only'
+# And beside them, the list of what the fork can do (emit, ...), gone with the fork.
+$FeaturesFile = 'omawin-features.txt'
 $elevated = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
 # Puts $New at $Target even while another Windows account runs it: a running program can't be
@@ -65,10 +78,14 @@ function Get-Base {
     if ($entry.DisplayVersion) { return ($entry.DisplayVersion -replace '^(\d+\.\d+\.\d+).*', '$1') }
     (Get-Item (Join-Path $dir 'glazewm-watcher.exe')).VersionInfo.ProductVersion -replace '^(\d+\.\d+\.\d+).*', '$1'
 }
+# The newest fork build of GlazeWM $Base; with $Base '*', the newest of any (a PC with no
+# GlazeWM in Program Files: the fork goes in on its own).
 function Get-Release([string]$Base) {
     # (Assigned first: Windows PowerShell passes the whole list down a pipe as one object.)
     $releases = Invoke-RestMethod 'https://api.github.com/repos/mjveilleux/glazewm/releases' -UseBasicParsing
-    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" } | Sort-Object { if ($_.tag_name -match 'omawin\.(\d+)') { [int]$Matches[1] } else { 0 } } | Select-Object -Last 1
+    $releases | Where-Object { $_.tag_name -like "v$Base-omawin.*" -and $_.tag_name -match '^v(\d+\.\d+\.\d+)-omawin\.(\d+)$' } |
+        Sort-Object { $null = $_.tag_name -match '^v(\d+\.\d+\.\d+)-omawin\.(\d+)$'; [version]$Matches[1] }, { $null = $_.tag_name -match 'omawin\.(\d+)$'; [int]$Matches[1] } |
+        Select-Object -Last 1
 }
 # This PC's certificate (the machine store's public half is readable from any account).
 function Get-MachineCert {
@@ -133,6 +150,11 @@ function Invoke-Elevated([string]$Switch) {
     if ($p.ExitCode -ne 0) { throw "the admin part failed$(if ($line) { ": $line" } else { " ($($p.ExitCode))" })" }
     $line
 }
+# GlazeWM's config again (themes/render.ps1), for the GlazeWM now in place; a failure is only said.
+function Update-GlazeConfig {
+    try { & (Join-Path (Split-Path $PSScriptRoot) 'themes\render.ps1') | Out-Null }
+    catch { Write-Warning "GlazeWM's config wasn't written again: $_ (omawin restart glazewm)" }
+}
 function Say([string]$Line) { if ($Out) { Set-Content $Out $Line -Encoding utf8 }; $Line }
 
 # --- the admin part ------------------------------------------------------------------------------
@@ -143,10 +165,11 @@ if ($Machine) {
         # First, whatever happens next: no certificate an account could sign with stays trusted.
         $machineCert = Get-MachineCert
         Remove-OldTrust $(if ($machineCert) { $machineCert.Thumbprint } else { '-' })
-        if (-not (Test-Path $exe)) { Say 'skip  GlazeWM is not installed'; exit 0 }
-        $base = Get-Base
+        # No GlazeWM in Program Files (the per-user one runs): the newest fork, on its own.
+        $fresh = -not (Test-Path $exe)
+        $base = if ($fresh) { '*' } else { Get-Base }
         $release = Get-Release $base
-        if (-not $release) { Say "ok  official GlazeWM $base (no fork build for it yet)"; exit 0 }
+        if (-not $release) { Say $(if ($fresh) { 'skip  no fork release found' } else { "ok  official GlazeWM $base (no fork build for it yet)" }); exit 0 }
         if (Test-Current $release.tag_name) { Say "ok  GlazeWM fork $($release.tag_name)"; exit 0 }
 
         $zipAsset = $release.assets | Where-Object name -like 'glazewm-*-windows-x64.zip' | Select-Object -First 1
@@ -176,6 +199,7 @@ if ($Machine) {
             if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Thumbprint -ne $cert.Thumbprint) { throw "signing failed ($($sig.Status))" }
 
             # The window manager, its watcher and its CLI; each official one kept for -Restore.
+            if ($fresh) { New-Item -ItemType Directory -Force (Join-Path $dir 'cli') | Out-Null; Set-Content $alone 'the fork, on its own (install/glazewm-fork.ps1)' }
             foreach ($name in $Files) {
                 $new = Join-Path "$work\x" $name
                 if (-not (Test-Path $new)) { continue }
@@ -184,6 +208,12 @@ if ($Machine) {
                 if ((Test-Path $target) -and -not (Test-Path $keep)) { Copy-Item $target $keep }
                 Set-InUseFile $new $target
             }
+            # What this build can do beyond the official one (bin/glazewm-features.ps1 reads it
+            # beside glazewm.exe): data, not signed. A release from before it has none, so an old
+            # copy goes.
+            $features = Join-Path "$work\x" $FeaturesFile
+            if (Test-Path $features) { Copy-Item $features (Join-Path $dir $FeaturesFile) -Force }
+            else { Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue }
             New-Item -ItemType Directory -Force (Split-Path $state) | Out-Null
             Set-Content $state $release.tag_name -NoNewline
             Remove-OldTrust $cert.Thumbprint
@@ -202,6 +232,7 @@ if ($Machine) {
                 $keep = $target -replace '\.exe$', '.official.exe'
                 if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
             }
+            Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue
             Remove-Item $state -ErrorAction SilentlyContinue
             # Say writes -Out's one line: a failure above stays a failure, not a skip.
             if ($failure) { Say "failed  $failure (the official GlazeWM is back)" }
@@ -211,11 +242,22 @@ if ($Machine) {
 }
 if ($RestoreMachine) {
     if (-not $elevated) { throw '-RestoreMachine runs elevated' }
+    if (Test-Path $alone) {
+        # Put in on its own: there's no official one to bring back, so omawin's files go, and the
+        # per-user GlazeWM takes over at its next start. (A running file is renamed aside and
+        # goes with the next restore or reinstall.)
+        foreach ($name in $Files) {
+            $target = Join-Path $dir $name
+            if (Test-Path $target) { try { Remove-Item $target -Force } catch { Rename-Item $target ((Split-Path $target -Leaf) + '.old-' + (Get-Date -Format yyyyMMddHHmmss)) } }
+        }
+        Remove-Item $alone -Force
+    }
     foreach ($name in $Files) {
         $target = Join-Path $dir $name
         $keep = $target -replace '\.exe$', '.official.exe'
         if (Test-Path $keep) { Set-InUseFile $keep $target; Remove-Item $keep -ErrorAction SilentlyContinue }
     }
+    Remove-Item (Join-Path $dir $FeaturesFile) -ErrorAction SilentlyContinue
     Remove-Item $state -ErrorAction SilentlyContinue
     # The official GlazeWM needs none of omawin's certificates: none stays trusted, and this PC's
     # own goes too.
@@ -227,7 +269,8 @@ if ($RestoreMachine) {
 
 # --- this account's part -------------------------------------------------------------------------
 if ($Check) {
-    # Not installed yet: the admin step installs it first (when it's on its list), then this.
+    # Opt-in: until the fork is in (its state file), nothing offers it unasked.
+    if (-not (Test-Path $state)) { return 'skip  not chosen: the per-user GlazeWM runs (omawin glazewm admin: admin windows too, one prompt)' }
     if (-not (Test-Path $exe)) { return 'needed' }
     # An old per-account certificate still trusted: the admin part takes that away, whatever else.
     $machineCert = Get-MachineCert
@@ -240,14 +283,26 @@ if ($Check) {
 if ($After) {
     # (Windows PowerShell turns a native program's stderr into an error under 'Stop'.)
     try { winget pin add --id glzr-io.glazewm --exact --accept-source-agreements 2>$null | Out-Null } catch { }
+    # GlazeWM's config is written for what the GlazeWM in place can do (the menu keys' emit).
+    Update-GlazeConfig
     if ($Restart -and (Get-MyGlazeWM)) { Stop-GlazeWM; Start-GlazeWM }
     return
 }
-if (-not (Test-Path $exe)) { 'GlazeWM not installed; re-run after installing it'; return }
 if ($Restore) {
+    if (-not (Test-Path $exe)) { 'ok  no GlazeWM in Program Files: the per-user one runs'; return }
     Stop-GlazeWM
-    try { Invoke-Elevated '-RestoreMachine' } finally { Start-GlazeWM }
+    # Written again for the official GlazeWM, which refuses a config with emit in it.
+    try { Invoke-Elevated '-RestoreMachine' } finally { Update-GlazeConfig; Start-GlazeWM }
     return
+}
+# What the one prompt will change, said before Windows asks (roadmap 2.9).
+if (-not $elevated) {
+    Write-Host 'Manage admin windows too: one admin prompt, which'
+    if (Test-Path $exe) { Write-Host "  - swaps omawin's GlazeWM in for the one in $dir (each official file kept as <name>.official.exe)" }
+    else { Write-Host "  - puts omawin's GlazeWM (the fork's newest release, checked against its SHA-256) in $dir" }
+    Write-Host "  - signs it with a certificate made for this PC ($subject), trusted on this PC only, its key usable by admins only"
+    Write-Host '  - restarts GlazeWM on it: windows of programs running as admin are tiled too'
+    Write-Host '  Undo: omawin glazewm admin-off (one prompt).'
 }
 $line = if ($elevated) { & $PSCommandPath -Machine } else { Invoke-Elevated '-Machine' }
 & $PSCommandPath -After -Restart:($line -like 'installed*')

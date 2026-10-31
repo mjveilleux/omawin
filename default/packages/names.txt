@@ -1,0 +1,67 @@
+# omawin pkg's names (src/cli/Pkg): one name for one thing, and its id in each package manager,
+# so `omawin pkg install ripgrep` means the same program whichever manager puts it in.
+#
+#   <name> | <winget id> | <scoop app> | <chocolatey id> | <mise tool> | <arch package> | <apt package> | <command> | <prefer>
+#
+#   -        that manager doesn't have it
+#   command  the program it puts on the PATH (omawin pkg info says which copy runs)
+#   prefer   omawin's own pick of manager for it (languages through mise); your pin
+#            (omawin pkg move) comes first, your order (omawin pkg prefer) after it
+#
+# The tools bundle's tools (install/tools.txt) are bundled under the same names. A name that isn't
+# here is looked up in each manager's catalogue (omawin pkg install <id> --from <manager> to say).
+
+# languages and their tools
+python           | Python.Python.3.13              | python           | python                      | python     | python      | python3     | python     | mise
+node             | OpenJS.NodeJS.LTS               | nodejs-lts       | nodejs-lts                  | node       | nodejs      | nodejs      | node       | -
+pnpm             | pnpm.pnpm                       | pnpm             | pnpm                        | pnpm       | pnpm        | -           | pnpm       | mise
+bun              | Oven-sh.Bun                     | bun              | bun                         | bun        | -           | -           | bun        | -
+go               | GoLang.Go                       | go               | golang                      | go         | go          | golang-go   | go         | mise
+rust             | Rustlang.Rustup                 | rustup           | rustup.install              | rust       | rustup      | rustup      | rustup     | winget
+zig              | zig.zig                         | zig              | zig                         | zig        | zig         | -           | zig        | -
+elixir           | Elixir.Elixir                   | elixir           | elixir                      | elixir     | elixir      | elixir      | elixir     | mise
+erlang           | Erlang.ErlangOTP                | erlang           | erlang                      | erlang     | erlang      | erlang      | erl        | mise
+ruby             | RubyInstallerTeam.Ruby.3.3      | ruby             | ruby                        | ruby       | ruby        | ruby        | ruby       | mise
+java             | EclipseAdoptium.Temurin.21.JDK  | temurin21-jdk    | temurin21                   | java       | jdk21-openjdk | openjdk-21-jdk | java    | mise
+uv               | astral-sh.uv                    | uv               | uv                          | uv         | uv          | -           | uv         | -
+r                | RProject.R                      | r                | r.project                   | -          | r           | r-base      | R          | -
+gcc              | BrechtSanders.WinLibs.POSIX.UCRT | gcc             | mingw                       | -          | gcc         | gcc         | gcc        | -
+tree-sitter      | tree-sitter.tree-sitter-cli     | tree-sitter      | tree-sitter                 | tree-sitter | tree-sitter-cli | -       | tree-sitter | -
+
+# the shell's tools (most are in the tools bundle)
+pwsh             | Microsoft.PowerShell            | pwsh             | powershell-core             | -          | -           | -           | pwsh       | -
+git              | Git.Git                         | git              | git                         | -          | git         | git         | git        | -
+gh               | GitHub.cli                      | gh               | gh                          | gh         | github-cli  | gh          | gh         | -
+starship         | Starship.Starship               | starship         | starship                    | starship   | starship    | -           | starship   | -
+zoxide           | ajeetdsouza.zoxide              | zoxide           | zoxide                      | zoxide     | zoxide      | zoxide      | zoxide     | -
+fzf              | junegunn.fzf                    | fzf              | fzf                         | fzf        | fzf         | fzf         | fzf        | -
+fd               | sharkdp.fd                      | fd               | fd                          | fd         | fd          | fd-find     | fd         | -
+ripgrep          | BurntSushi.ripgrep.MSVC         | ripgrep          | ripgrep                     | ripgrep    | ripgrep     | ripgrep     | rg         | -
+eza              | eza-community.eza               | eza              | eza                         | eza        | eza         | eza         | eza        | -
+bat              | sharkdp.bat                     | bat              | bat                         | bat        | bat         | bat         | bat        | -
+jq               | jqlang.jq                       | jq               | jq                          | jq         | jq          | jq          | jq         | -
+lazygit          | JesseDuffield.lazygit           | lazygit          | lazygit                     | lazygit    | lazygit     | -           | lazygit    | -
+fastfetch        | Fastfetch-cli.Fastfetch         | fastfetch        | fastfetch                   | -          | fastfetch   | fastfetch   | fastfetch  | -
+nvim             | Neovim.Neovim                   | neovim           | neovim                      | neovim     | neovim      | neovim      | nvim       | -
+neovide          | Neovide.Neovide                 | neovide          | neovide                     | -          | neovide     | -           | neovide    | -
+lazydocker       | JesseDuffield.Lazydocker        | lazydocker       | lazydocker                  | lazydocker | lazydocker  | -           | lazydocker | -
+duckdb           | DuckDB.cli                      | duckdb           | duckdb                      | duckdb     | duckdb      | -           | duckdb     | -
+typst            | Typst.Typst                     | typst            | typst                       | typst      | typst       | -           | typst      | -
+make             | ezwinports.make                 | make             | make                        | -          | make        | make        | make       | -
+cloc             | AlDanial.Cloc                   | cloc             | cloc                        | -          | cloc        | cloc        | cloc       | -
+wget             | JernejSimoncic.Wget             | wget             | wget                        | -          | wget        | wget        | wget       | -
+7zip             | 7zip.7zip                       | 7zip             | 7zip                        | -          | 7zip        | 7zip        | 7z         | -
+yt-dlp           | yt-dlp.yt-dlp                   | yt-dlp           | yt-dlp                      | yt-dlp     | yt-dlp      | yt-dlp      | yt-dlp     | -
+mpv              | shinchiro.mpv                   | mpv              | mpvio                       | -          | mpv         | mpv         | mpv        | -
+sqlcmd           | Microsoft.Sqlcmd                | sqlcmd           | sqlcmd                      | -          | -           | -           | sqlcmd     | -
+azure-cli        | Microsoft.AzureCLI              | azure-cli        | azure-cli                   | -          | azure-cli   | azure-cli   | az         | -
+
+# programs with a window
+glazewm          | glzr-io.glazewm                 | glazewm          | glazewm                     | -          | -           | -           | glazewm    | -
+windows-terminal | Microsoft.WindowsTerminal       | windows-terminal | microsoft-windows-terminal  | -          | -           | -           | wt         | -
+vscode           | Microsoft.VisualStudioCode      | vscode           | vscode                      | -          | -           | -           | code       | -
+docker-desktop   | Docker.DockerDesktop            | -                | docker-desktop              | -          | -           | -           | docker     | -
+handy            | cjpais.Handy                    | -                | -                           | -          | -           | -           | handy      | -
+rstudio          | Posit.RStudio                   | rstudio          | r.studio                    | -          | -           | -           | rstudio    | -
+powerbi          | Microsoft.PowerBI               | -                | powerbi                     | -          | -           | -           | -          | -
+dax-studio       | DaxStudio.DaxStudio             | -                | daxstudio                   | -          | -           | -           | -          | -

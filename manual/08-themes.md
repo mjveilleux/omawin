@@ -24,16 +24,27 @@ omawin theme backgrounds                        the background picker (or: omawi
 omawin theme list                               every theme; * is the one in use
 ```
 
-## More themes
+## Community themes
 
-Beyond Omarchy's own, any theme made for Omarchy installs from its git link, as in Omarchy: find one on [Omarchy's extra themes page](https://omarchy.org/themes/) (Style › More themes), then Style › Install a theme and paste its link, or:
+Beyond Omarchy's own, the community's: every theme on [omarchy.org/themes](https://omarchy.org/themes/), right in the picker. In **Style › Theme**, press **Tab** (or click **Community**): each theme's picture and colours, most popular first. Type to narrow them by name, by author, or by `light` / `dark`. The footer says whose it is, its licence and its repo.
+
+Rest on one for a moment and your desktop takes it on: GlazeWM's borders, the terminals and the wallpaper, so you see it before you have it. Nothing is installed; moving on shows the next, and Tab back, Esc or closing the menu puts yours back. **Enter** installs it and keeps it (exactly the version omawin's list checked); **Ctrl+Enter** opens its repo.
+
+The list is rebuilt every week and comes down in the background, a minute after the menu starts and then once a day; until it's there (a new PC offline), the Community chip says so.
+
+From a terminal:
 
 ```
-omawin theme install https://github.com/<someone>/omarchy-<name>-theme
-omawin theme update                             every installed theme, from its repo
+omawin theme search nord                        community themes matching every word (name, author, light, dark)
+omawin theme preview <name>                     show one across the desktop; omawin theme preview off puts yours back
+omawin theme add <name>                         install one by name
+omawin theme add https://github.com/<someone>/omarchy-<name>-theme    any theme, from its link
+omawin theme update                             every installed theme: shows what changed, asks, updates
 omawin theme remove <name>
 ```
 
-It's applied at once and shows in Style › Theme with the others, everywhere Omarchy's do. An installed theme with the name of one of Omarchy's replaces it until you remove it. An installed theme can't run anything: its colors and wallpapers are used, but its own Neovim and VS Code settings are made from its colors instead (Omarchy does the same).
+`omawin theme install` is the same as `add`. Style › Install a theme takes a name or a link too.
+
+An installed theme is applied at once and shows in Style › Theme with the others, everywhere Omarchy's do; `omawin theme list` says which repo each came from. An installed theme with the name of one of Omarchy's replaces it until you remove it. An installed theme can't run anything: its colors and wallpapers are used, but its own Neovim and VS Code settings are made from its colors instead (Omarchy does the same).
 
 Starship, on its starbase background, is the default; a new machine starts with it. How it works: [docs/themes.md](../docs/themes.md).
