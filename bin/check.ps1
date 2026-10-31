@@ -346,6 +346,17 @@ if ((Get-Command glazewm -ErrorAction SilentlyContinue) -and (Get-Process glazew
     if ($state.success) { Pass 'GlazeWM answers' "$(@($state.data.monitors).Count) monitor(s)" }
     else { Fail 'GlazeWM answers' 'no answer to glazewm query in 5 s' }
 }
+# The always-on desktop against its memory budget (roadmap 8K), and the drivers' pool, where a
+# driver's leak shows. Only once the PC has been up 10 minutes: right after sign-in everything
+# is still loading and the numbers mean nothing.
+$ram = try { & "$Repo\bin\profile-ram.ps1" -Json -Quick | ConvertFrom-Json } catch { $null }
+if (-not $ram) { Warn 'memory' "couldn't read it (omawin profile ram)" }
+elseif ($ram.System.UptimeMinutes -lt 10) { Pass 'memory' "up $($ram.System.UptimeMinutes) min: measured after 10" }
+else {
+    $desktop = "omawin's desktop $($ram.System.DesktopMB) of $($ram.System.DesktopBudgetMB) MB; $([math]::Round($ram.Memory.InUseMB / 1KB, 1)) GB in use"
+    if ($ram.System.DesktopMB -gt $ram.System.DesktopBudgetMB) { Warn 'memory' "$desktop (omawin profile ram says which part)" } else { Pass 'memory' $desktop }
+    if ($ram.Kernel.NonPagedMB -gt 1024) { Warn 'drivers'' memory' "non-paged pool $($ram.Kernel.NonPagedMB) MB: a driver may be leaking (a driver update usually fixes it)" }
+}
 
 Write-Host ''
 $summary = "$failed failed, $warned warning(s)"

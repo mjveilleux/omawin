@@ -65,7 +65,7 @@ update terminal | The default terminal's latest release (noctty: its latest rele
 migrate | Run the migrations this PC hasn't run yet | pwsh bin/migrate.ps1
 profile terminal | Measure what opening a terminal costs, step by step (-Runs 5, -Video file.mp4) | pwsh bin/profile-terminal.ps1
 profile login | How long after you signed in each part of the desktop was up (-Arm adds timing marks from the next sign-in) | pwsh bin/profile-login.ps1
-profile ram | What's using the memory and the processor, by app, omawin's parts against their budgets (-Save keeps a history and shows what changed, -Json for agents) | pwsh bin/profile-ram.ps1
+profile ram | What's using the memory and the processor, the whole PC by group, memory in use apart from cached, omawin's desktop against its 600 MB (-Save keeps a history and shows what changed, -Quick skips the processor, -Json for agents) | pwsh bin/profile-ram.ps1
 check | Health check: is everything in place and running | pwsh bin/check.ps1
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
 no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh bin/no-ads.ps1
