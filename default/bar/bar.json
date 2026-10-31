@@ -3,7 +3,7 @@
   "left": ["menu", "workspaces"],
   "centerBegin": ["indicators"],
   "center": ["clock"],
-  "centerEnd": ["system-update"],
+  "centerEnd": ["system-update", "installing"],
   "right": ["media", "tray", "agents", "linux", "bluetooth", "network", "audio", "monitor", "power"],
   "clock": { "format": "EEEE HH:mm", "formatAlt": "d MMMM 'W'WW yyyy" }
 }

@@ -49,6 +49,7 @@ public abstract class BarWidget
         "tray" => new TrayWidget(),
         "linux" => new LinuxWidget(),
         "media" => new MediaWidget(),
+        "installing" => new InstallingWidget(),
         _ => null, // agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
     };
 
@@ -272,6 +273,47 @@ sealed class UpdateWidget : BarWidget
     {
         cell.Visibility = data.Updates > 0 ? Visibility.Visible : Visibility.Collapsed;
         cell.Tip = $"{data.Updates} omawin update{(data.Updates == 1 ? "" : "s")} waiting: click to update";
+    }
+    public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+}
+
+// While an install or update runs in the background (Installing.cs): a download glyph that
+// breathes; click: its log, live, in a small terminal. Its end is a toast, not this.
+sealed class InstallingWidget : BarWidget
+{
+    readonly Cell cell = new();
+    string? log;
+    public override FrameworkElement Element => cell;
+    public InstallingWidget()
+    {
+        cell.SetIcon(Glyph(0xF01DA)); // nf-md-download
+        cell.Visibility = Visibility.Collapsed;
+        cell.Click = () =>
+        {
+            if (string.IsNullOrEmpty(log)) return;
+            MenuModel.Omawin("launch", "terminal", "--title", "menu-task", "--", "pwsh", "-NoLogo", "-NoProfile", "-Command",
+                $"Get-Content -Wait -Tail 60 -LiteralPath '{log.Replace("'", "''")}'");
+        };
+        var light = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(cell.Icon);
+        Action breathe = () => Motion.Breathe(light, 0.45f);
+        cell.Loaded += (_, _) => { Motion.Changed += breathe; breathe(); };
+        cell.Unloaded += (_, _) => Motion.Changed -= breathe;
+        if (!hooked)
+        {
+            hooked = true; // once for every bar
+            Installing.Changed += () => SystemMenu.Bar.Refresh();
+        }
+        Installing.Start();
+    }
+    static bool hooked;
+
+    public override void Update(BarData data)
+    {
+        var now = Installing.Now;
+        cell.Visibility = now != null ? Visibility.Visible : Visibility.Collapsed;
+        if (now == null) return;
+        log = now.Log;
+        cell.Tip = InstallMark.Tip(now);
     }
     public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
 }

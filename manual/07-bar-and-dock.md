@@ -11,6 +11,7 @@ The bar is drawn by the menu app itself, with no web engine, so it's up within s
   - **Indicators**, only while they're on: a red, pulsing microphone while you dictate (Win+H) or omawin's agent listens (Ctrl+Win+H); a mug while the PC is kept awake (click it to stop). Hover the bar to see the mug faintly and click it to keep the PC awake.
   - **The clock**: "Saturday 22:58". Right-click for the date and week; click for Windows' calendar.
   - **An update arrow**, red, only while an omawin update is waiting (checked every 6 hours). Click it to update.
+  - **A download glyph**, breathing, only while omawin installs or updates in the background (the install window can be anywhere). Click it for the install's log, live, in a small terminal. When it ends, a toast says how it went: done and how long it took, with how many warnings, or the step it stopped at.
 - **Right:**
   - **What's playing**, from any app that reports to Windows' media controls (Spotify, a video in the browser, Media Player), only while something plays or is paused: play / pause, the title (dimmed while paused) and next. Click the title to play or pause, right-click it to go back, the mouse wheel skips; hover for the whole title, the artist and the app.
   - **The record**: the music, podcast and radio player (below), while it plays.
