@@ -135,7 +135,8 @@ public sealed unsafe class SpiHandler : ISettingHandler
 
     public static readonly string[] Names =
         ["animations", "mouse-accel", "pointer-speed", "key-repeat", "key-delay", "sticky-hotkey", "swap-buttons",
-         "scroll-lines", "double-click", "drag-full-windows", "font-smoothing", "snap", "focus-follows-mouse"];
+         "scroll-lines", "double-click", "drag-full-windows", "font-smoothing", "snap", "focus-follows-mouse",
+         "menu-delay", "min-animate", "filter-hotkey", "toggle-hotkey"];
 
     public string? Read(SettingEntry e)
     {
@@ -152,10 +153,17 @@ public sealed unsafe class SpiHandler : ISettingHandler
             case "key-repeat": return Number(0x000A);        // SPI_GETKEYBOARDSPEED: 0..31
             case "key-delay": return Number(0x0016);         // SPI_GETKEYBOARDDELAY: 0..3
             case "scroll-lines": return Number(0x0068);      // SPI_GETWHEELSCROLLLINES
+            case "menu-delay": return Number(0x006A);        // SPI_GETMENUSHOWDELAY: milliseconds
             case "double-click": return SettingsNative.GetDoubleClickTime().ToString();
             case "swap-buttons": return SettingsNative.GetSystemMetrics(23) != 0 ? "on" : "off"; // SM_SWAPBUTTON
             case "sticky-hotkey":                            // SPI_GETSTICKYKEYS, SKF_HOTKEYACTIVE
             { var sk = new StickyKeys { Size = 8 }; return SettingsNative.SystemParametersInfo(0x003A, 8, &sk, 0) ? ((sk.Flags & 0x4) != 0 ? "on" : "off") : null; }
+            case "min-animate":                              // SPI_GETANIMATION: ANIMATIONINFO.iMinAnimate
+            { var ai = new AnimationInfo { Size = 8 }; return SettingsNative.SystemParametersInfo(0x0048, 8, &ai, 0) ? (ai.MinAnimate != 0 ? "on" : "off") : null; }
+            case "filter-hotkey":                            // SPI_GETFILTERKEYS, FKF_HOTKEYACTIVE
+            { var fk = new FilterKeys { Size = 24 }; return SettingsNative.SystemParametersInfo(0x0032, 24, &fk, 0) ? ((fk.Flags & 0x4) != 0 ? "on" : "off") : null; }
+            case "toggle-hotkey":                            // SPI_GETTOGGLEKEYS, TKF_HOTKEYACTIVE
+            { var tk = new StickyKeys { Size = 8 }; return SettingsNative.SystemParametersInfo(0x0034, 8, &tk, 0) ? ((tk.Flags & 0x4) != 0 ? "on" : "off") : null; }
             default: return null;
         }
     }
@@ -179,11 +187,15 @@ public sealed unsafe class SpiHandler : ISettingHandler
             "key-delay" => SettingsNative.SystemParametersInfo(0x0017, (uint)Clamp(e, value), null, Save),
             "scroll-lines" => SettingsNative.SystemParametersInfo(0x0069, (uint)Clamp(e, value), null, Save),
             "double-click" => SettingsNative.SystemParametersInfo(0x0020, (uint)Clamp(e, value), null, Save),
+            "menu-delay" => SettingsNative.SystemParametersInfo(0x006B, (uint)Clamp(e, value), null, Save), // SPI_SETMENUSHOWDELAY
             // SETMOUSESPEED takes the number in pvParam, not a pointer to it.
             "pointer-speed" => SettingsNative.SystemParametersInfo(0x0071, 0, (void*)(nint)Clamp(e, value), Save),
             // Windows' own "on" is thresholds 6 and 10 with acceleration 1; off is all zero.
             "mouse-accel" => SetMouse(on ? [6, 10, 1] : [0, 0, 0]),
             "sticky-hotkey" => SetSticky(on),
+            "min-animate" => SetMinAnimate(on),
+            "filter-hotkey" => SetFilterHotkey(on),
+            "toggle-hotkey" => SetToggleHotkey(on),
             _ => throw new InvalidOperationException($"no spi setting '{e.How.Target}'"),
         };
         return ok ? null : $"SystemParametersInfo failed ({System.Runtime.InteropServices.Marshal.GetLastPInvokeError()})";
@@ -202,10 +214,36 @@ public sealed unsafe class SpiHandler : ISettingHandler
         return SettingsNative.SystemParametersInfo(0x003B, 8, &sk, Save);
     }
 
+    // The accessibility structs: read the whole thing, flip only the hotkey flag, write it back, so
+    // the feature's own settings (and whether it's on) stay as they were.
+    static bool SetToggleHotkey(bool on)
+    {
+        var tk = new StickyKeys { Size = 8 }; // TOGGLEKEYS has the same shape: cbSize, dwFlags
+        if (!SettingsNative.SystemParametersInfo(0x0034, 8, &tk, 0)) return false;   // SPI_GETTOGGLEKEYS
+        tk.Flags = on ? tk.Flags | 0x4 : tk.Flags & ~0x4u;                           // TKF_HOTKEYACTIVE
+        return SettingsNative.SystemParametersInfo(0x0035, 8, &tk, Save);             // SPI_SETTOGGLEKEYS
+    }
+
+    static bool SetFilterHotkey(bool on)
+    {
+        var fk = new FilterKeys { Size = 24 };
+        if (!SettingsNative.SystemParametersInfo(0x0032, 24, &fk, 0)) return false;  // SPI_GETFILTERKEYS
+        fk.Flags = on ? fk.Flags | 0x4 : fk.Flags & ~0x4u;                           // FKF_HOTKEYACTIVE
+        return SettingsNative.SystemParametersInfo(0x0033, 24, &fk, Save);            // SPI_SETFILTERKEYS
+    }
+
+    static bool SetMinAnimate(bool on)
+    {
+        var ai = new AnimationInfo { Size = 8, MinAnimate = on ? 1 : 0 };
+        return SettingsNative.SystemParametersInfo(0x0049, 8, &ai, Save);             // SPI_SETANIMATION
+    }
+
     static int Clamp(SettingEntry e, string value) =>
         Math.Clamp(int.Parse(value), e.Range?.Min ?? 0, e.Range?.Max ?? int.MaxValue);
 
     struct StickyKeys { public uint Size, Flags; }
+    struct FilterKeys { public uint Size, Flags, WaitMSec, DelayMSec, RepeatMSec, BounceMSec; }
+    struct AnimationInfo { public uint Size; public int MinAnimate; }
 }
 
 // --- powercfg -----------------------------------------------------------------------------------
@@ -217,6 +255,7 @@ public sealed unsafe class PowerHandler : ISettingHandler
     static readonly Guid SubVideo = new("7516b95f-f776-4464-8c53-06167f40cc99");
     static readonly Guid SubSleep = new("238c9fa8-0aad-41ed-83f4-97be242c8f20");
     static readonly Guid SubButtons = new("4f971e89-eebd-4455-a8de-9e59040e7347");
+    static readonly Guid SubNone = new("fea3413e-7e05-4911-9a71-700331f1c294"); // settings in no subgroup
 
     // Seconds: Windows stores minutes as seconds; the catalog speaks minutes (0: never).
     public static readonly Dictionary<string, (Guid Sub, Guid Setting, bool Seconds)> Names = new()
@@ -226,6 +265,8 @@ public sealed unsafe class PowerHandler : ISettingHandler
         ["hibernate-after"] = (SubSleep, new("9d7815a6-7ee4-497e-8888-515a05f02364"), true), // HIBERNATEIDLE
         ["lid"] = (SubButtons, new("5ca83367-6e45-459f-a27b-476b1d01c936"), false),          // LIDACTION
         ["power-button"] = (SubButtons, new("7648efa3-dd9c-4e3e-b566-50f929386280"), false), // PBUTTONACTION
+        ["wake-timers"] = (SubSleep, new("bd3b718a-0680-4d9d-8ab2-e1d2b4ac806d"), false),    // RTCWAKE: 0 off, 1 on, 2 important only
+        ["standby-network"] = (SubNone, new("f15576e8-98b7-4186-b944-eafa664402d9"), false), // CONNECTIVITYINSTANDBY: 0 off, 1 on, 2 managed by Windows
     };
 
     static bool Dc(SettingEntry e) => e.How.Args is ["dc", ..];
@@ -240,7 +281,8 @@ public sealed unsafe class PowerHandler : ISettingHandler
         {
             uint v; var sub = n.Sub; var setting = n.Setting;
             uint err = Dc(e) ? SettingsNative.PowerReadDCValueIndex(0, scheme, &sub, &setting, &v) : SettingsNative.PowerReadACValueIndex(0, scheme, &sub, &setting, &v);
-            return err != 0 ? null : (n.Seconds ? (v / 60).ToString() : v.ToString());
+            // A switch's on= / off= name its raw values, as reg's do (wake-timers: on=1 off=0).
+            return err != 0 ? null : SettingValues.ToWords(e, n.Seconds ? (v / 60).ToString() : v.ToString());
         }
         finally { SettingsNative.LocalFree((nint)scheme); }
     }
@@ -248,7 +290,7 @@ public sealed unsafe class PowerHandler : ISettingHandler
     public string? Write(SettingEntry e, string value)
     {
         if (!Names.TryGetValue(e.How.Target, out var n)) return $"no power setting '{e.How.Target}'";
-        uint v = uint.Parse(value) * (n.Seconds ? 60u : 1u);
+        uint v = uint.Parse(SettingValues.FromWords(e, value)) * (n.Seconds ? 60u : 1u);
         Guid* scheme;
         if (SettingsNative.PowerGetActiveScheme(0, &scheme) != 0) return "no active power scheme";
         try

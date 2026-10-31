@@ -47,7 +47,7 @@ privacy.finish-setup | off | auto | After big updates Windows shows a full-scree
 look.spotlight-icon | off | auto | Windows Spotlight backgrounds put a "Learn about this picture" icon on the desktop.
 
 # --- sleep that doesn't drain the battery (8.30)
-system.hibernate-after | 180 | ask | Modern Standby can drain a laptop overnight; after three hours asleep on battery it hibernates and drains nothing. Needs hibernation on.
+system.hibernate-after-battery | 180 | ask | Modern Standby can drain a laptop overnight; after three hours asleep on battery it hibernates and drains nothing. Needs hibernation on.
 system.wake-timers | off | ask | On battery, programs' scheduled tasks can wake the PC from sleep in a bag.
 system.fast-startup | off | ask | "Shut down" with fast startup is half a hibernate: drivers keep their state and uptime keeps counting, which confuses drivers and dual boot. Turning it off makes shut down a real one. Needs admin.
 

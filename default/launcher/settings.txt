@@ -8,9 +8,9 @@
 #       [refresh-explorer] [restart-explorer]     a registry value; off=- deletes it (Windows' default)
 #   spi <name>        SystemParametersInfo (Switches.cs): animations mouse-accel pointer-speed key-repeat
 #                     key-delay sticky-hotkey swap-buttons scroll-lines double-click drag-full-windows
-#                     font-smoothing snap focus-follows-mouse
+#                     font-smoothing snap focus-follows-mouse menu-delay min-animate filter-hotkey toggle-hotkey
 #   powercfg <name> <ac|dc|both>   the active power plan (Switches.cs): screen-off sleep hibernate-after
-#                     lid power-button; minutes for the timeouts, 0 is never
+#                     lid power-button wake-timers standby-network; minutes for the timeouts, 0 is never
 #   builtin <name>    code (Builtins.cs): wifi bluetooth airplane power-mode brightness desktop-icons
 #                     refresh-rate hdr proxy hotspot audio-output audio-input restart-explorer, and the
 #                     admin ones hibernate sudo windows-feature <feature>
@@ -88,8 +88,7 @@ system.sleep | - | Sleep after (minutes, plugged in) | sleep standby timeout | s
 system.lid | - | Closing the lid (on battery) | lid laptop close | choice | powercfg lid dc values="0:Do nothing,1:Sleep,2:Hibernate,3:Shut down" |
 system.hibernate | - | Hibernate | hibernation hiberfil | switch | builtin hibernate | admin
 system.fast-startup | - | Fast startup | hiberboot boot fast | switch | reg "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Power\HiberbootEnabled" dword on=1 off=0 | admin restart
-system.snap | - | Snap windows | snap arrange aero layouts | switch | spi snap | check
-system.shake | - | Title bar window shake | aero shake minimize | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\DisallowShaking dword on=0 off=1 default=1 | minBuild=22000 check
+system.shake | - | Title bar window shake | aero shake minimize title bar | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\DisallowShaking dword on=0 off=1 default=1 | minBuild=22000 check
 system.storage-sense | - | Storage Sense | cleanup disk storage temp | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\StorageSense\Parameters\StoragePolicy\01 dword on=1 off=0 | check
 system.screen-off-battery | - | Turn off the screen after (minutes, on battery) | display timeout screen off battery | slider | powercfg screen-off dc range=0..240 |
 system.sleep-battery | - | Sleep after (minutes, on battery) | sleep standby timeout battery | slider | powercfg sleep dc range=0..240 |
@@ -134,10 +133,9 @@ developer.restart-explorer | - | Restart Explorer | explorer restart taskbar ref
 
 # 8.26 Windows stops fighting the tiling manager
 system.snap-flyout | - | Snap layouts on the maximize button | snap layouts flyout maximize hover | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapAssistFlyout dword on=1 off=0 |
-system.snap-drag | - | Snap windows by dragging them to an edge | snap drag edge arrange aero | switch | spi win-arranging | check
+system.snap-drag | - | Snap windows by dragging them to an edge | snap drag edge arrange aero | switch | spi snap | check
 system.snap-assist | - | Suggest other windows after snapping one | snap assist suggest | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\SnapAssist dword on=1 off=0 |
 system.snap-bar | - | Snap bar at the top of the screen while dragging | snap bar top drag | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\EnableSnapBar dword on=1 off=0 | minBuild=22621 check
-system.shake | - | Shake a window to minimize the others | aero shake title bar | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced\DisallowShaking dword on=0 off=1 |
 input.win-hotkeys | - | Windows' own Win+key shortcuts that clash with omawin's | disabled hotkeys win key conflict | switch | builtin disabled-hotkeys restart-explorer | check
 
 # 8.27 snappier menus and switching
@@ -164,8 +162,8 @@ privacy.finish-setup | - | "Let's finish setting up your device" after updates |
 look.spotlight-icon | - | "Learn about this picture" icon on the desktop | spotlight desktop icon learn picture | switch | reg HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\HideDesktopIcons\NewStartPanel\{2cc5ca98-6485-489a-920e-b3e88a6ccce3} dword on=0 off=1 refresh-explorer | check
 
 # 8.30 sleep that doesn't drain the battery
-system.hibernate-after | - | Hibernate after this long asleep (on battery) | hibernate standby sleep battery drain | choice | powercfg hibernate-after dc values="0:Never,60:1 hour,180:3 hours,360:6 hours" | check
-system.wake-timers | - | Wake timers on battery | wake timers sleep battery | switch | powercfg wake-timers dc | check
+system.hibernate-after-battery | - | Hibernate after this long asleep (on battery) | hibernate standby sleep battery drain | choice | powercfg hibernate-after dc values="0:Never,60:1 hour,180:3 hours,360:6 hours" |
+system.wake-timers | - | Wake timers on battery | wake timers sleep battery | switch | powercfg wake-timers dc on=1 off=0 | check
 system.standby-network | - | Network stays connected in standby (battery) | modern standby network connectivity | choice | powercfg standby-network dc values="0:Off,1:On,2:Managed by Windows" | check
 
 # 8.31 Windows' file indexer (offered once the finder replaces it)
