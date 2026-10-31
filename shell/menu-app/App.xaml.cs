@@ -196,6 +196,7 @@ public partial class App : Application
             // The theme picker's pictures, decoded while nothing else is going on (ThemeThumbs.cs).
             Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread().TryEnqueue(Microsoft.UI.Dispatching.DispatcherQueuePriority.Low, ThemeThumbs.Preload);
             ThemeThumbs.FetchBackgrounds(); // and every theme's backgrounds, on an unmetered connection
+            CommunityThemes.Start(); // the theme picker's Community chip: its index, fetched in the background
             if (!startArgs.Contains("--start-hidden")) HandleRequest(startArgs);
         });
     }

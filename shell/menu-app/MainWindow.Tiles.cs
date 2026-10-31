@@ -477,13 +477,18 @@ public sealed partial class MainWindow
                 inFrame.Children.Add(shaded);
                 inFrame.Children.Add(box);
                 var frame = new Border { Background = Brush(t.Background), BorderBrush = Brush(t.Border), BorderThickness = new Thickness(1), CornerRadius = new CornerRadius(8), Child = inFrame };
-                if (s.SwatchFile != null)
-                    ThemeThumbs.Get(s.SwatchFile, t, picture =>
-                    {
-                        frame.Background = new ImageBrush { ImageSource = picture, Stretch = Stretch.UniformToFill };
-                        shaded.Visibility = Visibility.Visible;
-                        aa.Visibility = Visibility.Collapsed;
-                    });
+                void ShowPicture(ImageSource picture)
+                {
+                    frame.Background = new ImageBrush { ImageSource = picture, Stretch = Stretch.UniformToFill };
+                    shaded.Visibility = Visibility.Visible;
+                    aa.Visibility = Visibility.Collapsed;
+                }
+                // A community theme's comes with the index (MainWindow.Community.cs).
+                if (s.SwatchFile?.StartsWith(CommunityThemes.KeyPrefix) == true)
+                {
+                    if (CommunityThemes.Find(s.SwatchFile[CommunityThemes.KeyPrefix.Length..]) is { } community) CommunityThemes.Picture(community, ShowPicture);
+                }
+                else if (s.SwatchFile != null) ThemeThumbs.Get(s.SwatchFile, t, ShowPicture);
                 var body = new Grid { Padding = new Thickness(6, 6, 6, 4), RowSpacing = 4 };
                 body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
                 body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });

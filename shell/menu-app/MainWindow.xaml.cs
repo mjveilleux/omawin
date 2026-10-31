@@ -203,8 +203,8 @@ public sealed partial class MainWindow : Window
             case "right": if (tileMode) NavTile(1, 0); else RunSelected(); break;
             case "enter": RunSelected(); break;
             case "esc": if (Input.Text.Length > 0) Input.Text = ""; else Back(hideAtTop: true); break;
-            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else if (backgroundsOf != null) CycleBackgroundTheme(1); else Move(1); break;
-            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else if (backgroundsOf != null) CycleBackgroundTheme(-1); else Move(-1); break;
+            case "tab": if (finding) CycleScope(1); else if (launching && page == "packages") CyclePackageSource(1); else if (backgroundsOf != null) CycleBackgroundTheme(1); else if (pickingTheme) ToggleCommunity(); else Move(1); break;
+            case "shift-tab": if (finding) CycleScope(-1); else if (launching && page == "packages") CyclePackageSource(-1); else if (backgroundsOf != null) CycleBackgroundTheme(-1); else if (pickingTheme) ToggleCommunity(); else Move(-1); break;
             case "pick": if (launching && page == "packages") TogglePackagePick(); break; // Ctrl+Space
         }
     }
@@ -231,6 +231,7 @@ public sealed partial class MainWindow : Window
         ApplyTheme(MenuModel.CurrentThemeName());
         current = entries.TryGetValue(at, out var e) && e.IsSubmenu ? at : "";
         confirming = null;
+        if (pickingTheme) LeaveThemePicker();
         pickingTheme = false;
         backgroundsOf = null;
         Input.Text = "";
@@ -286,6 +287,7 @@ public sealed partial class MainWindow : Window
     void HideMenu(bool instant = false)
     {
         if (!appWindow.IsVisible) return;
+        if (pickingTheme) LeaveThemePicker(); // a community theme being shown: yours back
         if (leaving != null) { if (instant) HideNow(); return; }
         if (instant || !Motion.Enabled) { HideNow(); return; }
         Root.IsHitTestVisible = false; // clicks during the fade go nowhere
@@ -601,9 +603,9 @@ public sealed partial class MainWindow : Window
         Placeholder.Visibility = Input.Text.Length == 0 ? Visibility.Visible : Visibility.Collapsed;
         FooterLeft.Text = theme.Name;
         pageRows.Clear();
-        // Folder chips are the file finder's (and source chips the Packages page's); the preview
-        // theirs and the clipboard page's.
-        Scopes.Visibility = finding || (launching && page == "packages") ? Visibility.Visible : Visibility.Collapsed;
+        // Folder chips are the file finder's (source chips the Packages page's, Built in |
+        // Community the theme picker's); the preview theirs and the clipboard page's.
+        Scopes.Visibility = finding || (launching && page == "packages") || pickingTheme ? Visibility.Visible : Visibility.Collapsed;
         Preview.Visibility = Wide ? Visibility.Visible : Visibility.Collapsed;
         PreviewColumn.Width = new GridLength(Wide ? 400 : 0);
 
@@ -621,11 +623,7 @@ public sealed partial class MainWindow : Window
         }
         else if (pickingTheme)
         {
-            SetCrumbs("style", "Theme");
-            Placeholder.Text = "Search themes…";
-            home = ThemePicker(query);
-            FooterLeft.Text = $"{home.Cells.Count} themes";
-            SetKeys(("←↑↓→", "move"), ("↵", "apply"), ("esc", "back"));
+            home = RenderThemePicker(query); // MainWindow.Community.cs: Built in | Community
         }
         else if (backgroundsOf is { } of)
         {
@@ -1214,6 +1212,7 @@ public sealed partial class MainWindow : Window
         {
             for (int i = 0; i < tiles.Count; i++) LiftTile(tiles[i], i == selected);
             ScrollToSelected(animate: !jump);
+            if (pickingTheme) ThemeHighlighted(); // a community theme's credit and preview
             return;
         }
         if (liftedRow != null && liftedRow.Index != selected) LiftRow(liftedRow, false);
@@ -1302,6 +1301,12 @@ public sealed partial class MainWindow : Window
             // The background picker: Tab shows the next theme's backgrounds.
             case VirtualKey.Tab when backgroundsOf != null:
                 CycleBackgroundTheme(shift ? -1 : 1); break;
+            // The theme picker: Tab moves between Built in and Community; Ctrl+Enter opens a
+            // community theme's repo (MainWindow.Community.cs).
+            case VirtualKey.Tab when pickingTheme:
+                ToggleCommunity(); break;
+            case VirtualKey.Enter when pickingTheme && communityThemes && ctrl:
+                OpenCommunityRepo(); break;
             // Tiles: the arrows move in two dimensions.
             case VirtualKey.Down when tileMode: NavTile(0, 1); break;
             case VirtualKey.Up when tileMode: NavTile(0, -1); break;
@@ -1361,7 +1366,7 @@ public sealed partial class MainWindow : Window
             return;
         }
         if (confirming != null) confirming = null;
-        else if (pickingTheme) { pickingTheme = false; from = entries.Values.FirstOrDefault(e => e.Kind == "themes")?.Id ?? ""; }
+        else if (pickingTheme) { LeaveThemePicker(); pickingTheme = false; from = entries.Values.FirstOrDefault(e => e.Kind == "themes")?.Id ?? ""; }
         else if (backgroundsOf != null) { backgroundsOf = null; from = entries.Values.FirstOrDefault(e => e.Kind == "backgrounds")?.Id ?? ""; }
         else if (current.Length > 0 && current != start) current = entries.TryGetValue(current, out var e) ? e.Parent : "";
         else if (menuFromLauncher)

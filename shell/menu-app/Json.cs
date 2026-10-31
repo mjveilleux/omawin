@@ -7,5 +7,6 @@ namespace SystemMenu;
 // case-insensitively, as themes/*.json and launch-history.json always were.
 [JsonSerializable(typeof(History))]
 [JsonSerializable(typeof(Theme))]
+[JsonSerializable(typeof(CommunityIndex))]
 [JsonSourceGenerationOptions(PropertyNameCaseInsensitive = true)]
 internal partial class Json : JsonSerializerContext { }
