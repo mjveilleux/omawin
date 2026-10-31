@@ -10,6 +10,7 @@ desktop | Win+Ctrl+Space | next background for the current theme
 desktop | Win+Shift+V | One Search on Clipboard: pick something you copied, Enter pastes it
 desktop | Win+A | quick settings: Wi-Fi, Bluetooth, brightness, power mode, night light, do not disturb, battery — and the speakers and microphones below them (Space: on/off · mute, + −: volume · brightness, Enter: opens / uses)
 desktop | Win+M | music, podcasts and radio: the player in the bar (Space plays / pauses, Esc or Win+M closes)
+desktop | Space (in File Explorer) | Quick Look: the selected file, in front (Space or Esc closes, ← → the other selected ones, Enter opens it)
 desktop | Win+Enter | terminal in the focused window's folder (else ~)
 desktop | Alt+Enter | terminal in ~
 desktop | Win+H | dictate (Handy): tap to start, tap again to stop
