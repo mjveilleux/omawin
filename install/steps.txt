@@ -14,3 +14,4 @@ look     | the theme, the lock screen, the taskbar                          | 5
 other    | WSL settings, Claude Code                                        | 6
 no-ads   | Windows' ads and suggestions off (running since the start)       | 1
 tools    | the rest of the tools bundle, the Nerd Font                       | 5
+start    | the desktop, now: GlazeWM, the bar, the launcher (no sign-out)   | 3

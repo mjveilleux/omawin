@@ -49,6 +49,8 @@ The steps are listed in `install/steps.txt`, one line each (`name | what it does
 | `helpers` | `omawin.exe` and the bar's helpers into `~/.local/bin` (on PATH), noctty (the terminal, our fork's latest release, into `%LOCALAPPDATA%\Programs\noctty`; `bin/noctty.ps1`), the menu app and the music player (`bin/install-binaries.ps1`: the release's prebuilt file for this PC, checked against its published hash, or a build here when there is none — [releases.md](releases.md)) |
 | `look` | the default theme (Starship, on its first background) if none is set, so a new install shows at once that it took; no Recycle Bin icon, and no desktop icons (`bin/desktop-icons.ps1 -Default`: hidden, unless you chose to show them); the lock-screen rotation task; the taskbar set to auto-hide |
 | `other` | `~/.wslconfig` (the account folder's when it has one); Claude Code's rules, skills, settings and plugins from the shared folder and this account's (`omawin claude sync`) |
+| `tools` | the rest of the tools bundle, collected (it has been unpacking in the background since the start) and put on the PATH; the Nerd Font, per-user; then LazyVim's plugins, put in by a hidden Neovim of its own at `lazy-lock.json`'s versions while the install goes on, so the first `nvim` opens ready (only when this PC's Neovim has none yet; its log is `%LOCALAPPDATA%\launcher\nvim-plugins.log`) |
+| `start` | the desktop, now: it runs the sign-in task (`omawin start glazewm`), so GlazeWM, the bar and the launcher come up as the install ends, with no sign-out; the install's window floats over it. Skipped by `-LinkOnly` (an update leaves the running desktop alone), when GlazeWM already runs, and where this session has no Windows desktop (a CI runner, a remote shell): then it starts at the next sign-in |
 
 Then the migrations (below).
 
@@ -61,11 +63,11 @@ In a smaller console, and for `-Step`, it prints line after line instead (`insta
 Every line, with winget's output for a failed package, also goes to `%LOCALAPPDATA%\launcher\install.log`, timestamped (moved to `install.log.old` past 1 MB). `install\demo-ui.ps1` plays the whole screen with pretend steps and packages and installs nothing (`-Fail` for a failing step, `-Speed 2` to hurry).
 
 By hand, once:
-- Open a terminal and run `nvim` once: lazy.nvim installs the plugins, mason.nvim the LSPs.
+- Nothing for Neovim's plugins (the `tools` step puts them in); mason.nvim installs the LSPs the first time `nvim` opens.
 - **Handy**: nothing; the desktop step downloads its speech model (Parakeet V3) when none is picked. Another one: open Handy from the tray.
 - **WSL**: nothing, when you picked a Linux at the start: WSL itself comes with the admin prompt, and the Linux is set up for your account (the `wsl` preset, below). Just installed, WSL works after a restart: the Linux then finishes setting up by itself at your next sign-in.
 - **Your account folder** (if you didn't clone it before installing): `~/omawin-account` ([work.md](work.md)), then `.\install.ps1 -LinkOnly`.
-- Sign out and back in, or start GlazeWM: it starts the bar and the menu app.
+- Nothing for the desktop: the `start` step starts it. If it couldn't (the summary says so), sign out and back in, or `omawin start glazewm`.
 
 Not covered (set up by hand): SQL Server tools / ODBC drivers, Docker Desktop, Visual Studio, opencode config, harlequin connection profiles.
 

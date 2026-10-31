@@ -611,6 +611,41 @@ function Install-NerdFont {
     Add-InstallItem 'Tools' 'font' $font 'done'
 }
 
+# Neovim ready on its first open (roadmap 2.4): lazy.nvim puts LazyVim's plugins in at the
+# lockfile's versions (config/nvim/lazy-lock.json, seeded into nvim-data), in a hidden Neovim of
+# its own, so the install doesn't wait for it and the first `nvim` doesn't either. Only on a PC
+# whose Neovim has no plugins yet: once lazy.nvim is there, they're yours (:Lazy update), and
+# omawin leaves them alone. A wrapper gives it 15 minutes: offline, lazy.nvim's own bootstrap
+# (config/nvim/lua/config/lazy.lua) waits for a key nobody presses. What it did goes in
+# %LOCALAPPDATA%\launcher\nvim-plugins.log.
+function Start-NeovimPlugins {
+    Write-Step "Neovim's plugins"
+    $data = Join-Path $env:LOCALAPPDATA 'nvim-data'
+    if (Test-Path (Join-Path $data 'lazy\lazy.nvim')) { Write-Note "ok  Neovim's plugins are here"; Add-InstallItem 'Tools' 'nvim-plugins' "Neovim's plugins" 'have'; return }
+    $nvim = Get-Command nvim -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    $git = Get-Command git -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $nvim -or -not $git) { Write-Note "skipped: $(if (-not $nvim) { 'no nvim' } else { 'no git' }) on the PATH yet; the first nvim start puts them in"; return }
+    $log = Join-Path $env:LOCALAPPDATA 'launcher\nvim-plugins.log'
+    $quote = { param($s) "'" + ($s -replace "'", "''") + "'" }
+    $script = @"
+`$log = $(& $quote $log)
+`$clock = [Diagnostics.Stopwatch]::StartNew()
+Set-Content -LiteralPath `$log "started `$(Get-Date -Format s)"
+`$p = Start-Process $(& $quote $nvim.Source) -ArgumentList '--headless', '"+Lazy! restore"', '+qa' -WindowStyle Hidden -PassThru -RedirectStandardOutput "`$log.out" -RedirectStandardError "`$log.err"
+if (`$p.WaitForExit(900000)) { `$result = "exit `$(`$p.ExitCode)" } else { `$p.Kill(`$true); `$result = 'gave up after 15 minutes (offline?): the first nvim start tries again' }
+Get-Content "`$log.out", "`$log.err" -ErrorAction SilentlyContinue | Add-Content -LiteralPath `$log
+Remove-Item "`$log.out", "`$log.err" -ErrorAction SilentlyContinue
+Add-Content -LiteralPath `$log ("{0} after {1:0} s" -f `$result, `$clock.Elapsed.TotalSeconds)
+"@
+    $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($script))
+    try {
+        $null = Start-Process (Join-Path $PSHOME 'pwsh.exe') -WindowStyle Hidden -ArgumentList '-NoLogo', '-NoProfile', '-NonInteractive', '-EncodedCommand', $encoded
+        $UI.NvimPlugins = $true
+        Write-Note "going in, in the background (lazy-lock.json's versions; $log)"
+        Add-InstallItem 'Tools' 'nvim-plugins' "Neovim's plugins" 'done'
+    } catch { Write-Warn "Neovim's plugins: $($_.Exception.Message); the first nvim start puts them in" }
+}
+
 if (-not $SoftwareFunctionsOnly) {
     if (-not $LinkOnly) {
         Start-EarlyExtras @($CoreExtras)
@@ -625,7 +660,7 @@ if (-not $SoftwareFunctionsOnly) {
         # The bundle keeps unpacking through the next steps: the shell, desktop and helpers steps
         # wait for the tools they need (Wait-BundleTools), the tools step collects the rest and
         # puts in the font (install/tools.ps1). Run alone (-Step software), it's all collected here.
-        if ($Step) { Complete-ToolBundle; Install-NerdFont }
+        if ($Step) { Complete-ToolBundle; Install-NerdFont; Start-NeovimPlugins }
     } else {
         # An update installs nothing, but a tool a package moved off the PATH still goes back on.
         Add-ToolPaths @(Get-WantedTools)

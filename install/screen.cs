@@ -57,6 +57,7 @@ static class Screen
     static readonly List<string[]> Next = new List<string[]>();
     static bool Final, Failed;
     static string FailedStep = "", FinalLine = "", FinalError = "";
+    static string Foot = "";   // the finale's last line (install/ui.ps1: whether the desktop is up); the log's path without one
     static string Title = "omawin is installed", Section = "Next";   // the finale's (omawin update: its own)
     static double FinalSeconds;
     static DateTime FinalAt;
@@ -154,6 +155,7 @@ static class Screen
                 case "warn": if (f.Length > 1) Warnings.Add(f[1]); break;
                 case "title": if (f.Length > 1) Title = f[1]; break;
                 case "section": Section = f.Length > 1 ? f[1] : ""; break;
+                case "foot": Foot = f.Length > 1 ? f[1] : ""; break;
                 case "next": if (f.Length > 2) Next.Add(new[] { f[1], f[2] }); break;
                 case "final":
                 {
@@ -465,7 +467,7 @@ static class Screen
         Put(x0 + 8, 0, Version + " " + Dot + " " + What, Dim, W - 30);
         string clock = Final ? "done in " + Dur(FinalSeconds) : string.Format("{0:00}:{1:00}", (int)(elapsed / 60), (int)(elapsed % 60));
         Put(W - clock.Length - 2, 0, clock, Dim, clock.Length);
-        string foot = Final && !Failed ? "sign out and back in: the desktop starts at sign-in" : "log  " + LogPath;
+        string foot = Final && !Failed && Foot.Length > 0 ? Foot : "log  " + LogPath;
         Put(x0, Hgt - 2, foot, Dim, W - 4);
 
         int top = 2, boxH = Hgt - 4;

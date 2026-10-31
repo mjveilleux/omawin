@@ -85,6 +85,17 @@ runs:
             $bash = Join-Path (Split-Path (Split-Path (Get-Command git -CommandType Application | Select-Object -First 1).Source)) 'bin\bash.exe'
             $o = & $bash -lc 'echo bash $BASH_VERSION'; if ($LASTEXITCODE) { throw "exit $LASTEXITCODE" }; $o
           }
+          Smoke "Neovim's plugins, from the install" {
+            # Put in by the install in a hidden Neovim of its own (install/software.ps1,
+            # Start-NeovimPlugins, roadmap 2.4): waited for, then counted.
+            $wait = [Diagnostics.Stopwatch]::StartNew()
+            while ((Get-Process nvim -ErrorAction SilentlyContinue) -and $wait.Elapsed.TotalMinutes -lt 4) { Start-Sleep 1 }
+            $lazy = "$env:LOCALAPPDATA\nvim-data\lazy"
+            $n = @(Get-ChildItem $lazy -Directory -ErrorAction SilentlyContinue).Count
+            $last = Get-Content "$env:LOCALAPPDATA\launcher\nvim-plugins.log" -Tail 1 -ErrorAction SilentlyContinue
+            if (-not (Test-Path "$lazy\lazy.nvim") -or $n -lt 10) { throw "$n plugin folder(s) ($last)" }
+            "$n plugins, waited $([int]$wait.Elapsed.TotalSeconds) s after the install ($last)"
+          }
           Smoke 'Neovim parsers' {
             $o = nvim --headless -u NONE "+lua local ok = pcall(vim.treesitter.language.add, 'python'); io.stdout:write(('%d parsers, python %s'):format(#vim.api.nvim_get_runtime_file('parser/*', true), ok and 'loads' or 'MISSING'))" +qa
             if ("$o" -notmatch 'python loads') { throw "$o" }; $o

@@ -8,7 +8,7 @@
 irm https://raw.githubusercontent.com/mjveilleux/omawin/main/bootstrap.ps1 | iex
 ```
 
-Run it from **Windows PowerShell**, then sign out and back in. It takes about a minute: every core tool comes prebuilt in one release bundle, downloaded and unpacked in parallel, with no admin prompt. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
+Run it from **Windows PowerShell**; the desktop starts as it ends, no sign-out. It takes about a minute: every core tool comes prebuilt in one release bundle, downloaded and unpacked in parallel, with no admin prompt. Read [what it changes](#what-it-changes-on-your-pc) first; try it in a VM if you can.
 
 ## What you get
 
@@ -47,7 +47,7 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 & $HOME\omawin\install.ps1
 ```
 
-Then sign out and back in. Every step is safe to run again; `omawin install -Step <name>` reruns one. Details: [docs/install.md](docs/install.md).
+The desktop starts as it ends. Every step is safe to run again; `omawin install -Step <name>` reruns one. Details: [docs/install.md](docs/install.md).
 
 ## What it changes on your PC
 

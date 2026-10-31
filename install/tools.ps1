@@ -6,4 +6,5 @@
 if (-not $LinkOnly) {
     Complete-ToolBundle
     Install-NerdFont
+    Start-NeovimPlugins
 }
