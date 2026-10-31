@@ -80,6 +80,8 @@ if [[ $ci != --ci ]]; then
   check fail "docker.socket" "enabled" "not enabled (omawin update)" systemctl is-enabled docker.socket
 fi
 
+check warn "boot doesn't wait for the network" "wait-online masked" "it may (omawin update)" test -L /etc/systemd/system/systemd-networkd-wait-online.service
+
 home="$(getent passwd "$user" | cut -d: -f6)"
 check fail "bashrc block" "" "missing (omawin update)" grep -q '^# >>> omawin >>>' "$home/.bashrc"
 check fail "bashrc sources omawin" "config/bash/bashrc" "its block names an old path (omawin update)" grep -q 'config/bash/bashrc' "$home/.bashrc"
