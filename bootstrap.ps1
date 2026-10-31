@@ -147,7 +147,9 @@ function Assert-Winget {
 # this session's). Returns the folder.
 function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
     $row = $Fetch.Row
+    $clock = [Diagnostics.Stopwatch]::StartNew()
     if ($Fetch.File.Process) { $Fetch.File.Process.WaitForExit() }
+    $waited = $clock.Elapsed.TotalSeconds
     $zip = $Fetch.File.Path
     if (-not (Test-Path $zip) -or (Get-FileHash $zip -Algorithm SHA256).Hash -ne $row[3].ToUpper()) { throw "$What from the release doesn't match its published SHA-256" }
     $dir = Join-Path $env:LOCALAPPDATA "omawin\tools\$($row[0])"
@@ -166,7 +168,7 @@ function Install-BundleTool($Fetch, [string]$Bin, [string]$What) {
     $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
     if (($userPath -split ';') -notcontains $onPath) { [Environment]::SetEnvironmentVariable('Path', (@($userPath.TrimEnd(';'), $onPath) | Where-Object { $_ }) -join ';', 'User') }
     if (($env:Path -split ';') -notcontains $onPath) { $env:Path = "$onPath;$env:Path" }
-    Write-Note "$What $($row[1]) -> $dir"
+    Write-Note ("$What $($row[1]) -> $dir (waited {0:0.0} s for the download, unpacked in {1:0.0} s)" -f $waited, ($clock.Elapsed.TotalSeconds - $waited))
     $dir
 }
 

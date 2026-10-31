@@ -58,3 +58,42 @@ jobs:
           release-url: C:\mirror
           release-tag: v0.0.0-ci
           fresh: 'true'
+
+      # Where unpacking's time goes (a question for the bundle's format): decompressing alone
+      # against writing the files, the zips against the same tools as .tar.zst, and git's
+      # self-extractor. Windows' own tar.exe does all of it, as the install does.
+      - name: Unpacking, measured
+        if: always()
+        shell: pwsh
+        run: |
+          $tar = "$env:WINDIR\System32\tar.exe"
+          $version = (& $tar --version) -join ' '
+          $lines = @('## Unpacking, measured', '', "tar: $version", '', '| Tool | Format | MB | Files | Decompress only (s) | To disk (s) |', '|---|---|---|---|---|---|')
+          function Time([scriptblock]$Do) { $c = [Diagnostics.Stopwatch]::StartNew(); & $Do | Out-Null; [math]::Round($c.Elapsed.TotalSeconds, 2) }
+          foreach ($name in 'pwsh', 'nvim', 'bun', 'node') {
+            $zip = "C:\mirror\omawin-tool-$name.zip"
+            if (-not (Test-Path $zip)) { continue }
+            $dir = "C:\bench\$name-zip"; New-Item -ItemType Directory -Force $dir | Out-Null
+            $only = Time { cmd /c "`"$tar`" -xOf `"$zip`" > NUL" }
+            $disk = Time { & $tar -xf $zip -C $dir }
+            $files = @(Get-ChildItem $dir -Recurse -File).Count
+            $lines += "| $name | zip | $([math]::Round((Get-Item $zip).Length / 1MB)) | $files | $only | $disk |"
+            # The same files as a zstd tar, if this tar can write one.
+            $zst = "C:\bench\$name.tar.zst"
+            & $tar -c --zstd -f $zst -C $dir . 2>$null
+            if ($LASTEXITCODE -eq 0 -and (Test-Path $zst)) {
+              $dir2 = "C:\bench\$name-zst"; New-Item -ItemType Directory -Force $dir2 | Out-Null
+              $only = Time { cmd /c "`"$tar`" -xOf `"$zst`" > NUL" }
+              $disk = Time { & $tar -xf $zst -C $dir2 }
+              $lines += "| $name | tar.zst | $([math]::Round((Get-Item $zst).Length / 1MB)) | $files | $only | $disk |"
+            } else { $lines += "| $name | tar.zst | this tar can't write zstd | | | |" }
+          }
+          $sfx = 'C:\mirror\omawin-tool-git.exe'
+          if (Test-Path $sfx) {
+            $dir = 'C:\bench\git'
+            $disk = Time { Start-Process $sfx -ArgumentList '-oC:\bench\git', '-y' -Wait -WindowStyle Hidden }
+            $lines += "| git | 7z self-extractor | $([math]::Round((Get-Item $sfx).Length / 1MB)) | $(@(Get-ChildItem $dir -Recurse -File).Count) | | $disk |"
+          }
+          $lines += '', "Cores: $([Environment]::ProcessorCount). Defender's real-time scan is on, as on a PC."
+          $lines -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+          $lines -join "`n"

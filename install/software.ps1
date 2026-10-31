@@ -356,15 +356,15 @@ function Start-EarlyHelpers {
 function Install-ToolBundle($Installed, [string[]]$Only) { Start-ToolBundle $Installed $Only; Complete-ToolBundle }
 
 function Install-WingetPackages([string[]]$Ids) {
+    $bundled = @(Get-BundleCovered)
+    # Everything left came from the bundle: winget isn't asked anything (nor looked for).
+    if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
         Write-Warn 'winget not found. Install "App Installer" from the Microsoft Store, then re-run.'
         return
     }
     $winget = (Get-Command winget).Source
     $installed = Get-WingetInstalled
-    $bundled = @(Get-BundleCovered)
-    # Everything left came from the bundle: winget isn't asked anything.
-    if (-not @($Ids | Where-Object { $bundled -notcontains $_ })) { return }
     Register-WingetSource
 
     $todo = New-Object Collections.Generic.List[string]
