@@ -81,8 +81,8 @@ check | Health check: is everything in place and running | pwsh bin/check.ps1
 path | Your PATH and Windows': empty, missing and duplicate entries, and which node / python / git … runs and why (more to look up: omawin path rg); omawin path fix cleans yours, omawin path undo puts it back | run omawin-path.exe
 install | Install and link everything (-LinkOnly: only relink; -Step <name>: one step) | pwsh install.ps1
 no-ads | Windows' ads off, and the PC maker's upsells (Lenovo, McAfee, Adobe, when found; asks for admin) | pwsh bin/no-ads.ps1
-dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
-dev remove | Take a development environment away again: omawin dev remove node | pwsh bin/remove-dev-env.ps1
+dev install | A development environment, as Omarchy's (mise where Windows allows, else each one's own installer): ruby, docker-db, node, bun, deno, go, php, laravel, symfony, python, elixir, phoenix, zig, rust, java, dotnet, ocaml, clojure, scala; in your Linux in WSL or in Windows (asked; -Linux or -Windows answers); -Check [name] says what's installed | pwsh bin/install-dev-env.ps1
+dev remove | Take a development environment away again: omawin dev remove node (-Linux or -Windows: which side) | pwsh bin/remove-dev-env.ps1
 pkg find | The package picker, in the launcher: winget, Chocolatey or Scoop (Tab), fuzzy found, Enter installs; Ctrl+Space picks several | app --launcher packages
 pkg install | Install by name with whichever manager omawin picks (default/packages/names.txt; --from winget, scoop, choco or mise; --machine; --linux); no name: winget's catalogue, fuzzy found (fzf, Tab picks several) | builtin pkg install
 pkg remove | Remove through the manager that installed it: omawin pkg remove <name>; no name: what winget installed here, fuzzy found | builtin pkg remove

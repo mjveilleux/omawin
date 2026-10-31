@@ -1,0 +1,332 @@
+#!/bin/bash
+# Development environments in Linux, Omarchy's way (roadmap 3.4, 3.6): its omarchy-install-dev-env,
+# omarchy-remove-dev-env and omarchy-install-docker-dbs in one, with mise for the languages and
+# Docker Engine for the databases. Install › Development runs it through bin/install-dev-env.ps1
+# when you pick Linux (wsl.exe -d <distro> ...); in Linux it's a command of its own.
+#
+#   omawin-dev-env install <name> [database ...]   install one (docker-db: no names, pick with gum)
+#   omawin-dev-env remove <name> [database ...]    take it away again
+#   omawin-dev-env check [name]                    with a name: exit 0 if installed, 1 if not;
+#                                                  without: the installed ones, one a line
+#
+# Names: ruby docker-db node bun deno go php laravel symfony python elixir phoenix zig rust java
+# dotnet ocaml clojure scala. (Copied to ~/.local/bin by wsl/setup.sh.)
+set -euo pipefail
+
+names=(ruby docker-db node bun deno go php laravel symfony python elixir phoenix zig rust java dotnet ocaml clojure scala)
+# The databases Omarchy's omarchy-install-docker-dbs offers, and their containers' names.
+databases=(MySQL PostgreSQL Redis MongoDB MariaDB MSSQL)
+declare -A containers=([MySQL]=mysql8 [PostgreSQL]=postgres18 [Redis]=redis [MongoDB]=mongodb [MariaDB]=mariadb11 [MSSQL]=mssql)
+
+mise_data="${MISE_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/mise}"
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$mise_data/shims:$PATH"
+
+usage() { echo "Usage: omawin-dev-env install|remove|check <$(IFS='|'; echo "${names[*]}")>" >&2; exit 2; }
+known() { [[ " ${names[*]} " == *" $1 "* ]]; }
+run() { printf '\e[2m> %s\e[0m\n' "$*"; "$@"; }
+
+# A system package, from the distro's own manager (sudo needs no password here: wsl/setup.sh).
+pkg_add() {
+  if command -v pacman > /dev/null; then
+    run sudo pacman -S --needed --noconfirm "$@"
+  else
+    run sudo apt-get install -y -qq "$@"
+  fi
+}
+
+# --- is it installed? ----------------------------------------------------------------------------
+# A tool mise installed has a folder with a version in it (not only the alias links mise leaves).
+mise_has() {
+  local dir
+  for dir in "$mise_data/installs/$1"/*; do
+    [[ -d $dir && ! -L $dir ]] && return 0
+  done
+  return 1
+}
+
+# Docker, as the user (the docker group) or through sudo while this session predates the group.
+docker_cmd=()
+find_docker() {
+  ((${#docker_cmd[@]})) && return 0
+  command -v docker > /dev/null || return 1
+  if docker info > /dev/null 2>&1; then
+    docker_cmd=(docker)
+  elif sudo -n docker info > /dev/null 2>&1; then
+    docker_cmd=(sudo docker)
+  else
+    return 1
+  fi
+}
+
+# The databases' containers that are here, one a line.
+db_containers() {
+  find_docker || return 0
+  local have db
+  have=" $("${docker_cmd[@]}" ps -a --format '{{.Names}}' 2> /dev/null | xargs) "
+  for db in "${databases[@]}"; do
+    [[ $have == *" ${containers[$db]} "* ]] && echo "$db"
+  done
+  return 0
+}
+
+installed() {
+  case "$1" in
+    docker-db) [[ -n $(db_containers) ]] ;;
+    laravel) [[ -x $HOME/.local/bin/laravel || -x $HOME/.config/composer/vendor/bin/laravel ]] ;;
+    symfony) command -v symfony > /dev/null || mise_has github-symfony-cli-symfony-cli ;;
+    phoenix) compgen -G "$HOME/.mix/archives/phx_new*" > /dev/null ;;
+    elixir) mise_has elixir ;;
+    rust) [[ -x $HOME/.cargo/bin/rustup ]] ;;
+    ocaml) [[ -f $HOME/.opam/config ]] ;;
+    *) mise_has "$1" ;;
+  esac
+}
+
+# --- the databases (omarchy-install-docker-dbs) ----------------------------------------------------
+# Several picked at once, as on Windows (gum's --no-limit: Space or x picks, Enter goes).
+pick_databases() {
+  if command -v gum > /dev/null; then
+    gum choose --no-limit --header "$1" "${@:2}" || true
+  elif command -v fzf > /dev/null; then
+    printf '%s\n' "${@:2}" | fzf --multi --prompt 'database > ' --header "$1" --height 40% --reverse || true
+  else
+    echo "gum isn't installed (omawin update brings it)" >&2
+  fi
+}
+
+docker_up() {
+  command -v docker > /dev/null || { echo "Docker isn't installed in this Linux (omawin update installs it)." >&2; exit 1; }
+  if ! find_docker; then
+    # docker.socket starts the engine on its first use; started here if systemd hasn't yet.
+    sudo -n systemctl start docker.socket docker.service > /dev/null 2>&1 || true
+    find_docker || { echo "Docker isn't running (sudo systemctl start docker), and it couldn't be started." >&2; exit 1; }
+  fi
+}
+
+install_dbs() {
+  docker_up
+  local choices=("$@") db
+  ((${#choices[@]})) || mapfile -t choices < <(pick_databases "Pick databases to run in Docker" "${databases[@]}")
+  if ((${#choices[@]} == 0)); then
+    echo "No databases selected for installation."
+    return 0
+  fi
+  for db in "${choices[@]}"; do
+    [[ -n ${containers[$db]:-} ]] || { echo "Unknown database: $db (pick from ${databases[*]})" >&2; exit 1; }
+  done
+  for db in "${choices[@]}"; do
+    echo -e "Installing $db...\n"
+    # Omarchy's containers exactly: the same images, ports (this PC only) and dev-only passwords.
+    # Mirrored networking (wsl/.wslconfig) makes them localhost:<port> for Windows' apps too.
+    case $db in
+      MySQL) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:3306:3306" --name=mysql8 -e MYSQL_ROOT_PASSWORD= -e MYSQL_ALLOW_EMPTY_PASSWORD=true mysql:8.4 ;;
+      PostgreSQL) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:5432:5432" --name=postgres18 -e POSTGRES_HOST_AUTH_METHOD=trust postgres:18 ;;
+      MariaDB) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:3306:3306" --name=mariadb11 -e MARIADB_ROOT_PASSWORD= -e MARIADB_ALLOW_EMPTY_ROOT_PASSWORD=true mariadb:11.8 ;;
+      Redis) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:6379:6379" --name=redis redis:7 ;;
+      MongoDB) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:27017:27017" --name mongodb -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=admin123 mongo:noble ;;
+      MSSQL) run "${docker_cmd[@]}" run -d --restart unless-stopped -p "127.0.0.1:1433:1433" --name mssql -e MSSQL_PID=Developer -e ACCEPT_EULA=Y -e "MSSQL_SA_PASSWORD=@dmin123" mcr.microsoft.com/mssql/server:2022-CU12-ubuntu-22.04 ;;
+    esac
+  done
+}
+
+remove_dbs() {
+  docker_up
+  local have choices=("$@") db
+  mapfile -t have < <(db_containers)
+  if ((${#have[@]} == 0)); then
+    echo "None of the Docker DB containers are here."
+    return 0
+  fi
+  ((${#choices[@]})) || mapfile -t choices < <(pick_databases "Pick databases to remove (their data goes too)" "${have[@]}")
+  for db in "${choices[@]}"; do
+    [[ -n ${containers[$db]:-} ]] || { echo "Unknown database: $db (pick from ${databases[*]})" >&2; exit 1; }
+    run "${docker_cmd[@]}" rm --force --volumes "${containers[$db]}"
+  done
+}
+
+# --- install (omarchy-install-dev-env) -------------------------------------------------------------
+need_mise() { command -v mise > /dev/null || { echo "mise isn't installed in this Linux (omawin update installs it)." >&2; exit 1; }; }
+
+install_php() {
+  need_mise
+  run mise tool-alias set php github:nunomaduro/static-php-builds
+  run mise use --global php@latest
+  mkdir -p "$HOME/.local/bin"
+  run mise x php -- composer global config bin-dir "$HOME/.local/bin"
+}
+
+install_node() { echo -e "Installing Node.js...\n"; need_mise; run mise use --global node@latest; }
+
+install_env() {
+  case "$1" in
+    ruby)
+      echo -e "Installing Ruby on Rails...\n"
+      need_mise
+      if command -v pacman > /dev/null; then pkg_add libyaml; else pkg_add libyaml-dev; fi
+      run mise settings add ruby.compile false
+      run mise settings add idiomatic_version_file_enable_tools ruby
+      run mise use --global ruby@latest
+      echo "gem: --no-document" > ~/.gemrc
+      run mise x ruby -- gem install rails --no-document
+      echo -e "\nYou can now run: rails new myproject"
+      ;;
+    docker-db) install_dbs "${@:2}" ;;
+    node) install_node ;;
+    bun | deno | go | java | dotnet)
+      echo -e "Installing $1...\n"
+      need_mise
+      run mise use --global "$1@latest"
+      ;;
+    php) echo -e "Installing PHP...\n"; install_php ;;
+    laravel)
+      echo -e "Installing PHP and Laravel...\n"
+      install_php
+      install_node
+      run mise x php -- composer global require laravel/installer
+      echo -e "\nYou can now run: laravel new myproject"
+      ;;
+    symfony)
+      echo -e "Installing PHP and Symfony...\n"
+      install_php
+      # Omarchy's symfony-cli package on Arch; Ubuntu's apt has none, so its release through mise.
+      if command -v pacman > /dev/null; then pkg_add symfony-cli; else run mise use --global github:symfony-cli/symfony-cli@latest; fi
+      echo -e "\nYou can now run: symfony new --webapp myproject"
+      ;;
+    python)
+      echo -e "Installing Python...\n"
+      need_mise
+      run mise use --global python@latest
+      echo -e "\nInstalling uv...\n"
+      run mise use --global uv@latest
+      ;;
+    elixir | phoenix)
+      echo -e "Installing Elixir...\n"
+      need_mise
+      run mise use --global erlang@latest
+      run mise use --global elixir@latest
+      run mise x elixir -- mix local.hex --force
+      if [[ $1 == phoenix ]]; then
+        echo -e "\nInstalling Phoenix Framework...\n"
+        run mise x elixir -- mix local.rebar --force
+        run mise x elixir -- mix archive.install hex phx_new --force
+        echo -e "\nYou can now run: mix phx.new my_app"
+      fi
+      ;;
+    zig)
+      echo -e "Installing Zig...\n"
+      need_mise
+      run mise use --global zig@latest
+      run mise use --global zls@latest
+      ;;
+    rust)
+      echo -e "Installing Rust...\n"
+      # Crates that generate C bindings with bindgen load libclang from clang (Omarchy's reason).
+      pkg_add clang
+      bash -c "$(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs)" -- -y
+      ;;
+    ocaml)
+      echo -e "Installing OCaml...\n"
+      # opam from the distro (Omarchy runs opam's install script, which asks where to put it).
+      pkg_add opam
+      run opam init --yes
+      eval "$(opam env)"
+      run opam install ocaml-lsp-server odoc ocamlformat utop --yes
+      ;;
+    clojure)
+      echo -e "Installing Clojure...\n"
+      need_mise
+      pkg_add rlwrap
+      run mise use --global java@latest
+      run mise use --global clojure@latest
+      ;;
+    scala)
+      echo -e "Installing Scala...\n"
+      need_mise
+      run mise use --global java@latest
+      run mise use --global scala@latest
+      run mise use --global scala-cli@latest
+      ;;
+  esac
+}
+
+# --- remove (omarchy-remove-dev-env) ---------------------------------------------------------------
+# Out of the global config, then every version, as Omarchy's `mise uninstall --all` + `mise rm -g`.
+# A step that finds nothing to remove isn't a failure; `check` judges the result.
+mise_remove() {
+  command -v mise > /dev/null || return 0
+  local tool
+  for tool in "$@"; do
+    run mise uninstall "$tool" --all || true
+    run mise rm -g "$tool" || true
+  done
+}
+
+remove_env() {
+  case "$1" in
+    ruby) mise_remove ruby; rm -f ~/.gemrc ;;
+    docker-db) remove_dbs "${@:2}" ;;
+    php)
+      mise_remove php
+      if command -v mise > /dev/null; then mise tool-alias unset php || true; fi
+      ;;
+    laravel)
+      if command -v mise > /dev/null; then mise x php -- composer global remove laravel/installer 2> /dev/null || true; fi
+      rm -f "$HOME/.local/bin/laravel" "$HOME/.config/composer/vendor/bin/laravel"
+      ;;
+    symfony)
+      if command -v pacman > /dev/null && pacman -Q symfony-cli > /dev/null 2>&1; then run sudo pacman -Rns --noconfirm symfony-cli; fi
+      mise_remove github:symfony-cli/symfony-cli
+      ;;
+    python) mise_remove python uv ;;
+    elixir | phoenix) mise_remove elixir erlang; rm -rf ~/.mix/archives/phx_new* ;;
+    zig) mise_remove zig zls ;;
+    rust)
+      # rustup by path: ~/.cargo/bin may be off PATH, and mise's shims can shadow it.
+      if [[ -x $HOME/.cargo/bin/rustup ]]; then run "$HOME/.cargo/bin/rustup" self uninstall -y; fi
+      rm -rf "$mise_data/installs/rust"
+      if command -v mise > /dev/null; then mise reshim; fi
+      ;;
+    ocaml)
+      if command -v opam > /dev/null; then opam switch remove default -y > /dev/null 2>&1 || true; fi
+      rm -rf ~/.opam
+      ;;
+    scala) mise_remove scala scala-cli ;;
+    *) mise_remove "$1" ;;
+  esac
+}
+
+# --- main ------------------------------------------------------------------------------------------
+main() {
+  local verb="${1:-}" name="${2:-}" n
+  case "$verb" in
+    check)
+      if [[ -n $name ]]; then
+        known "$name" || usage
+        installed "$name"
+      else
+        for n in "${names[@]}"; do installed "$n" && echo "$n"; done
+        return 0
+      fi
+      ;;
+    install | remove)
+      known "$name" || usage
+      # Run from Windows in the repo's folder (bin/install-dev-env.ps1); mise and opam work from home.
+      cd "$HOME"
+      "${verb}_env" "$name" "${@:3}"
+      # Docker DB picks some databases, not necessarily all, so it has no after-check.
+      [[ $name == docker-db ]] && return 0
+      if [[ $verb == install ]] && ! installed "$name"; then
+        printf '\n\e[31m✗ %s: the install finished, but it isn'"'"'t where it should be\e[0m\n' "$name"
+        return 1
+      fi
+      if [[ $verb == remove ]] && installed "$name"; then
+        printf '\n\e[31m✗ %s is still here\e[0m\n' "$name"
+        return 1
+      fi
+      printf '\n\e[32m✓ %s %s.\e[0m\n' "$name" "$([[ $verb == install ]] && echo "is installed" || echo "is removed")"
+      ;;
+    *) usage ;;
+  esac
+}
+
+main "$@"
