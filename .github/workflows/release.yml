@@ -142,6 +142,7 @@ jobs:
   parsers:
     needs: meta
     runs-on: windows-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Neovim and the tree-sitter CLI
@@ -317,7 +318,7 @@ jobs:
     needs: [meta, release]
     if: needs.meta.outputs.publish == 'true'
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: ./.github/actions/time-install

@@ -72,8 +72,8 @@ runs:
         # program check starts that keeps running would hold the output open, and this would wait.
         $check = Start-Process pwsh -ArgumentList '-NoProfile', '-File', "$HOME\omawin\bin\check.ps1" -RedirectStandardOutput C:\ci\out\check.log -RedirectStandardError C:\ci\out\check-errors.log -WindowStyle Hidden -PassThru
         $null = $check.Handle  # read now, or Windows PowerShell has no ExitCode for it later
-        if ($check.WaitForExit(300000)) { "check exit $($check.ExitCode)" | Add-Content C:\ci\out\result.txt }
-        else { $check.Kill(); 'check timed out (5 min)' | Add-Content C:\ci\out\result.txt }
+        if ($check.WaitForExit(120000)) { "check exit $($check.ExitCode)" | Add-Content C:\ci\out\result.txt }
+        else { $check.Kill(); 'check timed out (2 min)' | Add-Content C:\ci\out\result.txt }
         'done' | Set-Content C:\ci\out\done.txt
         '@
         ($setup + "`n" + $body) | Set-Content C:\ci\run.ps1 -Encoding utf8
@@ -85,7 +85,9 @@ runs:
       run: |
         $start = Get-Date
         Start-ScheduledTask -TaskName omawin-ci
-        while (-not (Test-Path C:\ci\out\done.txt) -and ((Get-Date) - $start).TotalMinutes -lt 50) {
+        # 5 minutes at most: the install takes under one, and a hang (a program waiting for an
+        # answer nobody gives) should fail fast, not hold a runner for an hour.
+        while (-not (Test-Path C:\ci\out\done.txt) -and ((Get-Date) - $start).TotalMinutes -lt 5) {
           Start-Sleep 5
           $state = (Get-ScheduledTask -TaskName omawin-ci).State
           $last = (Get-ScheduledTaskInfo -TaskName omawin-ci).LastTaskResult
@@ -95,6 +97,10 @@ runs:
             Write-Host "the task ended early ($state, result $last)"; break
           }
           if ($last -eq 267011 -and ((Get-Date) - $start).TotalMinutes -gt 3) { Write-Host 'the task never started'; break }
+        }
+        if (-not (Test-Path C:\ci\out\done.txt)) {
+          Write-Host '::error::the install was still running after 5 minutes: stopped'
+          Stop-ScheduledTask -TaskName omawin-ci -ErrorAction SilentlyContinue
         }
         Get-Content C:\ci\out\result.txt -ErrorAction SilentlyContinue
 
