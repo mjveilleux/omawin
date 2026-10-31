@@ -163,6 +163,30 @@ function iex {
     if ($MyInvocation.ExpectingInput) { $input | Invoke-Expression } else { iex.bat @args }
 }
 
+# --- omawin setting: Tab completes a Windows setting's id (default/launcher/settings.txt) -------
+# Read from the catalog's files the first time Tab is pressed after `omawin setting get|set|toggle`,
+# so the profile itself reads nothing.
+Register-ArgumentCompleter -Native -CommandName omawin, omawin.exe -ScriptBlock {
+    param($word, $ast, $cursor)
+    $words = @($ast.CommandElements | ForEach-Object { $_.ToString() })
+    if ($words.Count -lt 2 -or $words[1] -ne 'setting') { return }
+    $at = if ($word) { $words.Count - 1 } else { $words.Count } # which word is being completed
+    $candidates = if ($at -eq 2) {
+        'list', 'get', 'set', 'toggle', 'undo'
+    } elseif ($at -eq 3 -and $words[2] -eq 'list') {
+        'look', 'explorer', 'privacy', 'input', 'system', 'display', 'connections', 'sound', 'developer'
+    } elseif ($at -eq 3 -and $words[2] -in 'get', 'set', 'toggle') {
+        if (-not $script:OmawinSettingIds) {
+            $repo = if ($env:DOTFILES) { $env:DOTFILES } else { Join-Path $HOME 'omawin' }
+            $script:OmawinSettingIds = @("$repo\default\launcher\settings.txt", "$env:ProgramData\omawin\shared\launcher\settings.txt", "$OmawinUserLayer\launcher\settings.txt") |
+                Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Encoding utf8 } |
+                Where-Object { $_ -match '^\s*([a-z]+\.[a-z0-9-]+)\s*\|' } | ForEach-Object { $Matches[1] } | Sort-Object -Unique
+        }
+        $script:OmawinSettingIds
+    }
+    $candidates | Where-Object { $_ -like "$word*" } | ForEach-Object { [Management.Automation.CompletionResult]::new($_) }
+}
+
 # --- your own additions ---------------------------------------------------------------
 # Your own shortcuts and tool paths live in your account folder (docs/work.md), if it's here.
 # profile.ps1 (run first, in every host) set $OmawinUserLayer.

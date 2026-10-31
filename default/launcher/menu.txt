@@ -14,6 +14,9 @@
 #   run <command>    start a program, a URL or a settings page, like items.txt
 #   omawin <command> one of omawin's commands (bin/commands.txt), hidden
 #   @<page>          one of the launcher's pages (@keys, @clipboard, @localhost, ...)
+#   settings <area>  Windows' settings of one area, each switched in place (default/launcher/settings.txt:
+#                    look, explorer, privacy, input, system, display, connections, sound, developer);
+#                    settings undo puts the last change back, settings admin applies the queued admin ones
 #   themes           the theme picker (themes/*.json and installed themes, applied by
 #                    themes/set-theme.ps1)
 #   backgrounds      the background picker: a grid of a theme's pictures (set by
@@ -78,6 +81,20 @@ setup.bluetooth | 󰂯 | Bluetooth | run ms-settings:bluetooth
 setup.sound | 󰕾 | Sound | run ms-settings:sound
 setup.defaults | 󰄬 | Default apps | run ms-settings:defaultapps
 setup.startup | 󰐥 | Startup apps | run ms-settings:startupapps
+setup.windows | 󰒓 | Windows settings
+setup.windows.look | 󰏘 | Look | settings look
+setup.windows.explorer | 󰉋 | File Explorer and taskbar | settings explorer
+setup.windows.privacy | 󰒘 | Privacy | settings privacy
+setup.windows.input | 󰌌 | Mouse and keyboard | settings input
+setup.windows.system | 󰒓 | System | settings system
+setup.windows.display | 󰍹 | Display | settings display
+setup.windows.connections | 󰖩 | Connections | settings connections
+setup.windows.sound | 󰕾 | Sound | settings sound
+setup.windows.developer | 󰅩 | Developer | settings developer
+setup.windows.admin | 󰒘 | Admin changes waiting | settings admin
+setup.windows.undo | 󰕌 | Undo the last settings change | settings undo
+setup.windows.save | 󰆓 | Save my settings for a new PC | task omawin settings save
+setup.windows.app | 󰒓 | Windows' Settings app | run ms-settings:
 setup.default | 󰄬 | Defaults (terminal, editor, agent)
 setup.default.terminal | 󰆍 | Terminal
 setup.default.terminal.noctty | 󰆍 | noctty | omawin default terminal noctty

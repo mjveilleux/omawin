@@ -305,7 +305,7 @@ foreach ($line in Get-Content "$Repo\default\launcher\menu.txt" -Encoding utf8) 
     $ids[$id] = $true
     if ($id.Contains('.') -and -not $ids.ContainsKey($id.Substring(0, $id.LastIndexOf('.')))) { $menuProblems += "$id has no parent row above it" }
     if (-not $label) { $menuProblems += "$id has no label" }
-    if ($action -and $action.TrimStart('!').Trim() -notmatch '^(winget|choco|task|edit|run|omawin)\s|^@|^(themes|backgrounds)$') { $menuProblems += "$id has an unknown action" }
+    if ($action -and $action.TrimStart('!').Trim() -notmatch '^(winget|choco|task|edit|run|omawin|settings)\s|^@|^(themes|backgrounds)$') { $menuProblems += "$id has an unknown action" }
 }
 if ($menuProblems) { $menuProblems | ForEach-Object { Fail 'default/launcher/menu.txt' $_ } } else { Pass 'default/launcher/menu.txt' "$($ids.Count) rows" }
 # omawin's commands: known action kinds, the scripts they run exist, and every
@@ -326,7 +326,7 @@ foreach ($line in Get-Content "$Repo\bin\commands.txt" -Encoding utf8) {
     elseif ($action -match '^builtin\s+(\S+)') {
         if ($Matches[1] -notin 'launch-terminal', 'launch-project', 'launch-editor', 'terminal-here', 'terminal-warm', 'start-glazewm', 'start-bar', 'update-terminal', 'default') { $commandProblems += "$name runs unknown builtin $($Matches[1])" }
     }
-    elseif ($action -notmatch '^(app|run)\s') { $commandProblems += "$name has an unknown action" }
+    elseif ($action -notmatch '^(app|ask|run)\s') { $commandProblems += "$name has an unknown action" }
 }
 # (`emit omawin <command>` too: the same words, sent to the menu app instead, roadmap 1.2.)
 foreach ($m in [regex]::Matches((Get-Content "$Repo\config\glazewm\config.yaml" -Raw), "(?:omawin\.exe|emit omawin) ([a-z -]+?)'")) {

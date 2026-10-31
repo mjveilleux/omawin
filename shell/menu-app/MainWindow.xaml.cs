@@ -236,6 +236,9 @@ public sealed partial class MainWindow : Window
         backgroundsOf = null;
         galleryOpen = false;
         galleryAsking = null;
+        settingsArea = null; // Windows' settings by area (MainWindow.Settings.cs)
+        confirmingAdmin = false;
+        settingNote = null;
         Input.Text = "";
         selected = 0;
         // --open style.theme: straight to the theme list; --open style.backgrounds [theme]: to
@@ -600,6 +603,7 @@ public sealed partial class MainWindow : Window
     {
         rows.Clear();
         EndVirtual();
+        settingRows.Clear();
         used = 0;
         liftedRow = null;
         TileLayout? home = null; // set: this view is tiles
@@ -643,6 +647,10 @@ public sealed partial class MainWindow : Window
             FooterLeft.Text = $"{shown.Name} · {grid.Cells.Count} backgrounds";
             SetKeys(("←↑↓→", "move"), ("↵", "set"), ("tab", "another theme"), ("esc", "back"));
         }
+        else if (RenderSettingsViews(query))
+        {
+            // Setup › Windows › an area, or the admin changes waiting (MainWindow.Settings.cs)
+        }
         else if (galleryOpen)
         {
             RenderGallery(query);
@@ -677,21 +685,39 @@ public sealed partial class MainWindow : Window
             // A sum ("12*4.5", "sqrt(2)"): its value first; Enter copies it (Calc.cs).
             bool sum = Calc.TryEvaluate(query, out var value);
             string result = sum ? Calc.Format(value) : "";
-            if (sum) rows.Add((null, () => { ClipboardHistory.SetText(result); Dismiss(); }));
+            void Copy() { ClipboardHistory.SetText(result); Dismiss(); }
             var list = Launcher.Search(launchItems, query);
-            foreach (var match in list)
+            // The top Windows settings for it go under the apps (MainWindow.Settings.cs). Those rows
+            // are drawn as they're added, which a virtualized list can't hold, so a search that finds
+            // settings draws its apps the same way, the first 150 (a query that finds a setting is
+            // specific: its apps are few).
+            if (query.Length >= 2 && WinSettings.Search(query, 1).Count > 0)
             {
-                var item = match.Item;
-                rows.Add((null, () => Launch(item, query)));
+                if (sum) AddRow(char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), Copy, Tag.Text, "↵ copy", sub: query);
+                foreach (var match in list.Take(150))
+                {
+                    var item = match.Item;
+                    AddRow(item.Icon, item.Name, KindColor(item), () => Launch(item, query), Tag.Text, item.Hint, appId: item.IconKey, highlight: match.Positions);
+                }
+                AddSettingResults(query, 3);
             }
-            int skip = sum ? 1 : 0;
-            if (rows.Count == 0) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
-            else Virtualize((v, i) =>
+            else
             {
-                if (i < skip) { DrawRow(v, char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), Tag.Text, "↵ copy", sub: query); return; }
-                var item = list[i - skip].Item;
-                DrawRow(v, item.Icon, item.Name, KindColor(item), Tag.Text, item.Hint, appId: item.IconKey, highlight: list[i - skip].Positions);
-            });
+                if (sum) rows.Add((null, Copy));
+                foreach (var match in list)
+                {
+                    var item = match.Item;
+                    rows.Add((null, () => Launch(item, query)));
+                }
+                int skip = sum ? 1 : 0;
+                if (rows.Count == 0) AddRow(char.ConvertFromUtf32(0xF0156), "No matches", Hex(theme.Comment), () => { }, dim: true);
+                else Virtualize((v, i) =>
+                {
+                    if (i < skip) { DrawRow(v, char.ConvertFromUtf32(0xF00EC), "= " + result, Hex(theme.Green), Tag.Text, "↵ copy", sub: query); return; }
+                    var item = list[i - skip].Item;
+                    DrawRow(v, item.Icon, item.Name, KindColor(item), Tag.Text, item.Hint, appId: item.IconKey, highlight: list[i - skip].Positions);
+                });
+            }
             FooterLeft.Text = $"{launchItems.Count(i => i.IsApp)} apps";
             SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : "close"));
         }
@@ -707,12 +733,14 @@ public sealed partial class MainWindow : Window
                 // By kind: submenus purple, pages and the pickers cyan, actions yellow,
                 // ones that ask first (restart, shut down) red, what's installed gray.
                 var color = Hex(have ? theme.Comment : e.IsSubmenu ? theme.Purple : e.Confirm ? theme.Red
-                    : e.Kind is "themes" or "backgrounds" or "plugins" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
+                    : e.Kind is "themes" or "backgrounds" or "plugins" or "settings" || e.Kind.StartsWith('@') ? theme.Cyan : theme.Yellow);
                 var (tag, text) = TagFor(e, have);
                 string? sub = query.Length > 0 && e.Parent.Length > 0 ? MenuModel.PathLabel(entries, e.Parent) : null;
                 AddRow(e.Icon, e.Label, color, () => Pick(e), tag, text, dim: have, sub: sub);
             }
-            if (list.Count == 0)
+            // Typing also finds every Windows setting, under the menu's own rows (MainWindow.Settings.cs).
+            int settingsFound = query.Length > 0 ? AddSettingResults(query, 12) : 0;
+            if (list.Count == 0 && settingsFound == 0)
                 AddRow(char.ConvertFromUtf32(0xF0156), current == "remove" ? "Nothing from Install is on this PC" : "No matches", Hex(theme.Comment), () => { }, dim: true);
             SetKeys(("↑↓", "move"), ("↵", "open"), ("esc", query.Length > 0 ? "clear" : current.Length > 0 ? "back" : "close"));
         }
@@ -947,7 +975,7 @@ public sealed partial class MainWindow : Window
 
     (Tag, string) TagFor(MenuEntry e, bool have)
     {
-        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" or "plugins" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
+        if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" or "plugins" or "settings" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
         if (have) return (Tag.Installed, "Installed");
         if (e.Kind == "omawin" && e.Argument == "toggle stay-awake") return StayAwake.On ? (Tag.Installed, "On") : (Tag.Text, "off");
         if (e.Kind == "omawin" && e.Argument == "toggle animations") return Motion.On ? (Tag.Installed, "On") : (Tag.Text, "off");
@@ -1276,6 +1304,8 @@ public sealed partial class MainWindow : Window
         // Quick settings asked "Press again to turn Wi-Fi off": only Space or Enter (the press
         // that asked, repeated) can confirm it; any other key drops it.
         if (e.Key is not (VirtualKey.Space or VirtualKey.Enter)) ForgetOff();
+        // Windows' settings rows: Space, ← / → and Ctrl+Z (MainWindow.Settings.cs).
+        if (SettingKey(e.Key, ctrl, shift)) { e.Handled = true; return; }
         switch (e.Key)
         {
             case VirtualKey.X when ctrl && launching && page is "clipboard" or "localhost":
@@ -1363,7 +1393,7 @@ public sealed partial class MainWindow : Window
 
     void Back(bool hideAtTop)
     {
-        if (LeavePage() || LeaveGallery()) return;
+        if (LeavePage() || LeaveGallery() || LeaveSettings()) return;
         string from = current;
         if (finding)
         {
@@ -1401,6 +1431,7 @@ public sealed partial class MainWindow : Window
     // --- doing things -----------------------------------------------------------------------
     void Pick(MenuEntry e)
     {
+        if (e.Kind == "settings") { OpenSettings(e); return; } // Setup › Windows (MainWindow.Settings.cs)
         Input.Text = "";
         if (e.IsSubmenu) { current = e.Id; selected = 0; Render(); Slide(1); return; }
         if (e.Package != null && installed.Contains(e.Package)) return; // already installed

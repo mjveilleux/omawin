@@ -57,11 +57,13 @@ public static class SettingSearch
             if (name.StartsWith(query, StringComparison.OrdinalIgnoreCase)) score += 2;
             else if (WordStarts(name, query)) score += 1;
         }
-        foreach (var keyword in keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        // The keywords as one text: one match per row, not one per word (Windows' index has a
+        // couple of thousand rows, scored on every keystroke).
+        if (keywords.Length > 0)
         {
-            double k = Fuzzy.Match(keyword, query) - 0.5;
+            double k = Fuzzy.Match(keywords, query) - 0.5;
             // A keyword typed whole ("hz", "ext") is as good as the name.
-            if (keyword.Equals(query, StringComparison.OrdinalIgnoreCase)) k += 2.5;
+            if (k != Fuzzy.None && IsWord(keywords, query)) k += 2.5;
             if (k > score) { score = k; positions = []; }
         }
         // Every word somewhere in name, keywords and place ("explorer hidden"): a weaker match.
@@ -74,6 +76,14 @@ public static class SettingSearch
         if (score == Fuzzy.None) return null;
         score -= 0.02 * Math.Max(0, name.Length - query.Length); // shorter names first
         return (score, positions);
+    }
+
+    // query is one of text's space-separated words.
+    static bool IsWord(string text, string query)
+    {
+        for (int at = text.IndexOf(query, StringComparison.OrdinalIgnoreCase); at >= 0; at = text.IndexOf(query, at + 1, StringComparison.OrdinalIgnoreCase))
+            if ((at == 0 || text[at - 1] == ' ') && (at + query.Length == text.Length || text[at + query.Length] == ' ')) return true;
+        return false;
     }
 
     static bool WordStarts(string name, string query) =>
