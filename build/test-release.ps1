@@ -64,7 +64,8 @@ try {
     Remove-Item -Recurse -Force $Release -ErrorAction SilentlyContinue
     # The workflow's order: pack, (sign), then the manifest - so a signature can sit in between and
     # the hashes still describe the files that are published.
-    & "$Repo\build\release.ps1" -Tag $Tag -InDir $Built -OutDir $Release -Arch $Arch -NoManifest
+    # -AllowJit: this PC may not have the C++ tools for the native build; CI insists on it.
+    & "$Repo\build\release.ps1" -Tag $Tag -InDir $Built -OutDir $Release -Arch $Arch -NoManifest -AllowJit
     & "$Repo\build\release.ps1" -Tag $Tag -OutDir $Release -OnlyManifest
     Check 'a manifest with every asset' {
         $names = (Get-Content "$Release\SHA256SUMS.txt") | ForEach-Object { ($_ -split '\s+')[1] }

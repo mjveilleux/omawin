@@ -274,9 +274,20 @@ jobs:
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
         with:
           dotnet-version: '9.0.x'
-      - name: Build (the same script this PC runs)
+      # -Aot: the native build or a failed job, never a silent JIT build (roadmap 1.3: it starts
+      # in 0.34 s instead of 1.04 s), so a runner image without the C++ tools can't ship the slow one.
+      - name: Build (the same script this PC runs; native, or the job fails)
         shell: pwsh
-        run: .\shell\menu-app\build.ps1 -OutDir out\menu-${{ matrix.arch }} -BuildOnly -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu-${{ matrix.arch }} -BuildOnly -Aot -Arch ${{ matrix.arch }} -Release '${{ needs.meta.outputs.version }}'
+      - name: Check it's the native build
+        shell: pwsh
+        run: |
+          $out = 'out\menu-${{ matrix.arch }}'
+          $kind = (Get-Content "$out\build-kind.txt" -Raw).Trim()
+          if ($kind -ne 'native') { throw "build-kind.txt says '$kind', not 'native'" }
+          # A native build is one program with no .NET runtime beside it: coreclr.dll is the JIT build's.
+          if (Test-Path "$out\coreclr.dll") { throw 'coreclr.dll is there: this is the JIT build' }
+          Write-Host "native: $([math]::Round((Get-Item "$out\SystemMenu.exe").Length / 1MB, 1)) MB SystemMenu.exe"
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: menu-${{ matrix.arch }}

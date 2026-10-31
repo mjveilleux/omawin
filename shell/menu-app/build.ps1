@@ -17,8 +17,8 @@ param(
     # The release this build is from (SystemMenu --version); CI passes the tag.
     [string]$Release,
     # One native program (Native AOT): up in a fraction of the time, which counts at sign-in.
-    # It's the build wherever Visual Studio's C++ tools are (its linker needs them); -Aot asks
-    # for it anyway, -Jit for the ordinary .NET build.
+    # It's the build wherever Visual Studio's C++ tools are (its linker needs them); -Aot insists
+    # on it (and fails without them), -Jit asks for the ordinary .NET build.
     [switch]$Aot,
     [switch]$Jit
 )
@@ -38,9 +38,15 @@ if (-not $BuildOnly) {
     & "$PSScriptRoot\stop-menu.ps1" -Dir $out
 }
 
-# Native when the C++ tools are here (vswhere says; the linker needs vswhere on the PATH too).
+# Native when the C++ tools for this architecture are here (vswhere says; the linker needs
+# vswhere on the PATH too).
 $installer = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer'
-$cpp = (Test-Path "$installer\vswhere.exe") -and [bool](& "$installer\vswhere.exe" -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath 2>$null)
+$component = if ($Arch -eq 'arm64') { 'Microsoft.VisualStudio.Component.VC.Tools.ARM64' } else { 'Microsoft.VisualStudio.Component.VC.Tools.x86.x64' }
+$cpp = (Test-Path "$installer\vswhere.exe") -and [bool](& "$installer\vswhere.exe" -products * -requires $component -property installationPath 2>$null)
+# -Aot means the native build or nothing: a silent JIT build would ship 0.7 s slower to start
+# (CI passes it, so a runner image without the C++ tools fails the release instead).
+if ($Aot -and $Jit) { throw '-Aot and -Jit: pick one' }
+if ($Aot -and -not $cpp) { throw "-Aot needs Visual Studio's C++ tools ($component; vswhere found none): the native build can't link" }
 $native = -not $Jit -and ($Aot -or $cpp)
 if ($native) { $env:PATH = "$installer;$env:PATH" }
 # The two builds leave different files: switching from one to the other starts the folder afresh.

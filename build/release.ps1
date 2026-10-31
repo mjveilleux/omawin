@@ -26,7 +26,8 @@ param(
     # Signing sits between the two: the ZIPs are built, signed, and only then hashed, so the
     # manifest describes the signed bytes (docs/releases.md).
     [switch]$NoManifest,           # pack only
-    [switch]$OnlyManifest          # hash what is in -OutDir, pack nothing
+    [switch]$OnlyManifest,         # hash what is in -OutDir, pack nothing
+    [switch]$AllowJit              # pack a menu app that isn't the native build (a local test release)
 )
 $ErrorActionPreference = 'Stop'
 if ($InDir -and -not [IO.Path]::IsPathRooted($InDir)) { $InDir = Join-Path (Get-Location).Path $InDir }
@@ -54,7 +55,13 @@ if (-not $OnlyManifest) {
 
     foreach ($a in $Arch) {
         $menu = Join-Path $InDir "menu-$a"
-        if (Test-Path (Join-Path $menu 'SystemMenu.exe')) { Add-Zip $menu "SystemMenu-$Tag-win-$a.zip" }
+        if (Test-Path (Join-Path $menu 'SystemMenu.exe')) {
+            # Releases ship the native build only (roadmap 1.3); CI checks it too, this is the second
+            # guard, so a locally packed release can't carry the slower JIT one by accident.
+            $kind = "$(Get-Content (Join-Path $menu 'build-kind.txt') -Raw -ErrorAction SilentlyContinue)".Trim()
+            if ($kind -ne 'native' -and -not $AllowJit) { throw "menu-$a is a '$kind' build; releases ship the native one (build.ps1 -Aot), or -AllowJit for a test release" }
+            Add-Zip $menu "SystemMenu-$Tag-win-$a.zip"
+        }
         else { Write-Warning "no menu app for win-$a ($menu): left out of this release" }
 
         $music = Join-Path $InDir "music-$a\omawin-music.exe"
