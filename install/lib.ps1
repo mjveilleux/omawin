@@ -83,6 +83,15 @@ function Get-GitHome {
     $null
 }
 function Test-WslInstalled { Test-Path "$env:ProgramFiles\WSL\wsl.exe" }
+# WSL 2 needs virtualization turned on in the firmware. With Hyper-V (or WSL) already running,
+# Windows itself is the hypervisor and the processor reports it off, so that counts too. Asked of
+# WMI, which needs no admin; when it can't tell, $true (wsl --install says why if it fails).
+function Test-Virtualization {
+    try {
+        if ((Get-CimInstance Win32_ComputerSystem -ErrorAction Stop).HypervisorPresent) { return $true }
+        @(Get-CimInstance Win32_Processor -ErrorAction Stop | Where-Object { $_.VirtualizationFirmwareEnabled }).Count -gt 0
+    } catch { $true }
+}
 function Get-WslDistros {
     Get-ChildItem 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss' -ErrorAction SilentlyContinue |
         ForEach-Object { $_.GetValue('DistributionName') } | Where-Object { $_ }

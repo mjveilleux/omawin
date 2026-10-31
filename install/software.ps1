@@ -547,14 +547,26 @@ function Initialize-Presets {
         $picked = @($answer -split '[\s,]+' | Where-Object { $_ } | ForEach-Object {
                 if ($Presets.Contains($_)) { $_ } else { Write-Warn "no preset '$_'" } })
         $picked = @($picked | Where-Object { $_ -ne 'wsl' })
-        # Linux in WSL (the wsl preset): Arch unless this account already has one of the others.
+        # Linux in WSL (the wsl preset), on by default (roadmap 3.1): Arch unless this account
+        # already has one of the others. Enter takes it only when that needs no admin (WSL is on
+        # this PC already); otherwise WSL goes in with the one admin prompt and a restart, so it's
+        # yours to type, and Enter leaves it out (plans/roadmap.md 2.9: Enter through every
+        # question, no admin prompt). Without virtualization in the firmware it isn't offered.
         $choices = @(Get-LinuxChoices)
         $have = @(Get-WslDistros)
         $default = $choices | Where-Object { $have -contains $_.Distro } | Select-Object -First 1
         if (-not $default) { $default = $choices[0] }
         $names = @($choices | ForEach-Object Name) + 'none'
-        $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? (Enter for $($default.Name))").Trim().ToLower()
-        if (-not $answer) { $answer = $default.Name }
+        if (-not (Test-Virtualization)) {
+            Write-Warn 'Linux in WSL needs virtualization, which is off in this PC''s firmware (UEFI/BIOS: Intel VT-x or AMD SVM). Turn it on, then: omawin preset add wsl'
+            $answer = 'none'
+        } elseif (Test-WslInstalled) {
+            $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? (Enter for $($default.Name))").Trim().ToLower()
+            if (-not $answer) { $answer = $default.Name }
+        } else {
+            $answer = (Read-InstallAnswer "Linux in WSL: $($names -join ', ')? WSL itself takes admin once, then a restart (Enter for none; omawin preset add wsl later)").Trim().ToLower()
+            if (-not $answer) { $answer = 'none' }
+        }
         $linux = $choices | Where-Object Name -eq $answer | Select-Object -First 1
         if ($linux) {
             $picked += 'wsl'
