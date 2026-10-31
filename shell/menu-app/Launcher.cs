@@ -10,7 +10,10 @@ public sealed record LaunchItem(string Icon, string Name, string Command, string
     // Other names to find it by: the program ("pwsh" for PowerShell 7, "taskmgr"), or the
     // Store package's name with its words split ("Windows Calculator"). Matched a little
     // weaker than the name itself.
-    public string[] Keywords { get; } = KeywordsOf(Command, AppId);
+    public string[] Keywords { get; init; } = KeywordsOf(Command, AppId);
+
+    // A Linux GUI app's distro as its label says it ("Arch"), null for a Windows app (roadmap 3.7).
+    public string? Linux { get; init; }
 
     // How it's remembered (launch-history.json).
     public string Key => AppId ?? Name;
@@ -68,6 +71,7 @@ public sealed record LaunchItem(string Icon, string Name, string Command, string
         "files" => "files + folders ›",
         "packages" => "winget, choco, scoop ›",
         "vpn" => "vpn",
+        _ when Linux != null => Linux + " app",
         _ when IsApp => "app",
         _ when Launcher.Link.IsMatch(Command) => "link",
         _ => "app",
@@ -119,13 +123,22 @@ public static class Launcher
             catch { }
         }
         var names = new HashSet<string>(items.Select(i => i.Name), StringComparer.OrdinalIgnoreCase);
+        var distros = Projects.Distros();
         try
         {
             foreach (var line in File.ReadAllLines(AppsFile))
             {
                 var parts = line.Split('\t', 2);
-                if (parts.Length == 2 && names.Add(parts[0]))
-                    items.Add(new LaunchItem(char.ConvertFromUtf32(0xF003B), parts[0], "", parts[1]));
+                if (parts.Length != 2 || !names.Add(parts[0])) continue;
+                var item = new LaunchItem(char.ConvertFromUtf32(0xF003B), parts[0], "", parts[1]);
+                // A Linux GUI app (WSLg's shortcut): its distro's logo until its own icon loads,
+                // found by "linux" and the distro's name too, and its hint says which Linux.
+                if (LinuxState.WslgDistro(parts[0], distros) is { } distro)
+                {
+                    var label = LinuxFiles.Label(distro);
+                    item = item with { Icon = char.ConvertFromUtf32(LinuxFiles.Logo(distro)), Linux = label, Keywords = [.. item.Keywords, "linux", label] };
+                }
+                items.Add(item);
             }
         }
         catch { }

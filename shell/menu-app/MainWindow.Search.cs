@@ -595,7 +595,7 @@ public sealed partial class MainWindow
         if (ReferenceEquals(appsFor, launchItems)) return appResults;
         appsFor = launchItems;
         return appResults = [.. launchItems.Select(item => new Result("app:" + item.Key, STag.App, item.Name,
-            item.IsApp ? "" : item.Hint.TrimEnd(' ', '›'), string.Join(' ', item.Keywords),
+            item.IsApp ? item.Linux ?? "" : item.Hint.TrimEnd(' ', '›'), string.Join(' ', item.Keywords),
             Primary: () => { Launch(item, SearchText); return Task.CompletedTask; })
             { Icon = item.Icon, IconKey = item.IconKey, Data = item })];
     }

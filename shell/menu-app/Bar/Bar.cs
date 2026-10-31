@@ -258,7 +258,7 @@ public static class Bar
             {
                 var (name, distro) = Projects.Linux;
                 LinuxState.Status? now = null;
-                if (LinuxRegistered(distro))
+                if (Projects.Distros().Contains(distro, StringComparer.OrdinalIgnoreCase))
                 {
                     var (vmUp, vmBytes) = WslVm();
                     if (distro != lastDistro || linuxAsk) vmWasUp = false; // ask now
@@ -278,19 +278,6 @@ public static class Bar
             catch (Exception ex) { App.Log(ex); }
             linuxNow.WaitOne(5000);
         }
-    }
-
-    // This account's distros, from WSL's registry (reading it starts nothing).
-    static bool LinuxRegistered(string distro)
-    {
-        using var lxss = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
-        if (lxss == null) return false;
-        foreach (var id in lxss.GetSubKeyNames())
-        {
-            using var key = lxss.OpenSubKey(id);
-            if (string.Equals(key?.GetValue("DistributionName") as string, distro, StringComparison.OrdinalIgnoreCase)) return true;
-        }
-        return false;
     }
 
     // WSL's VM: up when its process is there (vmmemWSL; vmmem on older WSL), and its memory when

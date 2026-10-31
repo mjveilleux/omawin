@@ -36,6 +36,17 @@ public class LinuxStateTests
     }
 
     [Fact]
+    public void LinuxGuiAppsAreKnownByTheirDistro()
+    {
+        string[] distros = ["archlinux", "Ubuntu"];
+        Assert.Equal("archlinux", LinuxState.WslgDistro("Firefox (archlinux)", distros));
+        Assert.Equal("Ubuntu", LinuxState.WslgDistro("Text Editor (ubuntu)", distros));
+        Assert.Null(LinuxState.WslgDistro("Visual Studio Code (User)", distros));   // a Windows app's own brackets
+        Assert.Null(LinuxState.WslgDistro("Firefox", distros));
+        Assert.Null(LinuxState.WslgDistro("(archlinux)", distros));
+    }
+
+    [Fact]
     public void EachDistroHasItsLogo()
     {
         Assert.Equal(0xF303, LinuxFiles.Logo("archlinux"));

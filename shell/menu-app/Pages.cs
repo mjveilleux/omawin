@@ -48,6 +48,23 @@ public static class Projects
         }
     }
     public static string Distro => Linux.Distro;
+
+    // This account's distros by their WSL names, from WSL's registry (reading it starts nothing).
+    public static List<string> Distros()
+    {
+        var names = new List<string>();
+        try
+        {
+            using var lxss = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Lxss");
+            foreach (var id in lxss?.GetSubKeyNames() ?? [])
+            {
+                using var key = lxss!.OpenSubKey(id);
+                if (key?.GetValue("DistributionName") is string { Length: > 0 } name) names.Add(name);
+            }
+        }
+        catch (Exception ex) when (ex is System.Security.SecurityException or IOException or UnauthorizedAccessException) { }
+        return names;
+    }
     static readonly string[] Roots = [Path.Combine(Home, "Documents"), Path.Combine(Home, "OneDrive", "Documents"), Path.Combine(Home, "source", "repos"), Path.Combine(Home, "repos")];
     static string WslCache => Path.Combine(MenuModel.StateDir, "wsl-projects.txt");
 

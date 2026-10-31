@@ -29,5 +29,17 @@ public static class LinuxState
     public static string Memory(long bytes) =>
         bytes >= 1L << 30 ? $"{bytes / (double)(1L << 30):0.0} GB" : $"{bytes >> 20} MB";
 
+    // A Linux GUI app (roadmap 3.7): WSLg puts a Start menu shortcut for each app a distro has,
+    // named "<app> (<distro>)", so Windows' Apps folder already lists them (AppsFolder.cs). Which
+    // distro one is from, given this account's distros; null for any other app.
+    public static string? WslgDistro(string name, IEnumerable<string> distros)
+    {
+        if (!name.EndsWith(')')) return null;
+        int open = name.LastIndexOf(" (", StringComparison.Ordinal);
+        if (open <= 0) return null;
+        var inside = name[(open + 2)..^1];
+        return distros.FirstOrDefault(d => d.Equals(inside, StringComparison.OrdinalIgnoreCase));
+    }
+
     static string Title(string name) => name.Length == 0 ? "Linux" : char.ToUpperInvariant(name[0]) + name[1..];
 }
