@@ -19,6 +19,8 @@ public sealed record BarData(
     int Updates)
 {
     public sealed record Battery(int Percent, bool Charging);
+    // Your Linux in WSL (Bar.LinuxLoop); null without one.
+    public LinuxState.Status? Linux { get; init; }
 }
 
 // One of bar.json's widgets (Omarchy's bar widgets, as Zebar's bar had them: the same names, behaviour and
@@ -45,6 +47,7 @@ public abstract class BarWidget
         "monitor" => new MonitorWidget(),
         "power" => new PowerWidget(),
         "tray" => new TrayWidget(),
+        "linux" => new LinuxWidget(),
         _ => null, // media, agents: not yet (docs/native-bar.md); music is a plugin (shell/plugins/omawin.music)
     };
 
@@ -359,6 +362,38 @@ sealed class TrayWidget : BarWidget
     [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool GetCursorPos(out Point point);
 
     public override void Paint(Theme theme) { base.Paint(theme); chevron.Paint(theme); foreach (var c in cells.Values) c.Cell.Paint(theme); }
+}
+
+// Your Linux in WSL (roadmap 3.10): its distro's logo, bright while it runs and faint while it's
+// stopped; not there without a Linux. Click: a terminal in it (starting it); right click, while it
+// runs: stop it (omawin linux stop, the keep-warm with it). The tooltip has the VM's memory.
+sealed class LinuxWidget : BarWidget
+{
+    readonly Cell cell = new();
+    LinuxState.Status? last;
+    public override FrameworkElement Element => cell;
+    public LinuxWidget()
+    {
+        cell.Visibility = Visibility.Collapsed;
+        cell.Click = () => { SystemMenu.Bar.Omawin("launch terminal --wsl"); SystemMenu.Bar.LinuxChanged(); };
+        cell.RightClick = () =>
+        {
+            if (last is not { Running: true }) return;
+            SystemMenu.Bar.Omawin("linux stop");
+            SystemMenu.Bar.LinuxChanged();
+        };
+    }
+    public override void Update(BarData data)
+    {
+        last = data.Linux;
+        if (data.Linux is not { } s) { cell.Visibility = Visibility.Collapsed; return; }
+        cell.Visibility = Visibility.Visible;
+        cell.SetIcon(Glyph(LinuxFiles.Logo(s.Distro)));
+        // The icon's own opacity, not the cell's: the cell's is the bar's arrival fade (Bar.Arrive).
+        cell.Icon.Opacity = s.Running ? 1 : 0.45;
+        cell.Tip = LinuxState.Tip(s);
+    }
+    public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
 }
 
 // The Bluetooth glyph; click: Quick settings (its radio and devices).

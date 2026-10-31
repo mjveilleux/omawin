@@ -4,6 +4,6 @@
   "centerBegin": ["indicators"],
   "center": ["clock"],
   "centerEnd": ["system-update"],
-  "right": ["media", "tray", "agents", "bluetooth", "network", "audio", "monitor", "power"],
+  "right": ["media", "tray", "agents", "linux", "bluetooth", "network", "audio", "monitor", "power"],
   "clock": { "format": "EEEE HH:mm", "formatAlt": "d MMMM 'W'WW yyyy" }
 }

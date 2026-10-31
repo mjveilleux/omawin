@@ -825,7 +825,7 @@ public sealed partial class MainWindow : Window
         Chip("Folders", FoldersOnly, char.ConvertFromUtf32(0xF0770)); // folder-search
         Chip("Images", ImagesOnly, char.ConvertFromUtf32(0xF02E9)); // image
         foreach (var (root, label) in scopes)
-            Chip(label, root, char.ConvertFromUtf32(label switch
+            Chip(label, root, char.ConvertFromUtf32(LinuxFiles.LogoOfRoot(root) ?? label switch // Linux's: its distro's logo
             {
                 "Desktop" or "OneDrive Desktop" => 0xF01C4, "Documents" or "OneDrive Documents" => 0xF0219, "Downloads" => 0xF0B4F, _ => 0xF024B,
             }));
