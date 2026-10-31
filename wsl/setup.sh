@@ -224,8 +224,9 @@ ubuntu_root() {
   esac
   export DEBIAN_FRONTEND=noninteractive
   say "packages"
+  updatedb_conf
   apt-get update -qq
-  apt-get install -y -qq "${ubuntu_apt[@]}" > /dev/null
+  apt-get install -y -qq -o Dpkg::Options::=--force-confold "${ubuntu_apt[@]}" > /dev/null
   # Ubuntu names these fdfind and batcat
   [[ -e /usr/local/bin/fd ]] || ln -s "$(command -v fdfind)" /usr/local/bin/fd
   [[ -e /usr/local/bin/bat ]] || ln -s "$(command -v batcat)" /usr/local/bin/bat
@@ -246,6 +247,19 @@ ubuntu_root() {
     curl -fsSL "$(latest_asset tree-sitter/tree-sitter "tree-sitter-linux-$ts_arch.gz")" | gunzip > /usr/local/bin/tree-sitter.new
     mv /usr/local/bin/tree-sitter.new /usr/local/bin/tree-sitter
     chmod +x /usr/local/bin/tree-sitter
+  fi
+}
+
+# plocate's index: its install and its daily timer run updatedb, which would crawl Windows' drives
+# under /mnt for many minutes (Arch's updatedb.conf leaves /mnt out; Ubuntu's doesn't). Written
+# before plocate's install too, which keeps it (--force-confold) and indexes without them.
+updatedb_conf() {
+  local conf=/etc/updatedb.conf
+  if [[ ! -f $conf ]]; then
+    printf '%s\n' 'PRUNE_BIND_MOUNTS="yes"' 'PRUNEPATHS="/mnt /tmp /var/spool /media"' \
+      'PRUNEFS="9p NFS afs autofs binfmt_misc cgroup cgroup2 cifs configfs debugfs devpts devtmpfs fusectl nfs nfs4 proc pstore securityfs smbfs sysfs tmpfs tracefs"' > "$conf"
+  elif ! grep -Eq '^PRUNEPATHS="([^"]* )?/mnt[ "]' "$conf"; then
+    sed -i -E 's|^PRUNEPATHS="|PRUNEPATHS="/mnt |' "$conf"
   fi
 }
 
@@ -396,7 +410,14 @@ root_part() {
 }
 
 update_part() {
-  # Only a Linux omawin set up: someone's own distro is theirs.
+  local user
+  user="$(wsl_user /etc/wsl.conf)"
+  # Only a Linux omawin set up: someone's own distro is theirs. One an older setup made (before
+  # /etc/omawin) has omawin's block in its user's ~/.bashrc, as wsl/install.ps1 checks; it's marked
+  # now, else its block keeps pointing at whatever the repo had then.
+  if [[ ! -f /etc/omawin && -n $user ]] && grep -qs '^# >>> omawin >>>$' "/home/$user/.bashrc"; then
+    printf 'Set up by omawin (an older wsl/setup.sh), marked %s.\n' "$(date +%Y-%m-%d)" > /etc/omawin
+  fi
   [[ -f /etc/omawin ]] || { say "not omawin's Linux: left alone"; return 0; }
   mkdir -p "$omawin_share"
   case "$distro" in
@@ -404,8 +425,6 @@ update_part() {
     ubuntu) ubuntu_update ;;
     *) say "nothing to update in $distro"; return 0 ;;
   esac
-  local user
-  user="$(wsl_user /etc/wsl.conf)"
   [[ -n $user ]] && id "$user" > /dev/null 2>&1 || return 0
   # What a newer omawin sets up as root, for a Linux set up before it (wsl.conf applies from the
   # distro's next start).
@@ -449,8 +468,7 @@ case \":\$PATH:\" in *\":\$HOME/.local/bin:\"*) ;; *) PATH=\"\$HOME/.local/bin:\
   put_block ~/.bashrc "export OMAWIN=$(printf %q "$repo") OMAWIN_STATE=$(printf %q "$state")
 export STARSHIP_CONFIG=\"\$OMAWIN/config/starship/starship.toml\" HERDR_CONFIG_PATH=\"\$OMAWIN/config/herdr/config.toml\"
 export EDITOR=nvim BROWSER=\"\$HOME/.local/bin/browser\"
-export OMARCHY_PATH=$omarchy_dir
-[[ -f \$OMARCHY_PATH/default/bash/rc ]] && . \"\$OMARCHY_PATH/default/bash/rc\"
+if [[ -f $omarchy_dir/default/bash/rc ]]; then export OMARCHY_PATH=$omarchy_dir; . \"\$OMARCHY_PATH/default/bash/rc\"; fi
 [[ -f \$OMAWIN/config/bash/bashrc ]] && . \"\$OMAWIN/config/bash/bashrc\""
 }
 

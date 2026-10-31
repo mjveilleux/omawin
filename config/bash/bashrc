@@ -76,6 +76,10 @@ if [[ -n ${WSL_DISTRO_NAME:-} ]]; then
   esac
   unset OMAWIN_WINDOWS
 
+  # Every folder on Windows' drives (/mnt/c) is other-writable to Linux, which dircolors paints
+  # blue on green (ow, tw): plain folders here, in ls, tab completion, fd and tree alike.
+  [[ -n ${LS_COLORS:-} ]] && export LS_COLORS="$LS_COLORS:ow=01;34:tw=01;34"
+
   # The theme Windows rendered (themes/render.ps1 -> theme-linux.sh): read again when it's newer
   # than what this shell last saw, which costs one stat over /mnt/c per prompt.
   omawin_theme_file=${OMAWIN_STATE:+$OMAWIN_STATE/theme-linux.sh}
