@@ -25,6 +25,7 @@
     <Compile Include="..\..\shell\menu-app\Plugins\Protocol.cs" Link="Linked\Plugins\Protocol.cs" />
     <Compile Include="..\..\shell\menu-app\Contrast.cs" Link="Linked\Contrast.cs" />
     <Compile Include="..\..\shell\menu-app\IconScale.cs" Link="Linked\IconScale.cs" />
+    <Compile Include="..\..\shell\menu-app\PackageLogo.cs" Link="Linked\PackageLogo.cs" />
   </ItemGroup>
 
   <ItemGroup>

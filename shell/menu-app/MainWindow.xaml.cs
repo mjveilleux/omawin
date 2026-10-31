@@ -460,6 +460,7 @@ public sealed partial class MainWindow : Window
         if (name == themeName) return false;
         themeName = name;
         theme = MenuModel.LoadTheme(name);
+        AppIcons.Light = theme.Mode == "light"; // Store apps' light unplated logos
         Root.RequestedTheme = theme.Mode == "light" ? ElementTheme.Light : ElementTheme.Dark;
         // Tinted glass: the acrylic blur of what's behind, in the theme's background.
         Root.Background = Brush(theme.Background, theme.Mode == "light" ? (byte)0xCC : (byte)0xB4);
