@@ -69,7 +69,8 @@ public sealed class ViewerWindow : Window
         root.Children.Add(scroller);
         Content = root;
         foreach (var t in new[] { name, facts, keys }) t.FontFamily = textFont;
-        root.KeyDown += OnKey;
+        // Before the scroller sees them: it would take ← and → for itself.
+        root.PreviewKeyDown += OnKey;
         scroller.SizeChanged += (_, _) => Fit();
         Closed += (_, _) => open = null;
     }
@@ -179,6 +180,8 @@ public sealed class ViewerWindow : Window
 
     void OnKey(object sender, KeyRoutedEventArgs e)
     {
+        // Ctrl+C copies selected text, Ctrl+wheel zooms: those are the controls' own.
+        if (Microsoft.UI.Input.InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down)) return;
         bool picture = ViewerFile.KindOf(path) == ViewerFile.Kind.Picture;
         switch (e.Key)
         {
