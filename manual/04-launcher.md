@@ -102,3 +102,7 @@ One Search's **Files** filter (also the **Files** item, `/` typed first, or Tab 
 **Enter** opens; **Ctrl+Enter** shows it in its folder. Empty, it lists what you use most.
 
 It searches Desktop and Documents (both your home folder's and, when OneDrive backs them up, OneDrive's: chips "OneDrive Desktop", "OneDrive Documents"), Downloads, `~/repos`, `~/source/repos` and git repos in your home folder. It watches them, honors `.gitignore` (so a repo's ignored files, like a Power BI project's `.pbix` copies, don't show; its `.pbip` does) and ranks files you open higher. Folders, then files, whose own name matches come first. Folders named in `default/launcher/finder-skip.txt` (node_modules, duckdb, …) are skipped. Search is by [fff](https://github.com/dmtrKovalenko/fff).
+
+Your Linux in WSL is one more place, its chip marked with the distro's logo (Arch or Ubuntu): Linux keeps a list of its home's files itself (refreshed every 10 minutes and when `~/src` changes, .gitignore honoured, no hidden folders), so the finder never crawls `\\wsl.localhost`. A Linux file opens in Linux (`omawin launch editor`); Ctrl+Enter shows it in Explorer.
+
+**Linux apps:** a GUI app you install in your Linux (WSLg puts it in Start as "Firefox (archlinux)") is an app here too, with "Arch app" beside it; typing `linux` or the distro's name finds them.
