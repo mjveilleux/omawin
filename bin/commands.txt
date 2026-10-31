@@ -6,6 +6,7 @@
 #
 # Actions:
 #   app <request>          hand the menu app (shell/menu-app/, always running) a request: instant
+#   ask <request>          the same, for a request whose answer is printed (omawin setting get)
 #   pwsh <script> [args]   a PowerShell script of this repo, path from the repo root; in your
 #                          terminal when typed, hidden when run from a key
 #   run <program> [args]   start a program
@@ -113,3 +114,12 @@ toggle desktop-icons | Desktop icons shown or hidden (hidden by default; files s
 toggle night-light | Night light on or off. Windows has no API for it, so this opens the setting | app --qs night-light
 toggle dnd | Do not disturb on or off. No API for that either; this opens the setting | app --qs dnd
 about | About omawin and this PC (version, Windows, CPU, GPU, memory, uptime, theme), drawn like the terminal's fastfetch, in its own window | app --about
+
+setting list | Windows settings omawin reads and changes (default/launcher/settings.txt), with their values; an area narrows it: look, explorer, privacy, input, system, display, connections, sound, developer | ask --setting list
+setting get | One Windows setting's value: omawin setting get explorer.extensions | ask --setting get
+setting set | Change a Windows setting (undoable; admin ones wait for one prompt): omawin setting set explorer.hidden on; --now restarts Explorer when it needs that | ask --setting set
+setting toggle | Flip a Windows setting's switch, or step to its next choice: omawin setting toggle look.dark-apps | ask --setting toggle
+setting undo | Put back the last Windows setting changed through omawin (Ctrl+Z in the system menu) | ask --setting undo
+settings save | The Windows settings you've changed, into your account folder's settings.txt (-Shared: the PC's shared folder's), for a new PC | ask --settings save
+settings apply | Set what settings.txt says (the shared folder's, then this account's); admin ones in one prompt (-NoAdmin: leave them waiting) | ask --settings apply
+settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin

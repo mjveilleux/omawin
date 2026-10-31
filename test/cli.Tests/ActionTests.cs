@@ -13,6 +13,10 @@ public class ActionTests
         Assert.Equal(new SendToApp("--launcher projects"), Plan("app --launcher", "projects"));
 
     [Fact]
+    public void AskRequestsGetTheWordsAsTyped() =>
+        Assert.Equal(new AskApp("--setting set explorer.open-to This PC"), Plan("ask --setting set", "explorer.open-to", "This", "PC"));
+
+    [Fact]
     public void PwshScriptsRunFromTheRepoWithQuotedExtras()
     {
         var p = Assert.IsType<StartProcess>(Plan("pwsh themes/set-theme.ps1 -NextBackground", "a b"));

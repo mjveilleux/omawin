@@ -104,6 +104,17 @@ public class IndexTests
         Assert.Equal(new IndexedSetting("Pointer speed", "Bluetooth & devices › Mouse", "", "ms-settings:mousetouchpad"), rows[1]);
     }
 
+    [Theory]
+    [InlineData("SettingsPageDisplay", "ms-settings:display")]
+    [InlineData("SettingsPagePowerSleep", "ms-settings:powersleep")]
+    [InlineData("SettingsPageNoSuchThing", null)]
+    [InlineData("", null)]
+    public void PageIdsBecomeLinksOfTheCuratedList(string id, string? uri)
+    {
+        var pages = SettingsIndex.ParsePages(File.ReadAllLines(Path.Combine(CatalogTests.RepoRoot(), "default", "launcher", "settings-pages.txt")));
+        Assert.Equal(uri, SettingsIndex.PageOf(id, pages)?.Uri);
+    }
+
     [Fact]
     public void TheCacheReadsBackWhatWasWritten()
     {

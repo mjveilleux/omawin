@@ -35,6 +35,8 @@ namespace SystemMenu;
 //   SystemMenu --key <key>     down / up / tab / shift-tab / pick, as if pressed; walkthroughs too
 //   SystemMenu --hide          hide it at once, no animation (omawin profile menu, between runs)
 //   SystemMenu --start-hidden  start in the background (GlazeWM runs this at login)
+//   SystemMenu --reply <pid> --setting|--settings …  `omawin setting` / `omawin settings`: the
+//                              answer is written for the waiting omawin.exe (Reply.cs)
 //   SystemMenu --version       the release this exe is from ((dev) built off a checkout)
 //   SystemMenu --render-about <png> [frame]  draw the About window into a PNG and exit; for a
 //                              report's screenshots, never in normal use
@@ -194,6 +196,7 @@ public partial class App : Application
             Bar.Wm.Start(); // already started when the bar is up; once either way
             FileSearch.Start(); // the launcher's file indexes (fff), built in the background
             Background.Start(); // clipboard history, installed apps, reports (Background.cs)
+            WinSettings.Start(); // the settings history trimmed, Windows' settings index read if it changed (Settings/)
             Tiling.Start(); // Omarchy's window placement: each new window halves the focused one (Tiling.cs)
             StayAwake.Reset(); // a fresh start is never keeping the PC awake
             new Thread(Snip.Warm) { IsBackground = true }.Start(); // the screenshot overlay, ready
@@ -214,6 +217,9 @@ public partial class App : Application
     public void HandleRequest(string[] args)
     {
         Program.Trace("handle " + (args.Length > 0 ? args[0] : "toggle"));
+        // `omawin setting …` and other requests that print an answer (Reply.cs): they need no
+        // window, so one that comes early at sign-in is answered too.
+        if (args is ["--reply", var pid, _, ..]) { Reply.Answer(pid, args[2..]); return; }
         if (window == null) return;
         // `omawin profile menu` hides it between runs: at once, with no exit animation and no
         // focus handed back, so the next run starts from the same place.

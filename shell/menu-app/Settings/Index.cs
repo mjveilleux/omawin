@@ -76,6 +76,29 @@ public static class SettingsIndex
         return new(name, page?.Label ?? "Settings", words, uri);
     }
 
+    // A page id from Windows' file ("SettingsPageDisplay") as a page of the curated list: its
+    // ms-settings: link and label. The name after SettingsPage is usually the link's own
+    // ("Display" -> ms-settings:display); the few that differ are listed.
+    static readonly Dictionary<string, string> Renamed = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["SettingsPageAppsSizes"] = "ms-settings:appsfeatures",
+        ["SettingsPagePowerSleep"] = "ms-settings:powersleep",
+        ["SettingsPageNetworkWiFi"] = "ms-settings:network-wifi",
+        ["SettingsPageMouseTouchpad"] = "ms-settings:mousetouchpad",
+        ["SettingsPageMouse"] = "ms-settings:mousetouchpad",
+        ["SettingsPageBluetooth"] = "ms-settings:bluetooth",
+    };
+
+    public static (string Uri, string Label)? PageOf(string pageId, IReadOnlyList<IndexedSetting> pages)
+    {
+        if (pageId.Length == 0) return null;
+        var uri = Renamed.GetValueOrDefault(pageId)
+            ?? (pageId.StartsWith("SettingsPage", StringComparison.OrdinalIgnoreCase) ? "ms-settings:" + pageId[12..].ToLowerInvariant() : null);
+        if (uri == null) return null;
+        var page = pages.FirstOrDefault(p => p.Uri.Equals(uri, StringComparison.OrdinalIgnoreCase));
+        return page == null ? null : (page.Uri, page.Page);
+    }
+
     public static string Clean(string? s) => s == null ? "" : string.Join(' ', s.Split(['\t', '\r', '\n', ' ', ';'], StringSplitOptions.RemoveEmptyEntries));
 
     // --- the cache: settings-index.tsv ---------------------------------------------------------

@@ -118,7 +118,7 @@ sound.ducking | - | During calls, other sounds | ducking calls communications vo
 # --- developer --------------------------------------------------------------------------------
 developer.dev-mode | - | Developer mode | developer sideload symlink | switch | reg HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock\AllowDevelopmentWithoutDevLicense dword on=1 off=0 | admin
 developer.long-paths | - | Long paths (over 260 characters) | maxpath long path 260 | switch | reg HKLM\SYSTEM\CurrentControlSet\Control\FileSystem\LongPathsEnabled dword on=1 off=0 | admin
-developer.sudo | - | sudo for Windows | sudo elevate admin | choice | builtin sudo values="off:Off,forceNewWindow:In a new window,disableInput:Input closed,normal:Inline" | admin minBuild=26052
+developer.sudo | - | sudo for Windows | sudo elevate admin | choice | builtin sudo values="off:Off,forceNewWindow:In a new window,disableInput:Input closed,normal:Inline" | admin minBuild=26052 check
 developer.vm-platform | - | Virtual Machine Platform (WSL) | wsl hyper-v virtualization feature | switch | builtin windows-feature VirtualMachinePlatform | admin restart
 developer.wsl | - | Windows Subsystem for Linux (the feature) | wsl linux feature | switch | builtin windows-feature Microsoft-Windows-Subsystem-Linux | admin restart
 developer.sandbox | - | Windows Sandbox | sandbox disposable vm feature | switch | builtin windows-feature Containers-DisposableClientVM | admin restart check

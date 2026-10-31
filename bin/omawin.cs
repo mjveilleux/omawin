@@ -151,6 +151,8 @@ static class Omawin
         {
             case "app":
                 return Send((rest + " " + string.Join(" ", extra)).Trim());
+            case "ask":
+                return Ask((rest + " " + string.Join(" ", extra)).Trim());
             case "pwsh":
                 // A script of this repo, path from the repo root (or from your account folder, {user}/...),
                 // then its fixed arguments. {user} is filled in after the split: the path may have spaces.
@@ -205,6 +207,46 @@ static class Omawin
         if (!File.Exists(exe)) return Fail("the menu app isn't built: " + exe + " (omawin restart menu builds it)");
         Process.Start(new ProcessStartInfo(exe, request) { UseShellExecute = false });
         return 0;
+    }
+
+    // A request whose answer is printed (omawin setting get ...): the menu app writes it to a file
+    // named for this process and sets an event named the same way (shell/menu-app/Reply.cs). The
+    // wait covers a cold start of the menu app. Code 3 is a question: the text is shown, and on
+    // yes the request goes again with --yes (omawin settings admin: the list, then the prompt).
+    static int Ask(string request)
+    {
+        string id = Process.GetCurrentProcess().Id.ToString();
+        string dir = Path.Combine(StateDir, "replies");
+        string reply = Path.Combine(dir, id + ".txt");
+        Directory.CreateDirectory(dir);
+        if (File.Exists(reply)) File.Delete(reply);
+        using (var done = new EventWaitHandle(false, EventResetMode.ManualReset, @"Local\omawin-reply-" + id))
+        {
+            int sent = Send("--reply " + id + " " + request);
+            if (sent != 0) return sent;
+            if (!done.WaitOne(20000)) return Fail("the menu app didn't answer (omawin restart menu)");
+        }
+        string[] lines;
+        try { lines = File.ReadAllLines(reply, Encoding.UTF8); File.Delete(reply); }
+        catch (IOException ex) { return Fail("no answer: " + ex.Message); }
+        int code = 1;
+        if (lines.Length > 0) int.TryParse(lines[0], out code);
+        var text = string.Join(Environment.NewLine, lines.Skip(1));
+        if (code == 3)
+        {
+            if (!InTerminal) return 1; // from a key there's no one to ask
+            Console.WriteLine(text);
+            Console.Write("Apply these? [y/N] ");
+            var answer = Console.ReadLine();
+            if (answer == null || !answer.Trim().StartsWith("y", StringComparison.OrdinalIgnoreCase)) { Console.WriteLine("Nothing changed."); return 1; }
+            return Ask(request + " --yes");
+        }
+        if (InTerminal && text.Length > 0)
+        {
+            if (code == 0) Console.WriteLine(text);
+            else Console.Error.WriteLine(text);
+        }
+        return code;
     }
 
     static int Builtin(string name, string[] args)
