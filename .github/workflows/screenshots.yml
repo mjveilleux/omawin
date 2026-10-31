@@ -1,0 +1,85 @@
+name: Screenshots
+
+# Pictures of the menu app on a real Windows desktop (a GitHub runner's): the bar and One Search
+# in its main views, full screen, uploaded as the artifact `screenshots`. By hand, or on a push
+# that changes this file. The runner has no GlazeWM, no installed apps beyond its own and no
+# theme backgrounds, so the desktop behind is the runner's; what's checked is omawin's own drawing.
+on:
+  workflow_dispatch:
+  push:
+    branches: ['claude/**']
+    paths: ['.github/workflows/screenshots.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  shots:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: Build the menu app
+        shell: pwsh
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu -BuildOnly -Jit
+      - name: One Search, step by step
+        shell: pwsh
+        run: |
+          Add-Type -AssemblyName System.Drawing, System.Windows.Forms
+          # A bigger screen where the runner allows it (Windows Server's own cmdlet).
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Host "resolution stays: $($_.Exception.Message)" }
+          $state = Join-Path $env:LOCALAPPDATA 'launcher'
+          New-Item -ItemType Directory -Force $state, shots | Out-Null
+          'tokyo-night' | Set-Content (Join-Path $state 'theme') -NoNewline
+          'on' | Set-Content (Join-Path $state 'animations') -NoNewline
+          $env:DOTFILES = (Get-Location).Path
+          $app = Start-Process out\menu\SystemMenu.exe -ArgumentList '--start-hidden' -PassThru
+          Start-Sleep 8
+
+          # As omawin.exe sends it (bin/omawin.cs Send): the words in the request file, then the signal.
+          function Send([string]$Request) {
+            Set-Content (Join-Path $state 'system-menu-request') $Request -NoNewline
+            $signal = [Threading.EventWaitHandle]::OpenExisting('Local\dotfiles-system-menu-signal')
+            [void]$signal.Set()
+            $signal.Dispose()
+          }
+          function Shot([string]$Name) {
+            Start-Sleep -Milliseconds 1500 # the arrival, rows, icons and file results settle
+            $screen = [Windows.Forms.SystemInformation]::VirtualScreen
+            $bitmap = [Drawing.Bitmap]::new($screen.Width, $screen.Height)
+            $g = [Drawing.Graphics]::FromImage($bitmap)
+            $g.CopyFromScreen($screen.Left, $screen.Top, 0, 0, $bitmap.Size)
+            $bitmap.Save("shots\$Name.png", [Drawing.Imaging.ImageFormat]::Png)
+            $g.Dispose(); $bitmap.Dispose()
+            Write-Host "shots\$Name.png ($($screen.Width)x$($screen.Height))"
+          }
+
+          Shot '00-desktop-bar'
+          Send '--search';                  Shot '01-home'
+          Send '--type term';               Shot '02-typing-term'
+          Send '--type dark';               Shot '03-typing-dark-settings'
+          Send '--type 12*4.5';             Shot '04-calculator'
+          Send '--search setting';          Shot '05-filter-settings'
+          Send '--type mouse';              Shot '06-settings-mouse'
+          Send '--search command --browse'; Shot '07-browse-commands'
+          Send '--search command';          Shot '08-filter-commands'
+          Send '--type theme';              Shot '09-commands-theme'
+          Send '--search file';             Shot '10-filter-files'
+          Send '--type readme';             Shot '11-files-readme'
+          Send '--search theme';            Shot '12-themes'
+          Send '--search clipboard';        Shot '13-clipboard'
+          Send '--search --retired-key';    Shot '14-win-alt-space-note'
+
+          if (-not $app.HasExited) { $app.Kill() }
+          $log = Join-Path $state 'system-menu.log'
+          if (Test-Path $log) { Copy-Item $log shots\ }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots/
+          retention-days: 14
+          if-no-files-found: error
