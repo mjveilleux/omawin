@@ -11,6 +11,7 @@ key ──> GlazeWM (config/glazewm/config.yaml)
           └─ shell-exec --hide-window omawin.exe <group> <name>
                 └─ bin/commands.txt says what that is:
                      app <request>   → the menu app (shell/menu-app/, already running): instant
+                     ask <request>   → the same, and the menu app's answer is printed (omawin setting get)
                      pwsh <script>   → a PowerShell script in this repo (hidden from a key)
                      run <program>   → a program
 ```
@@ -28,6 +29,7 @@ Its successor is `src/cli/` (.NET 9 Native AOT, roadmap 2.11), shipped beside it
 - **In a terminal** (it has a console or its output is redirected), scripts run in that terminal and it waits, returning their exit code.
 - **From a key** (no console), scripts run hidden and it returns at once.
 - `app` requests are written to `%LOCALAPPDATA%\launcher\system-menu-request`, and the named event `Local\dotfiles-system-menu-signal` wakes the menu app. If the app isn't running, it's started with the request as arguments.
+- `ask` requests go the same way with `--reply <pid>` in front; the menu app writes its answer to `%LOCALAPPDATA%\launcher\replies\<pid>.txt` (the exit code, then the text) and sets the event `Local\omawin-reply-<pid>` (`Reply.cs`), and omawin.exe prints it. An answer with code 3 is a question: omawin shows it, asks y/N, and on yes sends the request again with `--yes` (`omawin settings admin`).
 - The repo is `%DOTFILES%` if set, else `~/omawin`.
 
 ## Defaults and launching (`omawin default`, `omawin launch`)
@@ -64,8 +66,11 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `StayAwake.cs` | `omawin toggle stay-awake`: `SetThreadExecutionState` held on the UI thread while on |
 | `Motion.cs`, `MotionTokens.cs` | every animation's numbers (Omarchy's: in within 200 ms, out in 130, ease-out-quint) and helpers on the compositor; `omawin toggle animations` writes `%LOCALAPPDATA%\launcher\animations`, which it watches with Windows' own Animation effects switch; off, every animation jumps to its end |
 | `Tiling.cs` | Omarchy's window placement: on each focus change (GlazeWM's IPC socket) it sets the focused window's next split across the split it sits in, so new windows spiral like Hyprland's dwindle layout: A | B, then B over C, then C | D |
+| `Settings/` | Windows' settings (roadmap 1B): `Catalog.cs` parses `default/launcher/settings.txt`; `Store.cs` is the service (cached values, `Set` / `Toggle` / `Step` / `UndoLast`, the undo history, the admin queue), with its handlers handed in so it's tested on Linux; `Switches.cs` (reg, spi, powercfg) and `Builtins.cs` (radios, refresh rate, HDR, proxy, audio devices, …) touch Windows; `Watch.cs` follows registry keys and `WM_SETTINGCHANGE`; `Index.cs` reads Windows' own settings index and `default/launcher/settings-pages.txt`; `Search.cs` ranks them; `Commands.cs` answers `omawin setting` / `settings`; `WinSettings.cs` wires it all, and is what the window (and One Search) uses |
+| `MainWindow.Settings.cs` | settings in the system menu's search and Setup › Windows: rows with their values, Enter / Space / ← → / Ctrl+Z |
+| `Reply.cs` | the menu app's half of `ask`: the answer file and event |
 
-Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--toggle animations [on|off|status]`, `--open <menu id>`, `--start-hidden`, no arguments (system menu); plus `--select`, `--type` and `--key`, used for walkthrough recordings, and `--hide` (at once, no animation) for `omawin profile menu`.
+Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--toggle animations [on|off|status]`, `--open <menu id>`, `--start-hidden`, `--reply <pid> --setting|--settings …` (answered, `ask`), no arguments (system menu); plus `--select`, `--type` and `--key`, used for walkthrough recordings, and `--hide` (at once, no animation) for `omawin profile menu`.
 
 ### Screenshots and text (`Snip.cs`)
 
@@ -147,6 +152,10 @@ Never in the repo:
 | `system-menu-request` | the request being handed to the menu app |
 | `emit-subscribed` | the menu app's process id, while GlazeWM sends it the menu keys (`emit`) |
 | `animations` | `off` while `omawin toggle animations` has them off: the menu app's and GlazeWM's (`animations.enabled`, filled in by `themes/render.ps1`) |
+| `replies\` | answers to `ask` requests, each read and deleted by the omawin.exe waiting for it |
+| `settings-history.tsv` | every Windows setting changed through omawin, with the value before it (undo; `omawin settings save` reads which ids you've changed) |
+| `settings-admin-queue.tsv` | settings that need admin, waiting for the one prompt (`omawin settings admin`) |
+| `settings-index.tsv` | Windows' own settings index, read from `AllSystemSettings_*.xml` in this PC's language; rebuilt when Windows changes it |
+| `airplane` | while airplane mode is on: the radios it turned off, to turn back on |
 | `system-menu.log` | the menu app's errors |
 | `stay-awake` | present while stay awake is on (removed when it's turned off or the menu app starts) |
-| `animations` | `on` or `off` (`omawin toggle animations`); the menu app writes the default on its first start: `off` in a virtual machine |
