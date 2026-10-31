@@ -29,6 +29,7 @@
     <Compile Include="..\..\shell\menu-app\IconScale.cs" Link="Linked\IconScale.cs" />
     <Compile Include="..\..\shell\menu-app\PackageLogo.cs" Link="Linked\PackageLogo.cs" />
     <Compile Include="..\..\shell\menu-app\ThemePictures.cs" Link="Linked\ThemePictures.cs" />
+    <Compile Include="..\..\shell\menu-app\MotionTokens.cs" Link="Linked\MotionTokens.cs" />
   </ItemGroup>
 
   <ItemGroup>

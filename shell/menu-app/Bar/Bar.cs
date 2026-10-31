@@ -6,7 +6,7 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Media;
-using Microsoft.UI.Xaml.Media.Animation;
+using Microsoft.UI.Xaml.Hosting;
 
 namespace SystemMenu;
 
@@ -308,6 +308,8 @@ public static class Bar
     }
 
     // Each widget fades down into place, left to right, the first time (Zebar's bar did the same).
+    // On the compositor (Motion.cs), so it runs off the UI thread; with animations off they're
+    // simply there.
     static void Arrive()
     {
         if (arrived || windows.Count == 0) return;
@@ -317,21 +319,12 @@ public static class Bar
             int i = 0;
             foreach (var w in bar.Widgets)
             {
-                var el = w.Element;
-                var move = new TranslateTransform { Y = -4 };
-                el.RenderTransform = move;
-                var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
-                var begin = TimeSpan.FromMilliseconds(25 * i++);
-                var board = new Storyboard();
-                var fade = new DoubleAnimation { From = 0, To = 1, Duration = TimeSpan.FromMilliseconds(280), BeginTime = begin, EasingFunction = ease };
-                var drop = new DoubleAnimation { From = -4, To = 0, Duration = TimeSpan.FromMilliseconds(280), BeginTime = begin, EasingFunction = ease };
-                Storyboard.SetTarget(fade, el);
-                Storyboard.SetTargetProperty(fade, "Opacity");
-                Storyboard.SetTarget(drop, move);
-                Storyboard.SetTargetProperty(drop, "Y");
-                board.Children.Add(fade);
-                board.Children.Add(drop);
-                board.Begin();
+                ElementCompositionPreview.SetIsTranslationEnabled(w.Element, true);
+                var visual = ElementCompositionPreview.GetElementVisual(w.Element);
+                w.Element.Opacity = 1; // the visual's opacity, below, is what hides it until now
+                var delay = Motion.Stagger * i++;
+                Motion.FadeIn(visual, delay);
+                Motion.MoveIn(visual, new System.Numerics.Vector3(0, -Motion.DropPx, 0), delay);
             }
         }
     }

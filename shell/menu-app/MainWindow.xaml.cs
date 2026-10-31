@@ -23,9 +23,9 @@ namespace SystemMenu;
 // hides instead of closing: when you pick something, press Esc at the top, or click elsewhere.
 public sealed partial class MainWindow : Window
 {
-    // Width; each row's height (with the gap under it); rows that cascade in on opening; and the
-    // search line, hairline and footer around the body (MainWindow.Tiles.cs, HomeBodyDip).
-    const double WidthDip = 560, RowDip = 44, MaxRows = 10, ChromeDip = 56 + 1 + 38;
+    // Width; each row's height (with the gap under it); and the search line, hairline and footer
+    // around the body (MainWindow.Tiles.cs, HomeBodyDip). How many rows cascade in: Motion.CascadeRows.
+    const double WidthDip = 560, RowDip = 44, ChromeDip = 56 + 1 + 38;
     // The file finder is wider (a preview beside the list) and a fixed height.
     const double FinderWidthDip = 980, FinderHeightDip = 620, FileRowDip = 54;
 
@@ -114,6 +114,8 @@ public sealed partial class MainWindow : Window
         SetUpMotion();
         Input.TextChanged += (_, _) =>
         {
+            // Letters typed while it fades out are dropped (Show clears the search anyway).
+            if (leaving != null) return;
             // omawin profile menu -Typing: a key in the search to its list on screen.
             Program.Trace("typed");
             selected = 0;
@@ -135,8 +137,8 @@ public sealed partial class MainWindow : Window
     public void Toggle()
     {
         bool menu = !launching && !finding;
-        if (appWindow.IsVisible && GetForegroundWindow() == hwnd && menu) Dismiss();
-        else if (appWindow.IsVisible && menu) { shownAt = DateTime.Now; SetForegroundWindow(hwnd); Input.Focus(FocusState.Programmatic); }
+        if (Showing && GetForegroundWindow() == hwnd && menu) Dismiss();
+        else if (Showing && menu) { shownAt = DateTime.Now; SetForegroundWindow(hwnd); Input.Focus(FocusState.Programmatic); }
         else ShowMenu(""); // hidden, or showing the launcher / finder: the menu
     }
 
@@ -151,7 +153,7 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            if (appWindow.IsVisible && GetForegroundWindow() == hwnd && launching) Dismiss();
+            if (Showing && GetForegroundWindow() == hwnd && launching) Dismiss();
             else Show("", asLauncher: true);
         }
         catch (Exception ex) { App.Log(ex); }
@@ -163,15 +165,15 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            if (appWindow.IsVisible && ApplyTheme(MenuModel.CurrentThemeName())) Render();
+            if (Showing && ApplyTheme(MenuModel.CurrentThemeName())) Render();
             if (id.StartsWith("theme:"))
             {
-                if (!pickingTheme || !appWindow.IsVisible) Show("style.theme");
+                if (!pickingTheme || !Showing) Show("style.theme");
                 selected = Math.Max(0, MenuModel.Themes().FindIndex(t => t.File == id[6..]));
                 Highlight();
                 return;
             }
-            if (!appWindow.IsVisible) Show("");
+            if (!Showing) Show("");
             var parent = entries.TryGetValue(id, out var e) ? e.Parent : "";
             if (pickingTheme || backgroundsOf != null || confirming != null || current != parent || Input.Text.Length > 0) Show(parent);
             selected = Math.Max(0, MenuModel.Children(entries, current).FindIndex(c => c.Id == id));
@@ -183,7 +185,7 @@ public sealed partial class MainWindow : Window
     // Types into the search (--type <text>); for scripted walkthroughs.
     public void TypeText(string text)
     {
-        if (!appWindow.IsVisible) Show("");
+        if (!Showing) Show("");
         Input.Text = text;
         Input.SelectionStart = text.Length;
     }
@@ -192,7 +194,7 @@ public sealed partial class MainWindow : Window
     // Packages page): as if pressed; for scripted walkthroughs.
     public void PressKey(string key)
     {
-        if (!appWindow.IsVisible) return;
+        if (!Showing) return;
         switch (key)
         {
             case "down": if (tileMode) NavTile(0, 1); else Move(1); break;
@@ -210,6 +212,8 @@ public sealed partial class MainWindow : Window
     // Shows the menu at a submenu; when it's already showing, just goes there.
     void Show(string at, bool asLauncher = false, bool asFinder = false, string? with = null)
     {
+        // A key during the exit animation ends it and shows afresh: nothing waits on an animation.
+        if (leaving != null) HideNow();
         bool showing = appWindow.IsVisible;
         if (!showing)
         {
@@ -271,10 +275,42 @@ public sealed partial class MainWindow : Window
         Cascade();
     }
 
-    void HideMenu() => appWindow.Hide();
+    // On screen and staying: not hidden, and not on its way out.
+    bool Showing => appWindow.IsVisible && leaving == null;
+
+    Motion.Leaving? leaving; // the exit animation, while it runs
+
+    // Hides it: a short fade and sink (Motion.Exit) unless `instant` or animations are off.
+    // Whatever captures the screen next (a screenshot, the colour picker, text from the screen)
+    // passes instant, so the fading menu isn't in the picture.
+    void HideMenu(bool instant = false)
+    {
+        if (!appWindow.IsVisible) return;
+        if (leaving != null) { if (instant) HideNow(); return; }
+        if (instant || !Motion.Enabled) { HideNow(); return; }
+        Root.IsHitTestVisible = false; // clicks during the fade go nowhere
+        var exit = Motion.Leave(ElementCompositionPreview.GetElementVisual(Root), Motion.DropPx, HideNow);
+        if (!exit.Over) leaving = exit;
+    }
+
+    // Hidden now, the exit animation (if any) cut short and undone for the next showing.
+    void HideNow()
+    {
+        var exit = leaving;
+        leaving = null;
+        exit?.Cancel();
+        Root.IsHitTestVisible = true;
+        appWindow.Hide();
+    }
+
+    // A screen capture is about to start (SystemMenu --snip): a menu still fading out goes now.
+    public void FinishHiding()
+    {
+        if (leaving != null) HideNow();
+    }
 
     // For `omawin profile menu` (SystemMenu --hide): hidden now, no animation, no focus shuffle.
-    public void HideForProfile() => appWindow.Hide();
+    public void HideForProfile() => HideMenu(instant: true);
 
     // Marks the next frame the compositor draws: what `omawin profile menu` calls "painted".
     // CompositionTarget.Rendering is raised on the UI thread once per frame, just before it's
@@ -295,8 +331,9 @@ public sealed partial class MainWindow : Window
     {
         var target = previous != IntPtr.Zero && IsWindowVisible(previous) && ClassOf(previous) != "Shell_TrayWnd"
             ? previous : FindWindow("Progman", null);
-        HideMenu();
+        // Focus first, then the fade: your next key goes to that window at once.
         if (target != IntPtr.Zero) SetForegroundWindow(target);
+        HideMenu();
     }
 
     static string ClassOf(IntPtr window)
@@ -332,30 +369,19 @@ public sealed partial class MainWindow : Window
     void Animate()
     {
         ElementCompositionPreview.SetIsTranslationEnabled(Root, true);
-        var visual = ElementCompositionPreview.GetElementVisual(Root);
-        var compositor = visual.Compositor;
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1);
-        fade.Duration = TimeSpan.FromMilliseconds(140);
-        var rise = compositor.CreateVector3KeyFrameAnimation();
-        rise.InsertKeyFrame(0, new Vector3(0, 10, 0)); rise.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.8f), new(0.2f, 1f)));
-        rise.Duration = TimeSpan.FromMilliseconds(180);
-        visual.StartAnimation("Opacity", fade);
-        visual.StartAnimation("Translation", rise);
+        Motion.Arrive(ElementCompositionPreview.GetElementVisual(Root));
     }
 
     // --- motion -------------------------------------------------------------------------------
     // All of it runs on the compositor (off the UI thread), so it stays smooth while the list
     // is being filled: scrolling, the selected row or tile lifting, the light drifting along the
-    // hairline, rows arriving, levels sliding.
-    static readonly TimeSpan ScrollGlide = TimeSpan.FromMilliseconds(200);
-
+    // hairline, rows arriving, levels sliding. The numbers are Motion's (Motion.cs), and with
+    // animations off every one of these is a jump to its end.
     void SetUpMotion()
     {
-        var compositor = ElementCompositionPreview.GetElementVisual(Root).Compositor;
         // Scrolling: setting ListLayer's Translation glides it there, and a new target set while
         // it's moving (a held key, the wheel) carries on from where it is.
-        ListLayer.TranslationTransition = new Vector3Transition { Duration = ScrollGlide };
+        ListLayer.TranslationTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) };
         ElementCompositionPreview.SetIsTranslationEnabled(Pane, true);
         Viewport.SizeChanged += (_, e) =>
         {
@@ -376,63 +402,70 @@ public sealed partial class MainWindow : Window
         DividerLine.SizeChanged += (_, e) =>
         {
             DividerLine.Clip = new RectangleGeometry { Rect = new Windows.Foundation.Rect(0, 0, e.NewSize.Width, e.NewSize.Height) };
-            var drift = compositor.CreateScalarKeyFrameAnimation();
-            drift.InsertKeyFrame(0f, -180f);
-            drift.InsertKeyFrame(0.55f, (float)e.NewSize.Width, compositor.CreateCubicBezierEasingFunction(new(0.4f, 0f), new(0.6f, 1f)));
-            drift.InsertKeyFrame(1f, (float)e.NewSize.Width);
-            drift.Duration = TimeSpan.FromSeconds(7);
-            drift.IterationBehavior = AnimationIterationBehavior.Forever;
-            ElementCompositionPreview.GetElementVisual(Sheen).StartAnimation("Translation.X", drift);
+            Drift();
+        };
+
+        // Turned on or off (omawin toggle animations, or Windows' own switch) while running.
+        Motion.Changed += () =>
+        {
+            ListLayer.TranslationTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) };
+            foreach (var v in pool) v.Row.BackgroundTransition = new BrushTransition { Duration = Motion.Or0(Motion.Quick) };
+            Drift();
         };
     }
 
-    // The first screenful of rows or tiles fades and rises in, a few ms apart.
+    // The hairline's light: decoration, so it doesn't move at all while animations are off.
+    void Drift()
+    {
+        var sheen = ElementCompositionPreview.GetElementVisual(Sheen);
+        sheen.StopAnimation("Translation.X");
+        float width = (float)DividerLine.ActualWidth;
+        if (!Motion.Enabled || width <= 0) { sheen.Properties.InsertVector3("Translation", new Vector3(-180, 0, 0)); return; }
+        var compositor = sheen.Compositor;
+        var drift = compositor.CreateScalarKeyFrameAnimation();
+        drift.InsertKeyFrame(0f, -180f);
+        // Across in the first half of the pass, then a rest.
+        drift.InsertKeyFrame(0.55f, width, Motion.EaseInOut(compositor));
+        drift.InsertKeyFrame(1f, width);
+        drift.Duration = Motion.Drift;
+        drift.IterationBehavior = AnimationIterationBehavior.Forever;
+        sheen.StartAnimation("Translation.X", drift);
+    }
+
+    // The first screenful of rows or tiles fades and rises in, Motion.Stagger apart.
     void Cascade()
     {
-        var compositor = ElementCompositionPreview.GetElementVisual(Root).Compositor;
         int first = tileMode ? 0 : (int)Math.Round(scrollY / Pitch);
         int count = tileMode ? tiles.Count : used;
         for (int i = 0; i < count; i++)
         {
             // A tile's inside moves, not the tile: the tile's own Translation is its lift.
             var visual = ElementCompositionPreview.GetElementVisual(tileMode ? tiles[i].Inner : pool[i].Slot);
-            int step = i - first;
-            if (step < 0 || step > (tileMode ? 18 : MaxRows)) { visual.Opacity = 1; continue; }
-            var delay = TimeSpan.FromMilliseconds(28 + step * (tileMode ? 16 : 18));
-            var fade = compositor.CreateScalarKeyFrameAnimation();
-            fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1);
-            fade.Duration = TimeSpan.FromMilliseconds(200);
-            fade.DelayTime = delay;
-            fade.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-            var rise = compositor.CreateVector3KeyFrameAnimation();
-            rise.InsertKeyFrame(0, new Vector3(0, 8, 0)); rise.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.8f), new(0.2f, 1f)));
-            rise.Duration = TimeSpan.FromMilliseconds(260);
-            rise.DelayTime = delay;
-            rise.DelayBehavior = AnimationDelayBehavior.SetInitialValueBeforeDelay;
-            visual.StartAnimation("Opacity", fade);
-            visual.StartAnimation("Translation", rise);
+            // A row's place in the list (pool[i].Index: the launcher's search binds only the rows
+            // in view, so the pool's first row may stand for one further down).
+            int step = (tileMode ? i : pool[i].Index) - first;
+            if (Motion.CascadeDelay(step, tileMode ? Motion.CascadeTiles : Motion.CascadeRows) is { } delay) Motion.Arrive(visual, delay);
+            else
+            {
+                visual.StopAnimation("Opacity");
+                visual.StopAnimation("Translation");
+                visual.Opacity = 1;
+                visual.Properties.InsertVector3("Translation", Vector3.Zero);
+            }
         }
     }
 
     // Into a submenu or page the new level slides in from the right; back out, from the left.
-    void Slide(int direction) => SlideIn(new Vector3(44 * direction, 0, 0), 280);
+    void Slide(int direction) => SlideIn(new Vector3(Motion.SlidePx * direction, 0, 0));
 
     // Typing on a home screen turns its tiles into a list (and clearing it, back): a quick fade.
-    void Swap() => SlideIn(new Vector3(0, 4, 0), 170);
+    void Swap() => SlideIn(new Vector3(0, Motion.DropPx, 0));
 
-    void SlideIn(Vector3 from, int ms)
+    void SlideIn(Vector3 from)
     {
         var visual = ElementCompositionPreview.GetElementVisual(Pane);
-        var compositor = visual.Compositor;
-        var move = compositor.CreateVector3KeyFrameAnimation();
-        move.InsertKeyFrame(0, from);
-        move.InsertKeyFrame(1, Vector3.Zero, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.9f), new(0.25f, 1f)));
-        move.Duration = TimeSpan.FromMilliseconds(ms);
-        var fade = compositor.CreateScalarKeyFrameAnimation();
-        fade.InsertKeyFrame(0, 0); fade.InsertKeyFrame(1, 1, compositor.CreateCubicBezierEasingFunction(new(0.2f, 0.9f), new(0.25f, 1f)));
-        fade.Duration = TimeSpan.FromMilliseconds(ms * 0.8);
-        visual.StartAnimation("Translation", move);
-        visual.StartAnimation("Opacity", fade);
+        Motion.MoveIn(visual, from);
+        Motion.FadeIn(visual, duration: Motion.Enter * 0.8);
     }
 
     // --- scrolling ------------------------------------------------------------------------------
@@ -900,6 +933,7 @@ public sealed partial class MainWindow : Window
         if (e.IsSubmenu || e.Kind is "themes" or "backgrounds" || e.Kind.StartsWith('@')) return (Tag.Chevron, "");
         if (have) return (Tag.Installed, "Installed");
         if (e.Kind == "omawin" && e.Argument == "toggle stay-awake") return StayAwake.On ? (Tag.Installed, "On") : (Tag.Text, "off");
+        if (e.Kind == "omawin" && e.Argument == "toggle animations") return Motion.On ? (Tag.Installed, "On") : (Tag.Text, "off");
         if (e.Package != null) return (Tag.Text, e.Kind);
         return e.Kind switch
         {
@@ -1067,7 +1101,7 @@ public sealed partial class MainWindow : Window
         {
             Child = grid, CornerRadius = new CornerRadius(10), Padding = new Thickness(9, 0, 9, 0), BorderThickness = new Thickness(1),
             Background = new SolidColorBrush(Colors.Transparent), BorderBrush = new SolidColorBrush(Colors.Transparent),
-            BackgroundTransition = new BrushTransition { Duration = TimeSpan.FromMilliseconds(120) },
+            BackgroundTransition = new BrushTransition { Duration = Motion.Or0(Motion.Quick) },
         };
         v.Row.PointerEntered += (_, _) => { if (!tileMode && !RecentlyMovedByKey && v.Index < rows.Count && selected != v.Index) { selected = v.Index; Highlight(); } };
         v.Row.Tapped += (_, _) => { if (v.Index < rows.Count) { selected = v.Index; Highlight(); rows[v.Index].Run(); } };
@@ -1206,6 +1240,9 @@ public sealed partial class MainWindow : Window
     // --- keys -------------------------------------------------------------------------------
     void OnKey(object sender, KeyRoutedEventArgs e)
     {
+        // On its way out (the exit animation): keys do nothing here, so a second Enter can't
+        // start a thing twice.
+        if (leaving != null) { e.Handled = true; return; }
         bool ctrl = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Control).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
         bool shift = InputKeyboardSource.GetKeyStateForCurrentThread(VirtualKey.Shift).HasFlag(Windows.UI.Core.CoreVirtualKeyStates.Down);
         // Quick settings asked "Press again to turn Wi-Fi off": only Space or Enter (the press
@@ -1358,7 +1395,7 @@ public sealed partial class MainWindow : Window
     {
         try
         {
-            if (appWindow.IsVisible && GetForegroundWindow() == hwnd && finding) Dismiss();
+            if (Showing && GetForegroundWindow() == hwnd && finding) Dismiss();
             else Show("", asFinder: true);
         }
         catch (Exception ex) { App.Log(ex); }
@@ -1398,7 +1435,7 @@ public sealed partial class MainWindow : Window
             if (page != null) Slide(1);
             return;
         }
-        HideMenu();
+        HideMenu(instant: !item.IsApp && CapturesScreen(item.Command));
         try
         {
             if (item.IsApp)
@@ -1409,9 +1446,13 @@ public sealed partial class MainWindow : Window
         catch (Exception ex) { App.Log(ex); }
     }
 
+    // A command that captures the screen (omawin capture ..., SystemMenu --snip): the menu goes at
+    // once instead of fading, so it isn't in the picture.
+    static bool CapturesScreen(string command) => Regex.IsMatch(command, @"(^|\s)(capture\s|--snip\b)", RegexOptions.IgnoreCase);
+
     void Run(MenuEntry e)
     {
-        HideMenu();
+        HideMenu(instant: CapturesScreen(e.Argument));
         try
         {
             switch (e.Kind)

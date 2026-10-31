@@ -57,6 +57,7 @@ style.themes-update | 󰚰 | Update installed themes | task omawin.exe theme upd
 style.themes-remove | 󰆴 | Remove an installed theme | task omawin.exe theme remove
 style.wallpaper | 󰋩 | Wallpaper (any image) | task & "$HOME\omawin\default\launcher\menu.ps1" -SetWallpaper
 style.desktopicons | 󰍹 | Desktop icons: show / hide | omawin toggle desktop-icons
+style.animations | 󰗘 | Animations: on / off | omawin toggle animations
 style.glazewm | 󰕰 | Gaps, borders, rules (GlazeWM) | edit ~\omawin\config\glazewm\config.yaml
 style.terminal | 󰆍 | Terminal | edit ~\omawin\config\noctty\config.ghostty
 style.prompt | 󰘦 | Prompt (starship) | edit ~\omawin\config\starship\starship.toml

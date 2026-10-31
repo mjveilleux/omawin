@@ -58,9 +58,10 @@ One WinUI 3 app (.NET 9, unpackaged), `SystemMenu.exe` in `%LOCALAPPDATA%\system
 | `Calc.cs` | the launcher's calculator: a small parser (no script engine), tried only when the query could be a sum |
 | `About.cs`, `MainWindow.About.cs` | the About page (`omawin about`): version and PC facts, read off the UI thread |
 | `StayAwake.cs` | `omawin toggle stay-awake`: `SetThreadExecutionState` held on the UI thread while on |
+| `Motion.cs`, `MotionTokens.cs` | every animation's numbers (Omarchy's: in within 200 ms, out in 130, ease-out-quint) and helpers on the compositor; `omawin toggle animations` writes `%LOCALAPPDATA%\launcher\animations`, which it watches with Windows' own Animation effects switch; off, every animation jumps to its end |
 | `Tiling.cs` | Omarchy's window placement: on each focus change (GlazeWM's IPC socket) it sets the focused window's next split across the split it sits in, so new windows spiral like Hyprland's dwindle layout: A | B, then B over C, then C | D |
 
-Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--open <menu id>`, `--start-hidden`, no arguments (system menu); plus `--select`, `--type` and `--key`, used for walkthrough recordings.
+Requests it understands: `--launcher [page]`, `--page <name>`, `--files`, `--snip [text|color|qr]`, `--toggle stay-awake`, `--toggle animations [on|off|status]`, `--open <menu id>`, `--start-hidden`, no arguments (system menu); plus `--select`, `--type` and `--key`, used for walkthrough recordings, and `--hide` (at once, no animation) for `omawin profile menu`.
 
 ### Screenshots and text (`Snip.cs`)
 
@@ -142,3 +143,4 @@ Never in the repo:
 | `system-menu-request` | the request being handed to the menu app |
 | `system-menu.log` | the menu app's errors |
 | `stay-awake` | present while stay awake is on (removed when it's turned off or the menu app starts) |
+| `animations` | `on` or `off` (`omawin toggle animations`); the menu app writes the default on its first start: `off` in a virtual machine |

@@ -227,17 +227,11 @@ sealed class IndicatorsWidget : BarWidget
         mug.Click = () => SystemMenu.Bar.Request(["--toggle", "stay-awake"]);
         row.Children.Add(mic);
         row.Children.Add(mug);
-        var pulse = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation
-        {
-            From = 1, To = 0.45, Duration = TimeSpan.FromMilliseconds(600), AutoReverse = true,
-            RepeatBehavior = Microsoft.UI.Xaml.Media.Animation.RepeatBehavior.Forever,
-            EasingFunction = new Microsoft.UI.Xaml.Media.Animation.SineEase(),
-        };
-        var board = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(pulse, mic.Icon);
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(pulse, "Opacity");
-        board.Children.Add(pulse);
-        mic.Loaded += (_, _) => board.Begin();
+        // The microphone breathes while it listens (on the compositor; still while animations are off).
+        var light = Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(mic.Icon);
+        Action breathe = () => Motion.Breathe(light, 0.45f);
+        mic.Loaded += (_, _) => { Motion.Changed += breathe; breathe(); };
+        mic.Unloaded += (_, _) => Motion.Changed -= breathe; // a bar closed (monitors changed) lets go
     }
     public override void Update(BarData data)
     {
@@ -306,14 +300,7 @@ sealed class TrayWidget : BarWidget
     {
         if (open == (drawer.Visibility == Visibility.Visible)) return;
         drawer.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-        if (!open) return;
-        drawer.Opacity = 0;
-        var fade = new Microsoft.UI.Xaml.Media.Animation.DoubleAnimation { To = 1, Duration = TimeSpan.FromMilliseconds(200) };
-        var board = new Microsoft.UI.Xaml.Media.Animation.Storyboard();
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTarget(fade, drawer);
-        Microsoft.UI.Xaml.Media.Animation.Storyboard.SetTargetProperty(fade, "Opacity");
-        board.Children.Add(fade);
-        board.Begin();
+        if (open) Motion.FadeIn(Microsoft.UI.Xaml.Hosting.ElementCompositionPreview.GetElementVisual(drawer));
     }
 
     public override void Update(BarData data)

@@ -16,6 +16,7 @@ namespace SystemMenu;
 //   SystemMenu --snip [text]   a screenshot (Win+Shift+S), or its text (Win+Shift+T): drag a region (Snip.cs)
 //   SystemMenu --snip color    the colour picker; --snip qr: read QR codes in a region
 //   SystemMenu --toggle stay-awake  keep the PC awake, or stop (StayAwake.cs)
+//   SystemMenu --toggle animations [on|off|status]  every animation on or off (Motion.cs)
 //   SystemMenu --qs <section> [action]  one Quick settings toggle without showing anything:
 //                              wifi|bluetooth on|off|toggle|connect|disconnect,
 //                              brightness up|down|set <n>, power <mode|cycle>,
@@ -176,6 +177,8 @@ public partial class App : Application
         }
         if (Program.BarPreview) { Bar.Preview(); return; }
         Program.Trace("launched");
+        // Before anything moves: every animation asks it whether to (Motion.cs).
+        Motion.Start(Microsoft.UI.Dispatching.DispatcherQueue.GetForCurrentThread());
         // The bar first (when it's the one picked, Bar/Bar.cs): at sign-in it's what you see. Its
         // windows draw once this returns, so the rest comes after, queued behind that first frame.
         Bar.Start(HandleRequest);
@@ -219,9 +222,11 @@ public partial class App : Application
         else if (args.Contains("--snip"))
         {
             var mode = args.Contains("text") ? SnipMode.Text : args.Contains("color") ? SnipMode.Color : args.Contains("qr") ? SnipMode.Qr : SnipMode.Picture;
+            window.FinishHiding(); // a menu still fading out isn't in the picture
             try { Snip.Start(mode); } catch (Exception ex) { Log(ex); }
         }
         else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "stay-awake") StayAwake.Toggle();
+        else if (args.Length > 1 && args[0] == "--toggle" && args[1] == "animations") Motion.Toggle(args.Length > 2 ? args[2] : null);
         else if (args.Length > 1 && args[0] == "--bar") Bar.Set(args[1]);
         else if (args.Length > 1 && args[0] == "--say") Snip.Say(string.Join(' ', args[1..])); // the note, for other programs (the music player)
         else if (args.Length > 1 && args[0] == "--qs")

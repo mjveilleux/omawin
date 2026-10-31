@@ -571,9 +571,9 @@ public sealed partial class MainWindow
         {
             CornerRadius = new CornerRadius(12), BorderThickness = new Thickness(1), Child = v.Inner,
             Background = Brush(Hex(theme.Foreground), 0x0A), BorderBrush = new SolidColorBrush(Colors.Transparent),
-            BackgroundTransition = new BrushTransition { Duration = TimeSpan.FromMilliseconds(140) },
-            ScaleTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(220) },
-            TranslationTransition = new Vector3Transition { Duration = TimeSpan.FromMilliseconds(220) },
+            BackgroundTransition = new BrushTransition { Duration = Motion.Or0(Motion.Quick) },
+            ScaleTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) },
+            TranslationTransition = new Vector3Transition { Duration = Motion.Or0(Motion.Glide) },
         };
         v.Root.SizeChanged += (_, e) => v.Root.CenterPoint = new Vector3((float)e.NewSize.Width / 2, (float)e.NewSize.Height / 2, 0);
         int index = tiles.Count;

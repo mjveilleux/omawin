@@ -92,6 +92,7 @@ start glazewm | Start GlazeWM once Windows' taskbar is up, again if it crashes a
 capture color | Colour picker: a loupe over the frozen screen; click copies the colour as #rrggbb | app --snip color
 capture qr | Read QR codes: drag over one (click a window, Enter for everything); the text is copied, not opened | app --snip qr
 toggle stay-awake | Keep the PC and screen awake, or stop; lasts while the menu app runs (%LOCALAPPDATA%\launcher\stay-awake while on) | app --toggle stay-awake
+toggle animations | Every animation on or off: the menu, the launcher, the bar and GlazeWM's windows (off by default in a virtual machine); or: on, off, status | app --toggle animations
 wifi | Wi-Fi: on, off, toggle, connect <network> (one Windows already saved), disconnect | app --qs wifi
 bluetooth | Bluetooth: on, off, toggle, connect <device>, disconnect <device> (one of the paired ones) | app --qs bluetooth
 brightness | Monitor brightness: up, down, set <0-100> (every monitor that reports a brightness control) | app --qs brightness
