@@ -13,6 +13,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's; `encrypt` for DNS over HTTPS |
 | `omawin proxy` | this account's system proxy, set and switched |
 | `omawin disk` | where a developer's disk space went, and getting it back |
+| `omawin pip [title]` | a window live in a small window on top (picture-in-picture) |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
@@ -110,3 +111,7 @@ Windows' own cleanup misses where a developer's space goes. `omawin disk` measur
 - **Old projects' build output**: `omawin disk projects` looks through your project folders (`~/src`, `~/code`, `~/projects`, `~/repos`, `~/source/repos`, Documents) for `node_modules`, `target`, `bin` and `obj`, `.venv`, `.next`, `build` and the like, only beside the file that makes them (a `target` with no `Cargo.toml` beside it is left alone), in projects untouched for 30 days. `omawin disk projects ~/work 90` for another folder or age; `omawin disk projects clean` deletes what it listed, after asking. Each comes back with `npm install`, `cargo build` and so on.
 
 Nothing outside a cache or a project's build output is ever deleted, and nothing without asking.
+
+## Picture-in-picture
+
+`omawin pip teams` keeps an eye on a window while you work in another: the window whose title holds the words, live, in a small window that stays on top in the bottom-right corner (Windows' own live preview, the one Alt+Tab draws: nothing is recorded). Drag it anywhere, resize it at its edges, scroll to make it fainter or stronger; double-click goes to the window, right-click closes the picture, and it closes by itself when the window does. Bound to a key (`omawin.exe pip` in `config/glazewm/config.yaml`), it shows the window in front; it has no key until you choose one.

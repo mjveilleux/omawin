@@ -24,6 +24,7 @@ namespace Omawin.Windows;
 //   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
 //   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
 //   wallpaper spread <picture>…  a picture per monitor, left to right (8.8; the theme switch uses it)
+//   pip [title]            the window in front, or one by title, live in a small window on top (8.6)
 //   --version
 public static partial class Program
 {
@@ -55,6 +56,7 @@ public static partial class Program
                 "disk" => DiskCommand.Run(rest),
                 "keyboard" => KeyboardCommand.Run(rest),
                 "wallpaper" => WallpaperCommand.Run(rest),
+                "pip" => PipCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -82,6 +84,7 @@ public static partial class Program
               omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
               omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
               omawin keyboard             Caps Lock, the Copilot key, snippets; keyboard signin caps-escape|caps-control|swap-caps-control|off
+              omawin pip [title]          a window live in a small window on top (from a key: the one in front)
             """);
         return 0;
     }

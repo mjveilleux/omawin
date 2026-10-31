@@ -177,6 +177,11 @@ window_rules:
       - window_process: { equals: 'noctty' }
         window_title: { not_regex: '^(menu-task|rename)$' }
 
+  # Picture-in-picture (omawin pip): a small window on top, where it put itself.
+  - commands: ['set-floating --shown-on-top']
+    match:
+      - window_class: { equals: 'omawin-pip' }
+
   # Small utility windows float instead of taking half the screen.
   - commands: ['set-floating --centered']
     match:
