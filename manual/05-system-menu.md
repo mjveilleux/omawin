@@ -25,7 +25,8 @@ The window keeps that height. Submenus slide in as lists, colored by kind: subme
 
 **Trigger › Toggle › Stay awake** (`omawin toggle stay-awake`) keeps the PC from sleeping and the screen from turning off, until you pick it again; the row says **On** while it is. It lasts only while the menu app runs: a rebuild, a restart or signing out turns it off. While it's on, `%LOCALAPPDATA%\launcher\stay-awake` exists, for the bar to show.
 
-- **Install › Presets** picks an opt-in group of tools (Python, Go, Elixir, R, data, AI agents, music, dictation, Linux in WSL, Power BI + Fabric…) and installs it now (`omawin preset add <name>`); **Which are picked** lists them (`omawin preset list`). Install installs the core and the picked presets on a new PC.
+- **Install › Presets** picks an opt-in group of tools (Python, Go, Elixir, R, data, AI agents, dictation, Linux in WSL, Power BI + Fabric…) and installs it now
+- **Install › Plugins** turns a plugin on and installs what it needs (`omawin plugin add music`: the music, podcast and radio player) (`omawin preset add <name>`); **Which are picked** lists them (`omawin preset list`). Install installs the core and the picked presets on a new PC.
 - **Install** also lists winget packages by group: Development, Azure + Fabric (Azure CLI, the Fabric CLI `fab`, azd, Bicep, Functions, the Az and Power BI PowerShell modules…), Data + SQL (Power BI Desktop, Report Builder, DAX Studio, SSMS, DBeaver, SQL Server Developer, sqlcmd, PostgreSQL…), Office (Microsoft 365, Teams, OneDrive, Zoom…), editors, terminals, AI (Claude Code, Codex CLI and OpenCode in the terminal; the Claude, ChatGPT + Codex and OpenCode desktop apps; Ollama, LM Studio), browsers, services, tools, gaming. Ones already on the PC show **✓ installed**; **Any package** searches all of winget.
 - **Remove** lists exactly the installed ones.
 - Installs, removals and updates run in a small floating terminal you can watch.

@@ -83,7 +83,11 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Presets
 
-`python` `node` `go` `elixir` `r` `c` `data` `typst` `docker` `cli-extras` `ai-agents` `music` `dictation` `powerbi-fabric`. Install asks the first time; later, `omawin preset add <name>` or the system menu's Install section.
+`python` `node` `go` `elixir` `r` `c` `data` `typst` `docker` `cli-extras` `ai-agents` `dictation` `powerbi-fabric`. Install asks the first time; later, `omawin preset add <name>` or the system menu's Install section.
+
+## Plugins
+
+Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar once omawin's QML host runs plugins.
 
 ## Make it yours
 

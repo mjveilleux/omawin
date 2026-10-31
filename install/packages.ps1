@@ -38,7 +38,8 @@ $WingetPackages = @(
     # on (bin/install-binaries.ps1, Install-DotNetSdk).
 )
 
-# Opt-in groups. Winget: winget ids. Extras: names in $ExtraInstalls. Tools: the commands
+# Opt-in groups. Plugin: a plugin's own programs (shell/plugins/<id>): picked with `omawin plugin
+# add <id>` rather than shown as a preset. Winget: winget ids. Extras: names in $ExtraInstalls. Tools: the commands
 # `omawin check` expects once the preset is in.
 $Presets = [ordered]@{
     'python'         = @{ Summary = 'Python 3.13'; Winget = @('Python.Python.3.13'); Tools = @('python') }
@@ -52,7 +53,7 @@ $Presets = [ordered]@{
     'docker'         = @{ Summary = 'lazydocker (Docker Desktop: Install > Development)'; Winget = @('JesseDuffield.Lazydocker'); Tools = @('lazydocker') }
     'cli-extras'     = @{ Summary = 'make, cloc, wget'; Winget = @('ezwinports.make', 'AlDanial.Cloc', 'JernejSimoncic.Wget'); Tools = @('make', 'cloc', 'wget') }
     'ai-agents'      = @{ Summary = 'Claude Code, opencode'; Extras = @('claude', 'opencode'); Tools = @('claude') }
-    'music'          = @{ Summary = "the Music plugin's programs: yt-dlp, mpv, the .NET runtime (shell/plugins/omawin.music)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv', 'Microsoft.DotNet.DesktopRuntime.9'); Tools = @('yt-dlp', 'mpv') }
+    'music'          = @{ Plugin = 'omawin.music'; Summary = "the Music plugin's programs: yt-dlp, mpv, the .NET runtime (shell/plugins/omawin.music)"; Winget = @('yt-dlp.yt-dlp', 'shinchiro.mpv', 'Microsoft.DotNet.DesktopRuntime.9'); Tools = @('yt-dlp', 'mpv') }
     'dictation'      = @{ Summary = 'Handy: local dictation on Win+H'; Winget = @('cjpais.Handy'); Tools = @('handy') }
     'wsl'            = @{ Summary = "Linux in WSL, Arch (Omarchy's packages) or Ubuntu, with omawin's Neovim, herdr and your agents (wsl/setup.sh)"; Extras = @('linux') }
     'powerbi-fabric' = @{ Summary = 'Power BI Desktop, DAX Studio, Azure CLI, Fabric CLI'; Winget = @('Microsoft.PowerBI', 'DaxStudio.DaxStudio', 'Microsoft.AzureCLI'); Extras = @('fab') }
