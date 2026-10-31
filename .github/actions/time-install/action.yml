@@ -170,6 +170,9 @@ runs:
           if ($mode -eq 'full') { $lines += "| $step | $s |" }
         }
         $lines += '', '```', $result, '```', '', 'No WSL and no desktop on a runner.'
+        # The goal is under a minute (roadmap 2.0); a runner's network varies, so over it is a
+        # warning to look at the step table, not a failure.
+        if ($seconds -and [int]$seconds -gt 60) { Write-Host "::warning::the install took $seconds s, over the minute it should take: see the step times in the summary" }
         $lines -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
         Write-Host '--- bootstrap.log ---'
         Get-Content C:\ci\out\bootstrap.log -Tail 40 -ErrorAction SilentlyContinue

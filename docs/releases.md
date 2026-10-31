@@ -82,6 +82,20 @@ pwsh -File build\test-release.ps1
 
 Each job writes its result to the run's summary page and uploads its files: `window-animations` (each run's frames, `checks.txt`, `events.txt`, GlazeWM's logs and the config it ran) and `menu-motion` (`summary.md`, `levels.csv` with every frame's level, the PNG frames around each change, and `open-sheet.png` / `close-sheet.png`, every frame in order with its level as a bar: green arrived, red gone, amber on the way). The fork has its own copy of the window check (its `animation-check.yaml`, with its own test config, slowed, and videos).
 
+## Profile checks
+
+[`.github/workflows/profile.yml`](../.github/workflows/profile.yml) measures the menu app's speed and idle memory on a runner's real desktop, so the roadmap's "needs the PC" numbers (1.1, 1.7, One Search's step 5, 8K) have a first figure and every change to `shell/menu-app/` a trend. It runs on pull requests and pushes that touch the menu app, `bin/omawin.cs`, the two profile scripts, `src/cli/Profile/`, `default/launcher/` or the workflow, and by hand (Actions › Profile › Run workflow, `runs` per surface, default 20). One job, about 8 minutes:
+
+- It builds the menu app as a release does (`build.ps1 -Aot`, native) and `omawin.exe` (`build/helpers.ps1`), installs the Nerd Font and the theme pictures from the latest release (as `screenshots.yml` does), and starts the menu app hidden with its bar, as a sign-in does.
+- **Idle memory, fresh:** a minute later, `omawin profile ram -Json -Seconds 10` (`bin/profile-ram.ps1`): omawin's parts, their private working set, commit and CPU against their budgets.
+- **Key to first frame:** `omawin profile menu -Direct -Json` (`bin/profile-menu.ps1`): `omawin.exe launcher`, `menu` and `files` run from the script, the way GlazeWM's key runs them (`-Direct`: there's no GlazeWM here, so its few milliseconds aren't counted), 20 runs each, timed from the trace marks; the median per surface.
+- **Typing:** `-Typing`: "visual studio code" typed into One Search with every source merged, 20 times; each key's time to its list on screen, the median over all keys and the slowest prefix.
+- **Idle memory, after use:** the same profile a minute after the runs.
+
+The summary page has the medians, each surface's step-by-step table, the per-prefix typing table and omawin's parts in both memory profiles; the `profile` artifact has the JSON, both trace logs and the menu app's log. A runner has no GPU (WARP draws the frames), shares its cores and varies from run to run, so the job fails only on gross regressions, set at the top of the file: a surface's median key to first frame over 250 ms (a PC's goal: 50), typing over 50 ms a key (a PC's: 16), a run with no result, or omawin's desktop parts over their 600 MB budget; a part over its own budget is a warning. Not covered: GlazeWM, noctty and herdr (the rest of the desktop's budget), GlazeWM's share of a key, a GPU, and a PC's whole-system memory, which stay `omawin profile menu` and `omawin profile ram -Save` on the PC.
+
+The install's own time is [`.github/actions/time-install`](../.github/actions/time-install/action.yml) (used by `install.yml` and `release.yml`): it warns when the bootstrap to the end passes a minute, with the step table in the summary to say where the time went.
+
 ## Limits, honestly
 
 - **Not byte-for-byte reproducible.** CI and a local build run the same commands, but a .NET publish embeds timestamps, so two builds of the same commit differ in bytes. What is verified is that the file a PC installs is the file that release published (the manifest), not that any two builds match.

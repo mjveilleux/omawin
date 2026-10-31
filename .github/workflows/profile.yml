@@ -1,0 +1,217 @@
+# The menu app's speed and memory, measured on a real Windows desktop (a GitHub runner's): the
+# numbers the roadmap's "needs the PC" items ask for, as far as a runner can give them.
+# docs/releases.md "Profile checks" is the reader's version of this file.
+#
+#   key to frame   `omawin profile menu -Direct` (bin/profile-menu.ps1): omawin.exe launcher,
+#                  menu and files run as GlazeWM's keys run them (no GlazeWM here: its own share,
+#                  a few ms, isn't counted), many runs each, timed from the trace marks every
+#                  step writes; the median from the key to the launcher's first frame (roadmap
+#                  1.1, the 50 ms goal).
+#   typing         `-Typing`: "visual studio code" typed into One Search with every source merged
+#                  (apps, settings, commands, the menu's rows, files, themes), each key to its
+#                  list on screen (roadmap 1.7 and One Search's step 5: 16 ms a key on a PC).
+#   idle memory    `omawin profile ram -Json` (bin/profile-ram.ps1) after a minute idle, fresh and
+#                  again after the runs above: omawin's parts against the 600 MB desktop budget
+#                  (roadmap 8K). The runner's own Windows isn't a PC's, so only omawin's share is
+#                  judged.
+#
+# A runner has no GPU (WARP draws), shares its cores and varies run to run, so this fails only on
+# gross regressions (the limits below), not on the PC's budgets; the numbers go to the run's page
+# either way, and the trace logs and JSON to the `profile` artifact. The menu app is the native
+# (AOT) build a release ships, since that's what's measured on a PC. Actions pinned by commit SHA.
+name: Profile
+
+on:
+  pull_request:
+    paths:
+      - 'shell/menu-app/**'
+      - 'bin/omawin.cs'
+      - 'bin/profile-menu.ps1'
+      - 'bin/profile-ram.ps1'
+      - 'src/cli/Profile/**'
+      - 'default/launcher/**'
+      - '.github/workflows/profile.yml'
+  push:
+    branches: [main, 'claude/**']
+    paths:
+      - 'shell/menu-app/**'
+      - 'bin/omawin.cs'
+      - 'bin/profile-menu.ps1'
+      - 'bin/profile-ram.ps1'
+      - 'src/cli/Profile/**'
+      - 'default/launcher/**'
+      - '.github/workflows/profile.yml'
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Runs per surface, and of the typed word
+        default: '20'
+
+concurrency:
+  group: profile-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  RUNS: ${{ inputs.runs || '20' }}
+  # Gross regressions only: about 5x and 3x what a PC should see (50 ms key to frame, 16 ms a key).
+  KEY_LIMIT_MS: '250'
+  TYPING_LIMIT_MS: '50'
+
+jobs:
+  menu:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      # As an install leaves it, as far as the menu app goes (screenshots.yml does the same): the
+      # Nerd Font its rows are drawn in, and the theme pictures it decodes in the background
+      # (part of its idle memory on a PC).
+      - name: The font and theme pictures from the latest release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo '${{ github.repository }}' --pattern 'omawin-tool-font.zip' --pattern 'omawin-tool-theme-thumbs.zip' --dir dl
+          $fonts = Join-Path $env:LOCALAPPDATA 'Microsoft\Windows\Fonts'
+          New-Item -ItemType Directory -Force $fonts, (Join-Path $env:LOCALAPPDATA 'launcher\thumbnails') | Out-Null
+          Expand-Archive dl\omawin-tool-font.zip dl\font -Force
+          Add-Type -Namespace Native -Name Gdi -MemberDefinition '[DllImport("gdi32.dll", CharSet = CharSet.Unicode)] public static extern int AddFontResourceW(string file);'
+          $key = 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\Fonts'
+          if (-not (Test-Path $key)) { New-Item $key -Force | Out-Null }
+          Get-ChildItem dl\font -Recurse -Filter *.ttf | ForEach-Object {
+            $to = Join-Path $fonts $_.Name
+            Copy-Item $_.FullName $to -Force
+            Set-ItemProperty $key "$($_.BaseName) (TrueType)" $to
+            [void][Native.Gdi]::AddFontResourceW($to)
+          }
+          Expand-Archive dl\omawin-tool-theme-thumbs.zip (Join-Path $env:LOCALAPPDATA 'launcher\thumbnails') -Force
+      - name: Build the menu app (native, as a release ships it)
+        shell: pwsh
+        run: .\shell\menu-app\build.ps1 -OutDir out\menu -BuildOnly -Aot
+      - name: Build omawin.exe (the keys' program)
+        shell: pwsh
+        run: .\build\helpers.ps1 -OutDir out\bin
+      - name: Start the menu app and its bar
+        shell: pwsh
+        run: |
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Host "resolution stays: $($_.Exception.Message)" }
+          $state = Join-Path $env:LOCALAPPDATA 'launcher'
+          New-Item -ItemType Directory -Force $state, results | Out-Null
+          'kanagawa' | Set-Content (Join-Path $state 'theme') -NoNewline
+          'on' | Set-Content (Join-Path $state 'animations') -NoNewline
+          # The repo is here, not ~/omawin: the menu app and omawin.exe both read DOTFILES. Later
+          # steps get it, and omawin.exe on the PATH, from the runner's files.
+          $env:DOTFILES = (Get-Location).Path
+          "DOTFILES=$env:DOTFILES" | Add-Content $env:GITHUB_ENV
+          (Resolve-Path out\bin).Path | Add-Content $env:GITHUB_PATH
+          (New-Object -ComObject Shell.Application).MinimizeAll()
+          # Started as a sign-in starts it (hidden, the bar up); it outlives this step.
+          Start-Process out\menu\SystemMenu.exe -ArgumentList '--start-hidden'
+          $deadline = (Get-Date).AddSeconds(60)
+          $ready = $null
+          while (-not [Threading.EventWaitHandle]::TryOpenExisting('Local\dotfiles-system-menu-signal', [ref]$ready) -and (Get-Date) -lt $deadline) { Start-Sleep -Milliseconds 250 }
+          if ($ready) { $ready.Dispose() } else { throw 'the menu app never came up' }
+          Write-Host "menu app up: $((Get-Process SystemMenu).Id)"
+
+      - name: Idle memory, fresh (a minute after start)
+        id: ram-idle
+        shell: pwsh
+        run: |
+          Start-Sleep 60
+          .\bin\profile-ram.ps1 -Json -Seconds 10 | Set-Content results\ram-idle.json -Encoding utf8
+      - name: Key to first frame (launcher, menu, files)
+        id: keys
+        if: always() && steps.ram-idle.outcome != 'skipped'
+        shell: pwsh
+        run: |
+          .\bin\profile-menu.ps1 -Direct -Json -Runs $env:RUNS | Set-Content results\keys.json -Encoding utf8
+          Copy-Item "$env:LOCALAPPDATA\launcher\trace.log" results\keys-trace.log -ErrorAction SilentlyContinue
+          (Get-Content results\keys.json -Raw | ConvertFrom-Json).Report
+      - name: Typing in One Search
+        id: typing
+        if: always() && steps.ram-idle.outcome != 'skipped'
+        shell: pwsh
+        run: |
+          .\bin\profile-menu.ps1 -Direct -Json -Typing -Runs $env:RUNS | Set-Content results\typing.json -Encoding utf8
+          Copy-Item "$env:LOCALAPPDATA\launcher\trace.log" results\typing-trace.log -ErrorAction SilentlyContinue
+          (Get-Content results\typing.json -Raw | ConvertFrom-Json).Report
+      - name: Idle memory, after use (a minute after the runs)
+        id: ram-used
+        if: always() && steps.ram-idle.outcome != 'skipped'
+        shell: pwsh
+        run: |
+          Start-Sleep 60
+          .\bin\profile-ram.ps1 -Json -Seconds 10 | Set-Content results\ram-used.json -Encoding utf8
+
+      - name: Summary, and the limits
+        if: always()
+        shell: pwsh
+        run: |
+          function Read-Result([string]$Name) {
+            $file = "results\$Name.json"
+            if (Test-Path $file) { try { return Get-Content $file -Raw | ConvertFrom-Json } catch { Write-Host "::warning::$file isn't JSON: $_" } }
+            $null
+          }
+          function Ms($v) { if ($null -eq $v) { '-' } else { '{0:0.0}' -f [double]$v } }
+          $fail = @()
+          $md = @('## Menu app on a runner (no GPU: WARP draws; a PC is faster)', '')
+
+          $keys = Read-Result keys
+          $md += '### Key to first frame (median ms, omawin.exe to the frame on screen)', ''
+          if ($keys) {
+            $md += '| Surface | Median ms |', '|---|---|'
+            foreach ($p in $keys.Numbers.KeyToFrameMs.PSObject.Properties) {
+              $md += "| $($p.Name) | $(Ms $p.Value) |"
+              if ($null -eq $p.Value) { $fail += "$($p.Name): no run reached its first frame" }
+              elseif ([double]$p.Value -gt [double]$env:KEY_LIMIT_MS) { $fail += "$($p.Name): key to first frame $(Ms $p.Value) ms (limit $env:KEY_LIMIT_MS)" }
+            }
+            $md += '', "$($keys.Numbers.Runs) runs, $($keys.Numbers.Missed) without a frame. $($keys.Keys)$(if ($keys.Scale) { " Display scale $($keys.Scale)%." })", ''
+            $md += '<details><summary>Every step</summary>', '', '```', $keys.Report.TrimEnd(), '```', '</details>', ''
+          } else { $md += "(no result: see the step's log)", ''; $fail += 'key to first frame: no result' }
+
+          $typing = Read-Result typing
+          $md += '### Typing in One Search, every source merged (ms from each key to its list on screen)', ''
+          if ($typing) {
+            $n = $typing.Numbers
+            $md += "Every key, median: **$(Ms $n.TypingMs) ms** (a PC's budget: 16 ms; limit here: $env:TYPING_LIMIT_MS ms). Slowest prefix: ``$($n.SlowestPrefix)`` $(Ms $n.SlowestPrefixMs) ms. $($n.Runs) keys, $($n.Missed) never drawn.", ''
+            if ($null -eq $n.TypingMs) { $fail += 'typing: no key reached the screen' }
+            elseif ([double]$n.TypingMs -gt [double]$env:TYPING_LIMIT_MS) { $fail += "typing: $(Ms $n.TypingMs) ms a key (limit $env:TYPING_LIMIT_MS)" }
+            $md += '<details><summary>Per prefix</summary>', '', '```', $typing.Report.TrimEnd(), '```', '</details>', ''
+          } else { $md += "(no result: see the step's log)", ''; $fail += 'typing: no result' }
+
+          $md += '### Idle memory: omawin''s parts (private working set, MB)', ''
+          foreach ($run in @(@{ Name = 'ram-idle'; Title = 'Fresh, a minute after start' }, @{ Name = 'ram-used'; Title = 'After the runs, a minute idle' })) {
+            $ram = Read-Result $run.Name
+            if (-not $ram) { $md += "**$($run.Title):** no result (see the step's log)", ''; $fail += "$($run.Title): no memory result"; continue }
+            $s = $ram.System
+            $md += "**$($run.Title):** the desktop's parts **$($s.DesktopMB) MB** of $($s.DesktopBudgetMB) MB; all of omawin $($s.OmawinMB) MB, $($s.OmawinCpu)% CPU over $($s.Seconds) s.", ''
+            $md += '| Part | Processes | Memory MB | Commit MB | CPU % | Budget MB | Over |', '|---|---|---|---|---|---|---|'
+            foreach ($p in @($ram.Omawin)) {
+              $md += "| $($p.Part) | $($p.Procs) | $($p.MemoryMB) | $($p.CommitMB) | $($p.Cpu) | $($p.BudgetMB) | $($p.Over) |"
+              if ($p.Over) { Write-Host "::warning::$($run.Title): $($p.Part) $($p.MemoryMB) MB, $($p.Cpu)% CPU: $($p.Over)" }
+            }
+            $md += '', "The runner: $($s.InUseMB) MB in use of $($s.TotalMB) MB, $($s.CachedMB) MB cached (a runner's Windows, not a PC's).", ''
+            if ([double]$s.DesktopMB -gt [double]$s.DesktopBudgetMB) { $fail += "$($run.Title): omawin's desktop $($s.DesktopMB) MB, over $($s.DesktopBudgetMB) MB" }
+          }
+          $md += 'Not here: GlazeWM, noctty and herdr (the rest of the 600 MB desktop), GlazeWM''s share of a key, a GPU, and a PC''s whole-system memory: those need the PC (`omawin profile menu`, `omawin profile ram -Save`).'
+          if ($fail) { $md += '', '**Over the limits:**', '' ; $md += $fail | ForEach-Object { "- $_" } }
+          $md -join "`n" | Add-Content $env:GITHUB_STEP_SUMMARY
+          Get-Process SystemMenu -ErrorAction SilentlyContinue | Stop-Process -Force
+          $log = Join-Path $env:LOCALAPPDATA 'launcher\system-menu.log'
+          if (Test-Path $log) { Copy-Item $log results\ }
+          if ($fail) { $fail | ForEach-Object { Write-Host "::error::$_" }; exit 1 }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: profile
+          path: results/
+          retention-days: 14
+          if-no-files-found: ignore
