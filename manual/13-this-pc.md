@@ -12,6 +12,7 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin hosts` | the hosts file, as entries |
 | `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's; `encrypt` for DNS over HTTPS |
 | `omawin proxy` | this account's system proxy, set and switched |
+| `omawin disk` | where a developer's disk space went, and getting it back |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
@@ -100,3 +101,12 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 - `omawin updates hours 9-18` sets the active hours by hand (18 hours at most, Windows' limit); `omawin updates hours auto` lets Windows pick them from when you use the PC. They're also settings in the launcher (search *active hours*).
 
 Pausing and active hours are settings for the whole PC: it says what will change, then Windows asks once. Nothing here hides an update or turns Windows Update off.
+
+## Disk space
+
+Windows' own cleanup misses where a developer's space goes. `omawin disk` measures it (**System menu › This PC › Disk space**):
+- **Caches**: npm, pnpm, Yarn, Bun, NuGet, pip, uv, cargo, Go, Gradle, Maven, mise's downloads, and Temp's files older than a week, biggest first, wherever their environment variables put them. Everything in them comes back when a tool needs it. `omawin disk clean npm` empties one: through the tool's own command when it has one and it's installed (`npm cache clean --force`, `uv cache clean`, `go clean -modcache`…), else by deleting the folder's contents; files in use are left. It says the size and asks first.
+- **Linux disks**: each WSL distro's disk and Docker Desktop's, with what they really take. They grow and never shrink by themselves; `omawin disk sparse Arch` stops that distro and makes its disk give freed space back to Windows from now on (WSL's own switch, no admin). Docker's: `docker system df`, then `docker builder prune` and `docker system prune`.
+- **Old projects' build output**: `omawin disk projects` looks through your project folders (`~/src`, `~/code`, `~/projects`, `~/repos`, `~/source/repos`, Documents) for `node_modules`, `target`, `bin` and `obj`, `.venv`, `.next`, `build` and the like, only beside the file that makes them (a `target` with no `Cargo.toml` beside it is left alone), in projects untouched for 30 days. `omawin disk projects ~/work 90` for another folder or age; `omawin disk projects clean` deletes what it listed, after asking. Each comes back with `npm install`, `cargo build` and so on.
+
+Nothing outside a cache or a project's build output is ever deleted, and nothing without asking.

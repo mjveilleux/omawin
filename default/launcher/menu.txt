@@ -306,6 +306,8 @@ pc.startup | 󱓞 | What starts with Windows | task omawin startup
 pc.top | 󰊚 | Processes by app | task omawin top
 pc.connections | 󰖟 | Apps on the internet | task omawin connections
 pc.whohas | 󰌾 | Who has this file? (its path on the clipboard) | task omawin who-has
+pc.disk | 󰋊 | Disk space: caches and Linux disks | task omawin disk
+pc.diskprojects | 󰋊 | Disk space: old projects' build output | task omawin disk projects
 pc.hosts | 󰇺 | Hosts file | task omawin hosts
 pc.dns | 󰇺 | DNS
 pc.dns.status | 󰇺 | Which DNS each network uses | task omawin dns

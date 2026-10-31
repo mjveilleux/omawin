@@ -21,6 +21,7 @@ namespace Omawin.Windows;
 //   dns [preset] [adapter] the adapters' DNS, and Cloudflare / Quad9 / Google / your router's (8.19)
 //   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
 //   proxy [set|on|off|script]  this account's system proxy (8.19)
+//   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
 //   --version
 public static partial class Program
 {
@@ -49,6 +50,7 @@ public static partial class Program
                 "dns" => DnsCommand.Run(rest),
                 "updates" => UpdatesCommand.Run(rest),
                 "proxy" => ProxyCommand.Run(rest),
+                "disk" => DiskCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -74,6 +76,7 @@ public static partial class Program
               omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it; dns encrypt [on|off] for DNS over HTTPS
               omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
               omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
+              omawin disk                 caches and Linux disks by size; disk clean <cache>, disk projects [clean], disk sparse <distro>
             """);
         return 0;
     }
