@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <RootNamespace>Omawin.Cli.Tests</RootNamespace>
-    <!-- bin/path-doctor.cs is linked for its pure part; this leaves out its Main. -->
+    <!-- bin/path-doctor.cs and bin/uninstall.cs are linked for their pure parts; this leaves out their Windows parts. -->
     <DefineConstants>$(DefineConstants);OMAWIN_TESTS</DefineConstants>
   </PropertyGroup>
   <ItemGroup>
@@ -17,14 +17,10 @@
     <Compile Include="../../src/bundle/Tools.cs" Link="bundle/Tools.cs" />
     <Compile Include="../../bin/path-doctor.cs" Link="bin/path-doctor.cs" />
     <Compile Include="../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs;../../src/cli/Profile/*.cs" LinkBase="cli" />
-    <Compile Include="../../src/cli/Security/*.cs;../../src/cli/Themes/*.cs;../../src/cli/Report/*.cs;../../src/cli/Release/*.cs" LinkBase="cli" />
     <!-- omawin uninstall's rules (a C# 5 helper built by build/helpers.ps1); OMAWIN_TESTS leaves
          out its Windows part. -->
     <Compile Include="../../bin/uninstall.cs" Link="bin/uninstall.cs" />
   </ItemGroup>
-  <PropertyGroup>
-    <DefineConstants>$(DefineConstants);OMAWIN_TESTS</DefineConstants>
-  </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageReference Include="xunit" Version="2.9.3" />
