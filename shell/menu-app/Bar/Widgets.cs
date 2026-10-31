@@ -437,6 +437,7 @@ sealed class LinuxWidget : BarWidget
         cell.Tip = LinuxState.Tip(s);
     }
     public override void Paint(Theme theme) { base.Paint(theme); cell.Paint(theme); }
+}
 
 // What's playing, from Windows' media controls (Media.cs): play/pause, the title, next. Shown only
 // while something plays or is paused. The title: click plays or pauses, right click goes back,
