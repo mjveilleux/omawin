@@ -84,7 +84,7 @@ The bar is drawn by the menu app itself, natively, with no web engine ([native-b
 
 At sign-in, `omawin start bar` (`bin/omawin.cs`) first paints a plain strip in the theme's background (`%LOCALAPPDATA%\launcher\bar-background.txt`, written by `themes/render.ps1`), the bar's size, across every monitor, in ~50 ms; the menu app's bar draws over it within a few seconds.
 
-One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone.
+One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone. Beside it, `bin/path-doctor.cs` (`omawin-path.exe`, `omawin path`): both PATHs read raw, what's broken in them, which program wins for each command, and a fix of your PATH with undo.
 
 Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), drawn by the QML host (`src/qs-host`, `omawin-qs.exe`): the bar keeps an empty cell for each plugin that's on (`Bar/PluginSlot.cs`, from `%LOCALAPPDATA%\launcher\plugins.txt`) and starts the host over it with `--plugin-dir <folder> --at x,y,w,h --parent <bar's pid>` (roadmap 4.9.4).
 
