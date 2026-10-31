@@ -8,14 +8,14 @@ public enum Verb
 {
     Open, Switch, Next, Previous, Undo, Run, RunInTerminal, RunAsAdmin, CopyCommand, ShowInFolder, CopyPath,
     TerminalHere, OpenInEditor, SwitchTo, Close, Paste, Copy, Delete, Apply, Backgrounds, CopyAnswer, Filter,
-    FindPackages, SearchWeb, AppSettings,
+    FindPackages, SearchWeb, AppSettings, Pin,
 }
 
 public sealed record ActionSpec(Verb Verb, string Label, string? Key = null);
 
 // What the actions depend on beyond the tag. Program: an item that starts a program we can name
-// (so it can run as admin); Folder: a file result that is a folder.
-public sealed record ResultFacts(bool Program = false, bool Folder = false, bool Undoable = false);
+// (so it can run as admin); Folder: a file result that is a folder; Pinned: it's on the home.
+public sealed record ResultFacts(bool Program = false, bool Folder = false, bool Undoable = false, bool Pinned = false);
 
 public static class ActionPlan
 {
@@ -85,6 +85,8 @@ public static class ActionPlan
                 list.Add(new(Verb.SearchWeb, "Search the web", "↵"));
                 break;
         }
+        // Last, for everything that's still there next time (Pins.cs).
+        if (Pins.CanPin(tag)) list.Add(new(Verb.Pin, facts.Pinned ? "Unpin from the home" : "Pin to the home", "ctrl p"));
         return list;
     }
 

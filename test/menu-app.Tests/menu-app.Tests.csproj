@@ -31,6 +31,7 @@
     <Compile Include="..\..\shell\menu-app\Search\Keys.cs" Link="Linked\Search\Keys.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Request.cs" Link="Linked\Search\Request.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Home.cs" Link="Linked\Search\Home.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Pins.cs" Link="Linked\Search\Pins.cs" />
     <Compile Include="..\..\shell\menu-app\Search\TagLook.cs" Link="Linked\Search\TagLook.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
     <Compile Include="..\..\shell\menu-app\TuneUp.cs" Link="Linked\TuneUp.cs" />

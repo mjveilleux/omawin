@@ -13,6 +13,7 @@ With nothing typed it opens on tiles that keep their places, so you learn them b
 - **Browse** (everything the system menu had) and **Theme** (yours, its palette as one gradient; Enter opens the Themes filter)
 - **Quick**: Wi-Fi, Bluetooth, Dark mode and Microphone (apps' access to it), each saying On or Off; Enter switches it
 - **Frequent**: the four apps you open most
+- **Pinned**, once you've pinned something: up to four of yours, in the order you pinned them. **Ctrl+P** on any result (an app, a setting, a command, a file, a project, a theme) pins it; Ctrl+P again, on the result or on its tile here, unpins it. It's the last row, so pinning never moves anything above it. A setting's pin shows its value and Enter switches it there.
 
 Arrow keys move between tiles; the selected one lifts. Only what's in the tiles changes, never where they are.
 
@@ -38,7 +39,8 @@ Some filters are richer views: **Files** is the file finder (below), **Clipboard
 ### Keys
 
 - **Enter** does the obvious thing: opens, runs, switches a setting, pastes a copy, applies a theme. A command that needs words (`theme set <name>`) fills the bar for them; scripts run in a terminal so you can see what they say.
-- **Ctrl+K** lists the selected result's other actions: run as administrator, show in folder, copy path, terminal here, open in the editor, run in a terminal, copy the command, close a window, delete a copy, a theme's backgrounds, a setting's previous value. Esc closes the list.
+- **Ctrl+K** lists the selected result's other actions: run as administrator, show in folder, copy path, terminal here, open in the editor, run in a terminal, copy the command, close a window, delete a copy, a theme's backgrounds, a setting's previous value, pin to the home. Esc closes the list.
+- **Ctrl+P** pins the selected result to the home, or unpins it (above).
 - **Ctrl+Enter** shows a file in its folder; **Ctrl+Shift+Enter** runs one of your items as administrator (Windows asks first).
 - **Settings switch in place**: a switch says On or Off and Enter flips it; **← / →** step a choice; **Ctrl+Z** puts the last change back ([Windows settings](05-system-menu.md#windows-settings)).
 - **Esc** steps back one thing at a time: the actions, then what you typed, then a view, then the filter, then the window. Win+Space again also hides it.
