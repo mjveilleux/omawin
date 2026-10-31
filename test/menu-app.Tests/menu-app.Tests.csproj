@@ -24,6 +24,13 @@
     <Compile Include="..\..\shell\menu-app\Search\Result.cs" Link="Linked\Search\Result.cs" />
     <Compile Include="..\..\shell\menu-app\Search\QueryParser.cs" Link="Linked\Search\QueryParser.cs" />
     <Compile Include="..\..\shell\menu-app\Search\Merger.cs" Link="Linked\Search\Merger.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\CommandList.cs" Link="Linked\Search\CommandList.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\WindowList.cs" Link="Linked\Search\WindowList.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Actions.cs" Link="Linked\Search\Actions.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Keys.cs" Link="Linked\Search\Keys.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Request.cs" Link="Linked\Search\Request.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\Home.cs" Link="Linked\Search\Home.cs" />
+    <Compile Include="..\..\shell\menu-app\Search\TagLook.cs" Link="Linked\Search\TagLook.cs" />
     <Compile Include="..\..\shell\menu-app\Settings\Catalog.cs" Link="Linked\Settings\Catalog.cs" />
     <Compile Include="..\..\shell\menu-app\TuneUp.cs" Link="Linked\TuneUp.cs" />
     <Compile Include="..\..\shell\menu-app\ReservedPorts.cs" Link="Linked\ReservedPorts.cs" />
