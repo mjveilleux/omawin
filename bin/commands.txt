@@ -19,6 +19,7 @@
 
 launcher | One Search (Win+Space): apps, settings, commands, files, windows, projects, clipboard, themes; a filter's name opens on it (clipboard, files, settings, …), a page's opens that page: localhost, reports, keys, audio (the sound: speakers, what plays on them, microphones), quick (Quick settings: the switches above the sound), packages, about | app --search
 files | One Search on Files (Win+F): files and folders, with a preview | app --search file
+everywhere | Whole-disk search, the file finder's Everywhere chip (Win+F, then Tab): on, off, rebuild, status (the default). No admin: every fixed drive walked at idle, kept current from Windows' change notifications | ask --everywhere
 menu | One Search on Commands, browsing what the system menu had (Win+Alt+Space was it); with a section's id, that section: omawin menu install | app --search command --browse
 search | One Search; a filter and words to start with: omawin search settings dark | app --search
 windows | The window switcher: One Search on Windows, every open window typed to filter, the selected one live beside the list, Enter goes there (its workspace too), Ctrl+K closes it; no key yet | app --search windows

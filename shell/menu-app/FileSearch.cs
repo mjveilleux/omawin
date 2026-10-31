@@ -35,6 +35,10 @@ public static class FileSearch
         catch { return []; }
     });
 
+    // The skip list as names and full paths, for whole-disk search (Everywhere.cs).
+    public static (List<string> Names, List<string> Paths) SkipList() =>
+        ([.. skip.Value.Where(s => !s.Contains('\\') && !s.Contains(':'))], [.. skip.Value.Where(s => s.Contains('\\') || s.Contains(':'))]);
+
     static bool Skipped(string path) => skip.Value.Any(s =>
         s.Contains('\\') || s.Contains(':')
             ? path.Equals(s, StringComparison.OrdinalIgnoreCase) || path.StartsWith(s + "\\", StringComparison.OrdinalIgnoreCase)
@@ -189,6 +193,44 @@ public static class FileSearch
             .ThenByDescending(x => x.name == Fuzzy.None ? 0 : x.name - 0.02 * x.h.Name.Length)
             .ThenByDescending(x => x.h.Score)
             .Select(x => x.h).Take(limit)];
+    }
+
+    // --- Everywhere: whole-disk search (Everywhere.cs, roadmap 8.2) ---------------------------
+    // The finder's Everywhere chip: every drive's names, not fff's folders. A scope that isn't a path.
+    public const string EverywhereScope = "*everywhere*";
+
+    // Types the preview may read the first lines of. Everywhere's hits aren't sniffed for binary
+    // content as fff's are: opening a file to look could download a OneDrive placeholder.
+    static readonly HashSet<string> TextTypes = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".txt", ".md", ".markdown", ".log", ".json", ".jsonc", ".yaml", ".yml", ".toml", ".xml", ".csv", ".tsv", ".ini", ".cfg", ".conf",
+        ".ps1", ".psm1", ".cs", ".csproj", ".rs", ".js", ".mjs", ".ts", ".tsx", ".jsx", ".py", ".go", ".java", ".kt", ".c", ".h", ".cpp", ".hpp",
+        ".sh", ".bash", ".bat", ".cmd", ".html", ".htm", ".css", ".scss", ".sql", ".lua", ".rb", ".php", ".r", ".qml", ".gitignore", ".editorconfig", ".env",
+    };
+
+    public static List<Hit> SearchEverywhere(string query, int limit = 60, bool foldersOnly = false)
+    {
+        var hits = new List<Hit>();
+        foreach (var f in Everywhere.Search(query, limit, foldersOnly))
+        {
+            // Where it is: the drive (C:), then the folders under it.
+            string drive = Path.GetPathRoot(f.Path)?.TrimEnd('\\') ?? "";
+            string dir = Path.GetDirectoryName(f.Path) ?? "";
+            string relative = dir.Length > drive.Length ? dir[(drive.Length + 1)..] : "";
+            long size = 0;
+            DateTime? modified = null;
+            try
+            {
+                FileSystemInfo info = f.IsDir ? new DirectoryInfo(f.Path) : new FileInfo(f.Path);
+                if (!info.Exists) continue; // gone since the last change Windows told of
+                modified = info.LastWriteTime;
+                if (info is FileInfo file) size = file.Length;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            hits.Add(new Hit(f.Path, f.Name, drive, relative, f.IsDir, size, modified, null,
+                !f.IsDir && !TextTypes.Contains(Path.GetExtension(f.Name)), (int)Math.Round(f.Score * 100)));
+        }
+        return hits;
     }
 
     // Opened from the launcher: fff ranks it higher next time, most of all for this query.

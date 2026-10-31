@@ -796,12 +796,13 @@ public sealed partial class MainWindow : Window
             null => "Search files and folders…",
             FoldersOnly => "Search folders…",
             ImagesOnly => "Search pictures…",
+            FileSearch.EverywhereScope => "Search every drive…",
             _ => $"Search {Path.GetFileName(findScope)}…",
         };
 
         Scopes.Children.Clear();
         var scopes = FileSearch.Scopes();
-        if (findScope is not (null or FoldersOnly or ImagesOnly) && !scopes.Any(s => s.Root == findScope)) findScope = null;
+        if (findScope is not (null or FoldersOnly or ImagesOnly or FileSearch.EverywhereScope) && !scopes.Any(s => s.Root == findScope)) findScope = null;
         void Chip(string label, string? root, string glyph)
         {
             bool on = findScope == root;
@@ -826,6 +827,7 @@ public sealed partial class MainWindow : Window
         Chip("All", null, char.ConvertFromUtf32(0xF0C4B)); // all-inclusive
         Chip("Folders", FoldersOnly, char.ConvertFromUtf32(0xF0770)); // folder-search
         Chip("Images", ImagesOnly, char.ConvertFromUtf32(0xF02E9)); // image
+        Chip("Everywhere", FileSearch.EverywhereScope, char.ConvertFromUtf32(0xF02CA)); // harddisk: every drive (Everywhere.cs)
         foreach (var (root, label) in scopes)
             Chip(label, root, char.ConvertFromUtf32(LinuxFiles.LogoOfRoot(root) ?? label switch // Linux's: its distro's logo
             {
@@ -838,13 +840,69 @@ public sealed partial class MainWindow : Window
         bool foldersOnly = !imagesOnly && (findScope == FoldersOnly || query.EndsWith('/') || query.EndsWith('\\'));
         string bare = query.TrimEnd('/', '\\'); // the name part, for searching and highlighting
         string fffQuery = imagesOnly ? $"{bare} {string.Join(" ", ImageExtensions.Select(e => "*." + e))}".Trim() : bare;
+        if (findScope == FileSearch.EverywhereScope)
+        {
+            RenderEverywhere(bare, foldersOnly);
+            return;
+        }
         findHits = FileSearch.Search(fffQuery, findScope is FoldersOnly or ImagesOnly ? null : findScope, foldersOnly: foldersOnly);
         if (imagesOnly) findHits = [.. findHits.Where(h => !h.IsDir && IsImage(h.Name))];
         foreach (var hit in findHits) AddFileRow(hit, bare);
         if (findHits.Count == 0)
             AddRow(char.ConvertFromUtf32(scopes.Count == 0 ? 0xF0996 : 0xF0156),
                 scopes.Count == 0 ? "Indexing your folders…" : "No matches", Hex(theme.Comment), () => { }, dim: true);
+        // Not in your folders? The whole disk is one row away (when it's on).
+        if (bare.Length > 0 && findScope == null && Everywhere.On)
+            AddRow(char.ConvertFromUtf32(0xF02CA), $"Search every drive for “{bare}”", Hex(theme.Cyan),
+                () => { findScope = FileSearch.EverywhereScope; selected = 0; Render(); }, Tag.Chevron);
         FooterLeft.Text = query.Length == 0 ? "most used" : $"{findHits.Count} found";
+        SetKeys(("tab", "where · folders"), ("↵", "open"), ("ctrl ↵", "show in folder"), ("esc", query.Length > 0 ? "clear" : findFromLauncher ? "back" : "close"));
+    }
+
+    // The Everywhere chip: whole-disk search (Everywhere.cs), off the UI thread, since loading the
+    // index the first time takes a moment; until the answer lands the last one stays.
+    string? everywhereFor;
+    List<FileSearch.Hit> everywhereHits = [];
+    int everywhereToken;
+
+    void RenderEverywhere(string query, bool foldersOnly)
+    {
+        string key = (foldersOnly ? "/" : "") + query;
+        if (key != everywhereFor)
+        {
+            everywhereFor = key;
+            int token = ++everywhereToken;
+            Task.Run(() => FileSearch.SearchEverywhere(query, foldersOnly: foldersOnly)).ContinueWith(t => DispatcherQueue.TryEnqueue(() =>
+            {
+                if (token != everywhereToken || !t.IsCompletedSuccessfully) return;
+                everywhereHits = t.Result;
+                if (finding && findScope == FileSearch.EverywhereScope) Render();
+            }));
+        }
+        findHits = query.Length == 0 ? [] : everywhereHits;
+        foreach (var hit in findHits) AddFileRow(hit, query);
+        if (findHits.Count == 0)
+        {
+            switch (Everywhere.Now)
+            {
+                case Everywhere.State.Off:
+                    AddRow(char.ConvertFromUtf32(0xF02CA), "Whole-disk search is off: Enter turns it on", Hex(theme.Cyan), () =>
+                    {
+                        var answer = Everywhere.Answer(["on"]);
+                        Snip.Say(answer.Text);
+                        everywhereFor = null;
+                        Render();
+                    }, sub: "Every file name on your drives, kept current; no admin");
+                    break;
+                case Everywhere.State.Walking:
+                    AddRow(char.ConvertFromUtf32(0xF0996), "Walking your drives… (a minute or two, in the background)", Hex(theme.Comment), () => { }, dim: true);
+                    break;
+                default:
+                    AddRow(char.ConvertFromUtf32(0xF0156), query.Length == 0 ? "Type a name: every drive is searched" : "No matches", Hex(theme.Comment), () => { }, dim: true);
+                    break;
+            }
+        }
+        FooterLeft.Text = query.Length == 0 ? "every drive" : $"{findHits.Count} found";
         SetKeys(("tab", "where · folders"), ("↵", "open"), ("ctrl ↵", "show in folder"), ("esc", query.Length > 0 ? "clear" : findFromLauncher ? "back" : "close"));
     }
 
@@ -1329,7 +1387,7 @@ public sealed partial class MainWindow : Window
     // Tab / Shift+Tab in the file finder: the next / previous folder chip.
     void CycleScope(int by)
     {
-        var scopes = new List<string?> { null, FoldersOnly, ImagesOnly };
+        var scopes = new List<string?> { null, FoldersOnly, ImagesOnly, FileSearch.EverywhereScope };
         scopes.AddRange(FileSearch.Scopes().Select(s => (string?)s.Root));
         int at = Math.Max(0, scopes.IndexOf(findScope));
         findScope = scopes[(at + by + scopes.Count) % scopes.Count];
