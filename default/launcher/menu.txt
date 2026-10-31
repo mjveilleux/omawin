@@ -313,6 +313,8 @@ pc.dns.cloudflare | 󰇺 | Cloudflare | task omawin dns cloudflare
 pc.dns.quad9 | 󰇺 | Quad9 (blocks known malware sites) | task omawin dns quad9
 pc.dns.google | 󰇺 | Google | task omawin dns google
 pc.dns.router | 󰇺 | Your router's (automatic) | task omawin dns router
+pc.dns.encrypt | 󰌾 | Encrypt DNS (DNS over HTTPS) | task omawin dns encrypt
+pc.proxy | 󰒍 | Proxy (this account) | task omawin proxy
 pc.updates | 󰚰 | Windows Update
 pc.updates.status | 󰚰 | What's waiting, and is a restart owed? | task omawin updates
 pc.updates.tonight | 󰜉 | Restart tonight at 03:00 | omawin updates restart tonight

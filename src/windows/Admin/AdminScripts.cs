@@ -103,6 +103,26 @@ public static partial class AdminScripts
         return Wrap(status, body.ToString());
     }
 
+    // DNS over HTTPS on or off for these adapters' servers (8.19): each one's DohFlags key, made or
+    // removed; only servers Windows knows an encrypted address for. Then the cache is cleared.
+    public static string DnsEncryption(IReadOnlyList<(Guid Adapter, string Server)> servers, bool on, string status)
+    {
+        if (servers.Count == 0) throw new ArgumentException("no servers", nameof(servers));
+        var body = new StringBuilder();
+        foreach (var (adapter, server) in servers)
+        {
+            if (!System.Net.IPAddress.TryParse(server, out var ip) || DnsPresets.Encryptable(ip) == null)
+                throw new ArgumentException($"not a server with an encrypted address: {server}", nameof(servers));
+            // .NET's registry calls, not the provider's paths: an IPv6 key name has colons in it.
+            var key = Quote(DnsPresets.DohKey(adapter, ip));
+            body.Append(on
+                ? $"$k = [Microsoft.Win32.Registry]::LocalMachine.CreateSubKey({key}); $k.SetValue('DohFlags', [long]{DnsPresets.DohAutomatic}, [Microsoft.Win32.RegistryValueKind]::QWord); $k.Close()\n"
+                : $"[Microsoft.Win32.Registry]::LocalMachine.DeleteSubKey({key}, $false)\n");
+        }
+        body.Append("Clear-DnsClientCache");
+        return Wrap(status, body.ToString());
+    }
+
     // Windows Update's pause (8.18): the values Settings writes, each a UTC time checked here; or,
     // with none given, the pause removed (resume). The service reads them at its next check, and
     // Settings shows "Resume updates" as for its own pause.

@@ -20,6 +20,7 @@ namespace Omawin.Windows;
 //   classic-menu [on|off|status]  the full right-click menu back (8.24)
 //   dns [preset] [adapter] the adapters' DNS, and Cloudflare / Quad9 / Google / your router's (8.19)
 //   updates [restart|pause|resume|hours]  Windows Update: what's coming, and the restart when you say (8.18)
+//   proxy [set|on|off|script]  this account's system proxy (8.19)
 //   --version
 public static partial class Program
 {
@@ -47,6 +48,7 @@ public static partial class Program
                 "classic-menu" => ClassicMenuCommand.Run(rest),
                 "dns" => DnsCommand.Run(rest),
                 "updates" => UpdatesCommand.Run(rest),
+                "proxy" => ProxyCommand.Run(rest),
                 _ => Help(),
             };
         }
@@ -69,8 +71,9 @@ public static partial class Program
               omawin wifi share [network] the Wi-Fi as a QR code
               omawin clip [transform]     the clipboard's text converted (clip lists them)
               omawin classic-menu         the full right-click menu, or Windows 11's short one (on, off, status)
-              omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it
+              omawin dns [preset]         each adapter's DNS; cloudflare, quad9, google or router switches it; dns encrypt [on|off] for DNS over HTTPS
               omawin updates              Windows Update: what's waiting; restart [tonight|<time>|cancel], pause [days], resume, hours 9-18
+              omawin proxy                the system proxy; proxy set <host:port> [names that skip it], on, off, script <url>
             """);
         return 0;
     }

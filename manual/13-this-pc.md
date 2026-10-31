@@ -10,7 +10,8 @@ Windows records why it restarted, who holds a file, what starts with it and whic
 | `omawin top [name]` | processes by app, the busiest first |
 | `omawin connections [app]` | which apps are talking to the internet, and to whom |
 | `omawin hosts` | the hosts file, as entries |
-| `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's |
+| `omawin dns [preset]` | each network's DNS, and Cloudflare, Quad9, Google or your router's; `encrypt` for DNS over HTTPS |
+| `omawin proxy` | this account's system proxy, set and switched |
 | `omawin wifi share [network]` | the Wi-Fi as a QR code a phone joins from |
 | `omawin clip <transform>` | the clipboard's text converted in place |
 | `omawin mic` | every microphone muted or unmuted at once |
@@ -58,7 +59,13 @@ From Windows' Restart Manager, the same thing installers use to ask which progra
 
 ## DNS
 
-`omawin dns` says which DNS each connected network uses: your router's (handed out automatically), or set by hand, named when it's one of the well-known ones. `omawin dns cloudflare` (or `quad9`, `google`) switches every connected adapter to it; `omawin dns router` gives them back to your network; add part of an adapter's name for one only (`omawin dns quad9 wi-fi`). It says which adapters change to what, then Windows asks once; the cache is cleared so the next lookup uses the new servers. **System menu › This PC › DNS** has the same. Cloudflare, Google and Quad9 are in Windows 11's DNS-over-HTTPS list, so Settings › Network can encrypt them.
+`omawin dns` says which DNS each connected network uses: your router's (handed out automatically), or set by hand, named when it's one of the well-known ones. `omawin dns cloudflare` (or `quad9`, `google`) switches every connected adapter to it; `omawin dns router` gives them back to your network; add part of an adapter's name for one only (`omawin dns quad9 wi-fi`). It says which adapters change to what, then Windows asks once; the cache is cleared so the next lookup uses the new servers. **System menu › This PC › DNS** has the same.
+
+**Encrypted DNS.** `omawin dns encrypt` turns on DNS over HTTPS (Windows 11) for the servers in use that Windows knows an encrypted address for: Cloudflare, Google and Quad9. Lookups then go encrypted, and none is sent in the clear. `omawin dns encrypt off` is the undo; `omawin dns` says under each network whether its DNS is encrypted. Your router's DNS can't be encrypted this way: switch to one of the three first. **System menu › This PC › DNS › Encrypt DNS** does the same.
+
+## The proxy
+
+`omawin proxy` says which system proxy this account uses (the one Edge, Chrome, winget and most programs follow): a server, the names that skip it, a setup script. `omawin proxy set proxy.example.com:8080` sets one and turns it on (names that should skip it go after: `omawin proxy set proxy.example.com:8080 *.corp.example`; the local network always does); `omawin proxy off` and `on` switch it without forgetting the server; `omawin proxy script <url>` uses a setup script (PAC), `script off` removes it. Each change says what it was before. It's Settings › Network › Proxy, for your account only, no admin; running programs are told at once. The launcher's *System proxy* switch does the on and off.
 
 ## Share the Wi-Fi
 
