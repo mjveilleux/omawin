@@ -23,6 +23,7 @@ namespace Omawin.Windows;
 //   proxy [set|on|off|script]  this account's system proxy (8.19)
 //   disk [clean|projects|sparse]  where a developer's disk went: caches, build output, Linux's disks (8.3)
 //   keyboard [signin <remap>]  what your keys do differently; Windows' own remap for the sign-in screen (8.12, 8.13, 8.23)
+//   wallpaper spread <picture>…  a picture per monitor, left to right (8.8; the theme switch uses it)
 //   --version
 public static partial class Program
 {
@@ -53,6 +54,7 @@ public static partial class Program
                 "proxy" => ProxyCommand.Run(rest),
                 "disk" => DiskCommand.Run(rest),
                 "keyboard" => KeyboardCommand.Run(rest),
+                "wallpaper" => WallpaperCommand.Run(rest),
                 _ => Help(),
             };
         }

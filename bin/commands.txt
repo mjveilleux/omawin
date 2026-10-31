@@ -29,6 +29,7 @@ theme set | Apply a theme: omawin theme set gruvbox [-Background village-square]
 theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
 theme backgrounds | The background picker: a grid of the current theme's pictures, Enter sets one, Tab shows another theme's; or a theme's: omawin theme backgrounds gruvbox | app --open style.backgrounds
 theme background | One of the current theme's backgrounds, by name or part of it: omawin theme background village-square | pwsh themes/set-theme.ps1 -Background
+wallpaper spread | A picture per monitor, left to right (the theme switch does this with the theme's backgrounds when there's more than one monitor): omawin wallpaper spread <picture> [picture…] | run omawin-windows wallpaper spread
 theme add | Install a community theme by name (omawin theme search), at the commit the index checked, or any theme from its git link; applies it | pwsh themes/theme.ps1 add
 theme search | Community themes matching every word (name, author, light, dark), with their repos: omawin theme search nord | pwsh themes/theme.ps1 search
 theme preview | A community theme across the desktop for a moment, nothing installed: omawin theme preview <name>; omawin theme preview off puts yours back (the picker's Community chip does this as you move) | pwsh themes/theme.ps1 preview
