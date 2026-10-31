@@ -86,7 +86,7 @@ At sign-in, `omawin start bar` (`bin/omawin.cs`) first paints a plain strip in t
 
 One native helper, `bin/voice-meter.cs`, built into `~/.local/bin` by install: the dictation indicator. It says whether dictation is listening (from Windows' microphone privacy log) and the default mic's level; it never opens the mic itself, and quits when the bar that started it is gone.
 
-Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), which runs once the QML host does (roadmap 4.9.4).
+Plugins add to the bar ([`plans/05-plugins.md`](../plans/05-plugins.md)): `shell/plugins/<id>/` in Omarchy's format. The first is the music player (`shell/plugins/omawin.music/`, QML), drawn by the QML host (`src/qs-host`, `omawin-qs.exe`): the bar keeps an empty cell for each plugin that's on (`Bar/PluginSlot.cs`, from `%LOCALAPPDATA%\launcher\plugins.txt`) and starts the host over it with `--plugin-dir <folder> --at x,y,w,h --parent <bar's pid>` (roadmap 4.9.4).
 
 ## The music player (`src/music/`)
 
@@ -135,7 +135,7 @@ Never in the repo:
 | `fff\` | the file finder's indexes |
 | `dirs\` | PowerShell tab title → folder, for Win+Enter |
 | `theme`, `background`, `nvim-theme`, `lockscreen*` | the current theme, its background, and the lock screen |
-| `backgrounds\`, `thumbnails\` | themes' wallpapers, downloaded once; the theme picker's small copies of each theme's first |
+| `backgrounds\`, `thumbnails\` | themes' wallpapers, downloaded once; small copies of every theme's backgrounds, for the theme and background pickers (the release brings them) |
 | `tasks\` | menu-task scripts |
 | `migrations.txt` | migrations already run on this PC |
 | `music.log` | the music player's errors (its playlists and podcasts are in `~/Music/omawin`) |

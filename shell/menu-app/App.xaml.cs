@@ -201,7 +201,7 @@ public partial class App : Application
         if (window == null) return;
         int open = Array.IndexOf(args, "--open");
         int select = Array.IndexOf(args, "--select");
-        if (open >= 0 && open + 1 < args.Length) window.ShowMenu(args[open + 1]);
+        if (open >= 0 && open + 1 < args.Length) window.ShowMenu(args[open + 1], open + 2 < args.Length ? args[open + 2] : null);
         else if (select >= 0 && select + 1 < args.Length) window.SelectItem(args[select + 1]);
         else if (args.Length > 0 && args[0] == "--type") window.TypeText(string.Join(' ', args[1..]));
         else if (args.Length > 1 && args[0] == "--key") window.PressKey(args[1]);

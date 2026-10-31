@@ -1,0 +1,14 @@
+module qs.Ui
+BarWidget 1.0 BarWidget.qml
+WidgetButton 1.0 WidgetButton.qml
+BarIconButton 1.0 BarIconButton.qml
+Panel 1.0 Panel.qml
+PanelController 1.0 PanelController.qml
+KeyboardPanel 1.0 KeyboardPanel.qml
+PanelKeyCatcher 1.0 PanelKeyCatcher.qml
+PanelActionButton 1.0 PanelActionButton.qml
+PanelSlider 1.0 PanelSlider.qml
+PanelSeparator 1.0 PanelSeparator.qml
+ButtonGroup 1.0 ButtonGroup.qml
+SizedImage 1.0 SizedImage.qml
+singleton OpenPanels 1.0 OpenPanels.qml

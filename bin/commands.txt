@@ -24,6 +24,8 @@ capture text | Text from the screen (Win+Shift+T): drag over it, its text is cop
 
 theme set | Apply a theme: omawin theme set gruvbox [-Background village-square] | pwsh themes/set-theme.ps1
 theme next-background | The current theme's next background (Win+Ctrl+Space) | pwsh themes/set-theme.ps1 -NextBackground
+theme backgrounds | The background picker: a grid of the current theme's pictures, Enter sets one, Tab shows another theme's; or a theme's: omawin theme backgrounds gruvbox | app --open style.backgrounds
+theme background | One of the current theme's backgrounds, by name or part of it: omawin theme background village-square | pwsh themes/set-theme.ps1 -Background
 theme install | Install a theme from its git link, like Omarchy's: omawin theme install https://github.com/<someone>/omarchy-<name>-theme | pwsh themes/theme.ps1 install
 theme update | Update installed themes (git pull), or one: omawin theme update <name> | pwsh themes/theme.ps1 update
 theme remove | Remove an installed theme: omawin theme remove <name> (asks which if left out) | pwsh themes/theme.ps1 remove

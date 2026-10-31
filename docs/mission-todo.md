@@ -78,7 +78,7 @@ Decided 2026-10-15: no Zebar fork. The bar and dock move into the menu app (the 
 - [ ] Reminders and toasts (`AppNotificationManager`): timers, low battery
 - [x] Menu section About, fastfetch-style (`omawin about`) (2026-10-15)
 - [ ] Menu sections Omarchy has that we don't: Setup › Input / Language / Security, Install › Web app / TUI / Fonts, Remove (uninstall what Install added)
-- [ ] Visual background picker (grid of the theme's pictures), not only "next"
+- [x] Visual background picker (grid of the theme's pictures), not only "next": Style › Backgrounds, `omawin theme backgrounds`; Tab for another theme's; every picture shipped by CI (2026-10-31; not yet seen on screen)
 
 ## 6. Developer machine
 

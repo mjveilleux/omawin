@@ -11,12 +11,16 @@
 
 **Win+Ctrl+Space** (or Style › Next background) cycles the theme's backgrounds.
 
+**System menu › Style › Backgrounds** shows them all at once: a grid of your theme's wallpapers, the one on your desktop checked. Arrow keys move, Enter (or a click) sets one and leaves the grid open so you can try another; only the wallpaper and the lock screen change. Type to narrow it by the picture's name. **Tab** (Shift+Tab back) shows the next theme's wallpapers: picking one of those switches to that theme, on that wallpaper. Every picture comes with omawin, so the grid is complete as soon as it opens.
+
 From a terminal:
 
 ```
 omawin theme set gruvbox                        a theme
 omawin theme set gruvbox -Background village    on a background (part of its name)
 omawin theme next-background
+omawin theme background village                one of your theme's backgrounds (part of its name)
+omawin theme backgrounds                        the background picker (or: omawin theme backgrounds gruvbox)
 omawin theme list                               every theme; * is the one in use
 ```
 

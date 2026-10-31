@@ -17,4 +17,4 @@ Zebar was removed on 2026-10-31 (`migrations/2026-10-31-zebar-out.ps1`): the nat
    - left: media
 3. **Switch over** (done 2026-10-31): the native bar the default and the only one; Zebar, our Zebar fork and `zebar/` gone, with a migration; `omawin check`, `omawin profile ram`'s budgets, docs and manual followed.
 
-Left for later: the agents panel, and media in the bar. The music player is a plugin now (`shell/plugins/omawin.music/`, QML), which shows once the QML host is built (roadmap 4.9.4).
+Left for later: the agents panel, and media in the bar. The music player is a plugin now (`shell/plugins/omawin.music/`, QML), which the QML host draws in a cell the bar keeps for it (`Bar/PluginSlot.cs`, roadmap 4.9.4).

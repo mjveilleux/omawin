@@ -21,7 +21,7 @@ Run it from **Windows PowerShell**, then sign out and back in. It takes about a 
 - **Terminal**: [noctty](https://github.com/mjveilleux/noctty) (Ghostty's core for Windows) with PowerShell 7 (installed first, and what omawin runs on) and starship; [herdr](https://herdr.dev) for project sessions; Windows Terminal if you prefer it.
 - **Neovim** with [LazyVim](https://lazyvim.org), themed, its treesitter parsers prebuilt (no C compiler needed).
 - **Opt-in presets**: language toolchains, data tools, AI agents, local dictation (`Win+H`).
-- **Plugins in Omarchy's format** (`shell/plugins/`): the first is the music, podcast and radio player (`Win+M`), a Quickshell plugin that runs once omawin's QML host lands.
+- **Plugins in Omarchy's format** (`shell/plugins/`): the first is the music, podcast and radio player (`Win+M`), a Quickshell plugin that omawin's QML host (`src/qs-host`, Rust and Qt) draws in the bar.
 - **`omawin`**, a command for everything: `omawin help` lists them; the keys, menus and bar all call it.
 
 ## Requirements
@@ -87,7 +87,7 @@ All of them: `Win+Space` → Shortcuts, or [manual/03-keys.md](manual/03-keys.md
 
 ## Plugins
 
-Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar once omawin's QML host runs plugins.
+Plugins are folders in Omarchy's format (`shell/plugins/<id>`: a `manifest.json` and QML). `omawin plugin list` shows them; `omawin plugin add music` turns one on and installs its programs (also Install › Plugins in the system menu). The first is `omawin.music`, the music, podcast and radio player; it shows in the bar, drawn by omawin's QML host (`omawin-qs`, downloaded the first time a plugin is turned on; nothing otherwise).
 
 ## Make it yours
 

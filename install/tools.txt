@@ -22,6 +22,10 @@
 #           tar.zst parts that n tars unpack at once, each writing its share of the files (a tool of
 #           many files: writing them, not decompressing, is what takes the time on Windows), when
 #           the PC's tar reads zstd (Windows 11 23H2 on); the single file otherwise
+#
+# Entries CI adds itself (build/release.ps1): nvim-parsers, theme-thumbs, and qs-host (the plugins'
+# QML host), flagged optional: only installed when asked for by name (a plugin turned on), then
+# updated with the rest.
 
 pwsh        | github:PowerShell/PowerShell      | ^PowerShell-[0-9.]+-win-x64\.zip$                  | .   | Microsoft.PowerShell
 git         | github:git-for-windows/git        | ^PortableGit-[0-9.]+-64-bit\.7z\.exe$             | cmd | Git.Git                     |                            | sfx parts:4

@@ -24,4 +24,4 @@ The widget writes `panel 1|0` and `focus 1|0` to its stdin, so Win+M closes an o
 
 ## Installing it
 
-`omawin plugin add music` (or Install › Plugins › Music) turns it on and installs the programs it needs: yt-dlp, mpv, the .NET runtime (the `music` preset in `install/packages.ps1`, tagged with this plugin). It shows in the bar once omawin's QML host runs plugins (roadmap 4.9.4); until then Win+M says the panel is on its way.
+`omawin plugin add music` (or Install › Plugins › Music) turns it on and installs the programs it needs: yt-dlp, mpv, the .NET runtime (the `music` preset in `install/packages.ps1`, tagged with this plugin). It also downloads omawin's QML host (`omawin-qs`, [`src/qs-host`](../../../src/qs-host/README.md)), which draws it in a cell the bar keeps for it (roadmap 4.9.4).

@@ -13,6 +13,10 @@ namespace SystemMenu;
 // monitor's scale; Windows is asked for the next standard icon size at or above those pixels
 // (one the app ships, rather than one it resizes), a bigger image is shrunk here to the exact
 // pixels (IconScale), a smaller one is never stretched, and the caller draws it 1:1.
+//
+// Store apps (an id that's an AUMID) get their package's own logo file instead, unplated where
+// the package ships one (StoreLogos, PackageLogo), since the shell can hand back the logo on its
+// coloured plate; the shell's icon is the fallback for anything that goes wrong there.
 public static unsafe class AppIcons
 {
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, PreserveSig = false)]
@@ -38,8 +42,12 @@ public static unsafe class AppIcons
     static readonly Dictionary<string, Icon?> cache = [];
     static readonly Queue<string> cacheOrder = new();
     static readonly Dictionary<string, List<Action<Icon>>> waiting = [];
-    static readonly System.Collections.Concurrent.BlockingCollection<(string Key, string Id, int Pixels)> queue = [];
+    static readonly System.Collections.Concurrent.BlockingCollection<(string Key, string Id, int Pixels, bool Light)> queue = [];
     static DispatcherQueue? ui;
+
+    // Whether the menu's theme is light (set where the window applies its theme): Store apps
+    // then get their light unplated logo, drawn for a light background, where they ship one.
+    public static bool Light { get; set; }
 
     // Calls back on the UI thread with the icon and the size to draw it at, in units (right away
     // if it's known already): an app id, or a file as "path:C:\..." (its icon, or a thumbnail for
@@ -48,7 +56,8 @@ public static unsafe class AppIcons
     public static void Get(string id, double units, double scale, Action<ImageSource, double> done)
     {
         int pixels = IconScale.Pixels(units, scale);
-        Request($"{pixels}|{id}", id, pixels, icon => done(icon.Image, icon.Pixels / Math.Max(scale, 0.5)));
+        // Light and dark are cached apart: a Store app's logo can differ between them.
+        Request($"{pixels}|{(Light ? 'l' : 'd')}|{id}", id, pixels, icon => done(icon.Image, icon.Pixels / Math.Max(scale, 0.5)));
     }
 
     // A file's preview ("big:C:\..."), not cached: a thumbnail (or its icon) for the preview pane,
@@ -71,23 +80,26 @@ public static unsafe class AppIcons
             worker.SetApartmentState(ApartmentState.STA);
             worker.Start();
         }
-        queue.Add((key, id, pixels));
+        queue.Add((key, id, pixels, Light));
     }
 
     static void Work()
     {
-        foreach (var (key, id, want) in queue.GetConsumingEnumerable())
+        foreach (var (key, id, want, light) in queue.GetConsumingEnumerable())
         {
             byte[]? pixels = null;
             int width = 0, height = 0;
             try
             {
                 if (id.StartsWith("big:")) (pixels, width, height) = Pixels(id[4..], want, 0);
+                else if (id.StartsWith("path:"))
+                {
+                    var (raw, w, h) = Pixels(id[5..], IconScale.Request(want), BiggerSizeOk);
+                    (pixels, width, height) = IconScale.Fit(raw, w, h, want);
+                }
                 else
                 {
-                    bool app = !id.StartsWith("path:");
-                    var (raw, w, h) = Pixels(app ? @"shell:AppsFolder\" + id : id[5..], IconScale.Request(want),
-                        BiggerSizeOk | (app ? IconOnly : 0));
+                    var (raw, w, h, _) = AppIcon(id, want, light);
                     (pixels, width, height) = IconScale.Fit(raw, w, h, want);
                 }
             }
@@ -117,36 +129,55 @@ public static unsafe class AppIcons
     // 150% and 200% scale, a launcher row's icon (26 units) and a tile's (46): the pixels it's drawn
     // at, the size asked of Windows, what came back, and what's drawn. An icon that came back
     // smaller than wanted is drawn at its own size (never stretched): counted, so a regression to
-    // scaling up shows. Runs on an STA thread of its own, as the icon worker does.
+    // scaling up shows. Each line says where the icon came from: the Store app's own logo file
+    // (step 4), or the shell and the size asked of it. The first 25 apps, then every other Store
+    // app in the folder, so the package path is seen however the folder is ordered. Light or dark
+    // as the current theme is. Runs on an STA thread of its own, as the icon worker does.
     public static string SelfTest()
     {
         var report = new System.Text.StringBuilder();
         var t = new Thread(() =>
         {
-            report.AppendLine("omawin icons: self test (read only)");
-            int ok = 0, smaller = 0, failed = 0;
-            foreach (var (name, id) in AppsFolder.Items().Take(25))
+            bool light = MenuModel.LoadTheme(MenuModel.CurrentThemeName()).Mode == "light";
+            report.AppendLine($"omawin icons: self test (read only, {(light ? "light" : "dark")} theme)");
+            int ok = 0, smaller = 0, failed = 0, packaged = 0;
+            var items = AppsFolder.Items();
+            var apps = items.Take(25).Concat(items.Skip(25).Where(i => PackageLogo.SplitAumid(i.Id) != null));
+            foreach (var (name, id) in apps)
                 foreach (var scale in new[] { 1.0, 1.5, 2.0 })
                     foreach (var units in new[] { 26.0, 46.0 })
                     {
-                        int want = IconScale.Pixels(units, scale), ask = IconScale.Request(want);
+                        int want = IconScale.Pixels(units, scale);
                         try
                         {
-                            var (raw, w, h) = Pixels(@"shell:AppsFolder\" + id, ask, BiggerSizeOk | IconOnly);
+                            var (raw, w, h, source) = AppIcon(id, want, light);
                             var (_, dw, dh) = IconScale.Fit(raw, w, h, want);
                             bool small = Math.Max(w, h) < want;
                             if (small) smaller++; else ok++;
-                            report.AppendLine($"  {(small ? "small" : "ok   ")} {name,-32} {units,3} units at {scale * 100,3}%: want {want,3}, asked {ask,3}, got {w}x{h}, drawn {dw}x{dh}");
+                            if (!source.StartsWith("shell")) packaged++;
+                            report.AppendLine($"  {(small ? "small" : "ok   ")} {name,-32} {units,3} units at {scale * 100,3}%: want {want,3}, got {w}x{h}, drawn {dw}x{dh}, from {source}");
                         }
                         catch (Exception ex) { failed++; report.AppendLine($"  FAIL  {name,-32} {ex.Message}"); }
                     }
             report.AppendLine();
             report.AppendLine($"{ok} at or above the drawn size (shrunk to it), {smaller} smaller (drawn at their own size, not stretched), {failed} failed");
+            report.AppendLine($"{packaged} from a Store app's own logo file, the rest from the shell");
         });
         t.SetApartmentState(ApartmentState.STA);
         t.Start();
         t.Join();
         return report.ToString();
+    }
+
+    // An app's icon for drawing `want` pixels wide, before it's fitted: a Store app's own logo
+    // file when its package has a suitable one, else the shell's icon at the next standard size
+    // up. Source says which ("package <file>" or "shell, asked N"), for the self test.
+    static (byte[] Raw, int Width, int Height, string Source) AppIcon(string id, int want, bool light)
+    {
+        if (StoreLogos.Load(id, want, light) is { } logo) return (logo.Pixels, logo.Width, logo.Height, $"package {logo.File}");
+        int ask = IconScale.Request(want);
+        var (pixels, width, height) = Pixels(@"shell:AppsFolder\" + id, ask, BiggerSizeOk | IconOnly);
+        return (pixels, width, height, $"shell, asked {ask}");
     }
 
     // Top-down BGRA, premultiplied: what WriteableBitmap wants.

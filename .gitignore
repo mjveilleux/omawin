@@ -40,3 +40,7 @@ src/thumbs/obj/
 # Links an older menu app still reads (migrations/2026-10-31-repo-layout.ps1), until the release after the move.
 /launcher
 /bar
+
+# The plugins' QML host's Rust build.
+src/qs-host/target/
+src/qs-host/.qmlls.ini

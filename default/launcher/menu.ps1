@@ -1,5 +1,5 @@
 # The system menu's jobs. The menu itself is native (shell/menu-app/, Win+Alt+Space): it reads
-# menu.txt and does its run, omawin, edit, @page and themes rows itself. This does the rest:
+# menu.txt and does its run, omawin, edit, @page, themes and backgrounds rows itself. This does the rest:
 #   menu.ps1 -Run <id>          a task, install or removal row, in a "menu-task" window
 #   menu.ps1 -RefreshInstalled  rebuild installed.txt (the app runs this in the background)
 # and, inside a menu-task window (menu.txt rows start them), two jobs that need more than a line:

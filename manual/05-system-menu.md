@@ -17,9 +17,9 @@ It's translucent and rounded, in the current theme. It opens on tiles:
 - the other sections, plus **Lock**
 - a **System** bar
 
-The window keeps that height. Submenus slide in as lists, colored by kind: submenus purple, pages and the theme picker cyan, actions yellow, ones that ask first red, what's installed gray. Where you are shows as chips before the search (Install › Development). Type to search every row. Arrow keys move; Enter opens; Esc or ← goes back; clicking outside closes it.
+The window keeps that height. Submenus slide in as lists, colored by kind: submenus purple, pages and the pickers cyan, actions yellow, ones that ask first red, what's installed gray. Where you are shows as chips before the search (Install › Development). Type to search every row. Arrow keys move; Enter opens; Esc or ← goes back; clicking outside closes it.
 
-**Theme** opens the picker: a tile per theme with its first wallpaper and its colors, your current one checked.
+**Theme** opens the picker: a tile per theme with its first wallpaper and its colors, your current one checked. **Backgrounds** opens the background picker: every wallpaper of your theme as a grid of pictures, the one on your desktop checked; Enter sets one, Tab shows the next theme's (picking one of those switches to that theme too). See [Themes](08-themes.md).
 
 **Quick** rows work the machine's switches without opening anything: **Wi-Fi on / off** (`omawin wifi toggle`), **Bluetooth on / off** (`omawin bluetooth toggle`), **Brighter** / **Dimmer** (`omawin brightness up|down`), **Power mode: next** (`omawin power cycle`). **Night light** and **Do not disturb** open the Settings page that owns them: Windows lets no program set either, so that is the whole of it. **All of it** opens the Quick settings page itself: the switches, with the sound of Win+A below them (see [Keys](03-keys.md)). Each row says what it did in a small note at the bottom when it's done.
 
@@ -43,5 +43,6 @@ The rows are one text file, `default/launcher/menu.txt`: `id | icon | label | ac
 | `omawin <command>` | one of omawin's commands, hidden |
 | `@<page>` | a launcher page |
 | `themes` | the theme picker |
+| `backgrounds` | the background picker |
 
 A `!` in front asks first. Edit it from **Setup › This menu**; it's read fresh each time.

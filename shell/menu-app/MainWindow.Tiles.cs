@@ -12,9 +12,10 @@ namespace SystemMenu;
 // The home screens are tiles, bento style: the launcher's (Win+Space) has a big Terminal tile,
 // wide Projects and Clipboard tiles that show what's in them, the other pages, a Menu bar and
 // what you use most; the system menu's (Win+Alt+Space) has a big Theme tile, wide Install and
-// Update tiles and the rest of its submenus. The theme picker is a grid of swatches. Typing,
-// submenus and pages are lists (MainWindow.xaml.cs). The selected tile lifts: it grows a little,
-// rises, and its icon fills with its color.
+// Update tiles and the rest of its submenus. The theme picker is a grid of swatches, the
+// background picker one of a theme's pictures. Typing, submenus and pages are lists
+// (MainWindow.xaml.cs). The selected tile lifts: it grows a little, rises, and its icon fills
+// with its color.
 public sealed partial class MainWindow
 {
     const double TileRowDip = 72, TitleRowDip = 22, TileGap = 6;
@@ -24,7 +25,7 @@ public sealed partial class MainWindow
     {
         public string Key = "";
         public string? BuiltIn;          // a launcher page's tile (it fills in its own details later)
-        public string Style = "tile";    // tile | hero | wide | swatch | audio | audiobox | chip
+        public string Style = "tile";    // tile | hero | wide | swatch | picture | audio | audiobox | chip
         public int Col, Row, ColSpan = 1, RowSpan = 1;
         public string Icon = "", Label = "";
         public string? Sub, Hint, AppId;
@@ -32,6 +33,7 @@ public sealed partial class MainWindow
         public Color Color;
         public Theme? Swatch;
         public string? SwatchFile;       // the theme's file name, for its picture (ThemeThumbs)
+        public string? Picture;          // a background picker tile's background, as its theme lists it
         public bool Current;
         public string? MeterKey;         // an audio tile's device or app (Audio.Peak); not a switch's
         public int Volume;
@@ -203,6 +205,67 @@ public sealed partial class MainWindow
             }), rowHeight: SwatchRowDip);
         return layout;
     }
+
+    // The background picker (Style › Backgrounds, omawin theme backgrounds): every background of
+    // one theme, yours unless Tab moved on, as a grid of its pictures (ThemeThumbs: the release
+    // brings them all), the one on your desktop checked. Typing narrows it by the picture's name.
+    TileLayout BackgroundPicker(string file, Theme shown, string query)
+    {
+        var layout = new TileLayout();
+        int on = CurrentBackground(file, shown);
+        layout.Flow(shown.Backgrounds.Select((source, i) => (Source: source, Index: i))
+            .Where(b => query.Length == 0 || ThemePictures.Matches(b.Source, query))
+            .Select(b => new TileSpec
+            {
+                Key = BackgroundKey(file, b.Source), Style = "picture", Label = ThemePictures.Label(b.Source),
+                Swatch = shown, SwatchFile = file, Picture = b.Source, Current = b.Index == on,
+                Color = Hex(shown.Accent), Run = () => SetBackground(file, b.Source),
+            }), rowHeight: SwatchRowDip);
+        return layout;
+    }
+
+    static string BackgroundKey(string file, string source) => $"background:{file}:{ThemePictures.Name(source)}";
+
+    // Which of a theme's backgrounds is on the desktop, -1 for none: the one just picked here,
+    // else, for your theme, the one set-theme.ps1 wrote down (launcher\background).
+    int CurrentBackground(string file, Theme shown)
+    {
+        if (pickedBackground is { } picked) return picked.Theme == file ? Array.IndexOf(shown.Backgrounds, picked.Source) : -1;
+        if (file != themeName) return -1;
+        string? saved = null;
+        try { saved = File.ReadAllText(Path.Combine(MenuModel.StateDir, "background")); } catch { }
+        return ThemePictures.Current(shown.Backgrounds, saved);
+    }
+
+    // Opens the background picker on a theme's backgrounds, on the one on the desktop.
+    void OpenBackgrounds(string file)
+    {
+        backgroundsOf = file;
+        selected = 0;
+        var shown = file == themeName ? theme : MenuModel.LoadTheme(file);
+        int on = CurrentBackground(file, shown);
+        selectKey = on >= 0 ? BackgroundKey(file, shown.Backgrounds[on]) : null;
+    }
+
+    // Tab / Shift+Tab in the background picker: the next / previous theme's backgrounds, in the
+    // theme picker's order, skipping themes without any.
+    void CycleBackgroundTheme(int by)
+    {
+        if (backgroundsOf == null) return;
+        var files = MenuModel.Themes().Where(t => t.Theme.Backgrounds.Length > 0).Select(t => t.File).ToList();
+        if (files.Count == 0) return;
+        int at = files.FindIndex(f => f.Equals(backgroundsOf, StringComparison.OrdinalIgnoreCase));
+        OpenBackgrounds(files[at < 0 ? 0 : ((at + by) % files.Count + files.Count) % files.Count]);
+        if (Input.Text.Length > 0) Input.Text = ""; // a search of one theme's names means nothing in the next
+        Render();
+    }
+
+    // A theme by its file name or its own name ("gruvbox", "Tokyo Night"), for
+    // `omawin theme backgrounds <theme>`; null when it's none of them.
+    static string? ThemeFileNamed(string? name) =>
+        string.IsNullOrWhiteSpace(name) ? null
+        : MenuModel.Themes().Where(t => t.File.Equals(name, StringComparison.OrdinalIgnoreCase) || t.Theme.Name.Equals(name, StringComparison.OrdinalIgnoreCase))
+            .Select(t => (string?)t.File).FirstOrDefault();
 
     // How tall the window's body is while it's showing: the home screen it opens on (lists get
     // the same room), so it doesn't resize as you move around.
@@ -433,6 +496,49 @@ public sealed partial class MainWindow
                 v.Inner.Children.Add(body);
                 break;
             }
+            case "picture":
+            {
+                // One of a theme's backgrounds: its picture (until that's loaded, the theme's
+                // background with a picture glyph), a check and an accent ring on the one on your
+                // desktop, its name under it.
+                var t = s.Swatch!;
+                var placeholder = new TextBlock
+                {
+                    Text = char.ConvertFromUtf32(0xF02E9), FontFamily = iconFont, FontSize = 20, Foreground = Brush(t.Comment),
+                    HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                };
+                var inFrame = new Grid();
+                inFrame.Children.Add(placeholder);
+                if (s.Current)
+                    inFrame.Children.Add(new Border
+                    {
+                        Width = 20, Height = 20, CornerRadius = new CornerRadius(10), Background = Brush(t.Background), Margin = new Thickness(0, 5, 5, 0),
+                        HorizontalAlignment = HorizontalAlignment.Right, VerticalAlignment = VerticalAlignment.Top,
+                        Child = new TextBlock { Text = char.ConvertFromUtf32(0xF05E0), FontFamily = iconFont, FontSize = 15, Foreground = Brush(t.Accent), HorizontalAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center },
+                    });
+                var frame = new Border
+                {
+                    Background = Brush(t.Background), BorderBrush = Brush(s.Current ? t.Accent : t.Border), BorderThickness = new Thickness(s.Current ? 2 : 1),
+                    CornerRadius = new CornerRadius(8), Child = inFrame,
+                };
+                if (s.SwatchFile != null && s.Picture != null)
+                    ThemeThumbs.Get(s.SwatchFile, t, s.Picture, picture =>
+                    {
+                        frame.Background = new ImageBrush { ImageSource = picture, Stretch = Stretch.UniformToFill };
+                        placeholder.Visibility = Visibility.Collapsed;
+                    });
+                var body = new Grid { Padding = new Thickness(6, 6, 6, 4), RowSpacing = 4 };
+                body.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
+                body.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+                body.Children.Add(frame);
+                label.FontSize = 12;
+                label.HorizontalAlignment = HorizontalAlignment.Center;
+                if (s.Current) { label.Foreground = Brush(theme.Accent); label.FontWeight = FontWeights.SemiBold; }
+                Grid.SetRow(label, 1);
+                body.Children.Add(label);
+                v.Inner.Children.Add(body);
+                break;
+            }
             case "audio":
             case "audiobox":
                 BuildAudioTile(v, s, label);
@@ -488,7 +594,7 @@ public sealed partial class MainWindow
         v.Root.Scale = on ? new Vector3(grow, grow, 1) : Vector3.One;
         v.Root.Translation = on && !box ? new Vector3(0, -2, 0) : Vector3.Zero;
         Canvas.SetZIndex(v.Root, (chip ? 2 : 0) + (on ? 1 : 0)); // a chip sits over its box
-        if (v.HasImage || v.Spec.Style == "swatch") return;
+        if (v.HasImage || v.Spec.Style is "swatch" or "picture") return;
         v.IconTile.Background = on ? new SolidColorBrush(v.Spec.Color) : Brush(v.Spec.Color, 0x29);
         v.Glyph.Foreground = on ? Brush(theme.Background) : new SolidColorBrush(v.Spec.Color);
     }
