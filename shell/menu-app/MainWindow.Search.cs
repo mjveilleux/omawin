@@ -529,7 +529,7 @@ public sealed partial class MainWindow
             case (Project p, Verb.CopyPath):
                 return Now(() => { ClipboardHistory.SetText(p.Path); Dismiss(); });
             case (ClipFile f, Verb.Copy):
-                return Now(() => { try { ClipboardHistory.SetText(File.ReadAllText(f.File)); } catch (IOException) { } Dismiss(); });
+                return Now(() => { try { ClipboardHistory.SetEntry(f.File); } catch (IOException) { } Dismiss(); });
             case (ClipFile f, Verb.Delete):
                 return Now(() => { try { File.Delete(f.File); } catch (IOException) { } clipTexts.Remove(f.File); clipList = null; Render(); });
             case (ThemeRef t, Verb.Backgrounds):
@@ -775,7 +775,7 @@ public sealed partial class MainWindow
         {
             if (!clipTexts.TryGetValue(f, out var line)) clipTexts[f] = line = OneLine(f, 90);
             return new Result("clip:" + Path.GetFileName(f), STag.Clipboard, line, "Copied " + Ago(ClipboardHistory.When(f)),
-                Primary: () => { Paste(f); return Task.CompletedTask; }) { Icon = Glyph(0xF014C), Data = new ClipFile(f) };
+                Primary: () => { Paste(f); return Task.CompletedTask; }) { Icon = Glyph(ClipEntries.IsImage(f) ? 0xF02E9 : 0xF014C), Data = new ClipFile(f) };
         })];
     }
 

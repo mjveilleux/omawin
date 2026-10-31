@@ -137,11 +137,12 @@ public sealed partial class MainWindow
                 {
                     var f = file;
                     clipFiles.Add(f);
-                    AddRow(Glyph(0xF014C), OneLine(f, 90), Hex(theme.Muted), () => Paste(f), Tag.Text, Ago(ClipboardHistory.When(f)), highlight: hits);
+                    AddRow(Glyph(ClipEntries.IsImage(f) ? 0xF02E9 : 0xF014C), OneLine(f, 90), Hex(ClipEntries.IsPinned(f) ? theme.Accent : theme.Muted), () => Paste(f),
+                        Tag.Text, ClipEntries.IsPinned(f) ? "pinned" : Ago(ClipboardHistory.When(f)), highlight: hits);
                 }
-                if (entries.Count == 0) AddRow(Glyph(0xF014C), "Nothing copied yet: copy some text and it shows up here", Hex(theme.Comment), () => { }, dim: true);
+                if (entries.Count == 0) AddRow(Glyph(0xF014C), "Nothing copied yet: copy some text or a picture and it shows up here", Hex(theme.Comment), () => { }, dim: true);
                 FooterLeft.Text = $"{entries.Count} copied";
-                SetKeys(("↵", "paste"), ("ctrl x", "delete"), ("esc", "back"));
+                SetKeys(("↵", "paste"), ("ctrl p", "pin"), ("ctrl x", "delete"), ("esc", "back"));
                 break;
 
             case "localhost":
@@ -233,6 +234,7 @@ public sealed partial class MainWindow
 
     static string OneLine(string file, int max)
     {
+        if (ClipEntries.IsImage(file)) return ClipPicture(file);
         string text;
         try { text = File.ReadAllText(file); } catch { return ""; }
         text = System.Text.RegularExpressions.Regex.Replace(text.Trim().Replace("\r", ""), "\n+", " ⏎ ");
@@ -240,14 +242,32 @@ public sealed partial class MainWindow
         return text.Length > max ? text[..(max - 1)] + "…" : text;
     }
 
+    // "Picture, 1920 × 1080": its size from the PNG's header, never the whole file.
+    static string ClipPicture(string file)
+    {
+        try
+        {
+            using var f = File.OpenRead(file);
+            Span<byte> header = stackalloc byte[24];
+            return ClipEntries.Describe(f.Read(header) == 24 ? ClipEntries.PngSize(header) : null);
+        }
+        catch (IOException) { return ClipEntries.Describe(null); }
+    }
+
+    // Ctrl+P: the selected entry pinned to the top (kept for good), or unpinned.
+    void PageTogglePin()
+    {
+        if (page != "clipboard" || selected >= clipFiles.Count) return;
+        try { ClipboardHistory.TogglePin(clipFiles[selected]); } catch (IOException) { }
+        Render();
+    }
+
     [DllImport("user32.dll")] static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
 
     // Back on the clipboard, then pasted (Ctrl+V) into the window you were in.
     void Paste(string file)
     {
-        string text;
-        try { text = File.ReadAllText(file); } catch { return; }
-        ClipboardHistory.SetText(text);
+        try { if (!ClipboardHistory.SetEntry(file)) return; } catch (IOException) { return; }
         var target = previous;
         HideMenu();
         if (target != IntPtr.Zero) SetForegroundWindow(target);
@@ -287,6 +307,7 @@ public sealed partial class MainWindow
     {
         ++previewToken; // a slow preview of something else no longer lands here
         Preview.Visibility = Visibility.Visible;
+        if (ClipEntries.IsImage(file)) { ShowClipPicture(file); return; }
         string text;
         try { text = File.ReadAllText(file); } catch { text = ""; }
         Preview.Background = Brush(Hex(theme.Surface), 0xB0);
@@ -305,5 +326,30 @@ public sealed partial class MainWindow
         PreviewTextBox.Background = Brush(Hex(theme.Background), 0x90);
         PreviewText.Text = string.Join("\n", text.Replace("\r", "").Split('\n').Take(30));
         PreviewTextBox.Visibility = Visibility.Visible;
+    }
+
+    // A copied picture: itself, decoded at the preview's size, and how big it is.
+    void ShowClipPicture(string file)
+    {
+        Preview.Background = Brush(Hex(theme.Surface), 0xB0);
+        Preview.BorderBrush = Brush(Hex(theme.Border), 0x80);
+        PreviewName.Text = (ClipEntries.IsPinned(file) ? "Pinned, copied " : "Copied ") + Ago(ClipboardHistory.When(file));
+        PreviewName.Foreground = Brush(theme.Foreground);
+        PreviewPath.Children.Clear();
+        PreviewFacts.Children.Clear();
+        PreviewFacts.Children.Add(Pill(ClipPicture(file), theme.Accent));
+        try { PreviewFacts.Children.Add(Pill($"{new FileInfo(file).Length / 1024.0:N0} KB", theme.Muted)); } catch (IOException) { }
+        PreviewTextBox.Visibility = Visibility.Collapsed;
+        PreviewArt.Visibility = Visibility.Visible;
+        PreviewArt.Height = 300;
+        PreviewArt.Background = Brush(Hex(theme.Background), 0x90);
+        PreviewArt.Child = new Microsoft.UI.Xaml.Controls.Image
+        {
+            Source = new Microsoft.UI.Xaml.Media.Imaging.BitmapImage(new Uri(file))
+            {
+                DecodePixelWidth = 380, DecodePixelType = Microsoft.UI.Xaml.Media.Imaging.DecodePixelType.Logical,
+            },
+            Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform, Margin = new Thickness(6),
+        };
     }
 }

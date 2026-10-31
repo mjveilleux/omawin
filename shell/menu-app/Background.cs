@@ -5,7 +5,7 @@ namespace SystemMenu;
 
 // What runs in the background while the menu app is up (it always is), so the launcher's lists
 // are ready when you open them:
-//   - the clipboard history (Clipboard page, Win+Shift+V): every text you copy
+//   - the clipboard history (Clipboard page, Win+Shift+V): every text and picture you copy
 //   - the installed apps (apps.tsv), every 10 minutes, and seconds after an install or removal
 //   - the projects (the Linux ones cached in wsl-projects.txt), every 10 minutes, and seconds
 //     after a git repo appears or goes in your home folder
@@ -159,13 +159,16 @@ public static class Background
     }
 }
 
-// The clipboard history: each text you copy, as one file in %LOCALAPPDATA%\launcher\clipboard
-// (named by when, newest first; the newest 200 kept; copying something again moves it to the
-// top). Copies that password managers mark as private are skipped, as Windows' own clipboard
-// history does (ExcludeClipboardContentFromMonitorProcessing, CanIncludeInClipboardHistory = 0).
-public static class ClipboardHistory
+// The clipboard history: each text or picture you copy, as one file in %LOCALAPPDATA%\launcher\
+// clipboard (named by when, newest first; the newest 200 kept; copying something again moves it to
+// the top), and the ones you pin in clipboard\pinned, kept for good. Copies that password managers
+// mark as private are skipped, as Windows' own clipboard history does
+// (ExcludeClipboardContentFromMonitorProcessing, CanIncludeInClipboardHistory = 0). Windows tells
+// it when the clipboard changes (AddClipboardFormatListener): nothing polls.
+public static unsafe partial class ClipboardHistory
 {
     public static readonly string Dir = Path.Combine(MenuModel.StateDir, "clipboard");
+    public static string PinnedDir => Path.Combine(Dir, ClipEntries.PinnedFolder);
     const int Keep = 200;
 
     [DllImport("user32.dll")] static extern uint GetClipboardSequenceNumber();
@@ -179,76 +182,229 @@ public static class ClipboardHistory
     [DllImport("kernel32.dll")] static extern IntPtr GlobalLock(IntPtr mem);
     [DllImport("kernel32.dll")] static extern bool GlobalUnlock(IntPtr mem);
     [DllImport("kernel32.dll")] static extern IntPtr GlobalAlloc(uint flags, UIntPtr bytes);
-    const uint CF_UNICODETEXT = 13;
+    [DllImport("kernel32.dll")] static extern UIntPtr GlobalSize(IntPtr mem);
+    const uint CF_UNICODETEXT = 13, CF_DIB = 8, CF_DIBV5 = 17, WM_CLIPBOARDUPDATE = 0x031D;
 
-    public static void Start() => new Thread(Watch) { IsBackground = true, Name = "clipboard" }.Start();
-
-    static void Watch()
+    [StructLayout(LayoutKind.Sequential)]
+    struct WNDCLASSEXW
     {
-        uint seen = GetClipboardSequenceNumber();
+        public uint cbSize, style;
+        public nint lpfnWndProc;
+        public int cbClsExtra, cbWndExtra;
+        public nint hInstance, hIcon, hCursor, hbrBackground, lpszMenuName, lpszClassName, hIconSm;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    struct MSG { public nint hwnd; public uint message; public nuint wParam; public nint lParam; public uint time; public int x, y; }
+
+    [LibraryImport("user32.dll", SetLastError = true)] private static partial ushort RegisterClassExW(WNDCLASSEXW* wc);
+    [LibraryImport("user32.dll", SetLastError = true, StringMarshalling = StringMarshalling.Utf16)]
+    private static partial nint CreateWindowExW(uint exStyle, string cls, string? name, uint style, int x, int y, int w, int h, nint parent, nint menu, nint instance, nint param);
+    [LibraryImport("user32.dll")] private static partial nint DefWindowProcW(nint hwnd, uint msg, nuint w, nint l);
+    [LibraryImport("user32.dll")] [return: MarshalAs(UnmanagedType.Bool)] private static partial bool AddClipboardFormatListener(nint hwnd);
+    [LibraryImport("user32.dll")] private static partial int GetMessageW(MSG* msg, nint hwnd, uint min, uint max);
+    [LibraryImport("user32.dll")] private static partial nint DispatchMessageW(MSG* msg);
+    [LibraryImport("kernel32.dll", StringMarshalling = StringMarshalling.Utf16)] private static partial nint GetModuleHandleW(string? name);
+
+    public static void Start() => new Thread(Listen) { IsBackground = true, Name = "clipboard" }.Start();
+
+    static uint seen;
+
+    // A message-only window that Windows tells about each clipboard change. Should it fail (it
+    // shouldn't), the old way: a look every half second.
+    static void Listen()
+    {
+        seen = GetClipboardSequenceNumber();
+        const string name = "omawin-clipboard-listener";
+        var wc = new WNDCLASSEXW
+        {
+            cbSize = (uint)sizeof(WNDCLASSEXW),
+            lpfnWndProc = (nint)(delegate* unmanaged<nint, uint, nuint, nint, nint>)&WndProc,
+            hInstance = GetModuleHandleW(null),
+        };
+        nint hwnd = 0;
+        fixed (char* cls = name)
+        {
+            wc.lpszClassName = (nint)cls;
+            if (RegisterClassExW(&wc) != 0)
+                hwnd = CreateWindowExW(0, name, null, 0, 0, 0, 0, 0, -3 /* HWND_MESSAGE */, 0, wc.hInstance, 0);
+        }
+        if (hwnd != 0 && AddClipboardFormatListener(hwnd))
+        {
+            MSG msg;
+            while (GetMessageW(&msg, 0, 0, 0) > 0) DispatchMessageW(&msg);
+            return;
+        }
+        App.Log(new Exception($"clipboard: no listener ({Marshal.GetLastPInvokeError()}); looking every 500 ms"));
         while (true)
         {
             Thread.Sleep(500);
-            uint now = GetClipboardSequenceNumber();
-            if (now == seen) continue;
-            try
-            {
-                var text = ReadText();
-                if (text == null) continue; // someone has the clipboard open: next time
-                seen = now;
-                Save(text);
-            }
-            catch { seen = now; }
+            Changed();
         }
     }
 
-    // The text, "" when there's nothing to keep (no text, or marked private), null when busy.
-    static string? ReadText()
+    [UnmanagedCallersOnly]
+    static nint WndProc(nint hwnd, uint msg, nuint w, nint l)
+    {
+        if (msg == WM_CLIPBOARDUPDATE)
+        {
+            try { Changed(); } catch (Exception ex) { App.Log(ex); }
+            return 0;
+        }
+        return DefWindowProcW(hwnd, msg, w, l);
+    }
+
+    // The program that copied may still hold the clipboard open: a few short tries.
+    static void Changed()
+    {
+        uint now = GetClipboardSequenceNumber();
+        if (now == seen) return;
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            Copied? copied;
+            try { copied = Read(); }
+            catch (Exception ex) { App.Log(ex); seen = now; return; }
+            if (copied == null) { Thread.Sleep(40); continue; }
+            seen = now;
+            if (copied.Text is { } text) Save(text);
+            else if (copied.Png is { } png) SavePicture(png);
+            return;
+        }
+    }
+
+    sealed record Copied(string? Text, byte[]? Png);
+
+    // What was copied: its text, else its picture as PNG; neither when it's marked private or is
+    // something else (files, rich data only). Null when the clipboard is busy.
+    static Copied? Read()
     {
         if (!OpenClipboard(IntPtr.Zero)) return null;
         try
         {
-            if (IsClipboardFormatAvailable(RegisterClipboardFormat("ExcludeClipboardContentFromMonitorProcessing"))) return "";
+            if (IsClipboardFormatAvailable(RegisterClipboardFormat("ExcludeClipboardContentFromMonitorProcessing"))) return new(null, null);
             uint history = RegisterClipboardFormat("CanIncludeInClipboardHistory");
-            if (IsClipboardFormatAvailable(history))
+            if (IsClipboardFormatAvailable(history) && Bytes(history) is { Length: >= 4 } allowed && BitConverter.ToInt32(allowed) == 0)
+                return new(null, null);
+            if (IsClipboardFormatAvailable(CF_UNICODETEXT))
             {
-                var h = GetClipboardData(history);
-                var p = GlobalLock(h);
-                if (p != IntPtr.Zero)
-                {
-                    int allowed = Marshal.ReadInt32(p);
-                    GlobalUnlock(h);
-                    if (allowed == 0) return "";
-                }
+                var data = GetClipboardData(CF_UNICODETEXT);
+                var text = GlobalLock(data);
+                if (text == IntPtr.Zero) return new(null, null);
+                try { return new(Marshal.PtrToStringUni(text) ?? "", null); } finally { GlobalUnlock(data); }
             }
-            if (!IsClipboardFormatAvailable(CF_UNICODETEXT)) return "";
-            var data = GetClipboardData(CF_UNICODETEXT);
-            var text = GlobalLock(data);
-            if (text == IntPtr.Zero) return "";
-            try { return Marshal.PtrToStringUni(text) ?? ""; } finally { GlobalUnlock(data); }
+            // A picture: browsers, Snip and most apps also put a PNG (alpha and all); else the bitmap.
+            uint png = RegisterClipboardFormat("PNG");
+            if (IsClipboardFormatAvailable(png) && Bytes(png) is { } p && ClipEntries.PngSize(p) != null) return new(null, p);
+            foreach (var format in new[] { CF_DIBV5, CF_DIB })
+                if (IsClipboardFormatAvailable(format) && Bytes(format) is { } dib && ClipEntries.DibToBmp(dib) is { } bmp)
+                    return new(null, BmpToPng(bmp));
+            return new(null, null);
         }
         finally { CloseClipboard(); }
+    }
+
+    // A clipboard format's bytes (the clipboard open), or null; none past the size kept.
+    static byte[]? Bytes(uint format)
+    {
+        var h = GetClipboardData(format);
+        if (h == IntPtr.Zero) return null;
+        var size = (long)GlobalSize(h);
+        if (size <= 0 || size > ClipEntries.MaxImageBytes) return null;
+        var p = GlobalLock(h);
+        if (p == IntPtr.Zero) return null;
+        try
+        {
+            var bytes = new byte[size];
+            Marshal.Copy(p, bytes, 0, bytes.Length);
+            return bytes;
+        }
+        finally { GlobalUnlock(h); }
+    }
+
+    static byte[]? BmpToPng(byte[] bmp)
+    {
+        try
+        {
+            using var input = new MemoryStream(bmp);
+            using var image = System.Drawing.Image.FromStream(input);
+            using var output = new MemoryStream();
+            image.Save(output, System.Drawing.Imaging.ImageFormat.Png);
+            return output.ToArray();
+        }
+        catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.ExternalException) { return null; }
     }
 
     static void Save(string text)
     {
         if (text.Trim().Length == 0 || text.Length > 200_000) return;
         Directory.CreateDirectory(Dir);
+        // Copied again: moves to the top (a pinned one stays pinned, and isn't added twice).
         foreach (var f in Directory.GetFiles(Dir, "*.txt"))
             try { if (File.ReadAllText(f) == text) File.Delete(f); } catch { }
-        File.WriteAllText(Path.Combine(Dir, DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + ".txt"), text);
-        foreach (var old in Entries().Skip(Keep)) try { File.Delete(old); } catch { }
+        if (Directory.Exists(PinnedDir) && Directory.GetFiles(PinnedDir, "*.txt").Any(f => { try { return File.ReadAllText(f) == text; } catch { return false; } })) return;
+        File.WriteAllText(Path.Combine(Dir, DateTime.Now.ToString(ClipEntries.Stamp) + ".txt"), text);
+        TrimOld();
     }
 
-    // Newest first.
+    static void SavePicture(byte[] png)
+    {
+        Directory.CreateDirectory(Dir);
+        foreach (var f in Directory.GetFiles(Dir, "*.png"))
+            try { if (new FileInfo(f).Length == png.Length && File.ReadAllBytes(f).AsSpan().SequenceEqual(png)) File.Delete(f); } catch { }
+        File.WriteAllBytes(Path.Combine(Dir, DateTime.Now.ToString(ClipEntries.Stamp) + ".png"), png);
+        TrimOld();
+    }
+
+    static void TrimOld()
+    {
+        foreach (var old in ClipEntries.Trim(Directory.GetFiles(Dir), Keep)) try { File.Delete(old); } catch { }
+    }
+
+    // Pinned first, then newest first.
     public static List<string> Entries() =>
-        Directory.Exists(Dir) ? [.. Directory.GetFiles(Dir, "*.txt").OrderByDescending(Path.GetFileName, StringComparer.Ordinal)] : [];
+        Directory.Exists(Dir) ? ClipEntries.Order(Directory.Exists(PinnedDir) ? Directory.GetFiles(PinnedDir) : [], Directory.GetFiles(Dir)) : [];
 
     public static DateTime When(string file) =>
-        DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), "yyyyMMdd-HHmmss-fff", null, System.Globalization.DateTimeStyles.None, out var t) ? t : File.GetLastWriteTime(file);
+        DateTime.TryParseExact(Path.GetFileNameWithoutExtension(file), ClipEntries.Stamp, null, System.Globalization.DateTimeStyles.None, out var t) ? t : File.GetLastWriteTime(file);
+
+    // Ctrl+P on the clipboard page: pinned entries stay at the top and are never trimmed; again
+    // to unpin. The file moves; its name (its time) stays. Returns the new path.
+    public static string TogglePin(string file)
+    {
+        var to = ClipEntries.IsPinned(file) ? Path.Combine(Dir, Path.GetFileName(file)) : Path.Combine(PinnedDir, Path.GetFileName(file));
+        Directory.CreateDirectory(Path.GetDirectoryName(to)!);
+        File.Move(file, to, overwrite: true);
+        return to;
+    }
+
+    // An entry back on the clipboard: its text, or its picture (PNG and a bitmap, so every app can paste it).
+    public static bool SetEntry(string file)
+    {
+        if (!ClipEntries.IsImage(file)) return SetText(File.ReadAllText(file));
+        var png = File.ReadAllBytes(file);
+        byte[]? dib = null;
+        try
+        {
+            using var input = new MemoryStream(png);
+            using var image = System.Drawing.Image.FromStream(input);
+            using var output = new MemoryStream();
+            image.Save(output, System.Drawing.Imaging.ImageFormat.Bmp);
+            dib = output.ToArray()[14..]; // a .bmp is the clipboard's bitmap with a file header in front
+        }
+        catch (Exception ex) when (ex is ArgumentException or System.Runtime.InteropServices.ExternalException) { }
+        var formats = new List<(uint, byte[])> { (RegisterClipboardFormat("PNG"), png) };
+        if (dib != null) formats.Add((CF_DIB, dib));
+        return Set([.. formats]);
+    }
 
     // Puts text on the clipboard (it's then also saved to the history as the newest entry).
     public static bool SetText(string text)
+    {
+        var bytes = new byte[(text.Length + 1) * 2];
+        System.Text.Encoding.Unicode.GetBytes(text, bytes);
+        return Set([(CF_UNICODETEXT, bytes)]);
+    }
+
+    static bool Set((uint Format, byte[] Data)[] formats)
     {
         for (int attempt = 0; attempt < 10; attempt++)
         {
@@ -257,13 +413,14 @@ public static class ClipboardHistory
                 try
                 {
                     EmptyClipboard();
-                    var bytes = (text.Length + 1) * 2;
-                    var mem = GlobalAlloc(0x0002 /* GMEM_MOVEABLE */, (UIntPtr)bytes);
-                    var p = GlobalLock(mem);
-                    Marshal.Copy(text.ToCharArray(), 0, p, text.Length);
-                    Marshal.WriteInt16(p, text.Length * 2, 0);
-                    GlobalUnlock(mem);
-                    SetClipboardData(CF_UNICODETEXT, mem);
+                    foreach (var (format, data) in formats)
+                    {
+                        var mem = GlobalAlloc(0x0002 /* GMEM_MOVEABLE */, (UIntPtr)data.Length);
+                        var p = GlobalLock(mem);
+                        Marshal.Copy(data, 0, p, data.Length);
+                        GlobalUnlock(mem);
+                        SetClipboardData(format, mem); // the clipboard owns it from here
+                    }
                     return true;
                 }
                 finally { CloseClipboard(); }

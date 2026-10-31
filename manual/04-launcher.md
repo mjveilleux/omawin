@@ -75,7 +75,7 @@ Like Omarchy's package picker, in One Search (Browse › Install › Package, th
 - **Localhost**: the web servers running right now, on Windows or in WSL ("wsl"), with each page's title, port and program. When Windows has reserved a common dev port at start-up (Hyper-V and WSL take random ranges, so a server on 3000 or 8080 fails though nothing is listening there), a yellow line says which and what to do. Under them are your favorite sites from `default/launcher/sites.txt`.
   - Enter opens one in Chrome.
   - **Ctrl+X** stops a server after you confirm. That's the program listening on its port, or the process inside WSL for a WSL server.
-- **Clipboard** (the filter, or **Win+Shift+V**): everything you've copied (text), newest first, searchable, with the full text in a preview.
+- **Clipboard** (the filter, or **Win+Shift+V**): everything you've copied, text and pictures, newest first, searchable, with the full text or the picture in a preview; Enter pastes it. **Ctrl+P** pins an entry to the top for good (again to unpin); the rest keeps the newest 200. **Ctrl+X** deletes one. What a password manager marks private is never kept, as in Windows' own clipboard history.
   - Enter pastes it into the window you were in; **Ctrl+X** deletes an entry.
   - The newest 200 copies are kept. Copies that password managers mark private are skipped.
 - **Audio** (or **Win+A**): every speaker and headset, with what's playing on each inside it (the music player, Chrome, Teams…), then every microphone, each with its volume as a bar; the one Windows is using says "in use". It opens on the first speaker.

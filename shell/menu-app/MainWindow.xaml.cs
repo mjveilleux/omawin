@@ -1346,6 +1346,8 @@ public sealed partial class MainWindow : Window
         {
             case VirtualKey.X when ctrl && launching && page is "clipboard" or "localhost":
                 PageDelete(); break;
+            case VirtualKey.P when ctrl && launching && page == "clipboard":
+                PageTogglePin(); break;
             // The Packages page: Tab moves between the sources; Ctrl+Space picks several.
             case VirtualKey.Tab when launching && page == "packages":
                 CyclePackageSource(shift ? -1 : 1); break;
