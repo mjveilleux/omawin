@@ -134,8 +134,9 @@ tune-up | omawin's recommended Windows settings (default/launcher/tune-up.txt): 
 tune-up apply | Set the recommended Windows settings not yet applied: listed first, then set (each undoable), admin ones in one prompt; -Auto: only the ones that need no asking | ask --tune-up apply
 windows-apps | The Store apps installed for you, biggest first, the ones omawin suggests removing marked (default/launcher/windows-apps.txt); never Windows' own parts | ask --windows-apps
 env | Your environment variables and the PC's: omawin env lists them (a PATH as its entries); get <name>; set <name> <value>; unset <name>; undo. -Machine: the PC's, shown first, then one admin prompt. New terminals see a change at once | ask --env
-shell-extensions |The add-ins programs put in Explorer's right-click menu (shell extensions), with their maker: off <name> leaves one out (for you, undoable), on <name> puts it back; --now restarts Explorer | ask --shell-extensions
-windows-apps remove |Remove Windows' extra apps for your account (Clipchamp, News, Solitaire, …): the suggested ones, or name some; listed and asked first, each back from the Store | ask --windows-apps remove
+dev-drive | A Dev Drive for code and package caches (faster builds and installs): omawin dev-drive says if there's one; create [<GB>] [<letter>] makes one (shown, then one admin prompt); caches <letter> points npm, Bun, NuGet, pip, uv, Go, … at it (undoable) | ask --dev-drive
+shell-extensions | The add-ins programs put in Explorer's right-click menu (shell extensions), with their maker: off <name> leaves one out (for you, undoable), on <name> puts it back; --now restarts Explorer | ask --shell-extensions
+windows-apps remove | Remove Windows' extra apps for your account (Clipchamp, News, Solitaire, …): the suggested ones, or name some; listed and asked first, each back from the Store | ask --windows-apps remove
 # Fixing Windows (roadmap Phase 8): the answers Windows has and doesn't show. omawin-windows (src/windows/)
 # does them in your terminal; the system menu's "This PC" rows open them in one.
 who-has | Which programs hold a file or folder open, then close or end them: omawin who-has <path> (no path: the one on the clipboard, from Explorer's Copy as path) | run omawin-windows who-has

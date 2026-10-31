@@ -235,6 +235,7 @@ public static class WinSettings
         ["--windows-apps", .. var rest] => WindowsAppsStore.Answer(rest, progress ?? (_ => { })),
         ["--shell-extensions", .. var rest] => ShellExtensionsWin.Answer(rest),
         ["--env", .. var rest] => await EnvVars.Answer(EnvVarsWin.Instance, EnvVarsWin.History, rest),
+        ["--dev-drive", .. var rest] => await DevDrive.Answer(DevDriveWin.Instance, EnvVarsWin.Instance, EnvVarsWin.History, rest),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

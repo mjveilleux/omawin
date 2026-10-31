@@ -14,7 +14,8 @@
     written to its hive by -User, its SID: this run may be another account), and a closed list of
     builtins (hibernation, sudo, a few Windows features, the search indexer's service, the SSH
     agent, UTF-8 code pages, Paint's AI, firewall rules for dev runtimes), and the PC's
-    environment variables (omawin env set -Machine). Nothing in the plan is
+    environment variables (omawin env set -Machine) and a Dev Drive (omawin dev-drive create).
+    Nothing in the plan is
     ever run as a command. Writes "<id> TAB <done|fail|skip> TAB <reason>" per line to -Result,
     then exits: nothing stays elevated.
 
@@ -195,6 +196,32 @@ foreach ($line in $lines) {
                     else { throw "env value $value" }
                 }
                 finally { $key.Close() }
+            }
+            'devdrive' {
+                # A Dev Drive (omawin dev-drive create, roadmap 8.32): <vhdx> TAB <GB> TAB <letter>. A
+                # growing VHDX (diskpart: New-VHD needs Hyper-V's module, which Home hasn't got),
+                # formatted as a Dev Drive, trusted (Defender's performance mode), and attached again
+                # at every start-up by a task that runs once and exits.
+                if ($target -notmatch '^[A-Za-z]:\\[^"''<>|?*]+\.vhdx$') { throw "VHDX path $target" }
+                $gb = 0
+                if (-not [int]::TryParse($arg, [ref]$gb) -or $gb -lt 50 -or $gb -gt 65536) { throw "size $arg GB: 50 or more" }
+                if ($value -notmatch '^[D-Z]$') { throw "drive letter $value" }
+                if (Test-Path "$($value):\") { throw "$($value): is in use" }
+                if (Test-Path -LiteralPath $target) { throw "$target is already there" }
+                New-Item -ItemType Directory -Force (Split-Path $target) | Out-Null
+                $diskpart = Join-Path $env:TEMP "omawin-devdrive-$PID.txt"
+                "create vdisk file=`"$target`" maximum=$($gb * 1024) type=expandable" | Set-Content $diskpart -Encoding ascii
+                try { & "$env:SystemRoot\System32\diskpart.exe" /s $diskpart | Out-Null; if ($LASTEXITCODE) { throw "diskpart exited $LASTEXITCODE" } }
+                finally { Remove-Item $diskpart -ErrorAction SilentlyContinue }
+                $disk = Mount-DiskImage -ImagePath $target -PassThru | Get-Disk
+                Initialize-Disk -Number $disk.Number -PartitionStyle GPT
+                New-Partition -DiskNumber $disk.Number -UseMaximumSize -DriveLetter $value | Out-Null
+                Format-Volume -DriveLetter $value -DevDrive -NewFileSystemLabel 'Dev' -Confirm:$false | Out-Null
+                & "$env:SystemRoot\System32\fsutil.exe" devdrv trust "$($value):" | Out-Null
+                $mount = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\WindowsPowerShell\v1.0\powershell.exe" -Argument "-NoProfile -NonInteractive -Command `"Mount-DiskImage -ImagePath '$target'`""
+                Register-ScheduledTask -TaskName 'omawin Dev Drive' -TaskPath '\omawin\' -Action $mount -Trigger (New-ScheduledTaskTrigger -AtStartup) `
+                    -Principal (New-ScheduledTaskPrincipal -UserId 'SYSTEM' -RunLevel Highest) -Force | Out-Null
+                $note = "$($value): $gb GB"
             }
             default { throw "verb $verb" }
         }
