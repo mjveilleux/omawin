@@ -223,7 +223,7 @@ public static class WinSettings
     }
 
     // --- `omawin setting …` / `omawin settings …` / `omawin tune-up` -----------------------------
-    public static async Task<SettingCommands.Answer> Answer(string[] request) => request switch
+    public static async Task<SettingCommands.Answer> Answer(string[] request, Action<string>? progress = null) => request switch
     {
         ["--setting", .. var rest] => SettingCommands.Setting(Store, rest, ExplorerRestart.Now),
         ["--settings", .. var rest] => await SettingCommands.Settings(Store, rest,
@@ -231,6 +231,8 @@ public static class WinSettings
             Path.Combine(MenuModel.StateDir, "settings-applied.txt")),
         ["--tune-up", .. var rest] => await SettingCommands.TuneUp(Store, rest, Recommendations(), AllEntries(), Build, Unverified,
             Path.Combine(MenuModel.StateDir, "tune-up-auto.txt")),
+        // Not a setting, but answered the same way: Windows' extra apps (roadmap 8.50, WindowsAppsStore.cs).
+        ["--windows-apps", .. var rest] => WindowsAppsStore.Answer(rest, progress ?? (_ => { })),
         _ => new(2, "unknown request: " + string.Join(' ', request)),
     };
 }

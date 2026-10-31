@@ -132,6 +132,8 @@ settings apply | Set what settings.txt says (the shared folder's, then this acco
 settings admin | The Windows settings waiting for admin: listed, then one prompt applies them all | ask --settings admin
 tune-up | omawin's recommended Windows settings (default/launcher/tune-up.txt): each one, applied or not, and why | ask --tune-up
 tune-up apply | Set the recommended Windows settings not yet applied: listed first, then set (each undoable), admin ones in one prompt; -Auto: only the ones that need no asking | ask --tune-up apply
+windows-apps | The Store apps installed for you, biggest first, the ones omawin suggests removing marked (default/launcher/windows-apps.txt); never Windows' own parts | ask --windows-apps
+windows-apps remove | Remove Windows' extra apps for your account (Clipchamp, News, Solitaire, …): the suggested ones, or name some; listed and asked first, each back from the Store | ask --windows-apps remove
 # Fixing Windows (roadmap Phase 8): the answers Windows has and doesn't show. omawin-windows (src/windows/)
 # does them in your terminal; the system menu's "This PC" rows open them in one.
 who-has | Which programs hold a file or folder open, then close or end them: omawin who-has <path> (no path: the one on the clipboard, from Explorer's Copy as path) | run omawin-windows who-has

@@ -1,0 +1,24 @@
+# Windows' extra apps omawin suggests removing (roadmap 8.50; `omawin windows-apps`, and the
+# system menu's Remove › Windows apps). Removed for your account only, after a list you say yes
+# to, never silently; each comes back from the Store. Windows' own parts (the Store, Settings,
+# the shell's apps, Windows Security, winget, the media codecs) are never offered, whatever this says.
+#
+#   <package name, or a prefix ending in *> | why it's suggested
+#
+# Layered like the launcher's other files: the shared folder's and your account folder's
+# launcher/windows-apps.txt add lines; "-<name>" there takes one off this list.
+
+Clipchamp.Clipchamp | A video editor Windows installs for everyone; most never open it.
+Microsoft.BingNews | Microsoft News: a feed of headlines and ads.
+Microsoft.BingSearch | Bing's search app, separate from Windows' search box.
+Microsoft.MicrosoftSolitaireCollection | Solitaire, with ads and a subscription.
+Microsoft.GamingApp | The Xbox app; the Game Bar and games' Xbox sign-in stay.
+Microsoft.Todos | Microsoft To Do.
+Microsoft.MicrosoftOfficeHub | The Microsoft 365 (Office) hub, which links to the web apps and sells subscriptions; Office itself stays.
+Microsoft.GetHelp | Get Help: Microsoft's support chat.
+Microsoft.Getstarted | Tips: Windows' introduction tour.
+Microsoft.WindowsFeedbackHub | Feedback Hub, for sending Microsoft feedback.
+Microsoft.PowerAutomateDesktop | Power Automate, Microsoft's desktop automation tool.
+Microsoft.549981C3F5F10 | Cortana, retired by Microsoft.
+Microsoft.People | People, the old contacts app.
+Microsoft.WindowsMaps | Maps, with offline maps that take space.
