@@ -136,7 +136,7 @@ function Install-Theme([string]$Url, [string]$Commit) {
         # The commit the index read (GitHub serves any commit by its id), with origin set up as a
         # clone's is, so `theme update` fetches from it later.
         git init --quiet $incoming
-        git -C $incoming remote add origin -- $Url
+        git -C $incoming remote add -- origin $Url
         git -C $incoming fetch --depth 1 --quiet origin $Commit
         if ($LASTEXITCODE -eq 0) { git -C $incoming checkout --quiet --detach FETCH_HEAD }
     } else { git clone --depth 1 --quiet -- $Url $incoming }
