@@ -17,6 +17,8 @@ key ──> GlazeWM (config/glazewm/config.yaml)
 
 The same names work from a terminal (`omawin capture text`, `omawin theme set gruvbox`), from the system menu (`default/launcher/menu.txt` rows with an `omawin <command>` action) and from the bar.
 
+**The menu keys skip omawin.exe** where our GlazeWM fork runs (roadmap 1.2): Win+Space, Win+Shift+V, Win+A and Win+F are bound to `emit omawin <command>`, which the fork broadcasts as a `custom` event to its IPC subscribers. The menu app holds a connection to GlazeWM anyway (`Bar/GlazeWm.cs`), subscribes to `custom` on it, and resolves the words through `bin/commands.txt` as omawin.exe would (`Emit.cs`): an `app` row's request goes to `HandleRequest` on the UI thread, any other row runs through omawin.exe. No process starts and no file is written, and it works while GlazeWM is paused. `themes/render.ps1` writes `emit` only when `bin/glazewm-features.ps1` finds `emit` in the `omawin-features.txt` the fork's release ships beside `glazewm.exe`; with any other GlazeWM the same keys get `shell-exec --hide-window omawin.exe <command>`. While it listens, the menu app keeps `%LOCALAPPDATA%\launcher\emit-subscribed` (its process id); `omawin check` warns when the fork emits and nothing listens.
+
 ## omawin.exe
 
 `bin/omawin.cs`, compiled by the C# compiler that ships with Windows into `~/.local/bin` (C# 5). It reads `bin/commands.txt`, finds the longest command the words spell (`theme set gruvbox` = `theme set` + `gruvbox`), and runs its action with the remaining words appended. It starts in ~35 ms, much less than PowerShell's ~300 ms.
@@ -141,6 +143,8 @@ Never in the repo:
 | `migrations.txt` | migrations already run on this PC |
 | `music.log` | the music player's errors (its playlists and podcasts are in `~/Music/omawin`) |
 | `system-menu-request` | the request being handed to the menu app |
+| `emit-subscribed` | the menu app's process id, while GlazeWM sends it the menu keys (`emit`) |
+| `animations` | `off` while `omawin toggle animations` has them off: the menu app's and GlazeWM's (`animations.enabled`, filled in by `themes/render.ps1`) |
 | `system-menu.log` | the menu app's errors |
 | `stay-awake` | present while stay awake is on (removed when it's turned off or the menu app starts) |
 | `animations` | `on` or `off` (`omawin toggle animations`); the menu app writes the default on its first start: `off` in a virtual machine |
