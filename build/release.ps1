@@ -96,6 +96,17 @@ if (-not $OnlyManifest) {
         $kept = @(Get-Content $list | Where-Object { $_ -notlike "theme-thumbs`t*" })
         [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
     } elseif (Test-Path $list) { Write-Warning "no theme pictures ($thumbs): left out of this release" }
+    # The plugin gallery's index (release.yml's plugin-gallery job): merged into the folder the
+    # gallery page reads, not waited for (later).
+    $gallery = Join-Path $InDir 'plugin-gallery\omawin-tool-plugin-gallery.zip'
+    if ((Test-Path $gallery) -and (Test-Path $list)) {
+        Add-File $gallery 'omawin-tool-plugin-gallery.zip'
+        $version = (Get-Content (Join-Path $InDir 'plugin-gallery\version.txt') -ErrorAction SilentlyContinue | Select-Object -First 1)
+        $sha = (Get-FileHash $gallery -Algorithm SHA256).Hash.ToLowerInvariant()
+        $row = @('plugin-gallery', $(if ($version) { $version } else { 'unknown' }), 'omawin-tool-plugin-gallery.zip', $sha, '-', '', 'launcher\plugin-gallery', 'merge later') -join "`t"
+        $kept = @(Get-Content $list | Where-Object { $_ -notlike "plugin-gallery`t*" })
+        [IO.File]::WriteAllLines($list, [string[]]($kept + $row))
+    } elseif (Test-Path $list) { Write-Warning "no plugin gallery ($gallery): left out of this release" }
     # The plugins' QML host (release.yml's qs-host job): optional, so only a PC that turns a plugin
     # on downloads it (install/software.ps1); in %LOCALAPPDATA%\omawin\tools\qs-host, not on the PATH.
     $qs = Join-Path $InDir 'qs-host\omawin-tool-qs-host.zip'

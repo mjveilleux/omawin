@@ -139,6 +139,42 @@ jobs:
           path: out/thumbs
           if-no-files-found: error
 
+  # The plugin gallery's index (roadmap 4.10): Omarchy's marketplace (plugins.omarchy.org's
+  # catalog.json), its most starred verified bar widgets downloaded at the reviewed commit and
+  # scanned for whether they run in the QML host (src/plugin-gallery), published as one more tools
+  # bundle entry (build/release.ps1), unpacked into %LOCALAPPDATA%\launcher\plugin-gallery, which
+  # the gallery page (Install > Plugins > Gallery) reads. Omarchy's own shell is checked out
+  # beside it so the scan knows its qs.Ui and qs.Commons types; where it isn't found (a branch
+  # moved), only imports and Quickshell's types are checked.
+  plugin-gallery:
+    needs: meta
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
+        with:
+          global-json-file: global.json
+      - name: The index (src/plugin-gallery)
+        run: |
+          for branch in master dev; do
+            rm -rf out/omarchy
+            git clone -q --depth 1 --branch "$branch" https://github.com/basecamp/omarchy out/omarchy || continue
+            [ -d out/omarchy/shell/Ui ] && break
+          done
+          omarchy=()
+          if [ -d out/omarchy/shell/Ui ]; then omarchy=(--omarchy out/omarchy/shell); else echo "::warning::Omarchy's shell/Ui not found: its types aren't checked"; fi
+          dotnet run --project src/plugin-gallery -c Release -- out/gallery "${omarchy[@]}"
+          mkdir -p out/plugin-gallery
+          (cd out/gallery && zip -q -9 ../plugin-gallery/omawin-tool-plugin-gallery.zip plugin-gallery.json)
+          date -u +%Y%m%d > out/plugin-gallery/version.txt
+          ls -la out/plugin-gallery
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: plugin-gallery
+          path: out/plugin-gallery
+          if-no-files-found: error
+
   # The plugins' QML host (src/qs-host, roadmap 4.9.4): Rust and Qt, built here with Qt's own
   # deploy tool beside it (the Qt it needs, ~40 MB) and published as one more tools bundle entry,
   # optional: only a PC that turns a plugin on downloads it (build/release.ps1, `omawin plugin add`).
@@ -170,7 +206,8 @@ jobs:
           $out = 'out\qs-host\omawin-qs'
           New-Item -ItemType Directory -Force $out | Out-Null
           Copy-Item src\qs-host\target\release\omawin-qs.exe $out
-          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --qmldir src\qs-host\qml --qmldir shell\plugins\omawin.music "$out\omawin-qs.exe"
+          # deploy\Qt.qml: Qt's modules community plugins import, beyond what the host itself does.
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw --qmldir src\qs-host\qml --qmldir src\qs-host\deploy --qmldir shell\plugins\omawin.music "$out\omawin-qs.exe"
           Copy-Item -Recurse -Force src\qs-host\qml\* "$out\qml\"
           # Qt logs to the debugger, not stderr, when there's no console window (as here).
           $env:QT_FORCE_STDERR_LOGGING = '1'
@@ -318,7 +355,7 @@ jobs:
   # Names the files the way the installer looks for them, hashes them into SHA256SUMS.txt (what
   # bin/release.ps1 checks a download against), and publishes.
   release:
-    needs: [meta, helpers, menu, music, tools, parsers, thumbs, qs-host]
+    needs: [meta, helpers, menu, music, tools, parsers, thumbs, qs-host, plugin-gallery]
     if: needs.meta.outputs.publish == 'true'
     runs-on: windows-latest
     permissions:
