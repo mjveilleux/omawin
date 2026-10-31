@@ -479,11 +479,12 @@ function Add-ToolPaths([string[]]$Tools) {
     if ($added) { Update-SessionPath }
 }
 
-# The core's own installers (herdr's) don't wait for winget or the bundle: each starts at the
-# top of the software step in a PowerShell of its own, and Install-Extras collects it.
-$EarlyExtras = @{}
+# The core's own installers (herdr's) don't wait for winget or the bundle: each starts at the start
+# of the install (install.ps1) in a PowerShell of its own, and Install-Extras collects it.
+if (-not $EarlyExtras) { $EarlyExtras = @{} }   # kept when the software step loads this file again
 function Start-EarlyExtras([string[]]$Names) {
     foreach ($name in $Names) {
+        if ($EarlyExtras.ContainsKey($name)) { continue }   # started already (install.ps1, at the start)
         if (Get-Command $name -ErrorAction SilentlyContinue) { continue }
         $log = Join-Path $env:TEMP "omawin-extra-$name-$Stamp.log"
         $code = "`$ErrorActionPreference = 'Stop'; & { $($ExtraInstalls[$name]) } *> '$log'"
