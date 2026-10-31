@@ -255,7 +255,6 @@ install.gaming.steam | 󰓓 | Steam | winget Valve.Steam
 
 remove | 󰭌 | Remove
 remove.package | 󰏓 | Packages | @packages remove
-remove.package | 󰏓 | Package | task omawin pkg remove
 remove.windows-apps | 󰖳 | Windows apps (Clipchamp, News, …) | task omawin windows-apps remove
 remove.development | 󰵮 | Development
 remove.development.rails | 󰫏 | Ruby on Rails | task omawin dev remove ruby
