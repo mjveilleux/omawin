@@ -28,6 +28,11 @@ repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 arch="$(uname -m)"
 distro="$(. /etc/os-release && echo "$ID")"
 say() { printf '  %s\n' "$*"; }
+# Docker Desktop on Windows, or its WSL integration in this distro: then Docker is Desktop's.
+docker_desktop() {
+  [[ $(readlink /usr/bin/docker 2> /dev/null) == /mnt/wsl/docker-desktop/* ||
+    -e "/mnt/c/Program Files/Docker/Docker/Docker Desktop.exe" ]]
+}
 
 # omawin's own root-owned folder in Linux: Omarchy's files at the pin, the wanted package list.
 omawin_share=/usr/share/omawin
@@ -279,6 +284,9 @@ ubuntu_mise_repo() {
 # docker, docker-buildx and docker-compose.
 ubuntu_docker() {
   command -v docker > /dev/null && return 0
+  # Docker Desktop on Windows is the PC's Docker: its WSL integration links /usr/bin/docker into
+  # its own distro (a dead link while Desktop isn't running). An engine here would fight it.
+  docker_desktop && return 0
   say "Docker Engine"
   install -m 0755 -d /etc/apt/keyrings
   curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
@@ -356,6 +364,7 @@ wsl_user() {
 # works. Started on its first use, as Omarchy does (docker.socket).
 docker_root() {
   local user="$1"
+  docker_desktop && return 0  # Docker Desktop's: its integration sets up the user's access
   getent group docker > /dev/null || groupadd -r docker
   id -nG "$user" | tr ' ' '\n' | grep -qx docker || usermod -aG docker "$user"
   # Enabling only writes links, so it works before systemd runs (the distro's first start).
@@ -659,9 +668,27 @@ run_migrations() {
   done
 }
 
+# omawin's Neovim config, the same files as Windows' (config/nvim/lua/omawin.lua finds Windows'
+# folders from here). Plugins and state stay Linux's own, in ~/.local/share/nvim. In every refresh,
+# so a moved repo folder reaches an existing Linux with the next `omawin update`.
+nvim_link() {
+  [[ $(readlink ~/.config/nvim 2> /dev/null) == "$repo/config/nvim" ]] && return 0
+  # shellcheck disable=SC2088  # (said as written, not expanded)
+  say "~/.config/nvim -> $repo/config/nvim"
+  # An old link of ours (before the repo's configs moved to config/) is replaced; a folder of
+  # yours is moved aside.
+  if [[ -L ~/.config/nvim ]]; then
+    rm ~/.config/nvim
+  elif [[ -e ~/.config/nvim ]]; then
+    mv ~/.config/nvim ~/.config/nvim.backup-"$(date +%Y%m%d-%H%M%S)"
+  fi
+  ln -s "$repo/config/nvim" ~/.config/nvim
+}
+
 refresh_part() {
   cd ~ || return 1
   mkdir -p ~/.config ~/.local/bin
+  nvim_link
   shell_blocks
   wrappers
   linux_tools
@@ -677,21 +704,6 @@ user_part() {
   # path Linux's git can't follow).
   cd ~ || return 1
   mkdir -p ~/.config ~/.local/bin
-
-  # omawin's Neovim config, the same files as Windows' (config/nvim/lua/omawin.lua finds Windows'
-  # folders from here). Plugins and state stay Linux's own, in ~/.local/share/nvim.
-  if [[ $(readlink ~/.config/nvim 2> /dev/null) != "$repo/config/nvim" ]]; then
-    # shellcheck disable=SC2088  # (said as written, not expanded)
-    say "~/.config/nvim -> $repo/config/nvim"
-    # An old link of ours (before the repo's configs moved to config/) is replaced; a folder of
-    # yours is moved aside.
-    if [[ -L ~/.config/nvim ]]; then
-      rm ~/.config/nvim
-    elif [[ -e ~/.config/nvim ]]; then
-      mv ~/.config/nvim ~/.config/nvim.backup-"$(date +%Y%m%d-%H%M%S)"
-    fi
-    ln -s "$repo/config/nvim" ~/.config/nvim
-  fi
 
   # git: Windows' sign-in (Git Credential Manager), so a push works without signing in again;
   # a helper of your own stays.

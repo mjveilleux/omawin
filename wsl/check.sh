@@ -72,12 +72,21 @@ else
 fi
 
 # The tools, as the user's login shell finds them (~/.local/bin, mise's shims).
-for tool in git nvim starship zoxide fzf eza bat fd rg jq lazygit btop gum tmux herdr mise docker; do
+for tool in git nvim starship zoxide fzf eza bat fd rg jq lazygit btop gum tmux herdr mise; do
   check fail "$tool" "" "not on $user's PATH (omawin update)" runuser -l "$user" -c "command -v $tool"
 done
-check fail "docker group" "$user is in it" "$user isn't in it (omawin update)" bash -c "id -nG $(printf %q "$user") | tr ' ' '\n' | grep -qx docker"
-if [[ $ci != --ci ]]; then
-  check fail "docker.socket" "enabled" "not enabled (omawin update)" systemctl is-enabled docker.socket
+# Docker Desktop on Windows is the PC's Docker (wsl/setup.sh installs no engine then): its WSL
+# integration's link is there, and works while Desktop runs.
+if [[ $(readlink /usr/bin/docker 2> /dev/null) == /mnt/wsl/docker-desktop/* ]]; then
+  line ok "docker" "Docker Desktop's (works while it runs)"
+elif [[ -e "/mnt/c/Program Files/Docker/Docker/Docker Desktop.exe" ]]; then
+  line warn "docker" "Docker Desktop is on Windows but not linked here: Settings > Resources > WSL integration > $(. /etc/os-release && echo "$NAME")"
+else
+  check fail "docker" "" "not on $user's PATH (omawin update)" runuser -l "$user" -c "command -v docker"
+  check fail "docker group" "$user is in it" "$user isn't in it (omawin update)" bash -c "id -nG $(printf %q "$user") | tr ' ' '\n' | grep -qx docker"
+  if [[ $ci != --ci ]]; then
+    check fail "docker.socket" "enabled" "not enabled (omawin update)" systemctl is-enabled docker.socket
+  fi
 fi
 
 check warn "boot doesn't wait for the network" "wait-online masked" "it may (omawin update)" test -L /etc/systemd/system/systemd-networkd-wait-online.service
